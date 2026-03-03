@@ -1,10 +1,13 @@
 import Fastify from "fastify";
+import { adminRoutes } from "./routes/admin.ts";
 
 const app = Fastify({ logger: true });
 
 app.get("/health", async () => {
   return { status: "ok", service: "edelphi-server" };
 });
+
+await app.register(adminRoutes);
 
 const port = Number(process.env.PORT ?? 3001);
 const host = process.env.HOST ?? "127.0.0.1";
