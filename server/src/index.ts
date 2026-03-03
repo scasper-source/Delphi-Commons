@@ -1,5 +1,6 @@
 import Fastify from "fastify";
 import { adminRoutes } from "./routes/admin.ts";
+import { studiesRoutes } from "./studies/routes.ts";
 
 const app = Fastify({ logger: true });
 
@@ -8,6 +9,7 @@ app.get("/health", async () => {
 });
 
 await app.register(adminRoutes);
+await studiesRoutes(app);
 
 const port = Number(process.env.PORT ?? 3001);
 const host = process.env.HOST ?? "127.0.0.1";

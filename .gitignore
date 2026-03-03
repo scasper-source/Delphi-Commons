@@ -9,3 +9,10 @@ node_modules/
 dist/
 build/
 .env
+# local server data
+server/data/
+
+
+# local server data
+server/data/
+
