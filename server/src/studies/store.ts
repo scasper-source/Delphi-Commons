@@ -8,7 +8,7 @@ import type {
   StudyAssignment,
   StudyVersion,
   StudyVersionSignoff,
-} from "./types.ts";
+} from "./types.js";
 
 type DbShape = {
   studies: Study[];
@@ -119,3 +119,4 @@ export async function listSignoffs(studyVersionId: string): Promise<StudyVersion
   const db = await readDb();
   return db.signoffs.filter(s => s.study_version_id === studyVersionId);
 }
+

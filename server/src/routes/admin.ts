@@ -1,6 +1,6 @@
 import type { FastifyInstance } from "fastify";
-import { requireRole, getActor } from "../middleware/auth.ts";
-import { writeAuditEvent } from "../core/audit.ts";
+import { requireRole, getActor } from "../middleware/auth.js";
+import { writeAuditEvent } from "../core/audit.js";
 
 export async function adminRoutes(app: FastifyInstance) {
   app.post(
@@ -20,3 +20,4 @@ export async function adminRoutes(app: FastifyInstance) {
     }
   );
 }
+

@@ -1,6 +1,6 @@
 import Fastify from "fastify";
-import { adminRoutes } from "./routes/admin.ts";
-import { studiesRoutes } from "./studies/routes.ts";
+import { adminRoutes } from "./routes/admin.js";
+import { studiesRoutes } from "./studies/routes.js";
 
 const app = Fastify({ logger: true });
 
@@ -21,3 +21,4 @@ app.listen({ port, host }, (err, address) => {
   }
   app.log.info(`Server listening at ${address}`);
 });
+

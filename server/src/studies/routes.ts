@@ -1,13 +1,14 @@
 // server/src/studies/routes.ts
 // Ticket 3 routes: Study + StudyVersion + dual signoff gate (Owner + MethodsSteward)
+// Ticket 4 (partial): set consensus rule (required before Round 1 opens; locked after Draft)
 
 import type { FastifyInstance, FastifyRequest } from "fastify";
 import { randomUUID } from "node:crypto";
 
-import { roleFromHeader } from "./roleMap.ts";
-import { sha256Json } from "./hash.ts";
+import { roleFromHeader } from "./roleMap.js";
+import { sha256Json } from "./hash.js";
 
-import type { Study, StudyAssignment, StudyVersion, StudyVersionSignoff } from "./types.ts";
+import type { Study, StudyAssignment, StudyVersion, StudyVersionSignoff } from "./types.js";
 import {
   createStudy,
   getStudy,
@@ -17,10 +18,10 @@ import {
   updateStudyVersion,
   upsertSignoff,
   listSignoffs,
-} from "./store.ts";
+} from "./store.js";
 
 // Use your existing audit writer (admin route imports this from ../core/audit.js)
-import { writeAuditEvent } from "../core/audit.ts";
+import { writeAuditEvent } from "../core/audit.js";
 
 function actorFromHeaders(req: FastifyRequest) {
   const userId = String(req.headers["x-user-id"] ?? "anonymous");
@@ -70,6 +71,40 @@ export async function studiesRoutes(app: FastifyInstance) {
     });
 
     return reply.code(201).send({ study });
+  });
+
+  // PATCH /studies/:studyId/versions/:versionId/consensus-rule
+  // Ticket 4: consensus rule must be set before Round 1 opens.
+  // We only allow setting it while Draft so it becomes part of the signed-off config.
+  app.patch("/studies/:studyId/versions/:versionId/consensus-rule", async (req, reply) => {
+    const actor = actorFromHeaders(req);
+    requireHeaderRole(actor.role, ["owner", "admin"]);
+
+    const { studyId, versionId } = req.params as any;
+    const v = await getStudyVersion(versionId);
+
+    if (!v || v.study_id !== studyId) return reply.code(404).send({ error: "study_version_not_found" });
+
+    // Method config is locked once the version leaves Draft.
+    if (v.status !== "Draft") return reply.code(409).send({ error: "consensus_rule_locked" });
+
+    const body = (req.body ?? {}) as { consensus_rule_json?: unknown };
+    if (body.consensus_rule_json === undefined || body.consensus_rule_json === null) {
+      return reply.code(400).send({ error: "consensus_rule_required" });
+    }
+
+    const updated = await updateStudyVersion(versionId, {
+      consensus_rule_json: body.consensus_rule_json,
+    });
+
+    await writeAuditEvent({
+      action: "study_version.set_consensus_rule",
+      actor,
+      object: { type: "study_version", id: versionId },
+      details: { study_id: studyId },
+    });
+
+    return reply.send({ studyVersion: updated });
   });
 
   // POST /studies/:studyId/versions  (Owner/admin only)
@@ -172,13 +207,13 @@ export async function studiesRoutes(app: FastifyInstance) {
     const now = new Date().toISOString();
     const body = (req.body ?? {}) as { note?: string };
 
-   const signoff: StudyVersionSignoff = {
-  study_version_id: versionId,
-  required_role,
-  signed_by_user_id: actor.userId,
-  signed_at: now,
-  ...(body.note ? { note: body.note } : {}),
-};
+    const signoff: StudyVersionSignoff = {
+      study_version_id: versionId,
+      required_role,
+      signed_by_user_id: actor.userId,
+      signed_at: now,
+      ...(body.note ? { note: body.note } : {}),
+    };
 
     await upsertSignoff(signoff);
 
@@ -193,6 +228,39 @@ export async function studiesRoutes(app: FastifyInstance) {
   });
 
   // POST /studies/:studyId/versions/:versionId/activate  (Owner/admin only)
+  // POST /studies/:studyId/versions/:versionId/open-round-1
+  // Ticket 4: cannot open Round 1 unless consensus rule is set.
+  // Opening Round 1 sets opened_round1_at and effectively locks method config.
+  app.post("/studies/:studyId/versions/:versionId/open-round-1", async (req, reply) => {
+    const actor = actorFromHeaders(req);
+    requireHeaderRole(actor.role, ["owner", "admin"]);
+
+    const { studyId, versionId } = req.params as any;
+    const v = await getStudyVersion(versionId);
+
+    if (!v || v.study_id !== studyId) return reply.code(404).send({ error: "study_version_not_found" });
+
+    // You can only open a round on an Active version
+    if (v.status !== "Active") return reply.code(409).send({ error: "study_version_not_active" });
+
+    // Must define consensus rule before Round 1 opens
+    if (v.consensus_rule_json === null) return reply.code(409).send({ error: "consensus_rule_missing" });
+
+    // One-way: cannot "re-open" if already opened
+    if (v.opened_round1_at !== null) return reply.code(409).send({ error: "round1_already_opened" });
+
+    const openedAt = new Date().toISOString();
+    const updated = await updateStudyVersion(versionId, { opened_round1_at: openedAt });
+
+    await writeAuditEvent({
+      action: "study_version.open_round1",
+      actor,
+      object: { type: "study_version", id: versionId },
+      details: { study_id: studyId, opened_round1_at: openedAt },
+    });
+
+    return reply.send({ studyVersion: updated });
+  });
   app.post("/studies/:studyId/versions/:versionId/activate", async (req, reply) => {
     const actor = actorFromHeaders(req);
     requireHeaderRole(actor.role, ["owner", "admin"]);
@@ -204,8 +272,8 @@ export async function studiesRoutes(app: FastifyInstance) {
     if (v.status !== "ReadyForSignoff") return reply.code(409).send({ error: "not_ready_for_signoff" });
 
     const signoffs = await listSignoffs(versionId);
-    const hasOwner = signoffs.some(s => s.required_role === "Owner");
-    const hasSteward = signoffs.some(s => s.required_role === "MethodsSteward");
+    const hasOwner = signoffs.some((s: any) => s.required_role === "Owner");
+    const hasSteward = signoffs.some((s: any) => s.required_role === "MethodsSteward");
 
     if (!hasOwner || !hasSteward) {
       return reply.code(409).send({ error: "missing_required_signoffs", hasOwner, hasSteward });

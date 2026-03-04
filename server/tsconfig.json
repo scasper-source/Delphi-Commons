@@ -1,7 +1,9 @@
 {
   // Visit https://aka.ms/tsconfig to read more about this file
   "compilerOptions": {
-    "allowImportingTsExtensions": true,    
+   "module": "NodeNext",
+   "moduleResolution": "NodeNext",    
+   
    // File Layout
      "rootDir": "./src",
     "outDir": "./dist",

@@ -1,5 +1,5 @@
 // server/src/studies/roleMap.ts
-import type { StudyRole } from "./types.ts";
+import type { StudyRole } from "./types.js";
 
 export function roleFromHeader(headerRole?: string | null): StudyRole | null {
   switch ((headerRole ?? "").toLowerCase()) {
@@ -17,3 +17,4 @@ export function roleFromHeader(headerRole?: string | null): StudyRole | null {
       return null;
   }
 }
+
