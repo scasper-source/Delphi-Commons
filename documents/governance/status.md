@@ -1,4 +1,4 @@
-Status
+﻿Status
 
 Completed:
 
@@ -12,7 +12,8 @@ Ticket 3: Study + StudyVersion + dual signoff activation gate (Owner + MethodsSt
 
 Ticket 4: Consensus rule required + locked on Round 1 open (audited)
 
+Ticket 5: Identity store + Response store separation (ParticipantMaster vs Responses; RBAC-gated master list + audited; responses contain participant_id only)
+
 Next up:
 
-Ticket 5: Identity store + Response store separation
-
+Ticket 6: (per JULY-MVP-PLAN.md)
