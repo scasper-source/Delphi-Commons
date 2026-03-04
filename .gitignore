@@ -16,3 +16,33 @@ server/data/
 # local server data
 server/data/
 
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+node_modules
+dist
+dist-ssr
+*.local
+
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# eDelphi runtime persistence (local-only)
+server/data/
+
+# eDelphi audit log (append-only local file)
+server/audit/audit.log
