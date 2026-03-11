@@ -18,6 +18,8 @@ Ticket 6: Consent versioning + consent capture + withdrawal (active consent requ
 
 Ticket 7: Round 1 open-ended collection (submission tied to open Round 1 StudyVersion; owner-only response summary; reminder logging audited)
 
+Ticket 8: Manual Curation Desk (manual draft item creation/list/publish; merge and split require rationale; curation actions audited)
+
 Next up:
 
-Ticket 8: Manual Curation Desk (per JULY-MVP-PLAN.md)
+Ticket 9: Round 2 rating + neutral feedback (per JULY-MVP-PLAN.md)

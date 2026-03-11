@@ -4,10 +4,13 @@ import {
   listItems,
   getItem,
   updateItem,
+  type ItemRecord,
 } from "../stores/itemStore.js";
 import {
   createMergeAction,
   listMergeActions,
+  createSplitAction,
+  listSplitActions,
 } from "../stores/mergeActionStore.js";
 import { requireRole, getActor } from "../middleware/auth.js";
 import { writeAuditEvent } from "../core/audit.js";
@@ -204,6 +207,100 @@ export async function itemsRoutes(app: FastifyInstance) {
       });
 
       return reply.send({ merges });
+    }
+  );
+
+  app.post(
+    "/studies/:studyId/versions/:versionId/items/:itemId/split",
+    { preHandler: allowCuration },
+    async (req, reply) => {
+      const { studyId, versionId, itemId } = req.params as any;
+      const body = (req.body ?? {}) as any;
+      const actor = getActor(req);
+
+      const source = getItem(String(itemId));
+      if (!source) {
+        return reply.code(404).send({ error: "item_not_found" });
+      }
+
+      if (
+        source.study_id !== String(studyId) ||
+        source.version_id !== String(versionId)
+      ) {
+        return reply.code(404).send({ error: "item_not_found" });
+      }
+
+      const rationale = String(body.rationale ?? "").trim();
+      if (!rationale) {
+        return reply.code(400).send({ error: "rationale_required" });
+      }
+
+      const newTexts = Array.isArray(body.new_texts)
+        ? body.new_texts.map((x: unknown) => String(x).trim()).filter((x: string) => x.length > 0)
+        : [];
+
+      if (newTexts.length < 2) {
+        return reply.code(400).send({ error: "new_texts_min_2_required" });
+      }
+
+      const newItems: ItemRecord[] = newTexts.map((text: string) =>
+        createItem({
+          study_id: String(studyId),
+          version_id: String(versionId),
+          round_number: source.round_number,
+          text,
+          provenance_type: source.provenance_type,
+          created_from: "manual",
+          created_by_user_id: actor.userId,
+        })
+      );
+
+      const split = createSplitAction({
+        study_id: String(studyId),
+        version_id: String(versionId),
+        source_item_id: String(itemId),
+        new_item_ids: newItems.map((i: ItemRecord) => i.item_id),
+        rationale,
+        actor_user_id: actor.userId,
+      });
+
+      await writeAuditEvent({
+        actor,
+        action: "item.split",
+        object: { type: "item", id: String(itemId) },
+        details: {
+          studyId,
+          versionId,
+          new_item_ids: newItems.map((i: ItemRecord) => i.item_id),
+          rationale,
+          split_id: split.split_id,
+        },
+      });
+
+      return reply.code(201).send({ split, items: newItems });
+    }
+  );
+
+  app.get(
+    "/studies/:studyId/versions/:versionId/split-actions",
+    { preHandler: allowCuration },
+    async (req, reply) => {
+      const { studyId, versionId } = req.params as any;
+      const actor = getActor(req);
+
+      const splits = listSplitActions({
+        study_id: String(studyId),
+        version_id: String(versionId),
+      });
+
+      await writeAuditEvent({
+        actor,
+        action: "item.split_list",
+        object: { type: "study_version", id: `${studyId}:${versionId}` },
+        details: { studyId, versionId, count: splits.length },
+      });
+
+      return reply.send({ splits });
     }
   );
 }
