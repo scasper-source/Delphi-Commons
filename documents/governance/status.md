@@ -16,6 +16,8 @@ Ticket 5: Identity store + Response store separation (ParticipantMaster vs Respo
 
 Ticket 6: Consent versioning + consent capture + withdrawal (active consent required for response submission; withdrawal blocks future submissions; consent actions audited)
 
+Ticket 7: Round 1 open-ended collection (submission tied to open Round 1 StudyVersion; owner-only response summary; reminder logging audited)
+
 Next up:
 
-Ticket 7: Round 1 open-ended collection (per JULY-MVP-PLAN.md)
+Ticket 8: Manual Curation Desk (per JULY-MVP-PLAN.md)
