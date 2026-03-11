@@ -1,4 +1,4 @@
-﻿Status
+Status
 
 Completed:
 
@@ -14,6 +14,8 @@ Ticket 4: Consensus rule required + locked on Round 1 open (audited)
 
 Ticket 5: Identity store + Response store separation (ParticipantMaster vs Responses; RBAC-gated master list + audited; responses contain participant_id only)
 
+Ticket 6: Consent versioning + consent capture + withdrawal (active consent required for response submission; withdrawal blocks future submissions; consent actions audited)
+
 Next up:
 
-Ticket 6: (per JULY-MVP-PLAN.md)
+Ticket 7: Round 1 open-ended collection (per JULY-MVP-PLAN.md)

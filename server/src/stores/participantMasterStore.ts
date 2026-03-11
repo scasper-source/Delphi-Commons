@@ -1,6 +1,10 @@
-﻿import fs from "node:fs";
+import fs from "node:fs";
 import path from "node:path";
 import crypto from "node:crypto";
+import { fileURLToPath } from "node:url";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 export type ParticipantMaster = {
   participant_id: string;
@@ -17,9 +21,10 @@ type StoreShape = {
   participants: Record<string, ParticipantMaster>;
 };
 
-const STORE_PATH = path.join(
-  process.cwd(),
-  "server",
+const STORE_PATH = path.resolve(
+  __dirname,
+  "..",
+  "..",
   "data",
   "identity",
   "participant_master.json"
@@ -96,5 +101,3 @@ export function updateParticipantMaster(
   saveStore(store);
   return updated;
 }
-
-

@@ -1,5 +1,6 @@
-﻿import type { FastifyInstance } from "fastify";
+import type { FastifyInstance } from "fastify";
 import { createResponse, listResponses } from "../stores/responseStore.js";
+import { hasActiveConsent } from "../stores/consentStore.js";
 
 import { requireRole, getActor } from "../middleware/auth.js";
 import { writeAuditEvent } from "../core/audit.js";
@@ -23,6 +24,27 @@ export async function responsesRoutes(app: FastifyInstance) {
 
       if (!body.participant_id) {
         return reply.code(400).send({ error: "participant_id_required" });
+      }
+
+      const consentOk = hasActiveConsent({
+        participant_id: String(body.participant_id),
+        study_id: studyId,
+        version_id: versionId,
+      });
+
+      if (!consentOk) {
+        await writeAuditEvent({
+          actor,
+          action: "response.submit_blocked_no_active_consent",
+          object: { type: "study_version", id: `${studyId}:${versionId}` },
+          details: {
+            studyId,
+            versionId,
+            participant_id: String(body.participant_id),
+          },
+        });
+
+        return reply.code(403).send({ error: "active_consent_required" });
       }
 
       const rec = createResponse({
@@ -67,7 +89,3 @@ export async function responsesRoutes(app: FastifyInstance) {
     }
   );
 }
-
-
-
-
