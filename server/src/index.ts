@@ -6,6 +6,7 @@ import { participantsRoutes } from "./routes/participants.js";
 import { responsesRoutes } from "./routes/responses.js";
 import { consentRoutes } from "./routes/consent.js";
 import { itemsRoutes } from "./routes/items.js";
+import { reportsRoutes } from "./routes/reports.js";
 
 const app = Fastify({ logger: true });
 
@@ -19,6 +20,7 @@ await app.register(participantsRoutes);
 await app.register(responsesRoutes);
 await app.register(consentRoutes);
 await app.register(itemsRoutes);
+await app.register(reportsRoutes);
 
 const port = Number(process.env.PORT ?? 3001);
 const host = process.env.HOST ?? "127.0.0.1";
