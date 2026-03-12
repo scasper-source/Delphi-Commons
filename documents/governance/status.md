@@ -20,6 +20,9 @@ Ticket 7: Round 1 open-ended collection (submission tied to open Round 1 StudyVe
 
 Ticket 8: Manual Curation Desk (manual draft item creation/list/publish; merge and split require rationale; curation actions audited)
 
+Ticket 9: Round 2 rating + neutral feedback (participants can rate published Round 2 items; neutral feedback shows median, dispersion, distribution, and prior response; "keep" and "revise" supported)
+
 Next up:
 
-Ticket 9: Round 2 rating + neutral feedback (per JULY-MVP-PLAN.md)
+Ticket 10: Export report (reproducible) incl. non-consensus
+
