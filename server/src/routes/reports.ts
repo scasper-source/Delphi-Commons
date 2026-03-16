@@ -320,7 +320,12 @@ export async function reportsRoutes(app: FastifyInstance) {
         },
         signoffs,
         methods: {
-          round_scope: "Current MVP export summarizes the active StudyVersion and published Round 2 items.",
+          study_format: studyVersion.study_format,
+          planned_round_count: studyVersion.planned_round_count,
+          terminal_round_number: studyVersion.terminal_round_number,
+          method_rationale: studyVersion.method_rationale,
+          round_scope:
+            "Current MVP export summarizes the active StudyVersion and published Round 2 items. Later round-aware final reporting is added in a later ticket.",
           rating_aggregation:
             "Per item, only the latest Round 2 rating from each participant is used for summary statistics and consensus classification.",
           consensus_definition: studyVersion.consensus_rule_json,
@@ -328,15 +333,19 @@ export async function reportsRoutes(app: FastifyInstance) {
             "For percent_agreement, consensus is computed as the percent of latest participant ratings greater than or equal to agreement_min_rating.",
           default_agreement_min_rating_used_when_missing: agreementMinRating,
           rounds_note:
-            "The consensus rule is version-level configuration chosen before Round 1 and intended to hold across later rounds in that StudyVersion.",
+            "The consensus rule and declared study design are StudyVersion-level configuration chosen before Round 1 and intended to hold across later rounds in that StudyVersion.",
         },
         limitations: [
           "Consensus does not imply correctness.",
           "This MVP export defaults agreement_min_rating to 7 when the consensus rule omits an explicit cutpoint.",
           "Round 1 responses are stored as flexible JSON payloads, so this export treats any non-Round-2 payload in the version as Round 1 material for summary purposes.",
           "Only published Round 2 items are included in item-level consensus and non-consensus summaries.",
+          "This export now includes locked study design fields, but it is not yet the final round-aware reporting layer for modified and classic study paths.",
         ],
         summary: {
+          study_format: studyVersion.study_format,
+          planned_round_count: studyVersion.planned_round_count,
+          terminal_round_number: studyVersion.terminal_round_number,
           published_round2_item_count: publishedRound2Items.length,
           consensus_item_count: consensusCount,
           non_consensus_item_count: nonConsensusCount,
@@ -364,6 +373,8 @@ export async function reportsRoutes(app: FastifyInstance) {
           config_hash: studyVersion.config_hash,
           dataset_hash: datasetHash,
           published_round2_item_count: publishedRound2Items.length,
+          study_format: studyVersion.study_format,
+          terminal_round_number: studyVersion.terminal_round_number,
         },
       });
 

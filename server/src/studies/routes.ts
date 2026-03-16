@@ -1,6 +1,7 @@
 // server/src/studies/routes.ts
 // Ticket 3 routes: Study + StudyVersion + dual signoff gate (Owner + MethodsSteward)
 // Ticket 4 (partial): set consensus rule (required before Round 1 opens; locked after Draft)
+// Ticket 11: study design declaration (modified vs classic, planned rounds, terminal round, rationale)
 
 import type { FastifyInstance, FastifyRequest } from "fastify";
 import { randomUUID } from "node:crypto";
@@ -8,7 +9,13 @@ import { randomUUID } from "node:crypto";
 import { roleFromHeader } from "./roleMap.js";
 import { sha256Json } from "./hash.js";
 
-import type { Study, StudyAssignment, StudyVersion, StudyVersionSignoff } from "./types.js";
+import type {
+  Study,
+  StudyAssignment,
+  StudyFormat,
+  StudyVersion,
+  StudyVersionSignoff,
+} from "./types.js";
 import {
   createStudy,
   getStudy,
@@ -20,7 +27,6 @@ import {
   listSignoffs,
 } from "./store.js";
 
-// Use your existing audit writer (admin route imports this from ../core/audit.js)
 import { writeAuditEvent } from "../core/audit.js";
 
 function actorFromHeaders(req: FastifyRequest) {
@@ -35,6 +41,25 @@ function requireHeaderRole(role: string, allowed: string[]) {
     err.statusCode = 403;
     throw err;
   }
+}
+
+function isStudyFormat(value: unknown): value is StudyFormat {
+  return value === "ModifiedDelphi" || value === "ClassicDelphi";
+}
+
+function expectedRoundPlan(studyFormat: StudyFormat): {
+  planned_round_count: number;
+  terminal_round_number: number;
+} {
+  if (studyFormat === "ModifiedDelphi") {
+    return { planned_round_count: 3, terminal_round_number: 3 };
+  }
+
+  return { planned_round_count: 4, terminal_round_number: 4 };
+}
+
+function hasNonEmptyText(value: unknown): value is string {
+  return typeof value === "string" && value.trim().length > 0;
 }
 
 export async function studiesRoutes(app: FastifyInstance) {
@@ -73,6 +98,77 @@ export async function studiesRoutes(app: FastifyInstance) {
     return reply.code(201).send({ study });
   });
 
+  // PATCH /studies/:studyId/versions/:versionId/design
+  // Ticket 11: study designer must declare method design before Round 1.
+  // These settings are locked once the version leaves Draft.
+  app.patch("/studies/:studyId/versions/:versionId/design", async (req, reply) => {
+    const actor = actorFromHeaders(req);
+    requireHeaderRole(actor.role, ["owner", "admin"]);
+
+    const { studyId, versionId } = req.params as any;
+    const v = await getStudyVersion(versionId);
+
+    if (!v || v.study_id !== studyId) {
+      return reply.code(404).send({ error: "study_version_not_found" });
+    }
+
+    if (v.status !== "Draft") {
+      return reply.code(409).send({ error: "study_design_locked" });
+    }
+
+    const body = (req.body ?? {}) as {
+      study_format?: unknown;
+      planned_round_count?: unknown;
+      terminal_round_number?: unknown;
+      method_rationale?: unknown;
+    };
+
+    if (!isStudyFormat(body.study_format)) {
+      return reply.code(400).send({ error: "invalid_study_format" });
+    }
+
+    const expected = expectedRoundPlan(body.study_format);
+
+    if (body.planned_round_count !== expected.planned_round_count) {
+      return reply.code(400).send({
+        error: "invalid_planned_round_count",
+        expected: expected.planned_round_count,
+      });
+    }
+
+    if (body.terminal_round_number !== expected.terminal_round_number) {
+      return reply.code(400).send({
+        error: "invalid_terminal_round_number",
+        expected: expected.terminal_round_number,
+      });
+    }
+
+    if (!hasNonEmptyText(body.method_rationale)) {
+      return reply.code(400).send({ error: "method_rationale_required" });
+    }
+
+    const updated = await updateStudyVersion(versionId, {
+      study_format: body.study_format,
+      planned_round_count: expected.planned_round_count,
+      terminal_round_number: expected.terminal_round_number,
+      method_rationale: body.method_rationale.trim(),
+    });
+
+    await writeAuditEvent({
+      action: "study_version.set_design",
+      actor,
+      object: { type: "study_version", id: versionId },
+      details: {
+        study_id: studyId,
+        study_format: updated.study_format,
+        planned_round_count: updated.planned_round_count,
+        terminal_round_number: updated.terminal_round_number,
+      },
+    });
+
+    return reply.send({ studyVersion: updated });
+  });
+
   // PATCH /studies/:studyId/versions/:versionId/consensus-rule
   // Ticket 4: consensus rule must be set before Round 1 opens.
   // We only allow setting it while Draft so it becomes part of the signed-off config.
@@ -85,7 +181,6 @@ export async function studiesRoutes(app: FastifyInstance) {
 
     if (!v || v.study_id !== studyId) return reply.code(404).send({ error: "study_version_not_found" });
 
-    // Method config is locked once the version leaves Draft.
     if (v.status !== "Draft") return reply.code(409).send({ error: "consensus_rule_locked" });
 
     const body = (req.body ?? {}) as { consensus_rule_json?: unknown };
@@ -128,6 +223,11 @@ export async function studiesRoutes(app: FastifyInstance) {
       version_number: nextVersion,
       status: "Draft",
 
+      study_format: null,
+      planned_round_count: null,
+      terminal_round_number: null,
+      method_rationale: null,
+
       consensus_rule_json: null,
       feedback_config_json: null,
       retention_policy_json: null,
@@ -162,9 +262,33 @@ export async function studiesRoutes(app: FastifyInstance) {
     if (!v || v.study_id !== studyId) return reply.code(404).send({ error: "study_version_not_found" });
     if (v.status !== "Draft") return reply.code(409).send({ error: "not_draft" });
 
+    if (!v.study_format) {
+      return reply.code(409).send({ error: "study_format_missing" });
+    }
+
+    if (v.planned_round_count === null) {
+      return reply.code(409).send({ error: "planned_round_count_missing" });
+    }
+
+    if (v.terminal_round_number === null) {
+      return reply.code(409).send({ error: "terminal_round_number_missing" });
+    }
+
+    if (!hasNonEmptyText(v.method_rationale)) {
+      return reply.code(409).send({ error: "method_rationale_missing" });
+    }
+
+    if (v.consensus_rule_json === null) {
+      return reply.code(409).send({ error: "consensus_rule_missing" });
+    }
+
     const configHash = sha256Json({
       study_id: v.study_id,
       version_number: v.version_number,
+      study_format: v.study_format,
+      planned_round_count: v.planned_round_count,
+      terminal_round_number: v.terminal_round_number,
+      method_rationale: v.method_rationale,
       consensus_rule_json: v.consensus_rule_json,
       feedback_config_json: v.feedback_config_json,
       retention_policy_json: v.retention_policy_json,
@@ -227,10 +351,9 @@ export async function studiesRoutes(app: FastifyInstance) {
     return reply.send({ signoff });
   });
 
-  // POST /studies/:studyId/versions/:versionId/activate  (Owner/admin only)
   // POST /studies/:studyId/versions/:versionId/open-round-1
-  // Ticket 4: cannot open Round 1 unless consensus rule is set.
-  // Opening Round 1 sets opened_round1_at and effectively locks method config.
+  // Ticket 4 + Ticket 11:
+  // cannot open Round 1 unless consensus rule and declared study design are present.
   app.post("/studies/:studyId/versions/:versionId/open-round-1", async (req, reply) => {
     const actor = actorFromHeaders(req);
     requireHeaderRole(actor.role, ["owner", "admin"]);
@@ -240,13 +363,19 @@ export async function studiesRoutes(app: FastifyInstance) {
 
     if (!v || v.study_id !== studyId) return reply.code(404).send({ error: "study_version_not_found" });
 
-    // You can only open a round on an Active version
     if (v.status !== "Active") return reply.code(409).send({ error: "study_version_not_active" });
 
-    // Must define consensus rule before Round 1 opens
+    if (!v.study_format) return reply.code(409).send({ error: "study_format_missing" });
+    if (v.planned_round_count === null) return reply.code(409).send({ error: "planned_round_count_missing" });
+    if (v.terminal_round_number === null) {
+      return reply.code(409).send({ error: "terminal_round_number_missing" });
+    }
+    if (!hasNonEmptyText(v.method_rationale)) {
+      return reply.code(409).send({ error: "method_rationale_missing" });
+    }
+
     if (v.consensus_rule_json === null) return reply.code(409).send({ error: "consensus_rule_missing" });
 
-    // One-way: cannot "re-open" if already opened
     if (v.opened_round1_at !== null) return reply.code(409).send({ error: "round1_already_opened" });
 
     const openedAt = new Date().toISOString();
@@ -261,6 +390,8 @@ export async function studiesRoutes(app: FastifyInstance) {
 
     return reply.send({ studyVersion: updated });
   });
+
+  // POST /studies/:studyId/versions/:versionId/activate  (Owner/admin only)
   app.post("/studies/:studyId/versions/:versionId/activate", async (req, reply) => {
     const actor = actorFromHeaders(req);
     requireHeaderRole(actor.role, ["owner", "admin"]);

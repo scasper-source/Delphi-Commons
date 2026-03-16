@@ -1,9 +1,3 @@
-Status
-
-Completed:
-
-Ticket 1: Web server scaffold with /health endpoint
-
 Ticket 1b: React app scaffold (Vite)
 
 Ticket 2: RBAC scaffolding + append-only audit log + admin/audit-test route
@@ -22,7 +16,10 @@ Ticket 8: Manual Curation Desk (manual draft item creation/list/publish; merge a
 
 Ticket 9: Round 2 rating + neutral feedback (participants can rate published Round 2 items; neutral feedback shows median, dispersion, distribution, and prior response; "keep" and "revise" supported)
 
+Ticket 10: Export report (reproducible) incl. non-consensus (staff-only export-report endpoint added; report includes StudyVersion, config_hash, dataset_hash, methods, limitations, published Round 2 item summaries, and consensus classification; export action audited)
+
+Ticket 11: Study design declaration (study_format, planned_round_count, terminal_round_number, method_rationale, and consensus_rule_json required before submit-for-signoff/open Round 1; design settings locked outside Draft; design-setting actions audited; design fields included in export/report output)
+
 Next up:
 
-Ticket 10: Export report (reproducible) incl. non-consensus
-
+Ticket 12: Generalize the round model beyond Round 2

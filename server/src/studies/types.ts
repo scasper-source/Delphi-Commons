@@ -1,5 +1,6 @@
 // server/src/studies/types.ts
 // Ticket 3 models (July MVP plan)
+// Ticket 11: study design declaration fields added to StudyVersion
 
 export type StudyVersionStatus =
   | "Draft"
@@ -15,6 +16,8 @@ export type StudyRole =
   | "DataCustodian"
   | "Maintainer";
 
+export type StudyFormat = "ModifiedDelphi" | "ClassicDelphi";
+
 export interface Study {
   id: string;
   title: string;
@@ -29,6 +32,12 @@ export interface StudyVersion {
   version_number: number;
 
   status: StudyVersionStatus;
+
+  // Ticket 11 locked design configuration
+  study_format: StudyFormat | null;
+  planned_round_count: number | null;
+  terminal_round_number: number | null;
+  method_rationale: string | null;
 
   consensus_rule_json: unknown | null;
   feedback_config_json: unknown | null;
