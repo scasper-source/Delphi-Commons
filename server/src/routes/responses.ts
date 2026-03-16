@@ -7,8 +7,8 @@ import { getItem, listItems } from "../stores/itemStore.js";
 import { requireRole, getActor } from "../middleware/auth.js";
 import { writeAuditEvent } from "../core/audit.js";
 
-type Round2RatingPayload = {
-  round_number: 2;
+type RatingRoundPayload = {
+  round_number: number;
   item_id: string;
   rating: number;
   action: "keep" | "revise";
@@ -34,13 +34,24 @@ function getStudyAndVersion(params: unknown): { studyId: string; versionId: stri
   return { studyId, versionId };
 }
 
-function isRound2RatingPayload(value: unknown): value is Round2RatingPayload {
+function getRoundNumber(params: unknown): number | null {
+  const p = (params ?? {}) as Record<string, unknown>;
+  const raw = p.roundNumber ?? p.round_number ?? null;
+  if (typeof raw === "number" && Number.isInteger(raw)) return raw;
+  if (typeof raw === "string" && raw.trim() !== "") {
+    const parsed = Number(raw);
+    return Number.isInteger(parsed) ? parsed : null;
+  }
+  return null;
+}
+
+function isRatingRoundPayload(value: unknown, roundNumber: number): value is RatingRoundPayload {
   if (!value || typeof value !== "object") return false;
 
   const rec = value as Record<string, unknown>;
 
   return (
-    rec.round_number === 2 &&
+    rec.round_number === roundNumber &&
     typeof rec.item_id === "string" &&
     typeof rec.rating === "number" &&
     Number.isFinite(rec.rating) &&
@@ -48,14 +59,15 @@ function isRound2RatingPayload(value: unknown): value is Round2RatingPayload {
   );
 }
 
-function getLatestRound2RatingsForItem(
+function getLatestRatingsForItem(
   responses: ResponseRecord[],
-  itemId: string
+  itemId: string,
+  roundNumber: number
 ): Map<string, ResponseRecord> {
   const latest = new Map<string, ResponseRecord>();
 
   for (const response of responses) {
-    if (!isRound2RatingPayload(response.response_json)) continue;
+    if (!isRatingRoundPayload(response.response_json, roundNumber)) continue;
     if (response.response_json.item_id !== itemId) continue;
     latest.set(response.participant_id, response);
   }
@@ -108,6 +120,25 @@ function buildDistribution(values: number[]): Record<string, number> {
   }
 
   return distribution;
+}
+
+function getMaxAllowedRound(studyFormat: string | null): number {
+  if (studyFormat === "ModifiedDelphi") return 3;
+  if (studyFormat === "ClassicDelphi") return 4;
+  return 2;
+}
+
+function getAllowedRatingRounds(studyFormat: string | null): number[] {
+  const maxRound = getMaxAllowedRound(studyFormat);
+  const rounds: number[] = [];
+  for (let round = 2; round <= maxRound; round += 1) {
+    rounds.push(round);
+  }
+  return rounds;
+}
+
+function isAllowedRatingRound(studyFormat: string | null, roundNumber: number): boolean {
+  return getAllowedRatingRounds(studyFormat).includes(roundNumber);
 }
 
 export async function responsesRoutes(app: FastifyInstance) {
@@ -269,28 +300,49 @@ export async function responsesRoutes(app: FastifyInstance) {
   );
 
   app.get(
-    "/studies/:studyId/versions/:versionId/round2/items",
+    "/studies/:studyId/versions/:versionId/rounds/:roundNumber/items",
     { preHandler: allowParticipantOrStaff },
     async (req, reply) => {
       const { studyId, versionId } = getStudyAndVersion(req.params);
+      const roundNumber = getRoundNumber(req.params);
       const actor = getActor(req);
       const query = (req.query ?? {}) as Record<string, unknown>;
       const participantId = query.participant_id ? String(query.participant_id) : null;
 
+      if (roundNumber === null) {
+        return reply.code(400).send({ error: "round_number_required" });
+      }
+
+      const studyVersion = await getStudyVersion(versionId);
+      if (!studyVersion || studyVersion.study_id !== studyId) {
+        return reply.code(404).send({ error: "study_version_not_found" });
+      }
+
+      if (roundNumber < 2) {
+        return reply.code(400).send({ error: "rating_round_must_be_gte_2" });
+      }
+
+      if (!isAllowedRatingRound(studyVersion.study_format, roundNumber)) {
+        return reply.code(409).send({
+          error: "round_not_allowed_for_study_design",
+          allowed_rounds: getAllowedRatingRounds(studyVersion.study_format),
+        });
+      }
+
       const publishedItems = listItems({
         study_id: studyId,
         version_id: versionId,
-      }).filter((item) => item.round_number === 2 && item.status === "Published");
+      }).filter((item) => item.round_number === roundNumber && item.status === "Published");
 
       const responses = listResponses({ study_id: studyId, version_id: versionId });
 
       const items = publishedItems.map((item) => {
-        const latestForItem = getLatestRound2RatingsForItem(responses, item.item_id);
+        const latestForItem = getLatestRatingsForItem(responses, item.item_id, roundNumber);
         const prior = participantId ? latestForItem.get(participantId) ?? null : null;
 
         let yourPriorResponse: { rating: number; action: "keep" | "revise"; submitted_at: string } | null = null;
 
-        if (prior && isRound2RatingPayload(prior.response_json)) {
+        if (prior && isRatingRoundPayload(prior.response_json, roundNumber)) {
           yourPriorResponse = {
             rating: prior.response_json.rating,
             action: prior.response_json.action,
@@ -309,11 +361,12 @@ export async function responsesRoutes(app: FastifyInstance) {
 
       await writeAuditEvent({
         actor,
-        action: "round2.items.list",
+        action: "round.items.list",
         object: { type: "study_version", id: `${studyId}:${versionId}` },
         details: {
           studyId,
           versionId,
+          round_number: roundNumber,
           count: items.length,
           participant_id: participantId,
         },
@@ -324,12 +377,17 @@ export async function responsesRoutes(app: FastifyInstance) {
   );
 
   app.post(
-    "/studies/:studyId/versions/:versionId/round2/ratings",
+    "/studies/:studyId/versions/:versionId/rounds/:roundNumber/ratings",
     { preHandler: allowSubmit },
     async (req, reply) => {
       const { studyId, versionId } = getStudyAndVersion(req.params);
+      const roundNumber = getRoundNumber(req.params);
       const body = (req.body ?? {}) as Record<string, unknown>;
       const actor = getActor(req);
+
+      if (roundNumber === null) {
+        return reply.code(400).send({ error: "round_number_required" });
+      }
 
       const participantId = String(body.participant_id ?? "");
       const itemId = String(body.item_id ?? "");
@@ -348,6 +406,17 @@ export async function responsesRoutes(app: FastifyInstance) {
         return reply.code(404).send({ error: "study_version_not_found" });
       }
 
+      if (roundNumber < 2) {
+        return reply.code(400).send({ error: "rating_round_must_be_gte_2" });
+      }
+
+      if (!isAllowedRatingRound(studyVersion.study_format, roundNumber)) {
+        return reply.code(409).send({
+          error: "round_not_allowed_for_study_design",
+          allowed_rounds: getAllowedRatingRounds(studyVersion.study_format),
+        });
+      }
+
       if (studyVersion.status !== "Active") {
         return reply.code(409).send({ error: "study_version_not_active" });
       }
@@ -361,11 +430,12 @@ export async function responsesRoutes(app: FastifyInstance) {
       if (!consentOk) {
         await writeAuditEvent({
           actor,
-          action: "round2.rating_blocked_no_active_consent",
+          action: "round.rating_blocked_no_active_consent",
           object: { type: "study_version", id: `${studyId}:${versionId}` },
           details: {
             studyId,
             versionId,
+            round_number: roundNumber,
             participant_id: participantId,
             item_id: itemId,
           },
@@ -379,17 +449,17 @@ export async function responsesRoutes(app: FastifyInstance) {
         return reply.code(404).send({ error: "item_not_found" });
       }
 
-      if (item.round_number !== 2 || item.status !== "Published") {
-        return reply.code(409).send({ error: "item_not_available_for_round2_rating" });
+      if (item.round_number !== roundNumber || item.status !== "Published") {
+        return reply.code(409).send({ error: "item_not_available_for_round_rating" });
       }
 
       const allResponses = listResponses({ study_id: studyId, version_id: versionId });
-      const prior = getLatestRound2RatingsForItem(allResponses, itemId).get(participantId) ?? null;
+      const prior = getLatestRatingsForItem(allResponses, itemId, roundNumber).get(participantId) ?? null;
 
       let rating: number;
 
       if (action === "keep") {
-        if (!prior || !isRound2RatingPayload(prior.response_json)) {
+        if (!prior || !isRatingRoundPayload(prior.response_json, roundNumber)) {
           return reply.code(400).send({ error: "prior_rating_required_for_keep" });
         }
 
@@ -409,20 +479,21 @@ export async function responsesRoutes(app: FastifyInstance) {
         version_id: versionId,
         participant_id: participantId,
         response_json: {
-          round_number: 2,
+          round_number: roundNumber,
           item_id: itemId,
           rating,
           action,
-        } satisfies Round2RatingPayload,
+        } satisfies RatingRoundPayload,
       });
 
       await writeAuditEvent({
         actor,
-        action: action === "keep" ? "round2.rating_keep" : "round2.rating_revise",
+        action: action === "keep" ? "round.rating_keep" : "round.rating_revise",
         object: { type: "item", id: itemId },
         details: {
           studyId,
           versionId,
+          round_number: roundNumber,
           participant_id: participantId,
           response_id: rec.response_id,
           rating,
@@ -433,6 +504,7 @@ export async function responsesRoutes(app: FastifyInstance) {
         response_id: rec.response_id,
         participant_id: participantId,
         item_id: itemId,
+        round_number: roundNumber,
         rating,
         action,
       });
@@ -440,14 +512,19 @@ export async function responsesRoutes(app: FastifyInstance) {
   );
 
   app.get(
-    "/studies/:studyId/versions/:versionId/round2/items/:itemId/feedback",
+    "/studies/:studyId/versions/:versionId/rounds/:roundNumber/items/:itemId/feedback",
     { preHandler: allowParticipantOrStaff },
     async (req, reply) => {
       const { studyId, versionId } = getStudyAndVersion(req.params);
+      const roundNumber = getRoundNumber(req.params);
       const { itemId } = (req.params ?? {}) as { itemId?: string };
       const actor = getActor(req);
       const query = (req.query ?? {}) as Record<string, unknown>;
       const participantId = String(query.participant_id ?? "");
+
+      if (roundNumber === null) {
+        return reply.code(400).send({ error: "round_number_required" });
+      }
 
       if (!itemId) {
         return reply.code(400).send({ error: "item_id_required" });
@@ -457,21 +534,37 @@ export async function responsesRoutes(app: FastifyInstance) {
         return reply.code(400).send({ error: "participant_id_required" });
       }
 
+      const studyVersion = await getStudyVersion(versionId);
+      if (!studyVersion || studyVersion.study_id !== studyId) {
+        return reply.code(404).send({ error: "study_version_not_found" });
+      }
+
+      if (roundNumber < 2) {
+        return reply.code(400).send({ error: "rating_round_must_be_gte_2" });
+      }
+
+      if (!isAllowedRatingRound(studyVersion.study_format, roundNumber)) {
+        return reply.code(409).send({
+          error: "round_not_allowed_for_study_design",
+          allowed_rounds: getAllowedRatingRounds(studyVersion.study_format),
+        });
+      }
+
       const item = getItem(String(itemId));
       if (!item || item.study_id !== studyId || item.version_id !== versionId) {
         return reply.code(404).send({ error: "item_not_found" });
       }
 
-      if (item.round_number !== 2 || item.status !== "Published") {
-        return reply.code(409).send({ error: "item_not_available_for_round2_feedback" });
+      if (item.round_number !== roundNumber || item.status !== "Published") {
+        return reply.code(409).send({ error: "item_not_available_for_round_feedback" });
       }
 
       const allResponses = listResponses({ study_id: studyId, version_id: versionId });
-      const latestByParticipant = getLatestRound2RatingsForItem(allResponses, String(itemId));
+      const latestByParticipant = getLatestRatingsForItem(allResponses, String(itemId), roundNumber);
 
       const latestRatings = Array.from(latestByParticipant.values())
         .flatMap((response) => {
-          if (!isRound2RatingPayload(response.response_json)) return [];
+          if (!isRatingRoundPayload(response.response_json, roundNumber)) return [];
           return [response.response_json.rating];
         });
 
@@ -486,7 +579,7 @@ export async function responsesRoutes(app: FastifyInstance) {
 
       let yourPriorResponse: { rating: number; action: "keep" | "revise"; submitted_at: string } | null = null;
 
-      if (prior && isRound2RatingPayload(prior.response_json)) {
+      if (prior && isRatingRoundPayload(prior.response_json, roundNumber)) {
         yourPriorResponse = {
           rating: prior.response_json.rating,
           action: prior.response_json.action,
@@ -498,11 +591,12 @@ export async function responsesRoutes(app: FastifyInstance) {
 
       await writeAuditEvent({
         actor,
-        action: "round2.feedback_get",
+        action: "round.feedback_get",
         object: { type: "item", id: String(itemId) },
         details: {
           studyId,
           versionId,
+          round_number: roundNumber,
           participant_id: participantId,
           response_count: sorted.length,
         },
@@ -534,4 +628,3 @@ export async function responsesRoutes(app: FastifyInstance) {
     }
   );
 }
-

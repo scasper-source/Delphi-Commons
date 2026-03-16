@@ -20,6 +20,8 @@ Ticket 10: Export report (reproducible) incl. non-consensus (staff-only export-r
 
 Ticket 11: Study design declaration (study_format, planned_round_count, terminal_round_number, method_rationale, and consensus_rule_json required before submit-for-signoff/open Round 1; design settings locked outside Draft; design-setting actions audited; design fields included in export/report output)
 
+Ticket 12: Generalize the round model beyond Round 2 (generic later-round item listing, rating, feedback, and round summary endpoints added; rating rounds are gated by declared study design; Modified Delphi allows through Round 3 and blocks Round 4; round-aware summary generation added for later rating rounds)
+
 Next up:
 
-Ticket 12: Generalize the round model beyond Round 2
+Ticket 13: Round 3 rating + neutral feedback + interim reporting

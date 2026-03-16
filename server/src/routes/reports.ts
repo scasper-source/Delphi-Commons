@@ -6,8 +6,8 @@ import { sha256Json } from "../studies/hash.js";
 import { requireRole, getActor } from "../middleware/auth.js";
 import { writeAuditEvent } from "../core/audit.js";
 
-type Round2RatingPayload = {
-  round_number: 2;
+type RatingRoundPayload = {
+  round_number: number;
   item_id: string;
   rating: number;
   action: "keep" | "revise";
@@ -33,13 +33,26 @@ function getStudyAndVersion(params: unknown): { studyId: string; versionId: stri
   return { studyId, versionId };
 }
 
-function isRound2RatingPayload(value: unknown): value is Round2RatingPayload {
+function getRoundNumber(params: unknown): number | null {
+  const p = (params ?? {}) as Record<string, unknown>;
+  const raw = p.roundNumber ?? p.round_number ?? null;
+
+  if (typeof raw === "number" && Number.isInteger(raw)) return raw;
+  if (typeof raw === "string" && raw.trim() !== "") {
+    const parsed = Number(raw);
+    return Number.isInteger(parsed) ? parsed : null;
+  }
+
+  return null;
+}
+
+function isRatingRoundPayload(value: unknown, roundNumber: number): value is RatingRoundPayload {
   if (!value || typeof value !== "object") return false;
 
   const rec = value as Record<string, unknown>;
 
   return (
-    rec.round_number === 2 &&
+    rec.round_number === roundNumber &&
     typeof rec.item_id === "string" &&
     typeof rec.rating === "number" &&
     Number.isFinite(rec.rating) &&
@@ -47,14 +60,15 @@ function isRound2RatingPayload(value: unknown): value is Round2RatingPayload {
   );
 }
 
-function getLatestRound2RatingsForItem(
+function getLatestRatingsForItem(
   responses: ResponseRecord[],
-  itemId: string
+  itemId: string,
+  roundNumber: number
 ): Map<string, ResponseRecord> {
   const latest = new Map<string, ResponseRecord>();
 
   for (const response of responses) {
-    if (!isRound2RatingPayload(response.response_json)) continue;
+    if (!isRatingRoundPayload(response.response_json, roundNumber)) continue;
     if (response.response_json.item_id !== itemId) continue;
     latest.set(response.participant_id, response);
   }
@@ -199,8 +213,182 @@ function evaluateConsensus(rule: unknown, ratings: number[]) {
   };
 }
 
+function getMaxAllowedRound(studyFormat: string | null): number {
+  if (studyFormat === "ModifiedDelphi") return 3;
+  if (studyFormat === "ClassicDelphi") return 4;
+  return 2;
+}
+
+function getAllowedRatingRounds(studyFormat: string | null): number[] {
+  const maxRound = getMaxAllowedRound(studyFormat);
+  const rounds: number[] = [];
+  for (let round = 2; round <= maxRound; round += 1) {
+    rounds.push(round);
+  }
+  return rounds;
+}
+
+function isAllowedRatingRound(studyFormat: string | null, roundNumber: number): boolean {
+  return getAllowedRatingRounds(studyFormat).includes(roundNumber);
+}
+
+function buildRoundItemReports(
+  publishedItems: ItemRecord[],
+  allResponses: ResponseRecord[],
+  roundNumber: number,
+  consensusRule: unknown
+) {
+  return publishedItems.map((item) => {
+    const latestByParticipant = getLatestRatingsForItem(allResponses, item.item_id, roundNumber);
+
+    const latestRatings = Array.from(latestByParticipant.values())
+      .flatMap((response) => {
+        if (!isRatingRoundPayload(response.response_json, roundNumber)) return [];
+        return [response.response_json.rating];
+      })
+      .sort((a, b) => a - b);
+
+    const distribution = buildDistribution(latestRatings);
+    const medianValue = median(latestRatings);
+    const q1 = percentileFromSorted(latestRatings, 0.25);
+    const q3 = percentileFromSorted(latestRatings, 0.75);
+    const minValue = latestRatings.length > 0 ? latestRatings[0] ?? null : null;
+    const maxValue =
+      latestRatings.length > 0 ? latestRatings[latestRatings.length - 1] ?? null : null;
+
+    const consensus = evaluateConsensus(consensusRule, latestRatings);
+
+    return {
+      item_id: item.item_id,
+      text: item.text,
+      round_number: item.round_number,
+      provenance_type: item.provenance_type,
+      created_from: item.created_from,
+      created_at: item.created_at,
+      rating_summary: {
+        response_count: latestRatings.length,
+        median: medianValue,
+        dispersion: {
+          min: minValue,
+          max: maxValue,
+          iqr: q1 !== null && q3 !== null ? q3 - q1 : null,
+          q1,
+          q3,
+        },
+        distribution,
+      },
+      consensus,
+    };
+  });
+}
+
 export async function reportsRoutes(app: FastifyInstance) {
   const allowStaffRead = requireRole(["owner", "methods_steward"]);
+
+  app.get(
+    "/studies/:studyId/versions/:versionId/rounds/:roundNumber/summary",
+    { preHandler: allowStaffRead },
+    async (req, reply) => {
+      const { studyId, versionId } = getStudyAndVersion(req.params);
+      const roundNumber = getRoundNumber(req.params);
+      const actor = getActor(req);
+
+      if (roundNumber === null) {
+        return reply.code(400).send({ error: "round_number_required" });
+      }
+
+      if (roundNumber < 2) {
+        return reply.code(400).send({ error: "rating_round_must_be_gte_2" });
+      }
+
+      const study = await getStudy(studyId);
+      if (!study) {
+        return reply.code(404).send({ error: "study_not_found" });
+      }
+
+      const studyVersion = await getStudyVersion(versionId);
+      if (!studyVersion || studyVersion.study_id !== studyId) {
+        return reply.code(404).send({ error: "study_version_not_found" });
+      }
+
+      if (!isAllowedRatingRound(studyVersion.study_format, roundNumber)) {
+        return reply.code(409).send({
+          error: "round_not_allowed_for_study_design",
+          allowed_rounds: getAllowedRatingRounds(studyVersion.study_format),
+        });
+      }
+
+      const allItems = sortItems(
+        listItems({
+          study_id: studyId,
+          version_id: versionId,
+        })
+      );
+
+      const publishedRoundItems = allItems.filter(
+        (item) => item.round_number === roundNumber && item.status === "Published"
+      );
+
+      const allResponses = sortResponses(
+        listResponses({
+          study_id: studyId,
+          version_id: versionId,
+        })
+      );
+
+      const roundResponses = allResponses.filter((response) =>
+        isRatingRoundPayload(response.response_json, roundNumber)
+      );
+
+      const itemReports = buildRoundItemReports(
+        publishedRoundItems,
+        allResponses,
+        roundNumber,
+        studyVersion.consensus_rule_json
+      );
+
+      const consensusCount = itemReports.filter((item) => item.consensus.status === "consensus").length;
+      const nonConsensusCount = itemReports.filter(
+        (item) => item.consensus.status === "non_consensus"
+      ).length;
+      const undeterminedCount = itemReports.filter(
+        (item) => item.consensus.status === "undetermined"
+      ).length;
+
+      await writeAuditEvent({
+        actor,
+        action: "round.summary_get",
+        object: { type: "study_version", id: `${studyId}:${versionId}` },
+        details: {
+          studyId,
+          versionId,
+          round_number: roundNumber,
+          published_item_count: publishedRoundItems.length,
+        },
+      });
+
+      return reply.send({
+        study,
+        study_version: studyVersion,
+        round_number: roundNumber,
+        summary: {
+          published_item_count: publishedRoundItems.length,
+          consensus_item_count: consensusCount,
+          non_consensus_item_count: nonConsensusCount,
+          undetermined_item_count: undeterminedCount,
+          round_submission_count: roundResponses.length,
+          unique_rated_item_count: new Set(
+            roundResponses.flatMap((response) =>
+              isRatingRoundPayload(response.response_json, roundNumber)
+                ? [response.response_json.item_id]
+                : []
+            )
+          ).size,
+        },
+        items: itemReports,
+      });
+    }
+  );
 
   app.get(
     "/studies/:studyId/versions/:versionId/export-report",
@@ -242,54 +430,19 @@ export async function reportsRoutes(app: FastifyInstance) {
       );
 
       const round1Responses = allResponses.filter(
-        (response) => !isRound2RatingPayload(response.response_json)
+        (response) => !isRatingRoundPayload(response.response_json, 2)
       );
 
       const round2Responses = allResponses.filter((response) =>
-        isRound2RatingPayload(response.response_json)
+        isRatingRoundPayload(response.response_json, 2)
       );
 
-      const itemReports = publishedRound2Items.map((item) => {
-        const latestByParticipant = getLatestRound2RatingsForItem(allResponses, item.item_id);
-
-        const latestRatings = Array.from(latestByParticipant.values())
-          .flatMap((response) => {
-            if (!isRound2RatingPayload(response.response_json)) return [];
-            return [response.response_json.rating];
-          })
-          .sort((a, b) => a - b);
-
-        const distribution = buildDistribution(latestRatings);
-        const medianValue = median(latestRatings);
-        const q1 = percentileFromSorted(latestRatings, 0.25);
-        const q3 = percentileFromSorted(latestRatings, 0.75);
-        const minValue = latestRatings.length > 0 ? latestRatings[0] ?? null : null;
-        const maxValue =
-          latestRatings.length > 0 ? latestRatings[latestRatings.length - 1] ?? null : null;
-
-        const consensus = evaluateConsensus(studyVersion.consensus_rule_json, latestRatings);
-
-        return {
-          item_id: item.item_id,
-          text: item.text,
-          provenance_type: item.provenance_type,
-          created_from: item.created_from,
-          created_at: item.created_at,
-          rating_summary: {
-            response_count: latestRatings.length,
-            median: medianValue,
-            dispersion: {
-              min: minValue,
-              max: maxValue,
-              iqr: q1 !== null && q3 !== null ? q3 - q1 : null,
-              q1,
-              q3,
-            },
-            distribution,
-          },
-          consensus,
-        };
-      });
+      const itemReports = buildRoundItemReports(
+        publishedRound2Items,
+        allResponses,
+        2,
+        studyVersion.consensus_rule_json
+      );
 
       const consensusCount = itemReports.filter((item) => item.consensus.status === "consensus").length;
       const nonConsensusCount = itemReports.filter(
@@ -325,9 +478,9 @@ export async function reportsRoutes(app: FastifyInstance) {
           terminal_round_number: studyVersion.terminal_round_number,
           method_rationale: studyVersion.method_rationale,
           round_scope:
-            "Current MVP export summarizes the active StudyVersion and published Round 2 items. Later round-aware final reporting is added in a later ticket.",
+            "Current MVP export summarizes the active StudyVersion and published Round 2 items. Ticket 12 adds per-round summary endpoints for later rating rounds; final round-aware export remains a later ticket.",
           rating_aggregation:
-            "Per item, only the latest Round 2 rating from each participant is used for summary statistics and consensus classification.",
+            "Per item, only the latest rating from each participant in the summarized rating round is used for summary statistics and consensus classification.",
           consensus_definition: studyVersion.consensus_rule_json,
           consensus_operationalization:
             "For percent_agreement, consensus is computed as the percent of latest participant ratings greater than or equal to agreement_min_rating.",
@@ -338,9 +491,9 @@ export async function reportsRoutes(app: FastifyInstance) {
         limitations: [
           "Consensus does not imply correctness.",
           "This MVP export defaults agreement_min_rating to 7 when the consensus rule omits an explicit cutpoint.",
-          "Round 1 responses are stored as flexible JSON payloads, so this export treats any non-Round-2 payload in the version as Round 1 material for summary purposes.",
-          "Only published Round 2 items are included in item-level consensus and non-consensus summaries.",
-          "This export now includes locked study design fields, but it is not yet the final round-aware reporting layer for modified and classic study paths.",
+          "Round 1 responses are stored as flexible JSON payloads, so this export treats any non-rating payload in the version as Round 1 material for summary purposes.",
+          "This export endpoint remains Round 2-centered until the later final round-aware reporting ticket.",
+          "Use the per-round summary endpoint to inspect later rating rounds before final-report support is added.",
         ],
         summary: {
           study_format: studyVersion.study_format,
@@ -354,7 +507,7 @@ export async function reportsRoutes(app: FastifyInstance) {
           round2_submission_count: round2Responses.length,
           round2_unique_rated_item_count: new Set(
             round2Responses.flatMap((response) =>
-              isRound2RatingPayload(response.response_json)
+              isRatingRoundPayload(response.response_json, 2)
                 ? [response.response_json.item_id]
                 : []
             )
