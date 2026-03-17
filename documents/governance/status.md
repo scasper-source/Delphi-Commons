@@ -26,9 +26,12 @@ Ticket 13: Round-aware post-round reporting (Round 3 support completed via gener
 
 Ticket 14: Round 4 support for Classic Delphi (verified live with no new code changes required; ClassicDelphi study design allows Round 4 items/report routes and returns a final Round 4 report at terminal round 4; ModifiedDelphi Round 4 items/report routes remain blocked by declared study design boundary)
 
+Ticket 15: Final round-aware export/report (export-report now reflects the terminal round defined by the declared study design; ModifiedDelphi exports final round 3 and ClassicDelphi exports final round 4; report includes study format, planned round count, terminal round, method rationale, consensus rule, final-round item summaries, non-consensus items, limitations, config hash, dataset hash, auditability metadata, and audited export action)
+
 Next up:
 
-Ticket 15: Final round-aware export/report
+Then AI Ticket A onward
+
 
 
 

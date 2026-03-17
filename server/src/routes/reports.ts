@@ -581,6 +581,11 @@ export async function reportsRoutes(app: FastifyInstance) {
         a.required_role.localeCompare(b.required_role)
       );
 
+      const finalRoundNumber = studyVersion.terminal_round_number;
+      if (finalRoundNumber === null || !isAllowedRatingRound(studyVersion.study_format, finalRoundNumber)) {
+        return reply.code(409).send({ error: "terminal_round_not_valid_for_study_design" });
+      }
+
       const allItems = sortItems(
         listItems({
           study_id: studyId,
@@ -588,8 +593,8 @@ export async function reportsRoutes(app: FastifyInstance) {
         })
       );
 
-      const publishedRound2Items = allItems.filter(
-        (item) => item.round_number === 2 && item.status === "Published"
+      const publishedFinalRoundItems = allItems.filter(
+        (item) => item.round_number === finalRoundNumber && item.status === "Published"
       );
 
       const allResponses = sortResponses(
@@ -600,17 +605,19 @@ export async function reportsRoutes(app: FastifyInstance) {
       );
 
       const round1Responses = allResponses.filter(
-        (response) => !isRatingRoundPayload(response.response_json, 2)
+        (response) => !getAllowedRatingRounds(studyVersion.study_format).some((round) =>
+          isRatingRoundPayload(response.response_json, round)
+        )
       );
 
-      const round2Responses = allResponses.filter((response) =>
-        isRatingRoundPayload(response.response_json, 2)
+      const finalRoundResponses = allResponses.filter((response) =>
+        isRatingRoundPayload(response.response_json, finalRoundNumber)
       );
 
       const itemReports = buildRoundItemReports(
-        publishedRound2Items,
+        publishedFinalRoundItems,
         allResponses,
-        2,
+        finalRoundNumber,
         studyVersion.consensus_rule_json
       );
 
@@ -622,12 +629,17 @@ export async function reportsRoutes(app: FastifyInstance) {
         (item) => item.consensus.status === "undetermined"
       ).length;
 
+      const nonConsensusItems = itemReports.filter(
+        (item) => item.consensus.status === "non_consensus"
+      );
+
       const datasetHash = sha256Json({
         study,
         studyVersion,
         signoffs,
-        items: publishedRound2Items,
-        responses: allResponses,
+        round_number: finalRoundNumber,
+        items: publishedFinalRoundItems,
+        responses: finalRoundResponses,
       });
 
       const agreementMinRating = getAgreementMinRating(studyVersion.consensus_rule_json);
@@ -635,8 +647,11 @@ export async function reportsRoutes(app: FastifyInstance) {
       const report = {
         generated_at: new Date().toISOString(),
         generated_by: actor,
+        report_kind: "final_export_report",
+        report_stage: "final",
         study,
         study_version: studyVersion,
+        final_round_number: finalRoundNumber,
         hashes: {
           config_hash: studyVersion.config_hash,
           dataset_hash: datasetHash,
@@ -648,9 +663,9 @@ export async function reportsRoutes(app: FastifyInstance) {
           terminal_round_number: studyVersion.terminal_round_number,
           method_rationale: studyVersion.method_rationale,
           round_scope:
-            "Current MVP export summarizes the active StudyVersion and published Round 2 items. Ticket 12 adds per-round summary endpoints for later rating rounds; final round-aware export remains a later ticket.",
+            "This final export summarizes the terminal rating round defined by the declared StudyVersion design.",
           rating_aggregation:
-            "Per item, only the latest rating from each participant in the summarized rating round is used for summary statistics and consensus classification.",
+            "Per item, only the latest rating from each participant in the final summarized rating round is used for summary statistics and consensus classification.",
           consensus_definition: studyVersion.consensus_rule_json,
           consensus_operationalization:
             "For percent_agreement, consensus is computed as the percent of latest participant ratings greater than or equal to agreement_min_rating.",
@@ -658,31 +673,39 @@ export async function reportsRoutes(app: FastifyInstance) {
           rounds_note:
             "The consensus rule and declared study design are StudyVersion-level configuration chosen before Round 1 and intended to hold across later rounds in that StudyVersion.",
         },
+        auditability: {
+          config_hash: studyVersion.config_hash,
+          dataset_hash: datasetHash,
+          generated_at: new Date().toISOString(),
+          generated_by: actor,
+          signoff_count: signoffs.length,
+        },
         limitations: [
           "Consensus does not imply correctness.",
           "This MVP export defaults agreement_min_rating to 7 when the consensus rule omits an explicit cutpoint.",
           "Round 1 responses are stored as flexible JSON payloads, so this export treats any non-rating payload in the version as Round 1 material for summary purposes.",
-          "This export endpoint remains Round 2-centered until the later final round-aware reporting ticket.",
-          "Use the per-round summary endpoint to inspect later rating rounds before final-report support is added.",
+          "Only the latest rating from each participant in the final summarized round is counted for each item.",
         ],
         summary: {
           study_format: studyVersion.study_format,
           planned_round_count: studyVersion.planned_round_count,
           terminal_round_number: studyVersion.terminal_round_number,
-          published_round2_item_count: publishedRound2Items.length,
+          final_round_number: finalRoundNumber,
+          published_final_round_item_count: publishedFinalRoundItems.length,
           consensus_item_count: consensusCount,
           non_consensus_item_count: nonConsensusCount,
           undetermined_item_count: undeterminedCount,
           round1_response_count: round1Responses.length,
-          round2_submission_count: round2Responses.length,
-          round2_unique_rated_item_count: new Set(
-            round2Responses.flatMap((response) =>
-              isRatingRoundPayload(response.response_json, 2)
+          final_round_submission_count: finalRoundResponses.length,
+          final_round_unique_rated_item_count: new Set(
+            finalRoundResponses.flatMap((response) =>
+              isRatingRoundPayload(response.response_json, finalRoundNumber)
                 ? [response.response_json.item_id]
                 : []
             )
           ).size,
         },
+        non_consensus_items: nonConsensusItems,
         items: itemReports,
       };
 
@@ -693,9 +716,10 @@ export async function reportsRoutes(app: FastifyInstance) {
         details: {
           studyId,
           versionId,
+          final_round_number: finalRoundNumber,
           config_hash: studyVersion.config_hash,
           dataset_hash: datasetHash,
-          published_round2_item_count: publishedRound2Items.length,
+          published_final_round_item_count: publishedFinalRoundItems.length,
           study_format: studyVersion.study_format,
           terminal_round_number: studyVersion.terminal_round_number,
         },
@@ -705,4 +729,5 @@ export async function reportsRoutes(app: FastifyInstance) {
     }
   );
 }
+
 
