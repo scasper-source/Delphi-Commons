@@ -391,6 +391,176 @@ export async function reportsRoutes(app: FastifyInstance) {
   );
 
   app.get(
+    "/studies/:studyId/versions/:versionId/rounds/:roundNumber/report",
+    { preHandler: allowStaffRead },
+    async (req, reply) => {
+      const { studyId, versionId } = getStudyAndVersion(req.params);
+      const roundNumber = getRoundNumber(req.params);
+      const actor = getActor(req);
+
+      if (roundNumber === null) {
+        return reply.code(400).send({ error: "round_number_required" });
+      }
+
+      if (roundNumber < 2) {
+        return reply.code(400).send({ error: "rating_round_must_be_gte_2" });
+      }
+
+      const study = await getStudy(studyId);
+      if (!study) {
+        return reply.code(404).send({ error: "study_not_found" });
+      }
+
+      const studyVersion = await getStudyVersion(versionId);
+      if (!studyVersion || studyVersion.study_id !== studyId) {
+        return reply.code(404).send({ error: "study_version_not_found" });
+      }
+
+      if (!isAllowedRatingRound(studyVersion.study_format, roundNumber)) {
+        return reply.code(409).send({
+          error: "round_not_allowed_for_study_design",
+          allowed_rounds: getAllowedRatingRounds(studyVersion.study_format),
+        });
+      }
+
+      const signoffs = (await listSignoffs(versionId)).sort((a, b) =>
+        a.required_role.localeCompare(b.required_role)
+      );
+
+      const allItems = sortItems(
+        listItems({
+          study_id: studyId,
+          version_id: versionId,
+        })
+      );
+
+      const publishedRoundItems = allItems.filter(
+        (item) => item.round_number === roundNumber && item.status === "Published"
+      );
+
+      const allResponses = sortResponses(
+        listResponses({
+          study_id: studyId,
+          version_id: versionId,
+        })
+      );
+
+      const roundResponses = allResponses.filter((response) =>
+        isRatingRoundPayload(response.response_json, roundNumber)
+      );
+
+      const itemReports = buildRoundItemReports(
+        publishedRoundItems,
+        allResponses,
+        roundNumber,
+        studyVersion.consensus_rule_json
+      );
+
+      const consensusCount = itemReports.filter((item) => item.consensus.status === "consensus").length;
+      const nonConsensusCount = itemReports.filter(
+        (item) => item.consensus.status === "non_consensus"
+      ).length;
+      const undeterminedCount = itemReports.filter(
+        (item) => item.consensus.status === "undetermined"
+      ).length;
+
+      const datasetHash = sha256Json({
+        study,
+        studyVersion,
+        signoffs,
+        round_number: roundNumber,
+        items: publishedRoundItems,
+        responses: roundResponses,
+      });
+
+      const agreementMinRating = getAgreementMinRating(studyVersion.consensus_rule_json);
+      const isFinalForDeclaredDesign = roundNumber === studyVersion.terminal_round_number;
+      const reportStage = isFinalForDeclaredDesign ? "final" : "interim";
+
+      const report = {
+        generated_at: new Date().toISOString(),
+        generated_by: actor,
+        report_kind: "round_report",
+        report_stage: reportStage,
+        is_final_for_declared_design: isFinalForDeclaredDesign,
+        study,
+        study_version: studyVersion,
+        round_number: roundNumber,
+        hashes: {
+          config_hash: studyVersion.config_hash,
+          dataset_hash: datasetHash,
+        },
+        signoffs,
+        methods: {
+          study_format: studyVersion.study_format,
+          planned_round_count: studyVersion.planned_round_count,
+          terminal_round_number: studyVersion.terminal_round_number,
+          method_rationale: studyVersion.method_rationale,
+          round_scope:
+            "This report summarizes the specified published rating round within the active StudyVersion using the declared study design.",
+          rating_aggregation:
+            "Per item, only the latest rating from each participant in the summarized rating round is used for summary statistics and consensus classification.",
+          consensus_definition: studyVersion.consensus_rule_json,
+          consensus_operationalization:
+            "For percent_agreement, consensus is computed as the percent of latest participant ratings greater than or equal to agreement_min_rating.",
+          default_agreement_min_rating_used_when_missing: agreementMinRating,
+          rounds_note:
+            "The consensus rule and declared study design are StudyVersion-level configuration chosen before Round 1 and intended to hold across later rounds in that StudyVersion.",
+        },
+        statements: {
+          report_status:
+            isFinalForDeclaredDesign
+              ? `This report is final for the declared StudyVersion design because Round ${roundNumber} is the terminal round.`
+              : `This report is not final for the declared StudyVersion design because Round ${roundNumber} is earlier than the terminal round ${studyVersion.terminal_round_number}.`,
+          consensus_caution: "Consensus does not imply correctness.",
+        },
+        limitations: [
+          "Consensus does not imply correctness.",
+          "This MVP report defaults agreement_min_rating to 7 when the consensus rule omits an explicit cutpoint.",
+          "Only the latest rating from each participant in the summarized round is counted for each item.",
+          isFinalForDeclaredDesign
+            ? "This report is final for the declared StudyVersion design, but later governance or export enhancements may present the same underlying results in a different final-report format."
+            : "This report is interim relative to the declared StudyVersion design and should not be treated as the last word of the process.",
+        ],
+        summary: {
+          study_format: studyVersion.study_format,
+          planned_round_count: studyVersion.planned_round_count,
+          terminal_round_number: studyVersion.terminal_round_number,
+          published_item_count: publishedRoundItems.length,
+          consensus_item_count: consensusCount,
+          non_consensus_item_count: nonConsensusCount,
+          undetermined_item_count: undeterminedCount,
+          round_submission_count: roundResponses.length,
+          unique_rated_item_count: new Set(
+            roundResponses.flatMap((response) =>
+              isRatingRoundPayload(response.response_json, roundNumber)
+                ? [response.response_json.item_id]
+                : []
+            )
+          ).size,
+        },
+        items: itemReports,
+      };
+
+      await writeAuditEvent({
+        actor,
+        action: "round.report_get",
+        object: { type: "study_version", id: `${studyId}:${versionId}` },
+        details: {
+          studyId,
+          versionId,
+          round_number: roundNumber,
+          report_stage: reportStage,
+          config_hash: studyVersion.config_hash,
+          dataset_hash: datasetHash,
+          published_item_count: publishedRoundItems.length,
+        },
+      });
+
+      return reply.send({ report });
+    }
+  );
+  app.get(
     "/studies/:studyId/versions/:versionId/export-report",
     { preHandler: allowStaffRead },
     async (req, reply) => {
@@ -535,3 +705,4 @@ export async function reportsRoutes(app: FastifyInstance) {
     }
   );
 }
+

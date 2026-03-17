@@ -22,6 +22,10 @@ Ticket 11: Study design declaration (study_format, planned_round_count, terminal
 
 Ticket 12: Generalize the round model beyond Round 2 (generic later-round item listing, rating, feedback, and round summary endpoints added; rating rounds are gated by declared study design; Modified Delphi allows through Round 3 and blocks Round 4; round-aware summary generation added for later rating rounds)
 
+Ticket 13: Round-aware post-round reporting (Round 3 support completed via generic later-round infrastructure from Ticket 12; added staff-only GET /studies/:studyId/versions/:versionId/rounds/:roundNumber/report; report computes interim vs final from terminal_round_number, includes methods/config snapshot, limitations, consensus caution, round summaries, item-level summaries, and audit event round.report_get)
+
 Next up:
 
-Ticket 13: Round 3 rating + neutral feedback + interim reporting
+Ticket 14: Round 4 support for Classic Delphi
+
+
