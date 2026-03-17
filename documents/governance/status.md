@@ -24,8 +24,11 @@ Ticket 12: Generalize the round model beyond Round 2 (generic later-round item l
 
 Ticket 13: Round-aware post-round reporting (Round 3 support completed via generic later-round infrastructure from Ticket 12; added staff-only GET /studies/:studyId/versions/:versionId/rounds/:roundNumber/report; report computes interim vs final from terminal_round_number, includes methods/config snapshot, limitations, consensus caution, round summaries, item-level summaries, and audit event round.report_get)
 
+Ticket 14: Round 4 support for Classic Delphi (verified live with no new code changes required; ClassicDelphi study design allows Round 4 items/report routes and returns a final Round 4 report at terminal round 4; ModifiedDelphi Round 4 items/report routes remain blocked by declared study design boundary)
+
 Next up:
 
-Ticket 14: Round 4 support for Classic Delphi
+Ticket 15: Final round-aware export/report
+
 
 
