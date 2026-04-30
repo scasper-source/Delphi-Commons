@@ -4,6 +4,7 @@ import {
   listItems,
   getItem,
   updateItem,
+  type ItemProvenanceLink,
   type ItemRecord,
 } from "../stores/itemStore.js";
 import {
@@ -12,11 +13,32 @@ import {
   createSplitAction,
   listSplitActions,
 } from "../stores/mergeActionStore.js";
+import { getAISuggestionPublicationGate } from "../stores/aiSuggestionStore.js";
 import { requireRole, getActor } from "../middleware/auth.js";
 import { writeAuditEvent } from "../core/audit.js";
 
 export async function itemsRoutes(app: FastifyInstance) {
   const allowCuration = requireRole(["owner", "methods_steward"]);
+
+  function parseManualProvenanceLinks(value: unknown): ItemProvenanceLink[] {
+    if (!Array.isArray(value)) return [];
+
+    return value.flatMap((entry) => {
+      if (!entry || typeof entry !== "object") return [];
+      const rec = entry as Record<string, unknown>;
+      if (rec.source_type !== "response" && rec.source_type !== "item") return [];
+      const sourceId = String(rec.source_id ?? "").trim();
+      const sourceRoundNumber = Number(rec.source_round_number);
+      if (!sourceId || !Number.isInteger(sourceRoundNumber) || sourceRoundNumber < 1) return [];
+
+      return [{
+        source_type: rec.source_type,
+        source_id: sourceId,
+        source_round_number: sourceRoundNumber,
+        excerpt: typeof rec.excerpt === "string" ? rec.excerpt : null,
+      }];
+    });
+  }
 
   app.post(
     "/studies/:studyId/versions/:versionId/items",
@@ -40,6 +62,11 @@ export async function itemsRoutes(app: FastifyInstance) {
           : "PanelDerived",
         created_from: "manual",
         created_by_user_id: actor.userId,
+        ai_provenance_links: parseManualProvenanceLinks(body.provenance_links ?? body.ai_provenance_links),
+        ai_provenance_rationale:
+          typeof body.rationale === "string" && body.rationale.trim() !== ""
+            ? body.rationale.trim()
+            : null,
       });
 
       await writeAuditEvent({
@@ -52,6 +79,7 @@ export async function itemsRoutes(app: FastifyInstance) {
           round_number: item.round_number,
           provenance_type: item.provenance_type,
           status: item.status,
+          provenance_source_ids: item.ai_provenance_links.map((link) => link.source_id),
         },
       });
 
@@ -99,6 +127,58 @@ export async function itemsRoutes(app: FastifyInstance) {
         existing.version_id !== String(versionId)
       ) {
         return reply.code(404).send({ error: "item_not_found" });
+      }
+
+      const aiSuggestionIds = new Set<string>();
+
+      if (existing.created_from === "ai") {
+        if (existing.source_ai_suggestion_id) {
+          aiSuggestionIds.add(existing.source_ai_suggestion_id);
+        } else {
+          await writeAuditEvent({
+            actor,
+            action: "item.publish_blocked_ai_source_missing",
+            object: { type: "item", id: String(itemId) },
+            details: { studyId, versionId },
+          });
+
+          return reply.code(409).send({ error: "ai_source_suggestion_required" });
+        }
+      }
+
+      for (const revision of existing.ai_assisted_revisions) {
+        aiSuggestionIds.add(revision.suggestion_id);
+      }
+
+      for (const suggestionId of aiSuggestionIds) {
+        const gate = getAISuggestionPublicationGate({
+          suggestion_id: suggestionId,
+          study_id: String(studyId),
+          version_id: String(versionId),
+        });
+
+        if (!gate.ok) {
+          await writeAuditEvent({
+            actor,
+            action: "item.publish_blocked_ai_gate",
+            object: { type: "item", id: String(itemId) },
+            details: {
+              studyId,
+              versionId,
+              ai_suggestion_id: suggestionId,
+              error: gate.error,
+              hasOwner: gate.hasOwner ?? false,
+              hasMethodsSteward: gate.hasMethodsSteward ?? false,
+            },
+          });
+
+          return reply.code(409).send({
+            error: gate.error,
+            ai_suggestion_id: suggestionId,
+            hasOwner: gate.hasOwner ?? false,
+            hasMethodsSteward: gate.hasMethodsSteward ?? false,
+          });
+        }
       }
 
       const updated = updateItem(String(itemId), { status: "Published" });

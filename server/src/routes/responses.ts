@@ -1,8 +1,15 @@
 import type { FastifyInstance } from "fastify";
 import { createResponse, listResponses, type ResponseRecord } from "../stores/responseStore.js";
 import { hasActiveConsent } from "../stores/consentStore.js";
-import { getStudyVersion } from "../studies/store.js";
+import { getStudyVersion, updateStudyVersion } from "../studies/store.js";
 import { getItem, listItems } from "../stores/itemStore.js";
+import {
+  getRoundConfig,
+  listRoundConfigs,
+  updateRoundConfigStatus,
+  upsertRoundConfig,
+  type RoundTaskType,
+} from "../stores/roundConfigStore.js";
 
 import { requireRole, getActor } from "../middleware/auth.js";
 import { writeAuditEvent } from "../core/audit.js";
@@ -141,10 +148,239 @@ function isAllowedRatingRound(studyFormat: string | null, roundNumber: number): 
   return getAllowedRatingRounds(studyFormat).includes(roundNumber);
 }
 
+function isAllowedConfiguredRound(studyFormat: string | null, roundNumber: number): boolean {
+  if (roundNumber === 1) return true;
+  return isAllowedRatingRound(studyFormat, roundNumber);
+}
+
+function isRoundTaskType(value: unknown): value is RoundTaskType {
+  return value === "open_text" || value === "rating" || value === "ranking" || value === "confirmation";
+}
+
+function hasText(value: unknown): value is string {
+  return typeof value === "string" && value.trim().length > 0;
+}
+
 export async function responsesRoutes(app: FastifyInstance) {
   const allowSubmit = requireRole(["participant", "owner", "methods_steward"]);
   const allowStaffRead = requireRole(["owner", "methods_steward"]);
   const allowParticipantOrStaff = requireRole(["participant", "owner", "methods_steward"]);
+
+  app.get(
+    "/studies/:studyId/versions/:versionId/round-configs",
+    { preHandler: allowParticipantOrStaff },
+    async (req, reply) => {
+      const { studyId, versionId } = getStudyAndVersion(req.params);
+      const actor = getActor(req);
+      const configs = listRoundConfigs({ study_id: studyId, version_id: versionId });
+
+      await writeAuditEvent({
+        actor,
+        action: "round.config.list",
+        object: { type: "study_version", id: `${studyId}:${versionId}` },
+        details: { studyId, versionId, count: configs.length },
+      });
+
+      return reply.send({ round_configs: configs });
+    },
+  );
+
+  app.get(
+    "/studies/:studyId/versions/:versionId/rounds/:roundNumber/config",
+    { preHandler: allowParticipantOrStaff },
+    async (req, reply) => {
+      const { studyId, versionId } = getStudyAndVersion(req.params);
+      const roundNumber = getRoundNumber(req.params);
+      const actor = getActor(req);
+
+      if (roundNumber === null) return reply.code(400).send({ error: "round_number_required" });
+
+      const config = getRoundConfig({ study_id: studyId, version_id: versionId, round_number: roundNumber });
+
+      await writeAuditEvent({
+        actor,
+        action: "round.config.get",
+        object: { type: "study_version", id: `${studyId}:${versionId}` },
+        details: { studyId, versionId, round_number: roundNumber, found: Boolean(config) },
+      });
+
+      if (!config) return reply.code(404).send({ error: "round_config_not_found" });
+      return reply.send({ round_config: config });
+    },
+  );
+
+  app.patch(
+    "/studies/:studyId/versions/:versionId/rounds/:roundNumber/config",
+    { preHandler: allowStaffRead },
+    async (req, reply) => {
+      const { studyId, versionId } = getStudyAndVersion(req.params);
+      const roundNumber = getRoundNumber(req.params);
+      const actor = getActor(req);
+      const body = (req.body ?? {}) as Record<string, unknown>;
+
+      if (roundNumber === null) return reply.code(400).send({ error: "round_number_required" });
+
+      const studyVersion = await getStudyVersion(versionId);
+      if (!studyVersion || studyVersion.study_id !== studyId) {
+        return reply.code(404).send({ error: "study_version_not_found" });
+      }
+
+      if (!isRoundTaskType(body.task_type)) return reply.code(400).send({ error: "invalid_task_type" });
+      if (!hasText(body.title)) return reply.code(400).send({ error: "title_required" });
+      if (!hasText(body.prompt)) return reply.code(400).send({ error: "prompt_required" });
+      if (!hasText(body.participant_instructions)) {
+        return reply.code(400).send({ error: "participant_instructions_required" });
+      }
+      if (!hasText(body.reminder_subject)) return reply.code(400).send({ error: "reminder_subject_required" });
+      if (!hasText(body.reminder_body)) return reply.code(400).send({ error: "reminder_body_required" });
+
+      const responseWindowDays = Number(body.response_window_days ?? 7);
+      if (!Number.isInteger(responseWindowDays) || responseWindowDays < 1 || responseWindowDays > 60) {
+        return reply.code(400).send({ error: "invalid_response_window_days" });
+      }
+
+      if (roundNumber === 1 && body.task_type !== "open_text") {
+        return reply.code(400).send({ error: "round1_must_be_open_text_for_current_setup" });
+      }
+
+      const config = upsertRoundConfig({
+        study_id: studyId,
+        version_id: versionId,
+        round_number: roundNumber,
+        task_type: body.task_type,
+        title: body.title.trim(),
+        prompt: body.prompt.trim(),
+        participant_instructions: body.participant_instructions.trim(),
+        response_window_days: responseWindowDays,
+        reminder_subject: body.reminder_subject.trim(),
+        reminder_body: body.reminder_body.trim(),
+        controlled_feedback_enabled: Boolean(body.controlled_feedback_enabled),
+        ai_curation_enabled: Boolean(body.ai_curation_enabled),
+        status: body.status === "Ready" || body.status === "Open" || body.status === "Closed" ? body.status : "Draft",
+      });
+
+      await writeAuditEvent({
+        actor,
+        action: "round.config.upsert",
+        object: { type: "study_version", id: `${studyId}:${versionId}` },
+        details: { studyId, versionId, round_number: roundNumber, task_type: config.task_type },
+      });
+
+      return reply.send({ round_config: config });
+    },
+  );
+
+  app.post(
+    "/studies/:studyId/versions/:versionId/rounds/:roundNumber/open",
+    { preHandler: allowStaffRead },
+    async (req, reply) => {
+      const { studyId, versionId } = getStudyAndVersion(req.params);
+      const roundNumber = getRoundNumber(req.params);
+      const actor = getActor(req);
+
+      if (roundNumber === null) return reply.code(400).send({ error: "round_number_required" });
+
+      const studyVersion = await getStudyVersion(versionId);
+      if (!studyVersion || studyVersion.study_id !== studyId) {
+        return reply.code(404).send({ error: "study_version_not_found" });
+      }
+
+      if (studyVersion.status !== "Active") {
+        return reply.code(409).send({ error: "study_version_not_active" });
+      }
+
+      if (!isAllowedConfiguredRound(studyVersion.study_format, roundNumber)) {
+        return reply.code(409).send({
+          error: "round_not_allowed_for_study_design",
+          allowed_rounds: [1, ...getAllowedRatingRounds(studyVersion.study_format)],
+        });
+      }
+
+      const config = getRoundConfig({ study_id: studyId, version_id: versionId, round_number: roundNumber });
+      if (!config) return reply.code(409).send({ error: "round_config_required" });
+      if (config.status === "Closed") return reply.code(409).send({ error: "round_already_closed" });
+
+      const openRound = listRoundConfigs({ study_id: studyId, version_id: versionId }).find(
+        (entry) => entry.status === "Open" && entry.round_number !== roundNumber,
+      );
+      if (openRound) {
+        return reply.code(409).send({
+          error: "another_round_open",
+          open_round_number: openRound.round_number,
+        });
+      }
+
+      if (roundNumber > 1) {
+        const previous = getRoundConfig({ study_id: studyId, version_id: versionId, round_number: roundNumber - 1 });
+        if (!previous || previous.status !== "Closed") {
+          return reply.code(409).send({ error: "previous_round_must_be_closed" });
+        }
+
+        const publishedItems = listItems({ study_id: studyId, version_id: versionId }).filter(
+          (item) => item.round_number === roundNumber && item.status === "Published",
+        );
+        if (publishedItems.length === 0) {
+          return reply.code(409).send({ error: "published_items_required_for_round" });
+        }
+      }
+
+      if (roundNumber === 1 && studyVersion.opened_round1_at === null) {
+        await updateStudyVersion(versionId, { opened_round1_at: new Date().toISOString() });
+      }
+
+      const updated = updateRoundConfigStatus({
+        study_id: studyId,
+        version_id: versionId,
+        round_number: roundNumber,
+        status: "Open",
+      });
+
+      await writeAuditEvent({
+        actor,
+        action: "round.open",
+        object: { type: "study_version", id: `${studyId}:${versionId}` },
+        details: { studyId, versionId, round_number: roundNumber },
+      });
+
+      return reply.send({ round_config: updated });
+    },
+  );
+
+  app.post(
+    "/studies/:studyId/versions/:versionId/rounds/:roundNumber/close",
+    { preHandler: allowStaffRead },
+    async (req, reply) => {
+      const { studyId, versionId } = getStudyAndVersion(req.params);
+      const roundNumber = getRoundNumber(req.params);
+      const actor = getActor(req);
+
+      if (roundNumber === null) return reply.code(400).send({ error: "round_number_required" });
+
+      const studyVersion = await getStudyVersion(versionId);
+      if (!studyVersion || studyVersion.study_id !== studyId) {
+        return reply.code(404).send({ error: "study_version_not_found" });
+      }
+
+      const config = getRoundConfig({ study_id: studyId, version_id: versionId, round_number: roundNumber });
+      if (!config) return reply.code(409).send({ error: "round_config_required" });
+
+      const updated = updateRoundConfigStatus({
+        study_id: studyId,
+        version_id: versionId,
+        round_number: roundNumber,
+        status: "Closed",
+      });
+
+      await writeAuditEvent({
+        actor,
+        action: "round.close",
+        object: { type: "study_version", id: `${studyId}:${versionId}` },
+        details: { studyId, versionId, round_number: roundNumber },
+      });
+
+      return reply.send({ round_config: updated });
+    },
+  );
 
   app.post(
     "/studies/:studyId/versions/:versionId/responses",
@@ -176,6 +412,14 @@ export async function responsesRoutes(app: FastifyInstance) {
           },
         });
 
+        return reply.code(409).send({ error: "round1_not_open" });
+      }
+
+      const roundOneConfig = getRoundConfig({ study_id: studyId, version_id: versionId, round_number: 1 });
+      if (!roundOneConfig) {
+        return reply.code(409).send({ error: "round1_config_required" });
+      }
+      if (roundOneConfig.status !== "Open") {
         return reply.code(409).send({ error: "round1_not_open" });
       }
 
@@ -329,6 +573,11 @@ export async function responsesRoutes(app: FastifyInstance) {
         });
       }
 
+      const roundConfig = getRoundConfig({ study_id: studyId, version_id: versionId, round_number: roundNumber });
+      if (!roundConfig || roundConfig.status !== "Open") {
+        return reply.code(409).send({ error: "round_not_open" });
+      }
+
       const publishedItems = listItems({
         study_id: studyId,
         version_id: versionId,
@@ -419,6 +668,11 @@ export async function responsesRoutes(app: FastifyInstance) {
 
       if (studyVersion.status !== "Active") {
         return reply.code(409).send({ error: "study_version_not_active" });
+      }
+
+      const roundConfig = getRoundConfig({ study_id: studyId, version_id: versionId, round_number: roundNumber });
+      if (!roundConfig || roundConfig.status !== "Open") {
+        return reply.code(409).send({ error: "round_not_open" });
       }
 
       const consentOk = hasActiveConsent({

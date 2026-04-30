@@ -3,6 +3,7 @@
 
 import { promises as fs } from "node:fs";
 import path from "node:path";
+import { getDataDir } from "../core/paths.js";
 import type {
   Study,
   StudyAssignment,
@@ -17,7 +18,7 @@ type DbShape = {
   signoffs: StudyVersionSignoff[];
 };
 
-const DATA_DIR = path.resolve(process.cwd(), "data");
+const DATA_DIR = getDataDir();
 const DB_FILE = path.join(DATA_DIR, "studies.db.json");
 
 async function ensureDb(): Promise<void> {
@@ -45,7 +46,12 @@ async function writeDb(db: DbShape): Promise<void> {
   await ensureDb();
   const tmp = DB_FILE + ".tmp";
   await fs.writeFile(tmp, JSON.stringify(db, null, 2), "utf8");
-  await fs.rename(tmp, DB_FILE);
+  try {
+    await fs.rename(tmp, DB_FILE);
+  } catch {
+    await fs.copyFile(tmp, DB_FILE);
+    await fs.unlink(tmp).catch(() => {});
+  }
 }
 
 export async function createStudy(study: Study, ownerAssignment: StudyAssignment): Promise<void> {
@@ -55,9 +61,31 @@ export async function createStudy(study: Study, ownerAssignment: StudyAssignment
   await writeDb(db);
 }
 
+export async function listStudies(options: { includeArchived?: boolean } = {}): Promise<Study[]> {
+  const db = await readDb();
+  return db.studies
+    .filter(study => options.includeArchived || !study.archived_at)
+    .sort((a, b) => b.created_at.localeCompare(a.created_at));
+}
+
 export async function getStudy(studyId: string): Promise<Study | null> {
   const db = await readDb();
   return db.studies.find(s => s.id === studyId) ?? null;
+}
+
+export async function updateStudy(studyId: string, patch: Partial<Study>): Promise<Study> {
+  const db = await readDb();
+  const idx = db.studies.findIndex(s => s.id === studyId);
+  if (idx === -1) throw new Error("study_not_found");
+
+  const existing = db.studies[idx];
+  if (!existing) throw new Error("study_not_found");
+
+  const updated: Study = { ...existing, ...patch, id: studyId };
+  db.studies[idx] = updated;
+
+  await writeDb(db);
+  return updated;
 }
 
 export async function addAssignment(assignment: StudyAssignment): Promise<void> {

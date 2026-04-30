@@ -1,10 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import crypto from "node:crypto";
-import { fileURLToPath } from "node:url";
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+import { getDataDir } from "../core/paths.js";
 
 export type ParticipantMaster = {
   participant_id: string;
@@ -22,10 +19,7 @@ type StoreShape = {
 };
 
 const STORE_PATH = path.resolve(
-  __dirname,
-  "..",
-  "..",
-  "data",
+  getDataDir(),
   "identity",
   "participant_master.json"
 );

@@ -1,10 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import crypto from "node:crypto";
-import { fileURLToPath } from "node:url";
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+import { getDataDir } from "../core/paths.js";
 
 export type ResponseRecord = {
   response_id: string;
@@ -12,7 +9,7 @@ export type ResponseRecord = {
   study_id: string;
   version_id: string;
 
-  // Linkage only — no identity fields allowed here.
+  // Linkage only - no identity fields allowed here.
   participant_id: string;
 
   // Flexible payload (Round 1 open text now; more later)
@@ -26,10 +23,7 @@ type StoreShape = {
 };
 
 const STORE_PATH = path.resolve(
-  __dirname,
-  "..",
-  "..",
-  "data",
+  getDataDir(),
   "responses",
   "responses.json"
 );

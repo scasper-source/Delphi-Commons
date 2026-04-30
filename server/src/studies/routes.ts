@@ -18,10 +18,12 @@ import type {
 } from "./types.js";
 import {
   createStudy,
+  listStudies,
   getStudy,
   createStudyVersion,
   getStudyVersion,
   listStudyVersions,
+  updateStudy,
   updateStudyVersion,
   upsertSignoff,
   listSignoffs,
@@ -62,7 +64,114 @@ function hasNonEmptyText(value: unknown): value is string {
   return typeof value === "string" && value.trim().length > 0;
 }
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value) && typeof value === "object" && !Array.isArray(value);
+}
+
 export async function studiesRoutes(app: FastifyInstance) {
+  // GET /studies  (staff roles only)
+  app.get("/studies", async (req, reply) => {
+    const actor = actorFromHeaders(req);
+    requireHeaderRole(actor.role, ["owner", "methods_steward", "privacy_lead", "admin"]);
+
+    const query = (req.query ?? {}) as { include_archived?: string };
+    const includeArchived = query.include_archived === "true";
+    const studies = await listStudies({ includeArchived });
+
+    await writeAuditEvent({
+      action: "study.list",
+      actor,
+      object: { type: "study" },
+      details: { count: studies.length, include_archived: includeArchived },
+    });
+
+    return reply.send({ studies });
+  });
+
+  // GET /studies/:studyId
+  app.get("/studies/:studyId", async (req, reply) => {
+    const actor = actorFromHeaders(req);
+    requireHeaderRole(actor.role, ["owner", "methods_steward", "privacy_lead", "admin"]);
+
+    const { studyId } = req.params as any;
+    const study = await getStudy(studyId);
+    if (!study) return reply.code(404).send({ error: "study_not_found" });
+
+    await writeAuditEvent({
+      action: "study.get",
+      actor,
+      object: { type: "study", id: studyId },
+      details: { study_id: studyId },
+    });
+
+    return reply.send({ study });
+  });
+
+  // GET /studies/:studyId/versions
+  app.get("/studies/:studyId/versions", async (req, reply) => {
+    const actor = actorFromHeaders(req);
+    requireHeaderRole(actor.role, ["owner", "methods_steward", "privacy_lead", "admin"]);
+
+    const { studyId } = req.params as any;
+    const study = await getStudy(studyId);
+    if (!study) return reply.code(404).send({ error: "study_not_found" });
+
+    const studyVersions = await listStudyVersions(studyId);
+
+    await writeAuditEvent({
+      action: "study_version.list",
+      actor,
+      object: { type: "study", id: studyId },
+      details: { study_id: studyId, count: studyVersions.length },
+    });
+
+    return reply.send({ studyVersions });
+  });
+
+  // GET /studies/:studyId/versions/:versionId
+  app.get("/studies/:studyId/versions/:versionId", async (req, reply) => {
+    const actor = actorFromHeaders(req);
+    requireHeaderRole(actor.role, ["owner", "methods_steward", "privacy_lead", "admin"]);
+
+    const { studyId, versionId } = req.params as any;
+    const studyVersion = await getStudyVersion(versionId);
+    if (!studyVersion || studyVersion.study_id !== studyId) {
+      return reply.code(404).send({ error: "study_version_not_found" });
+    }
+
+    await writeAuditEvent({
+      action: "study_version.get",
+      actor,
+      object: { type: "study_version", id: versionId },
+      details: { study_id: studyId },
+    });
+
+    return reply.send({ studyVersion });
+  });
+
+  // GET /studies/:studyId/versions/:versionId/signoffs
+  app.get("/studies/:studyId/versions/:versionId/signoffs", async (req, reply) => {
+    const actor = actorFromHeaders(req);
+    requireHeaderRole(actor.role, ["owner", "methods_steward", "privacy_lead", "admin"]);
+
+    const { studyId, versionId } = req.params as any;
+    const studyVersion = await getStudyVersion(versionId);
+    if (!studyVersion || studyVersion.study_id !== studyId) {
+      return reply.code(404).send({ error: "study_version_not_found" });
+    }
+
+    const signoffs = await listSignoffs(versionId);
+
+    await writeAuditEvent({
+      action: "study_version.signoff_list",
+      actor,
+      object: { type: "study_version", id: versionId },
+      details: { study_id: studyId, count: signoffs.length },
+    });
+
+    return reply.send({ signoffs });
+  });
+
   // POST /studies  (Owner/admin only)
   app.post("/studies", async (req, reply) => {
     const actor = actorFromHeaders(req);
@@ -96,6 +205,36 @@ export async function studiesRoutes(app: FastifyInstance) {
     });
 
     return reply.code(201).send({ study });
+  });
+
+  // PATCH /studies/:studyId/archive
+  // Hides a study from default saved-study lists while preserving records and audit history.
+  app.patch("/studies/:studyId/archive", async (req, reply) => {
+    const actor = actorFromHeaders(req);
+    requireHeaderRole(actor.role, ["owner", "admin"]);
+
+    const { studyId } = req.params as any;
+    const study = await getStudy(studyId);
+    if (!study) return reply.code(404).send({ error: "study_not_found" });
+
+    if (study.archived_at) {
+      return reply.code(409).send({ error: "study_already_archived" });
+    }
+
+    const archivedAt = new Date().toISOString();
+    const updated = await updateStudy(studyId, {
+      archived_at: archivedAt,
+      archived_by: actor.userId,
+    });
+
+    await writeAuditEvent({
+      action: "study.archive",
+      actor,
+      object: { type: "study", id: studyId },
+      details: { study_id: studyId, archived_at: archivedAt },
+    });
+
+    return reply.send({ study: updated });
   });
 
   // PATCH /studies/:studyId/versions/:versionId/design
@@ -202,6 +341,48 @@ export async function studiesRoutes(app: FastifyInstance) {
     return reply.send({ studyVersion: updated });
   });
 
+  // PATCH /studies/:studyId/versions/:versionId/wizard-packet
+  // Stores the full Study Builder packet while the version is still draft.
+  app.patch("/studies/:studyId/versions/:versionId/wizard-packet", async (req, reply) => {
+    const actor = actorFromHeaders(req);
+    requireHeaderRole(actor.role, ["owner", "admin"]);
+
+    const { studyId, versionId } = req.params as any;
+    const v = await getStudyVersion(versionId);
+
+    if (!v || v.study_id !== studyId) return reply.code(404).send({ error: "study_version_not_found" });
+
+    if (v.status !== "Draft") return reply.code(409).send({ error: "study_design_packet_locked" });
+
+    const body = (req.body ?? {}) as { study_design_packet_json?: unknown };
+    const packet = body.study_design_packet_json;
+    if (!isRecord(packet)) {
+      return reply.code(400).send({ error: "study_design_packet_required" });
+    }
+
+    const title = typeof packet.title === "string" ? packet.title.trim() : "";
+    const description = typeof packet.description === "string" ? packet.description.trim() : "";
+    if (title) {
+      await updateStudy(studyId, {
+        title,
+        ...(description ? { description } : {}),
+      });
+    }
+
+    const updated = await updateStudyVersion(versionId, {
+      study_design_packet_json: packet,
+    });
+
+    await writeAuditEvent({
+      action: "study_version.save_wizard_packet",
+      actor,
+      object: { type: "study_version", id: versionId },
+      details: { study_id: studyId, synced_study_title: Boolean(title) },
+    });
+
+    return reply.send({ studyVersion: updated });
+  });
+
   // POST /studies/:studyId/versions  (Owner/admin only)
   app.post("/studies/:studyId/versions", async (req, reply) => {
     const actor = actorFromHeaders(req);
@@ -231,6 +412,7 @@ export async function studiesRoutes(app: FastifyInstance) {
       consensus_rule_json: null,
       feedback_config_json: null,
       retention_policy_json: null,
+      study_design_packet_json: null,
 
       config_hash: null,
       opened_round1_at: null,
@@ -282,6 +464,10 @@ export async function studiesRoutes(app: FastifyInstance) {
       return reply.code(409).send({ error: "consensus_rule_missing" });
     }
 
+    if (v.study_design_packet_json === null) {
+      return reply.code(409).send({ error: "study_design_packet_missing" });
+    }
+
     const configHash = sha256Json({
       study_id: v.study_id,
       version_number: v.version_number,
@@ -292,6 +478,7 @@ export async function studiesRoutes(app: FastifyInstance) {
       consensus_rule_json: v.consensus_rule_json,
       feedback_config_json: v.feedback_config_json,
       retention_policy_json: v.retention_policy_json,
+      study_design_packet_json: v.study_design_packet_json,
     });
 
     const updated = await updateStudyVersion(versionId, {

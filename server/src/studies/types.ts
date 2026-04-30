@@ -24,6 +24,8 @@ export interface Study {
   description: string;
   created_by: string;
   created_at: string; // ISO timestamp
+  archived_at?: string;
+  archived_by?: string;
 }
 
 export interface StudyVersion {
@@ -42,6 +44,7 @@ export interface StudyVersion {
   consensus_rule_json: unknown | null;
   feedback_config_json: unknown | null;
   retention_policy_json: unknown | null;
+  study_design_packet_json: unknown | null;
 
   config_hash: string | null;
   opened_round1_at: string | null;
