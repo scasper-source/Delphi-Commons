@@ -57,6 +57,20 @@ function canAccessIdentityMap(role) {
   return role === "data_custodian" || role === "security_privacy_lead";
 }
 
+function luminance(hex) {
+  const rgb = hex.match(/[0-9a-f]{2}/gi).map((value) => Number.parseInt(value, 16) / 255);
+  const linear = rgb.map((channel) =>
+    channel <= 0.03928 ? channel / 12.92 : ((channel + 0.055) / 1.055) ** 2.4
+  );
+  return 0.2126 * linear[0] + 0.7152 * linear[1] + 0.0722 * linear[2];
+}
+
+function contrastRatio(foreground, background) {
+  const fg = luminance(foreground);
+  const bg = luminance(background);
+  return (Math.max(fg, bg) + 0.05) / (Math.min(fg, bg) + 0.05);
+}
+
 test("cannot launch without governance signoff and completed checklist", () => {
   const draftStudy = {
     ownerSigned: true,
@@ -135,4 +149,29 @@ test("frontend does not use unsafe HTML sinks or browser storage for sensitive d
     assert.equal(content.includes("localStorage"), false, `${file} uses localStorage`);
     assert.equal(content.includes("sessionStorage"), false, `${file} uses sessionStorage`);
   }
+});
+
+test("core UI colors meet WCAG AA contrast for normal text", () => {
+  const pairs = [
+    ["#1f2a2e", "#ffffff", "body text on panel"],
+    ["#5d6d70", "#ffffff", "muted text on panel"],
+    ["#5d6d70", "#f6f7f4", "eyebrow text on page background"],
+    ["#ffffff", "#19343a", "primary button text"],
+    ["#edf4f2", "#19343a", "sidebar navigation text"],
+    ["#c9d9d6", "#19343a", "sidebar secondary text"],
+  ];
+
+  for (const [foreground, background, label] of pairs) {
+    assert.ok(
+      contrastRatio(foreground, background) >= 4.5,
+      `${label} contrast is below WCAG AA`,
+    );
+  }
+});
+
+test("visible focus style is defined for keyboard users", () => {
+  const css = fs.readFileSync(path.join(appRoot, "src", "App.css"), "utf8");
+  assert.match(css, /:focus-visible/);
+  assert.match(css, /outline:\s*3px\s+solid/);
+  assert.match(css, /outline-offset:\s*3px/);
 });

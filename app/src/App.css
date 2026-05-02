@@ -56,7 +56,7 @@
   letter-spacing: 0;
   font-size: 0.72rem;
   font-weight: 800;
-  color: #69797a;
+  color: #5d6d70;
 }
 
 .role-picker span {
@@ -904,6 +904,16 @@
 .danger-button:hover,
 .danger-button:focus-visible {
   background: #fae8e6;
+}
+
+button:focus-visible,
+select:focus-visible,
+input:focus-visible,
+textarea:focus-visible,
+summary:focus-visible,
+[tabindex]:focus-visible {
+  outline: 3px solid #2f6f73;
+  outline-offset: 3px;
 }
 
 .plain-list {

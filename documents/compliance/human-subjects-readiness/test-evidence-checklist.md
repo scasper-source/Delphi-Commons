@@ -21,7 +21,7 @@ This checklist defines the evidence required before calling eDelphi human-subjec
 | Backend TypeScript build | Passing through server test | `cd server && npm.cmd run build` | Keep in CI/release script. |
 | Audit integrity test | Covered in backend road test | `server/tests/roadtest.test.mjs` | Add standalone audit package export test. |
 | Browser-level participant dry run | Manual, incomplete | In-app browser testing | Convert to Playwright or equivalent E2E. |
-| Accessibility audit | Not complete | None | Add automated and manual WCAG evidence. |
+| Accessibility audit | Partial | `documents/compliance/accessibility/*`; `app/tests/policyGates.test.mjs` | Add human NVDA/VoiceOver review and active participant task screenshots. |
 | Security verification | Partial | Backend negative tests plus Phase 8 ASVS-oriented controls | Add CI dependency scanning, deployment secret review, and external security review evidence. |
 | Backup/restore rehearsal | Partial | `server/tests/roadtest.test.mjs` | Add production runbook and off-host restore rehearsal. |
 
@@ -148,12 +148,14 @@ Current automated Phase 8 coverage includes: security headers on API responses, 
 
 - [ ] Keyboard-only flow works for Study Builder, Governance, Rounds, Curation, Participant Portal, Reporting, Admin/Security.
 - [ ] Screen reader labels are meaningful for participant consent and round tasks.
-- [ ] Color contrast meets WCAG 2.2 AA.
-- [ ] Focus indicators are visible.
+- [x] Core color contrast meets WCAG 2.2 AA for tested palette pairs.
+- [x] Focus indicators are visible for keyboard users.
 - [ ] Error messages are associated with inputs.
 - [ ] Mobile participant flow is usable at common viewport widths.
-- [ ] No text overlap or clipped controls in supported viewports.
+- [x] No text overlap or clipped controls in sampled desktop/mobile viewports.
 - [ ] Time limits, deadlines, and reminders are understandable and accessible.
+
+Current Phase 9 evidence includes: accessibility checklist, keyboard walkthrough, screen-reader notes, mobile screenshot evidence, copy review log, automated browser validation JSON, mobile/desktop screenshots, and app tests for contrast, focus style, unsafe HTML/storage, and forbidden participant language.
 
 ### Backup, Recovery, And Operations
 
