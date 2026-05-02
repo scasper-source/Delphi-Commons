@@ -1,7 +1,6 @@
-import fs from "node:fs";
-import path from "node:path";
 import crypto from "node:crypto";
-import { getDataDir } from "../core/paths.js";
+import { JsonCollection } from "../core/jsonCollection.js";
+import { withDatabaseTransaction } from "../core/database.js";
 
 export type ConsentVersion = {
   consent_version_id: string;
@@ -21,34 +20,11 @@ export type ConsentRecord = {
   withdrew_at: string | null;
 };
 
-type StoreShape = {
-  consent_versions: ConsentVersion[];
-  consent_records: ConsentRecord[];
-};
+const consentVersions = new JsonCollection<ConsentVersion>("consent_versions");
+const consentRecords = new JsonCollection<ConsentRecord>("consent_records");
 
-const STORE_PATH = path.resolve(
-  getDataDir(),
-  "consent",
-  "consent.json"
-);
-
-function ensureStore(): void {
-  const dir = path.dirname(STORE_PATH);
-  if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
-  if (!fs.existsSync(STORE_PATH)) {
-    const init: StoreShape = { consent_versions: [], consent_records: [] };
-    fs.writeFileSync(STORE_PATH, JSON.stringify(init, null, 2), "utf-8");
-  }
-}
-
-function loadStore(): StoreShape {
-  ensureStore();
-  const raw = fs.readFileSync(STORE_PATH, "utf-8");
-  return JSON.parse(raw) as StoreShape;
-}
-
-function saveStore(store: StoreShape): void {
-  fs.writeFileSync(STORE_PATH, JSON.stringify(store, null, 2), "utf-8");
+function consentRecordKey(input: Pick<ConsentRecord, "participant_id" | "study_id" | "version_id">): string {
+  return `${input.study_id}:${input.version_id}:${input.participant_id}`;
 }
 
 export function createConsentVersion(input: {
@@ -56,8 +32,6 @@ export function createConsentVersion(input: {
   version_id: string;
   text_md: string;
 }): ConsentVersion {
-  const store = loadStore();
-
   const rec: ConsentVersion = {
     consent_version_id: crypto.randomUUID(),
     study_id: input.study_id,
@@ -67,19 +41,17 @@ export function createConsentVersion(input: {
     is_active: false,
   };
 
-  store.consent_versions.push(rec);
-  saveStore(store);
-  return rec;
+  return consentVersions.insert(rec.consent_version_id, rec);
 }
 
 export function listConsentVersions(filter: {
   study_id: string;
   version_id: string;
 }): ConsentVersion[] {
-  const store = loadStore();
-  return store.consent_versions.filter(
-    (v) => v.study_id === filter.study_id && v.version_id === filter.version_id
-  );
+  return consentVersions
+    .all()
+    .filter((version) => version.study_id === filter.study_id && version.version_id === filter.version_id)
+    .sort((a, b) => a.created_at.localeCompare(b.created_at));
 }
 
 export function activateConsentVersion(input: {
@@ -87,35 +59,28 @@ export function activateConsentVersion(input: {
   version_id: string;
   consent_version_id: string;
 }): ConsentVersion | null {
-  const store = loadStore();
-
-  const versions = store.consent_versions.filter(
-    (v) => v.study_id === input.study_id && v.version_id === input.version_id
-  );
-
-  const target = versions.find((v) => v.consent_version_id === input.consent_version_id);
+  const versions = listConsentVersions(input);
+  const target = versions.find((version) => version.consent_version_id === input.consent_version_id);
   if (!target) return null;
 
-  for (const version of versions) {
-    version.is_active = version.consent_version_id === input.consent_version_id;
-  }
+  withDatabaseTransaction(() => {
+    for (const version of versions) {
+      consentVersions.set(version.consent_version_id, {
+        ...version,
+        is_active: version.consent_version_id === input.consent_version_id,
+      });
+    }
+  });
 
-  saveStore(store);
-  return target;
+  return consentVersions.get(input.consent_version_id);
 }
 
 export function getActiveConsentVersion(filter: {
   study_id: string;
   version_id: string;
 }): ConsentVersion | null {
-  const store = loadStore();
   return (
-    store.consent_versions.find(
-      (v) =>
-        v.study_id === filter.study_id &&
-        v.version_id === filter.version_id &&
-        v.is_active === true
-    ) ?? null
+    listConsentVersions(filter).find((version) => version.is_active === true) ?? null
   );
 }
 
@@ -125,15 +90,6 @@ export function recordConsent(input: {
   version_id: string;
   consent_version_id: string;
 }): ConsentRecord {
-  const store = loadStore();
-
-  const existingIndex = store.consent_records.findIndex(
-    (r) =>
-      r.participant_id === input.participant_id &&
-      r.study_id === input.study_id &&
-      r.version_id === input.version_id
-  );
-
   const rec: ConsentRecord = {
     participant_id: input.participant_id,
     study_id: input.study_id,
@@ -143,14 +99,7 @@ export function recordConsent(input: {
     withdrew_at: null,
   };
 
-  if (existingIndex >= 0) {
-    store.consent_records[existingIndex] = rec;
-  } else {
-    store.consent_records.push(rec);
-  }
-
-  saveStore(store);
-  return rec;
+  return consentRecords.set(consentRecordKey(rec), rec);
 }
 
 export function getConsentRecord(filter: {
@@ -158,15 +107,7 @@ export function getConsentRecord(filter: {
   study_id: string;
   version_id: string;
 }): ConsentRecord | null {
-  const store = loadStore();
-  return (
-    store.consent_records.find(
-      (r) =>
-        r.participant_id === filter.participant_id &&
-        r.study_id === filter.study_id &&
-        r.version_id === filter.version_id
-    ) ?? null
-  );
+  return consentRecords.get(consentRecordKey(filter));
 }
 
 export function withdrawConsent(input: {
@@ -174,20 +115,10 @@ export function withdrawConsent(input: {
   study_id: string;
   version_id: string;
 }): ConsentRecord | null {
-  const store = loadStore();
-
-  const rec = store.consent_records.find(
-    (r) =>
-      r.participant_id === input.participant_id &&
-      r.study_id === input.study_id &&
-      r.version_id === input.version_id
-  );
-
-  if (!rec) return null;
-
-  rec.withdrew_at = new Date().toISOString();
-  saveStore(store);
-  return rec;
+  return consentRecords.update(consentRecordKey(input), (record) => ({
+    ...record,
+    withdrew_at: new Date().toISOString(),
+  }));
 }
 
 export function hasActiveConsent(input: {
@@ -199,17 +130,10 @@ export function hasActiveConsent(input: {
     study_id: input.study_id,
     version_id: input.version_id,
   });
-
   if (!activeVersion) return false;
 
-  const record = getConsentRecord({
-    participant_id: input.participant_id,
-    study_id: input.study_id,
-    version_id: input.version_id,
-  });
-
-  if (!record) return false;
-  if (record.withdrew_at) return false;
+  const record = getConsentRecord(input);
+  if (!record || record.withdrew_at) return false;
 
   return record.consent_version_id === activeVersion.consent_version_id;
 }

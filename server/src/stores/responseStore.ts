@@ -1,51 +1,16 @@
-import fs from "node:fs";
-import path from "node:path";
 import crypto from "node:crypto";
-import { getDataDir } from "../core/paths.js";
+import { JsonCollection } from "../core/jsonCollection.js";
 
 export type ResponseRecord = {
   response_id: string;
-
   study_id: string;
   version_id: string;
-
-  // Linkage only - no identity fields allowed here.
   participant_id: string;
-
-  // Flexible payload (Round 1 open text now; more later)
   response_json: unknown;
-
   created_at: string;
 };
 
-type StoreShape = {
-  responses: ResponseRecord[];
-};
-
-const STORE_PATH = path.resolve(
-  getDataDir(),
-  "responses",
-  "responses.json"
-);
-
-function ensureStore(): void {
-  const dir = path.dirname(STORE_PATH);
-  if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
-  if (!fs.existsSync(STORE_PATH)) {
-    const init: StoreShape = { responses: [] };
-    fs.writeFileSync(STORE_PATH, JSON.stringify(init, null, 2), "utf-8");
-  }
-}
-
-function loadStore(): StoreShape {
-  ensureStore();
-  const raw = fs.readFileSync(STORE_PATH, "utf-8");
-  return JSON.parse(raw) as StoreShape;
-}
-
-function saveStore(store: StoreShape): void {
-  fs.writeFileSync(STORE_PATH, JSON.stringify(store, null, 2), "utf-8");
-}
+const responses = new JsonCollection<ResponseRecord>("responses");
 
 export function createResponse(input: {
   study_id: string;
@@ -53,8 +18,6 @@ export function createResponse(input: {
   participant_id: string;
   response_json: unknown;
 }): ResponseRecord {
-  const store = loadStore();
-
   const rec: ResponseRecord = {
     response_id: crypto.randomUUID(),
     study_id: input.study_id,
@@ -64,14 +27,17 @@ export function createResponse(input: {
     created_at: new Date().toISOString(),
   };
 
-  store.responses.push(rec);
-  saveStore(store);
-  return rec;
+  return responses.insert(rec.response_id, rec);
 }
 
 export function listResponses(filter: { study_id: string; version_id: string }): ResponseRecord[] {
-  const store = loadStore();
-  return store.responses.filter(
-    (r) => r.study_id === filter.study_id && r.version_id === filter.version_id
-  );
+  return responses
+    .all()
+    .filter((response) => response.study_id === filter.study_id && response.version_id === filter.version_id)
+    .sort((a, b) => {
+      const byCreated = a.created_at.localeCompare(b.created_at);
+      if (byCreated !== 0) return byCreated;
+      return a.response_id.localeCompare(b.response_id);
+    });
 }
+

@@ -26,6 +26,7 @@ import { getStudy, getStudyVersion } from "../studies/store.js";
 import { requireRole, getActor } from "../middleware/auth.js";
 import { writeAuditEvent } from "../core/audit.js";
 import type { Study, StudyVersion } from "../studies/types.js";
+import { recordExportManifest } from "../stores/exportManifestStore.js";
 
 type ItemInput = {
   text: string;
@@ -1509,7 +1510,7 @@ export async function aiRoutes(app: FastifyInstance) {
         irb_pack: getEffectiveSuggestionOutput(suggestion),
       };
 
-      await writeAuditEvent({
+      const auditEvent = await writeAuditEvent({
         actor,
         action: "ai.suggestion.export_irb_pack",
         object: { type: "ai_suggestion", id: suggestionId },
@@ -1523,7 +1524,29 @@ export async function aiRoutes(app: FastifyInstance) {
         },
       });
 
-      return reply.send({ irb_pack_export: pack });
+      const manifest = recordExportManifest({
+        study_id: studyId,
+        version_id: versionId,
+        package_type: "irb-pack",
+        generated_by: actor,
+        audit_event_id: auditEvent.id,
+        config_hash: suggestion.study_design_snapshot.config_hash,
+        dataset_hash: null,
+        content: pack,
+        data_scope: {
+          source_ai_suggestion_id: suggestionId,
+          feature: suggestion.feature,
+          output_hash: suggestion.output_hash,
+          human_edited_output_hash: suggestion.human_edited_output_hash,
+        },
+        redaction_profile: {
+          official_status: "released_after_human_signoff",
+          direct_identifiers: "limited_to_study_team_metadata",
+          participant_response_material: "not_included_unless_present_in_approved_irb_draft",
+        },
+      });
+
+      return reply.send({ irb_pack_export: pack, export_manifest: manifest });
     }
   );
 

@@ -1,7 +1,5 @@
-import fs from "node:fs";
-import path from "node:path";
 import crypto from "node:crypto";
-import { getDataDir } from "../core/paths.js";
+import { JsonCollection } from "../core/jsonCollection.js";
 
 export type MergeActionRecord = {
   merge_id: string;
@@ -25,39 +23,8 @@ export type SplitActionRecord = {
   created_at: string;
 };
 
-type StoreShape = {
-  merges: MergeActionRecord[];
-  splits: SplitActionRecord[];
-};
-
-const STORE_PATH = path.resolve(
-  getDataDir(),
-  "items",
-  "merge_actions.json"
-);
-
-function ensureStore(): void {
-  const dir = path.dirname(STORE_PATH);
-  if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
-  if (!fs.existsSync(STORE_PATH)) {
-    const init: StoreShape = { merges: [], splits: [] };
-    fs.writeFileSync(STORE_PATH, JSON.stringify(init, null, 2), "utf-8");
-  }
-}
-
-function loadStore(): StoreShape {
-  ensureStore();
-  const raw = fs.readFileSync(STORE_PATH, "utf-8");
-  const parsed = JSON.parse(raw) as Partial<StoreShape>;
-  return {
-    merges: parsed.merges ?? [],
-    splits: parsed.splits ?? [],
-  };
-}
-
-function saveStore(store: StoreShape): void {
-  fs.writeFileSync(STORE_PATH, JSON.stringify(store, null, 2), "utf-8");
-}
+const merges = new JsonCollection<MergeActionRecord>("item_merges");
+const splits = new JsonCollection<SplitActionRecord>("item_splits");
 
 export function createMergeAction(input: {
   study_id: string;
@@ -67,8 +34,6 @@ export function createMergeAction(input: {
   rationale: string;
   actor_user_id: string;
 }): MergeActionRecord {
-  const store = loadStore();
-
   const rec: MergeActionRecord = {
     merge_id: crypto.randomUUID(),
     study_id: input.study_id,
@@ -80,19 +45,17 @@ export function createMergeAction(input: {
     created_at: new Date().toISOString(),
   };
 
-  store.merges.push(rec);
-  saveStore(store);
-  return rec;
+  return merges.insert(rec.merge_id, rec);
 }
 
 export function listMergeActions(filter: {
   study_id: string;
   version_id: string;
 }): MergeActionRecord[] {
-  const store = loadStore();
-  return store.merges.filter(
-    (m) => m.study_id === filter.study_id && m.version_id === filter.version_id
-  );
+  return merges
+    .all()
+    .filter((merge) => merge.study_id === filter.study_id && merge.version_id === filter.version_id)
+    .sort((a, b) => a.created_at.localeCompare(b.created_at));
 }
 
 export function createSplitAction(input: {
@@ -103,8 +66,6 @@ export function createSplitAction(input: {
   rationale: string;
   actor_user_id: string;
 }): SplitActionRecord {
-  const store = loadStore();
-
   const rec: SplitActionRecord = {
     split_id: crypto.randomUUID(),
     study_id: input.study_id,
@@ -116,17 +77,16 @@ export function createSplitAction(input: {
     created_at: new Date().toISOString(),
   };
 
-  store.splits.push(rec);
-  saveStore(store);
-  return rec;
+  return splits.insert(rec.split_id, rec);
 }
 
 export function listSplitActions(filter: {
   study_id: string;
   version_id: string;
 }): SplitActionRecord[] {
-  const store = loadStore();
-  return store.splits.filter(
-    (s) => s.study_id === filter.study_id && s.version_id === filter.version_id
-  );
+  return splits
+    .all()
+    .filter((split) => split.study_id === filter.study_id && split.version_id === filter.version_id)
+    .sort((a, b) => a.created_at.localeCompare(b.created_at));
 }
+

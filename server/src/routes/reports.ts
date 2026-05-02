@@ -5,6 +5,19 @@ import { getStudy, getStudyVersion, listSignoffs } from "../studies/store.js";
 import { sha256Json } from "../studies/hash.js";
 import { requireRole, getActor } from "../middleware/auth.js";
 import { writeAuditEvent } from "../core/audit.js";
+import {
+  createExportPackage,
+  listExportPackageFiles,
+  listExportPackageReviews,
+  listExportPackages,
+  recordExportManifest,
+  recordExportPackageReview,
+} from "../stores/exportManifestStore.js";
+import {
+  renderFinalDelphiReportDocx,
+  renderFinalItemResultsXlsx,
+  type FinalItemResultRow,
+} from "../exports/finalReportRenderers.js";
 
 type RatingRoundPayload = {
   round_number: number;
@@ -282,8 +295,113 @@ function buildRoundItemReports(
   });
 }
 
+function csvCell(value: unknown): string {
+  if (value === null || value === undefined) return "";
+  const text = typeof value === "string" ? value : String(value);
+  return /[",\r\n]/.test(text) ? `"${text.replaceAll('"', '""')}"` : text;
+}
+
+function toCsv(rows: Array<Record<string, unknown>>): string {
+  if (rows.length === 0) return "";
+  const headers = Object.keys(rows[0] ?? {});
+  return [
+    headers.map(csvCell).join(","),
+    ...rows.map((row) => headers.map((header) => csvCell(row[header])).join(",")),
+  ].join("\n");
+}
+
+function requiredLimitationsMarkdown(): string {
+  return [
+    "# Required Limitations and Disclosures",
+    "",
+    "## Delphi Method Limitation",
+    "Consensus indicates agreement among this panel; it does not establish correctness.",
+    "",
+    "## Panel Limitation",
+    "This Delphi study used a purposively selected expert/stakeholder panel and does not represent a random sample.",
+    "",
+    "## Feedback Limitation",
+    "Participant responses may have been influenced by structured feedback across rounds.",
+    "",
+    "## Consensus Threshold Disclosure",
+    "The consensus threshold was defined before the study began and was not changed mid-study.",
+    "",
+    "## Non-Consensus Disclosure",
+    "Items not reaching consensus are preserved as meaningful study findings and should not be interpreted as unimportant solely because they did not reach consensus.",
+    "",
+    "## AI Assistance Disclosure",
+    "Where AI assistance was used, AI-generated outputs were treated as draft suggestions only. Human reviewers made all final decisions about item wording, inclusion, exclusion, merging, splitting, reporting, and export.",
+    "",
+  ].join("\n");
+}
+
+function finalItemResultsRows(input: {
+  studyId: string;
+  versionId: string;
+  finalRoundNumber: number;
+  itemReports: ReturnType<typeof buildRoundItemReports>;
+  publishedItems: ItemRecord[];
+  nInvited: number;
+  consensusThreshold: number | null;
+}): FinalItemResultRow[] {
+  const itemById = new Map(input.publishedItems.map((item) => [item.item_id, item]));
+  return input.itemReports.map((itemReport) => {
+    const item = itemById.get(itemReport.item_id);
+    const nResponded = itemReport.rating_summary.response_count;
+    const consensusStatus = itemReport.consensus.status === "undetermined"
+      ? "insufficient_response"
+      : itemReport.consensus.status;
+
+    return {
+      study_id: input.studyId,
+      study_version_id: input.versionId,
+      round_number: input.finalRoundNumber,
+      round_id: `${input.versionId}:round:${input.finalRoundNumber}`,
+      item_id: itemReport.item_id,
+      item_version_id: itemReport.item_id,
+      item_text: itemReport.text,
+      item_origin: item?.created_from === "ai" ? "ai_suggested" : itemReport.provenance_type === "LiteratureDerived" ? "literature_derived" : "panel_derived",
+      source_response_count: item?.ai_provenance_links.filter((link) => link.source_type === "response").length ?? 0,
+      n_invited: input.nInvited,
+      n_responded: nResponded,
+      response_rate: input.nInvited > 0 ? nResponded / input.nInvited : 0,
+      scale_min: 1,
+      scale_max: 9,
+      median: itemReport.rating_summary.median,
+      iqr: itemReport.rating_summary.dispersion.iqr,
+      mean: "",
+      std_dev: "",
+      percent_agree: itemReport.consensus.agreement_percent,
+      consensus_threshold: input.consensusThreshold,
+      consensus_status: consensusStatus,
+      majority_view_summary: "Neutral aggregate rating summary is available in the distribution fields.",
+      minority_view_summary: consensusStatus === "non_consensus"
+        ? "Non-consensus ratings are retained as meaningful study findings."
+        : "Distinct lower-frequency views should be reviewed in the provenance bundle where available.",
+      minority_view_retained: consensusStatus === "non_consensus",
+      near_consensus_flag: false,
+      non_consensus_flag: consensusStatus === "non_consensus",
+      included_in_final_report: true,
+      exclusion_reason: "",
+      exclusion_rationale: "",
+    };
+  });
+}
+
+function finalItemResultsCsv(input: Parameters<typeof finalItemResultsRows>[0]) {
+  return toCsv(finalItemResultsRows(input));
+}
+
 export async function reportsRoutes(app: FastifyInstance) {
   const allowStaffRead = requireRole(["owner", "methods_steward"]);
+  const allowExportGovernance = requireRole([
+    "owner",
+    "methods_steward",
+    "privacy_lead",
+    "data_custodian",
+    "admin",
+    "maintainer",
+  ]);
 
   app.get(
     "/studies/:studyId/versions/:versionId/rounds/:roundNumber/summary",
@@ -562,7 +680,7 @@ export async function reportsRoutes(app: FastifyInstance) {
   );
   app.get(
     "/studies/:studyId/versions/:versionId/export-report",
-    { preHandler: allowStaffRead },
+    { preHandler: allowExportGovernance },
     async (req, reply) => {
       const { studyId, versionId } = getStudyAndVersion(req.params);
       const actor = getActor(req);
@@ -643,6 +761,25 @@ export async function reportsRoutes(app: FastifyInstance) {
       });
 
       const agreementMinRating = getAgreementMinRating(studyVersion.consensus_rule_json);
+      const consensusThreshold =
+        itemReports.find((item) => item.consensus.threshold_percent !== null)?.consensus.threshold_percent ?? null;
+      const dataCutoffAt =
+        allResponses.map((response) => response.created_at).sort().at(-1) ??
+        publishedFinalRoundItems.map((item) => item.created_at).sort().at(-1) ??
+        new Date().toISOString();
+      const nInvited = new Set(allResponses.map((response) => response.participant_id)).size;
+      const limitationsMarkdown = requiredLimitationsMarkdown();
+      const itemResultsInput = {
+        studyId,
+        versionId,
+        finalRoundNumber,
+        itemReports,
+        publishedItems: publishedFinalRoundItems,
+        nInvited,
+        consensusThreshold,
+      };
+      const itemResultsRows = finalItemResultsRows(itemResultsInput);
+      const itemResultsCsv = toCsv(itemResultsRows);
 
       const report = {
         generated_at: new Date().toISOString(),
@@ -681,7 +818,7 @@ export async function reportsRoutes(app: FastifyInstance) {
           signoff_count: signoffs.length,
         },
         limitations: [
-          "Consensus does not imply correctness.",
+          "Consensus indicates agreement among this panel; it does not establish correctness.",
           "This MVP export defaults agreement_min_rating to 7 when the consensus rule omits an explicit cutpoint.",
           "Round 1 responses are stored as flexible JSON payloads, so this export treats any non-rating payload in the version as Round 1 material for summary purposes.",
           "Only the latest rating from each participant in the final summarized round is counted for each item.",
@@ -709,7 +846,7 @@ export async function reportsRoutes(app: FastifyInstance) {
         items: itemReports,
       };
 
-      await writeAuditEvent({
+      const auditEvent = await writeAuditEvent({
         actor,
         action: "report.export",
         object: { type: "study_version", id: `${studyId}:${versionId}` },
@@ -725,7 +862,238 @@ export async function reportsRoutes(app: FastifyInstance) {
         },
       });
 
-      return reply.send({ report });
+      const manifest = recordExportManifest({
+        study_id: studyId,
+        version_id: versionId,
+        package_type: "final-delphi-report",
+        generated_by: actor,
+        audit_event_id: auditEvent.id,
+        config_hash: studyVersion.config_hash,
+        dataset_hash: datasetHash,
+        content: report,
+        data_scope: {
+          final_round_number: finalRoundNumber,
+          response_scope: "terminal_rating_round_and_round1_summary",
+          item_scope: "published_terminal_round_items",
+        },
+        redaction_profile: {
+          direct_identifiers: "excluded",
+          identity_response_mapping: "excluded",
+          participant_ids: "retained_for_internal_traceability_only",
+        },
+      });
+
+      const finalReportDocx = renderFinalDelphiReportDocx({
+        report,
+        itemResults: itemResultsRows,
+        limitationsMarkdown,
+      });
+      const finalItemResultsXlsx = renderFinalItemResultsXlsx({
+        report,
+        itemResults: itemResultsRows,
+        limitationsMarkdown,
+      });
+
+      const exportPackage = createExportPackage({
+        study_id: studyId,
+        study_version_id: versionId,
+        export_type: "final-delphi-report",
+        generated_by: actor,
+        audit_event_id: auditEvent.id,
+        data_cutoff_at: dataCutoffAt,
+        consensus_rule_version_id: studyVersion.config_hash,
+        feedback_config_version_id: studyVersion.config_hash,
+        instrument_version_ids: [versionId],
+        contains_identifiable_data: false,
+        anonymization_level: "aggregated_only",
+        external_ai_used: false,
+        human_review_required: true,
+        human_review_status: "pending_review",
+        limitations_text_version_id: "charter-required-limitations-v1",
+        files: [
+          {
+            path: "final_report/final_delphi_report.docx",
+            content: finalReportDocx,
+            format: ".docx",
+            record_count: itemReports.length,
+            contains_identifiable_data: false,
+            redaction_profile: {
+              direct_identifiers: "excluded",
+              identity_response_mapping: "excluded",
+              participant_ids: "excluded_from_public_report",
+            },
+          },
+          {
+            path: "final_report/final_item_results.xlsx",
+            content: finalItemResultsXlsx,
+            format: ".xlsx",
+            record_count: itemReports.length,
+            contains_identifiable_data: false,
+            redaction_profile: {
+              direct_identifiers: "excluded",
+              identity_response_mapping: "excluded",
+              participant_ids: "excluded",
+            },
+          },
+          {
+            path: "final_report/final_delphi_report.json",
+            content: JSON.stringify(report, null, 2),
+            format: ".json",
+            record_count: itemReports.length,
+            contains_identifiable_data: false,
+            redaction_profile: {
+              direct_identifiers: "excluded",
+              identity_response_mapping: "excluded",
+              participant_ids: "excluded_from_public_report",
+            },
+          },
+          {
+            path: "final_report/final_item_results.csv",
+            content: itemResultsCsv,
+            format: ".csv",
+            record_count: itemReports.length,
+            contains_identifiable_data: false,
+            redaction_profile: {
+              direct_identifiers: "excluded",
+              identity_response_mapping: "excluded",
+              participant_ids: "excluded",
+            },
+          },
+          {
+            path: "final_report/required_limitations_and_disclosures.md",
+            content: limitationsMarkdown,
+            format: ".md",
+            record_count: null,
+            contains_identifiable_data: false,
+            redaction_profile: {
+              direct_identifiers: "not_applicable",
+              identity_response_mapping: "not_applicable",
+            },
+          },
+        ],
+      });
+
+      return reply.send({ report, export_manifest: manifest, export_package: exportPackage });
+    }
+  );
+
+  app.get(
+    "/studies/:studyId/versions/:versionId/export-packages",
+    { preHandler: allowExportGovernance },
+    async (req, reply) => {
+      const { studyId, versionId } = getStudyAndVersion(req.params);
+      const exportPackages = listExportPackages({ study_id: studyId, study_version_id: versionId });
+      const reviews = listExportPackageReviews({ study_id: studyId, study_version_id: versionId });
+      return reply.send({
+        export_packages: exportPackages.map((pkg) => ({
+          ...pkg,
+          reviews: reviews.filter((review) => review.export_package_id === pkg.export_package_id),
+        })),
+      });
+    }
+  );
+
+  app.get(
+    "/studies/:studyId/versions/:versionId/export-packages/:packageId/files",
+    { preHandler: allowExportGovernance },
+    async (req, reply) => {
+      const { studyId, versionId } = getStudyAndVersion(req.params);
+      const { packageId } = req.params as any;
+      const pkg = listExportPackages({ study_id: studyId, study_version_id: versionId })
+        .find((entry) => entry.export_package_id === String(packageId));
+      if (!pkg) return reply.code(404).send({ error: "export_package_not_found" });
+
+      return reply.send({
+        export_package: pkg,
+        files: listExportPackageFiles(pkg.export_package_id),
+      });
+    }
+  );
+
+  app.get(
+    "/studies/:studyId/versions/:versionId/export-packages/:packageId/files/:fileId/download",
+    { preHandler: allowExportGovernance },
+    async (req, reply) => {
+      const { studyId, versionId } = getStudyAndVersion(req.params);
+      const { packageId, fileId } = req.params as any;
+      const actor = getActor(req);
+      const pkg = listExportPackages({ study_id: studyId, study_version_id: versionId })
+        .find((entry) => entry.export_package_id === String(packageId));
+      if (!pkg) return reply.code(404).send({ error: "export_package_not_found" });
+
+      const file = listExportPackageFiles(pkg.export_package_id)
+        .find((entry) => entry.export_file_id === String(fileId));
+      if (!file) return reply.code(404).send({ error: "export_file_not_found" });
+
+      await writeAuditEvent({
+        actor,
+        action: "export.file_download",
+        object: { type: "export_file", id: file.export_file_id },
+        details: {
+          studyId,
+          versionId,
+          export_package_id: pkg.export_package_id,
+          path: file.path,
+          format: file.format,
+          sha256: file.sha256,
+          contains_identifiable_data: file.contains_identifiable_data,
+        },
+      });
+
+      return reply.send({ export_package: pkg, file });
+    }
+  );
+
+  app.post(
+    "/studies/:studyId/versions/:versionId/export-packages/:packageId/review",
+    { preHandler: allowExportGovernance },
+    async (req, reply) => {
+      const { studyId, versionId } = getStudyAndVersion(req.params);
+      const { packageId } = req.params as any;
+      const body = (req.body ?? {}) as Record<string, unknown>;
+      const actor = getActor(req);
+      const reviewStatus = body.review_status;
+      const note = typeof body.note === "string" ? body.note.trim() : "";
+
+      if (reviewStatus !== "approved" && reviewStatus !== "rejected") {
+        return reply.code(400).send({ error: "review_status_required" });
+      }
+      if (!note) {
+        return reply.code(400).send({ error: "review_note_required" });
+      }
+
+      const pkg = listExportPackages({ study_id: studyId, study_version_id: versionId })
+        .find((entry) => entry.export_package_id === String(packageId));
+      if (!pkg) return reply.code(404).send({ error: "export_package_not_found" });
+
+      const auditEvent = await writeAuditEvent({
+        actor,
+        action: "export.package_review",
+        object: { type: "export_package", id: pkg.export_package_id },
+        details: {
+          studyId,
+          versionId,
+          export_package_id: pkg.export_package_id,
+          review_status: reviewStatus,
+          note,
+        },
+      });
+
+      const review = recordExportPackageReview({
+        export_package_id: pkg.export_package_id,
+        study_id: studyId,
+        study_version_id: versionId,
+        reviewed_by: actor,
+        review_status: reviewStatus,
+        note,
+        audit_event_id: auditEvent.id,
+      });
+
+      return reply.code(201).send({
+        export_package: pkg,
+        review,
+        reviews: listExportPackageReviews({ export_package_id: pkg.export_package_id }),
+      });
     }
   );
 }

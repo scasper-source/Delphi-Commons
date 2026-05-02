@@ -1,55 +1,21 @@
-import fs from "node:fs";
-import path from "node:path";
 import crypto from "node:crypto";
-import { getDataDir } from "../core/paths.js";
+import { JsonCollection } from "../core/jsonCollection.js";
 
 export type ParticipantMaster = {
   participant_id: string;
-
-  // Identity fields live ONLY here (never in responses):
   name?: string;
   email?: string;
-
   created_at: string;
   created_by_user_id: string;
 };
 
-type StoreShape = {
-  participants: Record<string, ParticipantMaster>;
-};
-
-const STORE_PATH = path.resolve(
-  getDataDir(),
-  "identity",
-  "participant_master.json"
-);
-
-function ensureStore(): void {
-  const dir = path.dirname(STORE_PATH);
-  if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
-  if (!fs.existsSync(STORE_PATH)) {
-    const init: StoreShape = { participants: {} };
-    fs.writeFileSync(STORE_PATH, JSON.stringify(init, null, 2), "utf-8");
-  }
-}
-
-function loadStore(): StoreShape {
-  ensureStore();
-  const raw = fs.readFileSync(STORE_PATH, "utf-8");
-  return JSON.parse(raw) as StoreShape;
-}
-
-function saveStore(store: StoreShape): void {
-  fs.writeFileSync(STORE_PATH, JSON.stringify(store, null, 2), "utf-8");
-}
+const participants = new JsonCollection<ParticipantMaster>("identity_participants");
 
 export function createParticipantMaster(input: {
   name?: string;
   email?: string;
   created_by_user_id: string;
 }): ParticipantMaster {
-  const store = loadStore();
-
   const base: ParticipantMaster = {
     participant_id: crypto.randomUUID(),
     created_at: new Date().toISOString(),
@@ -62,36 +28,25 @@ export function createParticipantMaster(input: {
     ...(input.email !== undefined ? { email: input.email } : {}),
   };
 
-  store.participants[participant.participant_id] = participant;
-  saveStore(store);
-  return participant;
+  return participants.insert(participant.participant_id, participant);
 }
 
 export function listParticipantMasters(): ParticipantMaster[] {
-  const store = loadStore();
-  return Object.values(store.participants);
+  return participants.all();
 }
 
 export function getParticipantMaster(participant_id: string): ParticipantMaster | null {
-  const store = loadStore();
-  return store.participants[participant_id] ?? null;
+  return participants.get(participant_id);
 }
 
 export function updateParticipantMaster(
   participant_id: string,
-  patch: { name?: string; email?: string }
+  patch: { name?: string; email?: string },
 ): ParticipantMaster | null {
-  const store = loadStore();
-  const existing = store.participants[participant_id];
-  if (!existing) return null;
-
-  const updated: ParticipantMaster = {
+  return participants.update(participant_id, (existing) => ({
     ...existing,
     ...(patch.name !== undefined ? { name: patch.name } : {}),
     ...(patch.email !== undefined ? { email: patch.email } : {}),
-  };
-
-  store.participants[participant_id] = updated;
-  saveStore(store);
-  return updated;
+  }));
 }
+

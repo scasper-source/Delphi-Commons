@@ -78,6 +78,7 @@ export async function itemsRoutes(app: FastifyInstance) {
           versionId,
           round_number: item.round_number,
           provenance_type: item.provenance_type,
+          provenance_hash: item.provenance_hash,
           status: item.status,
           provenance_source_ids: item.ai_provenance_links.map((link) => link.source_id),
         },
@@ -110,6 +111,57 @@ export async function itemsRoutes(app: FastifyInstance) {
     }
   );
 
+  app.patch(
+    "/studies/:studyId/versions/:versionId/items/:itemId",
+    { preHandler: allowCuration },
+    async (req, reply) => {
+      const { studyId, versionId, itemId } = req.params as any;
+      const body = (req.body ?? {}) as any;
+      const actor = getActor(req);
+
+      const existing = getItem(String(itemId));
+      if (!existing || existing.study_id !== String(studyId) || existing.version_id !== String(versionId)) {
+        return reply.code(404).send({ error: "item_not_found" });
+      }
+
+      const text = typeof body.text === "string" && body.text.trim() !== "" ? body.text.trim() : undefined;
+      const status =
+        body.status === "Draft" || body.status === "Published" || body.status === "Rejected"
+          ? body.status
+          : undefined;
+
+      if (status === "Published") {
+        return reply.code(400).send({ error: "use_publish_endpoint_for_publication_gate" });
+      }
+
+      if (!text && !status) {
+        return reply.code(400).send({ error: "item_patch_required" });
+      }
+
+      const updated = updateItem(String(itemId), {
+        ...(text ? { text } : {}),
+        ...(status ? { status } : {}),
+      });
+
+      if (!updated) return reply.code(404).send({ error: "item_not_found" });
+
+      await writeAuditEvent({
+        actor,
+        action: status === "Rejected" ? "item.reject" : "item.update",
+        object: { type: "item", id: String(itemId) },
+        details: {
+          studyId,
+          versionId,
+          status: updated.status,
+          provenance_hash: updated.provenance_hash,
+          rationale: typeof body.rationale === "string" ? body.rationale : null,
+        },
+      });
+
+      return reply.send({ item: updated });
+    }
+  );
+
   app.post(
     "/studies/:studyId/versions/:versionId/items/:itemId/publish",
     { preHandler: allowCuration },
@@ -127,6 +179,17 @@ export async function itemsRoutes(app: FastifyInstance) {
         existing.version_id !== String(versionId)
       ) {
         return reply.code(404).send({ error: "item_not_found" });
+      }
+
+      if (existing.status === "Rejected") {
+        await writeAuditEvent({
+          actor,
+          action: "item.publish_blocked_rejected",
+          object: { type: "item", id: String(itemId) },
+          details: { studyId, versionId, status: existing.status },
+        });
+
+        return reply.code(409).send({ error: "item_rejected_cannot_publish" });
       }
 
       const aiSuggestionIds = new Set<string>();
@@ -190,7 +253,7 @@ export async function itemsRoutes(app: FastifyInstance) {
         actor,
         action: "item.publish",
         object: { type: "item", id: String(itemId) },
-        details: { studyId, versionId, status: updated.status },
+        details: { studyId, versionId, status: updated.status, provenance_hash: updated.provenance_hash },
       });
 
       return reply.send({ item: updated });

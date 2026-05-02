@@ -96,7 +96,7 @@ export type ItemRecord = {
   text: string;
   provenance_type: "PanelDerived" | "LiteratureDerived";
   created_from: "manual" | "ai";
-  status: "Draft" | "Published";
+  status: "Draft" | "Published" | "Rejected";
   created_at: string;
   created_by_user_id: string;
   source_ai_suggestion_id: string | null;
@@ -197,11 +197,103 @@ export type RoundReport = {
   }>;
 };
 
+export type ExportFormat = ".docx" | ".xlsx" | ".csv" | ".json" | ".md" | ".txt";
+export type ExportContentEncoding = "utf8" | "base64";
+
+export type ExportPackageFile = {
+  export_file_id: string;
+  export_package_id: string;
+  path: string;
+  format: ExportFormat;
+  media_type: string;
+  sha256: string;
+  record_count: number | null;
+  contains_identifiable_data: boolean;
+  redaction_profile: Record<string, unknown>;
+  content_text: string;
+  content_encoding: ExportContentEncoding;
+  created_at: string;
+};
+
+export type ExportPackageReview = {
+  review_id: string;
+  export_package_id: string;
+  study_id: string;
+  study_version_id: string;
+  reviewed_at: string;
+  reviewed_by: {
+    user_id: string;
+    role: string;
+  };
+  review_status: "approved" | "rejected";
+  note: string;
+  audit_event_id: string;
+};
+
+export type ExportPackage = {
+  export_package_id: string;
+  study_id: string;
+  study_version_id: string;
+  export_type:
+    | "final-delphi-report"
+    | "irb-pack"
+    | "anonymized-response-dataset"
+    | "audit-package"
+    | "provenance-bundle"
+    | "complete-archive";
+  export_created_at: string;
+  export_created_by: {
+    user_id: string;
+    role: string;
+  };
+  export_format_set: ExportFormat[];
+  data_cutoff_at: string;
+  consensus_rule_version_id: string | null;
+  feedback_config_version_id: string | null;
+  instrument_version_ids: string[];
+  contains_identifiable_data: boolean;
+  anonymization_level: "none" | "pseudonymized" | "anonymized" | "aggregated_only";
+  external_ai_used: boolean;
+  human_review_required: boolean;
+  human_review_status: "draft" | "pending_review" | "approved" | "rejected" | "superseded";
+  release_status: "not_released" | "released" | "superseded";
+  released_at: string | null;
+  released_by_user_id: string | null;
+  release_signoff_ids: string[];
+  supersedes_export_package_id: string | null;
+  limitations_text_version_id: string;
+  manifest_hash: string;
+  package_hash: string;
+  audit_event_id: string;
+  files: Omit<ExportPackageFile, "content_text">[];
+  reviews?: ExportPackageReview[];
+};
+
 export type SavedStudyRecord = {
   study: BackendStudy;
   versions: BackendStudyVersion[];
   latestVersion: BackendStudyVersion | null;
   signoffs: BackendSignoff[];
+};
+
+export type ParticipantInvitationContext = {
+  invitation: {
+    invitation_id: string;
+    study_id: string;
+    version_id: string;
+    participant_id: string;
+    expires_at: string;
+  };
+  study: BackendStudy | null;
+  study_version: BackendStudyVersion | null;
+  active_consent_version: ConsentVersion | null;
+  consent_record: {
+    participant_id: string;
+    consent_version_id: string;
+    consented_at: string;
+    withdrew_at: string | null;
+  } | null;
+  round_configs: RoundConfig[];
 };
 
 export type BackendRole = "owner" | "methods_steward" | "privacy_lead" | "admin" | "participant";
@@ -222,11 +314,46 @@ const backendRoles: Record<UserRole, BackendRole> = {
   panelist: "participant",
 };
 
-function authHeaders(role: UserRole): HeadersInit {
+const demoCredentials: Record<UserRole, { email: string; password: string }> = {
+  study_owner: { email: "owner@example.test", password: "demo-owner" },
+  ethics_methods_steward: { email: "steward@example.test", password: "demo-steward" },
+  security_privacy_lead: { email: "privacy@example.test", password: "demo-privacy" },
+  data_custodian: { email: "custodian@example.test", password: "demo-custodian" },
+  open_source_admin: { email: "admin@example.test", password: "demo-admin" },
+  study_coordinator: { email: "owner@example.test", password: "demo-owner" },
+  panelist: { email: "participant@example.test", password: "demo-participant" },
+};
+
+const sessionTokens = new Map<UserRole, string>();
+
+async function getSessionToken(role: UserRole): Promise<string | null> {
+  const cached = sessionTokens.get(role);
+  if (cached) return cached;
+
+  const credentials = demoCredentials[role];
+  try {
+    const response = await fetch(`${apiBoundary.baseUrl}/auth/login`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(credentials),
+    });
+    if (!response.ok) return null;
+    const payload = await response.json() as { token?: string };
+    if (!payload.token) return null;
+    sessionTokens.set(role, payload.token);
+    return payload.token;
+  } catch {
+    return null;
+  }
+}
+
+async function authHeaders(role: UserRole): Promise<HeadersInit> {
   const backendRole = backendRoles[role];
+  const token = await getSessionToken(role);
 
   return {
     "Content-Type": "application/json",
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
     "X-User-ID": `${role}-dev-user`,
     "X-User-Role": backendRole,
   };
@@ -239,12 +366,34 @@ async function requestJson<T>(
 ): Promise<T> {
   const response = await fetch(`${apiBoundary.baseUrl}${path}`, {
     method: options.method ?? "GET",
-    headers: authHeaders(role),
+    headers: await authHeaders(role),
     body: options.body === undefined ? undefined : JSON.stringify(options.body),
   });
 
   const payload = await response.json().catch(() => null) as unknown;
 
+  if (!response.ok) {
+    const message =
+      payload && typeof payload === "object" && "error" in payload
+        ? String((payload as { error: unknown }).error)
+        : `Request failed with ${response.status}`;
+    throw new Error(message);
+  }
+
+  return payload as T;
+}
+
+async function requestPublicJson<T>(
+  path: string,
+  options: { method?: string; body?: unknown } = {},
+): Promise<T> {
+  const response = await fetch(`${apiBoundary.baseUrl}${path}`, {
+    method: options.method ?? "GET",
+    headers: { "Content-Type": "application/json" },
+    body: options.body === undefined ? undefined : JSON.stringify(options.body),
+  });
+
+  const payload = await response.json().catch(() => null) as unknown;
   if (!response.ok) {
     const message =
       payload && typeof payload === "object" && "error" in payload
@@ -479,6 +628,60 @@ export const conductorApi = {
     );
   },
 
+  async createParticipantInvitation(studyId: string, versionId: string, participantId: string, role: UserRole) {
+    return requestJson<{ invitation: unknown; invitation_url: string }>(
+      `/studies/${studyId}/versions/${versionId}/participants/${participantId}/invitations`,
+      role,
+      { method: "POST", body: {} },
+    );
+  },
+
+  async getParticipantInvitation(token: string) {
+    return requestPublicJson<ParticipantInvitationContext>(
+      `/participant/invitations/${encodeURIComponent(token)}`,
+    );
+  },
+
+  async recordInvitationConsent(token: string) {
+    return requestPublicJson<{ consent_record: unknown }>(
+      `/participant/invitations/${encodeURIComponent(token)}/consent`,
+      { method: "POST", body: {} },
+    );
+  },
+
+  async withdrawInvitationConsent(token: string) {
+    return requestPublicJson<{ consent_record: unknown }>(
+      `/participant/invitations/${encodeURIComponent(token)}/withdraw`,
+      { method: "POST", body: {} },
+    );
+  },
+
+  async submitInvitationRoundOneResponse(token: string, text: string) {
+    return requestPublicJson<{ response_id: string }>(
+      `/participant/invitations/${encodeURIComponent(token)}/responses`,
+      { method: "POST", body: { text } },
+    );
+  },
+
+  async listInvitationRoundItems(token: string, roundNumber: number) {
+    return requestPublicJson<{ items: RoundItemForParticipant[] }>(
+      `/participant/invitations/${encodeURIComponent(token)}/rounds/${roundNumber}/items`,
+    );
+  },
+
+  async submitInvitationRating(
+    token: string,
+    roundNumber: number,
+    itemId: string,
+    rating: number,
+    action: "keep" | "revise" = "revise",
+  ) {
+    return requestPublicJson<{ response_id: string }>(
+      `/participant/invitations/${encodeURIComponent(token)}/rounds/${roundNumber}/ratings`,
+      { method: "POST", body: { item_id: itemId, rating, action } },
+    );
+  },
+
   async submitRoundOneResponse(
     studyId: string,
     versionId: string,
@@ -537,6 +740,47 @@ export const conductorApi = {
       `/studies/${studyId}/versions/${versionId}/items/${itemId}/publish`,
       role,
       { method: "POST", body: {} },
+    );
+  },
+
+  async updateItem(
+    studyId: string,
+    versionId: string,
+    itemId: string,
+    role: UserRole,
+    input: { text?: string; status?: "Draft" | "Published" | "Rejected"; rationale?: string },
+  ) {
+    return requestJson<{ item: ItemRecord }>(
+      `/studies/${studyId}/versions/${versionId}/items/${itemId}`,
+      role,
+      { method: "PATCH", body: input },
+    );
+  },
+
+  async mergeItems(
+    studyId: string,
+    versionId: string,
+    role: UserRole,
+    input: { from_item_ids: string[]; to_item_id: string; rationale: string },
+  ) {
+    return requestJson<{ merge: unknown }>(
+      `/studies/${studyId}/versions/${versionId}/items/merge`,
+      role,
+      { method: "POST", body: input },
+    );
+  },
+
+  async splitItem(
+    studyId: string,
+    versionId: string,
+    itemId: string,
+    role: UserRole,
+    input: { new_texts: string[]; rationale: string },
+  ) {
+    return requestJson<{ split: unknown; items: ItemRecord[] }>(
+      `/studies/${studyId}/versions/${versionId}/items/${itemId}/split`,
+      role,
+      { method: "POST", body: input },
     );
   },
 
@@ -643,9 +887,57 @@ export const conductorApi = {
   },
 
   async exportReport(studyId: string, versionId: string, role: UserRole) {
-    return requestJson<{ report: RoundReport }>(
+    return requestJson<{ report: RoundReport; export_package?: ExportPackage }>(
       `/studies/${studyId}/versions/${versionId}/export-report`,
       role,
+    );
+  },
+
+  async listExportPackages(studyId: string, versionId: string, role: UserRole) {
+    return requestJson<{ export_packages: ExportPackage[] }>(
+      `/studies/${studyId}/versions/${versionId}/export-packages`,
+      role,
+    );
+  },
+
+  async listExportPackageFiles(studyId: string, versionId: string, packageId: string, role: UserRole) {
+    return requestJson<{ export_package: ExportPackage; files: ExportPackageFile[] }>(
+      `/studies/${studyId}/versions/${versionId}/export-packages/${packageId}/files`,
+      role,
+    );
+  },
+
+  async downloadExportPackageFile(
+    studyId: string,
+    versionId: string,
+    packageId: string,
+    fileId: string,
+    role: UserRole,
+  ) {
+    return requestJson<{ export_package: ExportPackage; file: ExportPackageFile }>(
+      `/studies/${studyId}/versions/${versionId}/export-packages/${packageId}/files/${fileId}/download`,
+      role,
+    );
+  },
+
+  async reviewExportPackage(
+    studyId: string,
+    versionId: string,
+    packageId: string,
+    role: UserRole,
+    reviewStatus: "approved" | "rejected",
+    note: string,
+  ) {
+    return requestJson<{ export_package: ExportPackage; review: ExportPackageReview; reviews: ExportPackageReview[] }>(
+      `/studies/${studyId}/versions/${versionId}/export-packages/${packageId}/review`,
+      role,
+      {
+        method: "POST",
+        body: {
+          review_status: reviewStatus,
+          note,
+        },
+      },
     );
   },
 };

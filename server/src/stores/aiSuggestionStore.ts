@@ -1,9 +1,7 @@
-import fs from "node:fs";
-import path from "node:path";
 import crypto from "node:crypto";
 import type { StudyFormat, StudyVersionStatus } from "../studies/types.js";
 import { sha256Json } from "../studies/hash.js";
-import { getDataDir } from "../core/paths.js";
+import { JsonCollection } from "../core/jsonCollection.js";
 
 export const AI_SUGGESTION_LABEL = "AI Suggestion (Not Final)";
 
@@ -78,19 +76,11 @@ export type AISuggestionPublicationGate =
       hasMethodsSteward?: boolean;
     };
 
-const STORE_PATH = path.resolve(
-  getDataDir(),
-  "ai",
-  "ai_suggestions.json"
-);
+const suggestions = new JsonCollection<AISuggestionRecord>("ai_suggestions");
+const releaseSignoffs = new JsonCollection<AISuggestionReleaseSignoff>("ai_release_signoffs");
 
-function ensureStore(): void {
-  const dir = path.dirname(STORE_PATH);
-  if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
-  if (!fs.existsSync(STORE_PATH)) {
-    const init: StoreShape = { suggestions: [], release_signoffs: [] };
-    fs.writeFileSync(STORE_PATH, JSON.stringify(init, null, 2), "utf-8");
-  }
+function releaseSignoffKey(signoff: Pick<AISuggestionReleaseSignoff, "suggestion_id" | "required_role">): string {
+  return `${signoff.suggestion_id}:${signoff.required_role}`;
 }
 
 function normalizeSuggestion(raw: Partial<AISuggestionRecord>): AISuggestionRecord | null {
@@ -141,25 +131,24 @@ function normalizeSuggestion(raw: Partial<AISuggestionRecord>): AISuggestionReco
 }
 
 function loadStore(): StoreShape {
-  ensureStore();
-  const raw = fs.readFileSync(STORE_PATH, "utf-8");
-  const parsed = JSON.parse(raw) as Partial<StoreShape>;
-
   return {
-    suggestions: Array.isArray(parsed.suggestions)
-      ? parsed.suggestions.flatMap((suggestion) => {
+    suggestions: suggestions
+      .all()
+      .flatMap((suggestion) => {
           const normalized = normalizeSuggestion(suggestion);
           return normalized ? [normalized] : [];
-        })
-      : [],
-    release_signoffs: Array.isArray(parsed.release_signoffs)
-      ? parsed.release_signoffs
-      : [],
+        }),
+    release_signoffs: releaseSignoffs.all(),
   };
 }
 
 function saveStore(store: StoreShape): void {
-  fs.writeFileSync(STORE_PATH, JSON.stringify(store, null, 2), "utf-8");
+  for (const suggestion of store.suggestions) {
+    suggestions.set(suggestion.suggestion_id, suggestion);
+  }
+  for (const signoff of store.release_signoffs) {
+    releaseSignoffs.set(releaseSignoffKey(signoff), signoff);
+  }
 }
 
 export function createAISuggestion(input: {

@@ -1,9 +1,8 @@
-import fs from "node:fs";
-import path from "node:path";
 import crypto from "node:crypto";
-import { getDataDir } from "../core/paths.js";
+import { JsonCollection } from "../core/jsonCollection.js";
+import { sha256Json } from "../studies/hash.js";
 
-export type ItemStatus = "Draft" | "Published";
+export type ItemStatus = "Draft" | "Published" | "Rejected";
 export type ProvenanceType = "PanelDerived" | "LiteratureDerived";
 export type CreatedFrom = "manual" | "ai";
 export type ItemProvenanceSourceType = "response" | "item";
@@ -38,6 +37,7 @@ export type ItemRecord = {
   source_ai_suggestion_id: string | null;
   ai_provenance_links: ItemProvenanceLink[];
   ai_provenance_rationale: string | null;
+  provenance_hash: string;
   ai_assisted_revisions: ItemAIRevision[];
 };
 
@@ -45,20 +45,7 @@ type StoreShape = {
   items: ItemRecord[];
 };
 
-const STORE_PATH = path.resolve(
-  getDataDir(),
-  "items",
-  "items.json"
-);
-
-function ensureStore(): void {
-  const dir = path.dirname(STORE_PATH);
-  if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
-  if (!fs.existsSync(STORE_PATH)) {
-    const init: StoreShape = { items: [] };
-    fs.writeFileSync(STORE_PATH, JSON.stringify(init, null, 2), "utf-8");
-  }
-}
+const itemDocuments = new JsonCollection<ItemRecord>("items");
 
 function normalizeProvenanceLink(raw: Partial<ItemProvenanceLink>): ItemProvenanceLink | null {
   if (
@@ -148,6 +135,22 @@ function normalizeItem(raw: Partial<ItemRecord>): ItemRecord | null {
       typeof raw.ai_provenance_rationale === "string"
         ? raw.ai_provenance_rationale
         : null,
+    provenance_hash:
+      typeof raw.provenance_hash === "string"
+        ? raw.provenance_hash
+        : hashItemProvenance({
+            provenance_type: raw.provenance_type as ProvenanceType,
+            ai_provenance_links: Array.isArray(raw.ai_provenance_links)
+              ? raw.ai_provenance_links.flatMap((link) => {
+                  const normalized = normalizeProvenanceLink(link);
+                  return normalized ? [normalized] : [];
+                })
+              : [],
+            ai_provenance_rationale:
+              typeof raw.ai_provenance_rationale === "string"
+                ? raw.ai_provenance_rationale
+                : null,
+          }),
     ai_assisted_revisions: Array.isArray(raw.ai_assisted_revisions)
       ? raw.ai_assisted_revisions.flatMap((revision) => {
           const normalized = normalizeAIRevision(revision);
@@ -157,23 +160,37 @@ function normalizeItem(raw: Partial<ItemRecord>): ItemRecord | null {
   };
 }
 
-function loadStore(): StoreShape {
-  ensureStore();
-  const raw = fs.readFileSync(STORE_PATH, "utf-8");
-  const parsed = JSON.parse(raw) as Partial<StoreShape>;
+export function hashItemProvenance(input: {
+  provenance_type: ProvenanceType;
+  ai_provenance_links: ItemProvenanceLink[];
+  ai_provenance_rationale: string | null;
+}): string {
+  return sha256Json({
+    provenance_type: input.provenance_type,
+    provenance_links: [...input.ai_provenance_links].sort((a, b) =>
+      `${a.source_type}:${a.source_round_number}:${a.source_id}`.localeCompare(
+        `${b.source_type}:${b.source_round_number}:${b.source_id}`,
+      ),
+    ),
+    rationale: input.ai_provenance_rationale ?? null,
+  });
+}
 
+function loadStore(): StoreShape {
   return {
-    items: Array.isArray(parsed.items)
-      ? parsed.items.flatMap((item) => {
+    items: itemDocuments
+      .all()
+      .flatMap((item) => {
           const normalized = normalizeItem(item);
           return normalized ? [normalized] : [];
-        })
-      : [],
+        }),
   };
 }
 
 function saveStore(store: StoreShape): void {
-  fs.writeFileSync(STORE_PATH, JSON.stringify(store, null, 2), "utf-8");
+  for (const item of store.items) {
+    itemDocuments.set(item.item_id, item);
+  }
 }
 
 export function createItem(input: {
@@ -190,6 +207,9 @@ export function createItem(input: {
 }): ItemRecord {
   const store = loadStore();
 
+  const provenanceLinks = input.ai_provenance_links ?? [];
+  const provenanceRationale = input.ai_provenance_rationale ?? null;
+
   const rec: ItemRecord = {
     item_id: crypto.randomUUID(),
     study_id: input.study_id,
@@ -202,8 +222,13 @@ export function createItem(input: {
     created_at: new Date().toISOString(),
     created_by_user_id: input.created_by_user_id,
     source_ai_suggestion_id: input.source_ai_suggestion_id ?? null,
-    ai_provenance_links: input.ai_provenance_links ?? [],
-    ai_provenance_rationale: input.ai_provenance_rationale ?? null,
+    ai_provenance_links: provenanceLinks,
+    ai_provenance_rationale: provenanceRationale,
+    provenance_hash: hashItemProvenance({
+      provenance_type: input.provenance_type,
+      ai_provenance_links: provenanceLinks,
+      ai_provenance_rationale: provenanceRationale,
+    }),
     ai_assisted_revisions: [],
   };
 
@@ -254,6 +279,11 @@ export function updateItem(
     source_ai_suggestion_id: existing.source_ai_suggestion_id,
     ai_provenance_links: existing.ai_provenance_links,
     ai_provenance_rationale: existing.ai_provenance_rationale,
+    provenance_hash: hashItemProvenance({
+      provenance_type: patch.provenance_type ?? existing.provenance_type,
+      ai_provenance_links: existing.ai_provenance_links,
+      ai_provenance_rationale: existing.ai_provenance_rationale,
+    }),
     ai_assisted_revisions: existing.ai_assisted_revisions,
   };
 

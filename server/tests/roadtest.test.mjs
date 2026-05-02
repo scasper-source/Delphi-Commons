@@ -17,6 +17,7 @@ process.env.EDELPHI_DATA_DIR = path.join(runtimeRoot, "data");
 process.env.EDELPHI_AUDIT_DIR = path.join(runtimeRoot, "audit");
 
 const Fastify = (await import("fastify")).default;
+const { authRoutes } = await import("../dist/routes/auth.js");
 const { adminRoutes } = await import("../dist/routes/admin.js");
 const { studiesRoutes } = await import("../dist/studies/routes.js");
 const { participantsRoutes } = await import("../dist/routes/participants.js");
@@ -25,15 +26,38 @@ const { consentRoutes } = await import("../dist/routes/consent.js");
 const { itemsRoutes } = await import("../dist/routes/items.js");
 const { reportsRoutes } = await import("../dist/routes/reports.js");
 const { aiRoutes } = await import("../dist/routes/ai.js");
+const { verifyAuditIntegrity } = await import("../dist/core/audit.js");
+const { getDatabase } = await import("../dist/core/database.js");
+const { inspectDataIntegrity } = await import("../dist/core/dataIntegrity.js");
+const { listExportManifests } = await import("../dist/stores/exportManifestStore.js");
 
 const owner = { "x-user-id": "owner-1", "x-user-role": "owner" };
 const steward = { "x-user-id": "steward-1", "x-user-role": "methods_steward" };
 const participant = { "x-user-id": "participant-user", "x-user-role": "participant" };
+const dataCustodian = { "x-user-id": "custodian-1", "x-user-role": "data_custodian" };
+
+async function login(app, email, password) {
+  const body = await expectStatus(
+    app,
+    {
+      method: "POST",
+      url: "/auth/login",
+      body: { email, password },
+    },
+    200
+  );
+  return {
+    token: body.token,
+    user: body.user,
+    headers: { authorization: `Bearer ${body.token}` },
+  };
+}
 
 async function buildApp() {
   const app = Fastify({ logger: false });
 
   app.get("/health", async () => ({ status: "ok", service: "edelphi-server" }));
+  await app.register(authRoutes);
   await app.register(adminRoutes);
   await studiesRoutes(app);
   await app.register(participantsRoutes);
@@ -78,6 +102,88 @@ test("backend road test covers study, consent, AI, reporting, and audit flows", 
 
   const health = await expectStatus(app, { method: "GET", url: "/health" }, 200);
   assert.equal(health.status, "ok");
+
+  const storageStatus = await expectStatus(
+    app,
+    {
+      method: "GET",
+      url: "/admin/storage-status",
+      headers: owner,
+    },
+    200
+  );
+  assert.equal(storageStatus.ok, true);
+  assert.equal(storageStatus.storage.driver, "sqlite");
+  assert.ok(storageStatus.storage.migration_count >= 2);
+
+  const previousAuthRequirement = process.env.EDELPHI_AUTH_REQUIRE_SESSION;
+  process.env.EDELPHI_AUTH_REQUIRE_SESSION = "true";
+
+  await expectStatus(
+    app,
+    {
+      method: "GET",
+      url: "/studies",
+      headers: owner,
+    },
+    401
+  );
+
+  const ownerLogin = await login(app, "owner@example.test", "demo-owner");
+  const stewardLogin = await login(app, "steward@example.test", "demo-steward");
+
+  const authStudy = await expectStatus(
+    app,
+    {
+      method: "POST",
+      url: "/studies",
+      headers: ownerLogin.headers,
+      body: {
+        title: "Session Auth Membership Study",
+        description: "Confirms study membership is enforced by the backend.",
+      },
+    },
+    201
+  );
+
+  await expectStatus(
+    app,
+    {
+      method: "GET",
+      url: `/studies/${authStudy.study.id}`,
+      headers: stewardLogin.headers,
+    },
+    403
+  );
+
+  const assignment = await expectStatus(
+    app,
+    {
+      method: "POST",
+      url: `/studies/${authStudy.study.id}/assignments`,
+      headers: ownerLogin.headers,
+      body: { user_id: stewardLogin.user.user_id, role: "MethodsSteward" },
+    },
+    201
+  );
+  assert.equal(assignment.assignment.role, "MethodsSteward");
+
+  const stewardStudyRead = await expectStatus(
+    app,
+    {
+      method: "GET",
+      url: `/studies/${authStudy.study.id}`,
+      headers: stewardLogin.headers,
+    },
+    200
+  );
+  assert.equal(stewardStudyRead.study.id, authStudy.study.id);
+
+  if (previousAuthRequirement === undefined) {
+    delete process.env.EDELPHI_AUTH_REQUIRE_SESSION;
+  } else {
+    process.env.EDELPHI_AUTH_REQUIRE_SESSION = previousAuthRequirement;
+  }
 
   await expectStatus(
     app,
@@ -307,6 +413,7 @@ test("backend road test covers study, consent, AI, reporting, and audit flows", 
   );
 
   const participantIds = [uniqueParticipantId(1), uniqueParticipantId(2), uniqueParticipantId(3)];
+  let invitedParticipantId = null;
   for (const [index, participantId] of participantIds.entries()) {
     const created = await expectStatus(
       app,
@@ -322,6 +429,7 @@ test("backend road test covers study, consent, AI, reporting, and audit flows", 
       201
     );
     assert.equal(typeof created.participant_id, "string");
+    if (index === 0) invitedParticipantId = created.participant_id;
   }
 
   await expectStatus(
@@ -358,6 +466,85 @@ test("backend road test covers study, consent, AI, reporting, and audit flows", 
       body: {},
     },
     200
+  );
+
+  assert.equal(typeof invitedParticipantId, "string");
+  const invitation = await expectStatus(
+    app,
+    {
+      method: "POST",
+      url: `/studies/${studyId}/versions/${versionId}/participants/${invitedParticipantId}/invitations`,
+      headers: owner,
+      body: {},
+    },
+    201
+  );
+  assert.match(invitation.invitation_url, /\?invite=/);
+  const inviteToken = new URL(invitation.invitation_url).searchParams.get("invite");
+  assert.ok(inviteToken);
+
+  const invitationContext = await expectStatus(
+    app,
+    {
+      method: "GET",
+      url: `/participant/invitations/${inviteToken}`,
+    },
+    200
+  );
+  assert.equal(invitationContext.invitation.participant_id, invitedParticipantId);
+  assert.equal(invitationContext.active_consent_version.consent_version_id, consentVersion.consent_version.consent_version_id);
+
+  await expectStatus(
+    app,
+    {
+      method: "POST",
+      url: `/participant/invitations/${inviteToken}/responses`,
+      body: { text: "This should be blocked until the invitee consents." },
+    },
+    403
+  );
+
+  const invitationConsent = await expectStatus(
+    app,
+    {
+      method: "POST",
+      url: `/participant/invitations/${inviteToken}/consent`,
+      body: {},
+    },
+    201
+  );
+  assert.equal(invitationConsent.consent_record.participant_id, invitedParticipantId);
+
+  const invitationResponse = await expectStatus(
+    app,
+    {
+      method: "POST",
+      url: `/participant/invitations/${inviteToken}/responses`,
+      body: { text: "Patients benefit when discharge instructions are written in plain language." },
+    },
+    201
+  );
+  assert.equal(typeof invitationResponse.response_id, "string");
+
+  const invitationWithdrawal = await expectStatus(
+    app,
+    {
+      method: "POST",
+      url: `/participant/invitations/${inviteToken}/withdraw`,
+      body: {},
+    },
+    200
+  );
+  assert.equal(typeof invitationWithdrawal.consent_record.withdrew_at, "string");
+
+  await expectStatus(
+    app,
+    {
+      method: "POST",
+      url: `/participant/invitations/${inviteToken}/responses`,
+      body: { text: "This should be blocked after withdrawal." },
+    },
+    403
   );
 
   for (const participantId of participantIds) {
@@ -404,8 +591,8 @@ test("backend road test covers study, consent, AI, reporting, and audit flows", 
     },
     200
   );
-  assert.equal(summary.response_count, 3);
-  assert.equal(summary.unique_participant_count, 3);
+  assert.equal(summary.response_count, 4);
+  assert.equal(summary.unique_participant_count, 4);
 
   const roundTwoSynthesis = await expectStatus(
     app,
@@ -469,10 +656,14 @@ test("backend road test covers study, consent, AI, reporting, and audit flows", 
       headers: owner,
       body: {
         candidate_ids: roundTwoCandidates.map((candidate) => candidate.candidate_id),
-        rationales: {
-          [clusteredCandidate.candidate_id]:
-            "The duplicate Round 1 responses use identical wording and preserve the same meaning.",
-        },
+        rationales: Object.fromEntries(
+          roundTwoCandidates
+            .filter((candidate) => candidate.requires_human_rationale)
+            .map((candidate) => [
+              candidate.candidate_id,
+              "The duplicate Round 1 responses use identical wording and preserve the same meaning.",
+            ])
+        ),
       },
     },
     201
@@ -484,13 +675,86 @@ test("backend road test covers study, consent, AI, reporting, and audit flows", 
   assert.equal(roundTwoItems[0].source_ai_suggestion_id, roundTwoSuggestion.suggestion_id);
   assert.ok(roundTwoItems[0].ai_provenance_links.length >= 1);
 
+  const manualCandidate = await expectStatus(
+    app,
+    {
+      method: "POST",
+      url: `/studies/${studyId}/versions/${versionId}/items`,
+      headers: owner,
+      body: {
+        round_number: 2,
+        text: "A candidate that will be edited and rejected during curation.",
+        provenance_links: [
+          {
+            source_type: "response",
+            source_id: "manual-source-for-rejection",
+            source_round_number: 1,
+            excerpt: "Manual curation source excerpt.",
+          },
+        ],
+        rationale: "Manual candidate created to exercise the curation edit and reject workflow.",
+      },
+    },
+    201
+  );
+
+  const editedManualCandidate = await expectStatus(
+    app,
+    {
+      method: "PATCH",
+      url: `/studies/${studyId}/versions/${versionId}/items/${manualCandidate.item.item_id}`,
+      headers: owner,
+      body: {
+        text: "Edited manual candidate retained for audit but not published.",
+        rationale: "Human curator edited the candidate wording.",
+      },
+    },
+    200
+  );
+  assert.equal(editedManualCandidate.item.text, "Edited manual candidate retained for audit but not published.");
+
+  await expectStatus(
+    app,
+    {
+      method: "PATCH",
+      url: `/studies/${studyId}/versions/${versionId}/items/${manualCandidate.item.item_id}`,
+      headers: owner,
+      body: { status: "Published", rationale: "Publication should require the publication gate." },
+    },
+    400
+  );
+
+  const rejectedManualCandidate = await expectStatus(
+    app,
+    {
+      method: "PATCH",
+      url: `/studies/${studyId}/versions/${versionId}/items/${manualCandidate.item.item_id}`,
+      headers: owner,
+      body: { status: "Rejected", rationale: "Human curator rejected this candidate." },
+    },
+    200
+  );
+  assert.equal(rejectedManualCandidate.item.status, "Rejected");
+
+  await expectStatus(
+    app,
+    {
+      method: "POST",
+      url: `/studies/${studyId}/versions/${versionId}/items/${manualCandidate.item.item_id}/publish`,
+      headers: owner,
+      body: {},
+    },
+    409
+  );
+
+  const lintTarget = roundTwoItems.find((item) => item.text.includes("must always")) ?? roundTwoItems[0];
   const lint = await expectStatus(
     app,
     {
       method: "POST",
       url: `/studies/${studyId}/versions/${versionId}/ai/lint-wording`,
       headers: owner,
-      body: { item_ids: [roundTwoItems[0].item_id] },
+      body: { item_ids: [lintTarget.item_id] },
     },
     201
   );
@@ -523,7 +787,7 @@ test("backend road test covers study, consent, AI, reporting, and audit flows", 
       body: {
         changes: [
           {
-            item_id: roundTwoItems[0].item_id,
+            item_id: lintTarget.item_id,
             text: suggestedText,
             rationale: "Human review accepted the neutralized wording.",
           },
@@ -563,7 +827,7 @@ test("backend road test covers study, consent, AI, reporting, and audit flows", 
       body: {
         changes: [
           {
-            item_id: roundTwoItems[0].item_id,
+            item_id: lintTarget.item_id,
             text: suggestedText,
             rationale: "Human review accepted the neutralized wording.",
           },
@@ -579,7 +843,7 @@ test("backend road test covers study, consent, AI, reporting, and audit flows", 
     app,
     {
       method: "POST",
-      url: `/studies/${studyId}/versions/${versionId}/items/${roundTwoItems[0].item_id}/publish`,
+      url: `/studies/${studyId}/versions/${versionId}/items/${lintTarget.item_id}/publish`,
       headers: owner,
       body: {},
     },
@@ -601,7 +865,7 @@ test("backend road test covers study, consent, AI, reporting, and audit flows", 
     app,
     {
       method: "POST",
-      url: `/studies/${studyId}/versions/${versionId}/items/${roundTwoItems[0].item_id}/publish`,
+      url: `/studies/${studyId}/versions/${versionId}/items/${lintTarget.item_id}/publish`,
       headers: owner,
       body: {},
     },
@@ -923,6 +1187,116 @@ test("backend road test covers study, consent, AI, reporting, and audit flows", 
   assert.equal(finalExport.report.report_stage, "final");
   assert.ok(finalExport.report.summary.non_consensus_item_count >= 1);
   assert.equal(typeof finalExport.report.hashes.dataset_hash, "string");
+  assert.equal(finalExport.export_manifest.package_type, "final-delphi-report");
+  assert.equal(finalExport.export_manifest.audit_event_id.length > 0, true);
+  assert.equal(finalExport.export_manifest.dataset_hash, finalExport.report.hashes.dataset_hash);
+  assert.equal(finalExport.export_package.export_type, "final-delphi-report");
+  assert.equal(finalExport.export_package.human_review_status, "pending_review");
+  assert.equal(finalExport.export_package.release_status, "not_released");
+  assert.ok(finalExport.export_package.export_format_set.includes(".docx"));
+  assert.ok(finalExport.export_package.export_format_set.includes(".xlsx"));
+  assert.ok(finalExport.export_package.export_format_set.includes(".csv"));
+  assert.ok(finalExport.export_package.export_format_set.includes(".md"));
+  assert.equal(finalExport.export_package.files.some((file) => file.path === "final_report/final_delphi_report.docx"), true);
+  assert.equal(finalExport.export_package.files.some((file) => file.path === "final_report/final_item_results.xlsx"), true);
+  assert.equal(finalExport.export_package.files.some((file) => file.path === "final_report/final_item_results.csv"), true);
+  assert.equal(finalExport.export_package.files.some((file) => file.path === "final_report/required_limitations_and_disclosures.md"), true);
+  assert.equal(typeof finalExport.export_package.manifest_hash, "string");
+  assert.equal(typeof finalExport.export_package.package_hash, "string");
+  assert.ok(finalExport.report.limitations.includes("Consensus indicates agreement among this panel; it does not establish correctness."));
+
+  const exportPackages = await expectStatus(
+    app,
+    {
+      method: "GET",
+      url: `/studies/${studyId}/versions/${versionId}/export-packages`,
+      headers: owner,
+    },
+    200
+  );
+  assert.ok(exportPackages.export_packages.some((pkg) => pkg.export_package_id === finalExport.export_package.export_package_id));
+
+  const exportPackageFiles = await expectStatus(
+    app,
+    {
+      method: "GET",
+      url: `/studies/${studyId}/versions/${versionId}/export-packages/${finalExport.export_package.export_package_id}/files`,
+      headers: owner,
+    },
+    200
+  );
+  const itemResultsFile = exportPackageFiles.files.find((file) => file.path === "final_report/final_item_results.csv");
+  assert.ok(itemResultsFile);
+  assert.equal(itemResultsFile.content_encoding, "utf8");
+  assert.match(itemResultsFile.content_text, /consensus_status/);
+  assert.match(itemResultsFile.content_text, /non_consensus_flag/);
+  const docxFile = exportPackageFiles.files.find((file) => file.path === "final_report/final_delphi_report.docx");
+  const xlsxFile = exportPackageFiles.files.find((file) => file.path === "final_report/final_item_results.xlsx");
+  assert.ok(docxFile);
+  assert.ok(xlsxFile);
+  assert.equal(docxFile.content_encoding, "base64");
+  assert.equal(xlsxFile.content_encoding, "base64");
+  const docxBuffer = Buffer.from(docxFile.content_text, "base64");
+  const xlsxBuffer = Buffer.from(xlsxFile.content_text, "base64");
+  assert.equal(docxBuffer.subarray(0, 2).toString("utf8"), "PK");
+  assert.equal(xlsxBuffer.subarray(0, 2).toString("utf8"), "PK");
+  assert.match(docxBuffer.toString("utf8"), /word\/document\.xml/);
+  assert.match(xlsxBuffer.toString("utf8"), /xl\/workbook\.xml/);
+  assert.equal(docxFile.sha256.length, 64);
+  assert.equal(xlsxFile.sha256.length, 64);
+
+  const downloadedDocx = await expectStatus(
+    app,
+    {
+      method: "GET",
+      url: `/studies/${studyId}/versions/${versionId}/export-packages/${finalExport.export_package.export_package_id}/files/${docxFile.export_file_id}/download`,
+      headers: owner,
+    },
+    200
+  );
+  assert.equal(downloadedDocx.file.path, "final_report/final_delphi_report.docx");
+  assert.equal(downloadedDocx.file.content_encoding, "base64");
+
+  const reviewedPackage = await expectStatus(
+    app,
+    {
+      method: "POST",
+      url: `/studies/${studyId}/versions/${versionId}/export-packages/${finalExport.export_package.export_package_id}/review`,
+      headers: owner,
+      body: {
+        review_status: "approved",
+        note: "Reviewed generated report, disclosures, and package hashes for release.",
+      },
+    },
+    201
+  );
+  assert.equal(reviewedPackage.review.review_status, "approved");
+  assert.equal(reviewedPackage.reviews.length, 1);
+
+  const reviewedPackageList = await expectStatus(
+    app,
+    {
+      method: "GET",
+      url: `/studies/${studyId}/versions/${versionId}/export-packages`,
+      headers: owner,
+    },
+    200
+  );
+  const reviewedPackageFromList = reviewedPackageList.export_packages.find(
+    (pkg) => pkg.export_package_id === finalExport.export_package.export_package_id
+  );
+  assert.equal(reviewedPackageFromList.reviews.at(-1).review_status, "approved");
+
+  const custodianFinalExport = await expectStatus(
+    app,
+    {
+      method: "GET",
+      url: `/studies/${studyId}/versions/${versionId}/export-report`,
+      headers: dataCustodian,
+    },
+    200
+  );
+  assert.equal(custodianFinalExport.export_package.export_type, "final-delphi-report");
 
   const irbDraft = await expectStatus(
     app,
@@ -1001,6 +1375,8 @@ test("backend road test covers study, consent, AI, reporting, and audit flows", 
     200
   );
   assert.equal(officialIrb.irb_pack_export.official_status, "released_for_official_use");
+  assert.equal(officialIrb.export_manifest.package_type, "irb-pack");
+  assert.equal(officialIrb.export_manifest.audit_event_id.length > 0, true);
 
   await expectStatus(
     app,
@@ -1085,6 +1461,9 @@ test("backend road test covers study, consent, AI, reporting, and audit flows", 
     "ai.suggestion.lint_wording",
     "ai.suggestion.generate_irb_pack",
     "ai.suggestion.export_irb_pack",
+    "item.update",
+    "item.reject",
+    "item.publish_blocked_rejected",
     "report.export",
     "study.archive",
   ]) {
@@ -1100,4 +1479,48 @@ test("backend road test covers study, consent, AI, reporting, and audit flows", 
         event.details.final_round_number === 3
     )
   );
+
+  const manifestList = listExportManifests({ study_id: studyId, version_id: versionId });
+  assert.ok(manifestList.some((manifest) => manifest.package_type === "final-delphi-report"));
+  assert.ok(manifestList.some((manifest) => manifest.package_type === "irb-pack"));
+
+  const auditIntegrity = verifyAuditIntegrity();
+  assert.equal(auditIntegrity.ok, true);
+  assert.equal(auditEvents.every((event) => typeof event.sequence === "number" && typeof event.eventHash === "string"), true);
+
+  assert.throws(
+    () => getDatabase().prepare("UPDATE audit_events SET action = action WHERE id = ?").run(auditEvents[0].id),
+    /audit_events_append_only/,
+  );
+  assert.throws(
+    () => getDatabase().prepare("DELETE FROM export_manifests WHERE export_id = ?").run(manifestList[0].export_id),
+    /export_manifests_append_only/,
+  );
+
+  const dataIntegrity = inspectDataIntegrity();
+  assert.equal(dataIntegrity.ok, true);
+  assert.equal(dataIntegrity.separation_model.identity_collection, "identity_participants");
+  assert.equal(dataIntegrity.separation_model.response_collection, "responses");
+
+  const auditIntegrityEndpoint = await expectStatus(
+    app,
+    {
+      method: "GET",
+      url: "/admin/audit-integrity",
+      headers: dataCustodian,
+    },
+    200
+  );
+  assert.equal(auditIntegrityEndpoint.audit_integrity.ok, true);
+
+  const dataIntegrityEndpoint = await expectStatus(
+    app,
+    {
+      method: "GET",
+      url: "/admin/data-integrity",
+      headers: dataCustodian,
+    },
+    200
+  );
+  assert.equal(dataIntegrityEndpoint.data_integrity.ok, true);
 });

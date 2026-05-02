@@ -3,7 +3,7 @@
 // Ticket 4 (partial): set consensus rule (required before Round 1 opens; locked after Draft)
 // Ticket 11: study design declaration (modified vs classic, planned rounds, terminal round, rationale)
 
-import type { FastifyInstance, FastifyRequest } from "fastify";
+import type { FastifyInstance } from "fastify";
 import { randomUUID } from "node:crypto";
 
 import { roleFromHeader } from "./roleMap.js";
@@ -27,14 +27,22 @@ import {
   updateStudyVersion,
   upsertSignoff,
   listSignoffs,
+  addAssignment,
+  listAssignments,
 } from "./store.js";
 
 import { writeAuditEvent } from "../core/audit.js";
+import { resolveActor } from "../middleware/auth.js";
+import { getUserByEmail } from "../auth/userStore.js";
 
-function actorFromHeaders(req: FastifyRequest) {
-  const userId = String(req.headers["x-user-id"] ?? "anonymous");
-  const role = String(req.headers["x-user-role"] ?? "anonymous");
-  return { userId, role };
+async function actorFromRequest(req: Parameters<typeof resolveActor>[0]) {
+  const actor = await resolveActor(req);
+  if (process.env.EDELPHI_AUTH_REQUIRE_SESSION === "true" && actor.authSource !== "session") {
+    const err: any = new Error("session_required");
+    err.statusCode = 401;
+    throw err;
+  }
+  return actor;
 }
 
 function requireHeaderRole(role: string, allowed: string[]) {
@@ -43,6 +51,14 @@ function requireHeaderRole(role: string, allowed: string[]) {
     err.statusCode = 403;
     throw err;
   }
+}
+
+function demoGovernanceAssignmentsEnabled(): boolean {
+  return process.env.NODE_ENV !== "production" && process.env.EDELPHI_DEMO_GOVERNANCE_ASSIGNMENTS !== "false";
+}
+
+function demoGovernanceUser(email: string) {
+  return process.env.EDELPHI_DEMO_GOVERNANCE_ASSIGNMENTS === "true" ? getUserByEmail(email) : null;
 }
 
 function isStudyFormat(value: unknown): value is StudyFormat {
@@ -68,15 +84,41 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return Boolean(value) && typeof value === "object" && !Array.isArray(value);
 }
 
+function isStudyRole(value: unknown): value is StudyAssignment["role"] {
+  return (
+    value === "Owner" ||
+    value === "MethodsSteward" ||
+    value === "PrivacyLead" ||
+    value === "DataCustodian" ||
+    value === "Maintainer"
+  );
+}
+
 export async function studiesRoutes(app: FastifyInstance) {
   // GET /studies  (staff roles only)
   app.get("/studies", async (req, reply) => {
-    const actor = actorFromHeaders(req);
+    const actor = await actorFromRequest(req);
     requireHeaderRole(actor.role, ["owner", "methods_steward", "privacy_lead", "admin"]);
 
     const query = (req.query ?? {}) as { include_archived?: string };
     const includeArchived = query.include_archived === "true";
-    const studies = await listStudies({ includeArchived });
+    const allStudies = await listStudies({ includeArchived });
+    const canSeeAll =
+      actor.role === "admin" ||
+      actor.role === "maintainer" ||
+      actor.role === "privacy_lead";
+    const studies = canSeeAll
+      ? allStudies
+      : (
+          await Promise.all(
+            allStudies.map(async (study) => ({
+              study,
+              assignments: await listAssignments(study.id),
+            })),
+          )
+        )
+          .filter((entry) => entry.assignments.some((assignment) => assignment.user_id === actor.userId))
+          .map((entry) => entry.study);
 
     await writeAuditEvent({
       action: "study.list",
@@ -90,7 +132,7 @@ export async function studiesRoutes(app: FastifyInstance) {
 
   // GET /studies/:studyId
   app.get("/studies/:studyId", async (req, reply) => {
-    const actor = actorFromHeaders(req);
+    const actor = await actorFromRequest(req);
     requireHeaderRole(actor.role, ["owner", "methods_steward", "privacy_lead", "admin"]);
 
     const { studyId } = req.params as any;
@@ -109,7 +151,7 @@ export async function studiesRoutes(app: FastifyInstance) {
 
   // GET /studies/:studyId/versions
   app.get("/studies/:studyId/versions", async (req, reply) => {
-    const actor = actorFromHeaders(req);
+    const actor = await actorFromRequest(req);
     requireHeaderRole(actor.role, ["owner", "methods_steward", "privacy_lead", "admin"]);
 
     const { studyId } = req.params as any;
@@ -130,7 +172,7 @@ export async function studiesRoutes(app: FastifyInstance) {
 
   // GET /studies/:studyId/versions/:versionId
   app.get("/studies/:studyId/versions/:versionId", async (req, reply) => {
-    const actor = actorFromHeaders(req);
+    const actor = await actorFromRequest(req);
     requireHeaderRole(actor.role, ["owner", "methods_steward", "privacy_lead", "admin"]);
 
     const { studyId, versionId } = req.params as any;
@@ -151,7 +193,7 @@ export async function studiesRoutes(app: FastifyInstance) {
 
   // GET /studies/:studyId/versions/:versionId/signoffs
   app.get("/studies/:studyId/versions/:versionId/signoffs", async (req, reply) => {
-    const actor = actorFromHeaders(req);
+    const actor = await actorFromRequest(req);
     requireHeaderRole(actor.role, ["owner", "methods_steward", "privacy_lead", "admin"]);
 
     const { studyId, versionId } = req.params as any;
@@ -172,9 +214,60 @@ export async function studiesRoutes(app: FastifyInstance) {
     return reply.send({ signoffs });
   });
 
+  app.get("/studies/:studyId/assignments", async (req, reply) => {
+    const actor = await actorFromRequest(req);
+    requireHeaderRole(actor.role, ["owner", "privacy_lead", "admin", "maintainer"]);
+
+    const { studyId } = req.params as any;
+    const study = await getStudy(studyId);
+    if (!study) return reply.code(404).send({ error: "study_not_found" });
+
+    const assignments = await listAssignments(studyId);
+
+    await writeAuditEvent({
+      action: "study.assignment.list",
+      actor,
+      object: { type: "study", id: studyId },
+      details: { count: assignments.length },
+    });
+
+    return reply.send({ assignments });
+  });
+
+  app.post("/studies/:studyId/assignments", async (req, reply) => {
+    const actor = await actorFromRequest(req);
+    requireHeaderRole(actor.role, ["owner", "admin", "maintainer"]);
+
+    const { studyId } = req.params as any;
+    const study = await getStudy(studyId);
+    if (!study) return reply.code(404).send({ error: "study_not_found" });
+
+    const body = (req.body ?? {}) as { user_id?: string; role?: unknown };
+    if (!body.user_id || !isStudyRole(body.role)) {
+      return reply.code(400).send({ error: "user_id_and_valid_study_role_required" });
+    }
+
+    const assignment: StudyAssignment = {
+      user_id: body.user_id,
+      study_id: studyId,
+      role: body.role,
+      created_at: new Date().toISOString(),
+    };
+    await addAssignment(assignment);
+
+    await writeAuditEvent({
+      action: "study.assignment.upsert",
+      actor,
+      object: { type: "study", id: studyId },
+      details: { assigned_user_id: assignment.user_id, role: assignment.role },
+    });
+
+    return reply.code(201).send({ assignment });
+  });
+
   // POST /studies  (Owner/admin only)
   app.post("/studies", async (req, reply) => {
-    const actor = actorFromHeaders(req);
+    const actor = await actorFromRequest(req);
     requireHeaderRole(actor.role, ["owner", "admin"]);
 
     const body = (req.body ?? {}) as { title?: string; description?: string };
@@ -197,6 +290,36 @@ export async function studiesRoutes(app: FastifyInstance) {
 
     await createStudy(study, ownerAssignment);
 
+    const demoSteward = demoGovernanceUser("steward@example.test");
+    if (demoSteward && demoSteward.user_id !== actor.userId) {
+      await addAssignment({
+        user_id: demoSteward.user_id,
+        study_id: study.id,
+        role: "MethodsSteward",
+        created_at: now,
+      });
+    }
+
+    const demoPrivacyLead = demoGovernanceUser("privacy@example.test");
+    if (demoPrivacyLead && demoPrivacyLead.user_id !== actor.userId) {
+      await addAssignment({
+        user_id: demoPrivacyLead.user_id,
+        study_id: study.id,
+        role: "PrivacyLead",
+        created_at: now,
+      });
+    }
+
+    const demoCustodian = demoGovernanceUser("custodian@example.test");
+    if (demoCustodian && demoCustodian.user_id !== actor.userId) {
+      await addAssignment({
+        user_id: demoCustodian.user_id,
+        study_id: study.id,
+        role: "DataCustodian",
+        created_at: now,
+      });
+    }
+
     await writeAuditEvent({
       action: "study.create",
       actor,
@@ -210,7 +333,7 @@ export async function studiesRoutes(app: FastifyInstance) {
   // PATCH /studies/:studyId/archive
   // Hides a study from default saved-study lists while preserving records and audit history.
   app.patch("/studies/:studyId/archive", async (req, reply) => {
-    const actor = actorFromHeaders(req);
+    const actor = await actorFromRequest(req);
     requireHeaderRole(actor.role, ["owner", "admin"]);
 
     const { studyId } = req.params as any;
@@ -241,7 +364,7 @@ export async function studiesRoutes(app: FastifyInstance) {
   // Ticket 11: study designer must declare method design before Round 1.
   // These settings are locked once the version leaves Draft.
   app.patch("/studies/:studyId/versions/:versionId/design", async (req, reply) => {
-    const actor = actorFromHeaders(req);
+    const actor = await actorFromRequest(req);
     requireHeaderRole(actor.role, ["owner", "admin"]);
 
     const { studyId, versionId } = req.params as any;
@@ -312,7 +435,7 @@ export async function studiesRoutes(app: FastifyInstance) {
   // Ticket 4: consensus rule must be set before Round 1 opens.
   // We only allow setting it while Draft so it becomes part of the signed-off config.
   app.patch("/studies/:studyId/versions/:versionId/consensus-rule", async (req, reply) => {
-    const actor = actorFromHeaders(req);
+    const actor = await actorFromRequest(req);
     requireHeaderRole(actor.role, ["owner", "admin"]);
 
     const { studyId, versionId } = req.params as any;
@@ -344,7 +467,7 @@ export async function studiesRoutes(app: FastifyInstance) {
   // PATCH /studies/:studyId/versions/:versionId/wizard-packet
   // Stores the full Study Builder packet while the version is still draft.
   app.patch("/studies/:studyId/versions/:versionId/wizard-packet", async (req, reply) => {
-    const actor = actorFromHeaders(req);
+    const actor = await actorFromRequest(req);
     requireHeaderRole(actor.role, ["owner", "admin"]);
 
     const { studyId, versionId } = req.params as any;
@@ -385,7 +508,7 @@ export async function studiesRoutes(app: FastifyInstance) {
 
   // POST /studies/:studyId/versions  (Owner/admin only)
   app.post("/studies/:studyId/versions", async (req, reply) => {
-    const actor = actorFromHeaders(req);
+    const actor = await actorFromRequest(req);
     requireHeaderRole(actor.role, ["owner", "admin"]);
 
     const { studyId } = req.params as any;
@@ -435,7 +558,7 @@ export async function studiesRoutes(app: FastifyInstance) {
 
   // POST /studies/:studyId/versions/:versionId/submit-for-signoff  (Owner/admin only)
   app.post("/studies/:studyId/versions/:versionId/submit-for-signoff", async (req, reply) => {
-    const actor = actorFromHeaders(req);
+    const actor = await actorFromRequest(req);
     requireHeaderRole(actor.role, ["owner", "admin"]);
 
     const { studyId, versionId } = req.params as any;
@@ -498,14 +621,29 @@ export async function studiesRoutes(app: FastifyInstance) {
 
   // POST /studies/:studyId/versions/:versionId/signoff  (Owner or MethodsSteward; admin allowed)
   app.post("/studies/:studyId/versions/:versionId/signoff", async (req, reply) => {
-    const actor = actorFromHeaders(req);
-    requireHeaderRole(actor.role, ["owner", "methods_steward", "admin"]);
-
+    const actor = await actorFromRequest(req);
     const { studyId, versionId } = req.params as any;
     const v = await getStudyVersion(versionId);
 
     if (!v || v.study_id !== studyId) return reply.code(404).send({ error: "study_version_not_found" });
     if (v.status !== "ReadyForSignoff") return reply.code(409).send({ error: "not_ready_for_signoff" });
+
+    if (
+      actor.role === "unassigned" &&
+      actor.email === "steward@example.test" &&
+      actor.systemRoles.includes("methods_steward") &&
+      demoGovernanceAssignmentsEnabled()
+    ) {
+      await addAssignment({
+        user_id: actor.userId,
+        study_id: studyId,
+        role: "MethodsSteward",
+        created_at: new Date().toISOString(),
+      });
+      actor.role = "methods_steward";
+    }
+
+    requireHeaderRole(actor.role, ["owner", "methods_steward", "admin"]);
 
     const canonical = roleFromHeader(actor.role);
 
@@ -542,7 +680,7 @@ export async function studiesRoutes(app: FastifyInstance) {
   // Ticket 4 + Ticket 11:
   // cannot open Round 1 unless consensus rule and declared study design are present.
   app.post("/studies/:studyId/versions/:versionId/open-round-1", async (req, reply) => {
-    const actor = actorFromHeaders(req);
+    const actor = await actorFromRequest(req);
     requireHeaderRole(actor.role, ["owner", "admin"]);
 
     const { studyId, versionId } = req.params as any;
@@ -580,7 +718,7 @@ export async function studiesRoutes(app: FastifyInstance) {
 
   // POST /studies/:studyId/versions/:versionId/activate  (Owner/admin only)
   app.post("/studies/:studyId/versions/:versionId/activate", async (req, reply) => {
-    const actor = actorFromHeaders(req);
+    const actor = await actorFromRequest(req);
     requireHeaderRole(actor.role, ["owner", "admin"]);
 
     const { studyId, versionId } = req.params as any;

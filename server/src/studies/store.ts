@@ -1,9 +1,5 @@
-// server/src/studies/store.ts
-// Ticket 3: minimal file-based storage (JSON) for Study + StudyVersion + Signoffs.
-
-import { promises as fs } from "node:fs";
-import path from "node:path";
-import { getDataDir } from "../core/paths.js";
+import { JsonCollection } from "../core/jsonCollection.js";
+import { withDatabaseTransaction } from "../core/database.js";
 import type {
   Study,
   StudyAssignment,
@@ -11,140 +7,85 @@ import type {
   StudyVersionSignoff,
 } from "./types.js";
 
-type DbShape = {
-  studies: Study[];
-  studyVersions: StudyVersion[];
-  assignments: StudyAssignment[];
-  signoffs: StudyVersionSignoff[];
-};
+const studies = new JsonCollection<Study>("studies");
+const studyVersions = new JsonCollection<StudyVersion>("study_versions");
+const assignments = new JsonCollection<StudyAssignment>("study_assignments");
+const signoffs = new JsonCollection<StudyVersionSignoff>("study_version_signoffs");
 
-const DATA_DIR = getDataDir();
-const DB_FILE = path.join(DATA_DIR, "studies.db.json");
-
-async function ensureDb(): Promise<void> {
-  await fs.mkdir(DATA_DIR, { recursive: true });
-  try {
-    await fs.access(DB_FILE);
-  } catch {
-    const initial: DbShape = {
-      studies: [],
-      studyVersions: [],
-      assignments: [],
-      signoffs: [],
-    };
-    await fs.writeFile(DB_FILE, JSON.stringify(initial, null, 2), "utf8");
-  }
+function assignmentKey(assignment: StudyAssignment): string {
+  return `${assignment.study_id}:${assignment.user_id}:${assignment.role}`;
 }
 
-async function readDb(): Promise<DbShape> {
-  await ensureDb();
-  const raw = await fs.readFile(DB_FILE, "utf8");
-  return JSON.parse(raw) as DbShape;
-}
-
-async function writeDb(db: DbShape): Promise<void> {
-  await ensureDb();
-  const tmp = DB_FILE + ".tmp";
-  await fs.writeFile(tmp, JSON.stringify(db, null, 2), "utf8");
-  try {
-    await fs.rename(tmp, DB_FILE);
-  } catch {
-    await fs.copyFile(tmp, DB_FILE);
-    await fs.unlink(tmp).catch(() => {});
-  }
+function signoffKey(signoff: Pick<StudyVersionSignoff, "study_version_id" | "required_role">): string {
+  return `${signoff.study_version_id}:${signoff.required_role}`;
 }
 
 export async function createStudy(study: Study, ownerAssignment: StudyAssignment): Promise<void> {
-  const db = await readDb();
-  db.studies.push(study);
-  db.assignments.push(ownerAssignment);
-  await writeDb(db);
+  withDatabaseTransaction(() => {
+    studies.insert(study.id, study);
+    assignments.set(assignmentKey(ownerAssignment), ownerAssignment);
+  });
 }
 
 export async function listStudies(options: { includeArchived?: boolean } = {}): Promise<Study[]> {
-  const db = await readDb();
-  return db.studies
-    .filter(study => options.includeArchived || !study.archived_at)
+  return studies
+    .all()
+    .filter((study) => options.includeArchived || !study.archived_at)
     .sort((a, b) => b.created_at.localeCompare(a.created_at));
 }
 
 export async function getStudy(studyId: string): Promise<Study | null> {
-  const db = await readDb();
-  return db.studies.find(s => s.id === studyId) ?? null;
+  return studies.get(studyId);
 }
 
 export async function updateStudy(studyId: string, patch: Partial<Study>): Promise<Study> {
-  const db = await readDb();
-  const idx = db.studies.findIndex(s => s.id === studyId);
-  if (idx === -1) throw new Error("study_not_found");
-
-  const existing = db.studies[idx];
-  if (!existing) throw new Error("study_not_found");
-
-  const updated: Study = { ...existing, ...patch, id: studyId };
-  db.studies[idx] = updated;
-
-  await writeDb(db);
+  const updated = studies.update(studyId, (existing) => ({ ...existing, ...patch, id: studyId }));
+  if (!updated) throw new Error("study_not_found");
   return updated;
 }
 
 export async function addAssignment(assignment: StudyAssignment): Promise<void> {
-  const db = await readDb();
-  db.assignments.push(assignment);
-  await writeDb(db);
+  assignments.set(assignmentKey(assignment), assignment);
 }
 
 export async function listAssignments(studyId: string): Promise<StudyAssignment[]> {
-  const db = await readDb();
-  return db.assignments.filter(a => a.study_id === studyId);
+  return assignments
+    .all()
+    .filter((assignment) => assignment.study_id === studyId)
+    .sort((a, b) => a.created_at.localeCompare(b.created_at));
 }
 
 export async function createStudyVersion(version: StudyVersion): Promise<void> {
-  const db = await readDb();
-  db.studyVersions.push(version);
-  await writeDb(db);
+  studyVersions.insert(version.id, version);
 }
 
 export async function getStudyVersion(studyVersionId: string): Promise<StudyVersion | null> {
-  const db = await readDb();
-  return db.studyVersions.find(v => v.id === studyVersionId) ?? null;
+  return studyVersions.get(studyVersionId);
 }
 
 export async function listStudyVersions(studyId: string): Promise<StudyVersion[]> {
-  const db = await readDb();
-  return db.studyVersions
-    .filter(v => v.study_id === studyId)
+  return studyVersions
+    .all()
+    .filter((version) => version.study_id === studyId)
     .sort((a, b) => a.version_number - b.version_number);
 }
 
 export async function updateStudyVersion(
   studyVersionId: string,
-  patch: Partial<StudyVersion>
+  patch: Partial<StudyVersion>,
 ): Promise<StudyVersion> {
-  const db = await readDb();
-  const idx = db.studyVersions.findIndex(v => v.id === studyVersionId);
-  if (idx === -1) throw new Error("study_version_not_found");
-
-  const updated: StudyVersion = { ...db.studyVersions[idx], ...patch } as StudyVersion;
-  db.studyVersions[idx] = updated;
-
-  await writeDb(db);
+  const updated = studyVersions.update(studyVersionId, (existing) => ({ ...existing, ...patch }));
+  if (!updated) throw new Error("study_version_not_found");
   return updated;
 }
 
 export async function upsertSignoff(signoff: StudyVersionSignoff): Promise<void> {
-  const db = await readDb();
-  const idx = db.signoffs.findIndex(s =>
-    s.study_version_id === signoff.study_version_id &&
-    s.required_role === signoff.required_role
-  );
-  if (idx >= 0) db.signoffs[idx] = signoff;
-  else db.signoffs.push(signoff);
-  await writeDb(db);
+  signoffs.set(signoffKey(signoff), signoff);
 }
 
 export async function listSignoffs(studyVersionId: string): Promise<StudyVersionSignoff[]> {
-  const db = await readDb();
-  return db.signoffs.filter(s => s.study_version_id === studyVersionId);
+  return signoffs
+    .all()
+    .filter((signoff) => signoff.study_version_id === studyVersionId)
+    .sort((a, b) => a.required_role.localeCompare(b.required_role));
 }
-

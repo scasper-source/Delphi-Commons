@@ -14,6 +14,9 @@ import {
   type RoundReport,
   type RoundConfig,
   type SavedStudyRecord,
+  type ParticipantInvitationContext,
+  type ExportPackage,
+  type ExportPackageFile,
 } from "./core/api";
 import { mockStudies, mockStudy } from "./core/mockData";
 import { canAccessIdentityMap, canAccessModule, canExportOutput, roleLabels } from "./core/permissions";
@@ -67,8 +70,27 @@ const statusLabels: Record<string, string> = {
   ReadyForSignoff: "Ready for signoff",
 };
 
+const ratingScaleOptions = [
+  { value: 1, label: "Strongly disagree", detail: "I do not support prioritizing this statement." },
+  { value: 2, label: "Disagree", detail: "I mostly do not support prioritizing this statement." },
+  { value: 3, label: "Somewhat disagree", detail: "I lean against prioritizing this statement." },
+  { value: 4, label: "Slightly disagree", detail: "I have mild reservations about prioritizing this statement." },
+  { value: 5, label: "Uncertain / mixed judgment", detail: "I see reasons both for and against prioritizing this statement." },
+  { value: 6, label: "Slightly agree", detail: "I mildly support prioritizing this statement." },
+  { value: 7, label: "Somewhat agree", detail: "I lean toward prioritizing this statement." },
+  { value: 8, label: "Agree", detail: "I support prioritizing this statement." },
+  { value: 9, label: "Strongly agree", detail: "I strongly support prioritizing this statement." },
+] as const;
+
+const legacyVagueRatingPrompt = "Please rate each candidate statement using the study rating scale.";
+
 function formatStatus(value: string): string {
   return statusLabels[value] ?? value;
+}
+
+function formatRatingChoice(value: number | null | undefined): string {
+  if (!value) return "No response recorded";
+  return ratingScaleOptions.find((option) => option.value === value)?.label ?? `Recorded response ${value}`;
 }
 
 function formatDateTime(value: string): string {
@@ -113,6 +135,78 @@ function roundReportRisk(status: string): "success" | "warning" | "info" | "lock
   if (status === "non_consensus") return "warning";
   return "info";
 }
+
+function humanizeBackendMessage(message: string | null): string | null {
+  if (!message) return null;
+
+  const labels: Record<string, string> = {
+    active_consent_required: "Consent must be acknowledged before this participant response can be submitted.",
+    ai_suggestion_decision_required: "Accept, edit, or reject the AI suggestion before using it.",
+    ai_suggestion_release_signoff_required:
+      "Participant-facing AI-assisted material needs both Study Owner and Ethics & Methods Steward release signoff.",
+    another_round_open: "Close the currently open round before opening another round.",
+    consensus_rule_locked: "The consensus threshold is locked after governance submission.",
+    locked_study_design_required_for_ai: "Submit the study design for governance before using AI-assisted drafting.",
+    previous_round_must_be_closed: "Close the previous round before opening this round.",
+    published_items_required_for_round: "Publish at least one traceable candidate item before opening this round.",
+    round_config_required: "Configure this round before opening it.",
+    round_not_open: "This task is not available until the study team opens the round.",
+    round1_config_required: "Configure Round 1 before collecting participant responses.",
+    round1_not_open: "Round 1 is not open for participant responses.",
+    source_material_required_for_synthesis: "Round 1 responses are required before drafting Round 2 candidates.",
+    study_design_packet_missing: "Save the Study Builder packet before submitting for governance signoff.",
+    study_version_not_active: "Activate the study version before opening rounds or collecting responses.",
+    forbidden: "This role is not authorized for the selected study. Confirm the user has study membership for this role.",
+    unassigned: "This signed-in user is not assigned to the selected study.",
+  };
+
+  return labels[message] ?? message.replaceAll("_", " ");
+}
+
+function bytesFromBase64(value: string): ArrayBuffer {
+  const binary = window.atob(value);
+  const buffer = new ArrayBuffer(binary.length);
+  const bytes = new Uint8Array(buffer);
+  for (let index = 0; index < binary.length; index += 1) {
+    bytes[index] = binary.charCodeAt(index);
+  }
+  return buffer;
+}
+
+function downloadPackageFile(file: ExportPackageFile) {
+  const body: BlobPart =
+    file.content_encoding === "base64"
+      ? bytesFromBase64(file.content_text)
+      : file.content_text;
+  const blob = new Blob([body], { type: file.media_type });
+  const url = window.URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = file.path.split("/").at(-1) ?? "edelphi-export-file";
+  document.body.append(link);
+  link.click();
+  link.remove();
+  window.URL.revokeObjectURL(url);
+}
+
+type NextAction = {
+  title: string;
+  detail: string;
+  module: ModuleId;
+  actionLabel: string;
+  risk: "success" | "warning" | "info" | "locked";
+  command?: {
+    kind: "transition-round";
+    roundNumber: number;
+    action: "open" | "close";
+  };
+};
+
+type ActionChecklistItem = {
+  label: string;
+  detail: string;
+  complete: boolean;
+};
 
 type WorkflowStep =
   | "create-study"
@@ -160,8 +254,13 @@ type RuntimeStudyData = {
   items: ItemRecord[];
   aiSuggestions: AISuggestionRecord[];
   roundTwoItems: RoundItemForParticipant[];
+  ratingRoundItems: Record<number, RoundItemForParticipant[]>;
   roundReport: RoundReport | null;
+  roundReports: Record<number, RoundReport | null>;
   exportReport: RoundReport | null;
+  exportPackages: ExportPackage[];
+  exportPackageFiles: Record<string, ExportPackageFile[]>;
+  selectedExportPackageId: string | null;
   loading: boolean;
   error: string | null;
   message: string | null;
@@ -192,9 +291,9 @@ const defaultRoundOneSetup: RoundOneSetupState = {
 
 const defaultRoundTwoSetup: RoundTwoSetupState = {
   title: "Round 2: Structured rating",
-  prompt: "Please rate each candidate statement using the study rating scale.",
+  prompt: "For each candidate statement, indicate how much you agree it should be prioritized for this study.",
   participantInstructions:
-    "Review each statement independently. Ratings should reflect your judgment for this study; no answer is treated as correct.",
+    "Review each statement independently. Use your own judgment; no response is treated as correct, and retaining or revising a response are both acceptable choices.",
   responseWindowDays: 7,
   reminderSubject: "Round 2 rating window is open",
   reminderBody:
@@ -207,8 +306,13 @@ const emptyRuntimeStudyData: RuntimeStudyData = {
   items: [],
   aiSuggestions: [],
   roundTwoItems: [],
+  ratingRoundItems: {},
   roundReport: null,
+  roundReports: {},
   exportReport: null,
+  exportPackages: [],
+  exportPackageFiles: {},
+  selectedExportPackageId: null,
   loading: false,
   error: null,
   message: null,
@@ -227,10 +331,18 @@ function App() {
   const [roundActionError, setRoundActionError] = useState<string | null>(null);
   const [roundActionBusy, setRoundActionBusy] = useState<string | null>(null);
   const [participantResponseText, setParticipantResponseText] = useState("");
+  const [participantSubmittedRoundOneText, setParticipantSubmittedRoundOneText] = useState<string | null>(null);
+  const [participantRoundOneEditing, setParticipantRoundOneEditing] = useState(false);
+  const [participantRoundOneComplete, setParticipantRoundOneComplete] = useState(false);
+  const [participantSubmittedRatings, setParticipantSubmittedRatings] = useState<Record<number, RatingDraft>>({});
+  const [participantRatingRoundEditing, setParticipantRatingRoundEditing] = useState<Record<number, boolean>>({});
+  const [participantRatingRoundComplete, setParticipantRatingRoundComplete] = useState<Record<number, boolean>>({});
   const [participantConsentChecked, setParticipantConsentChecked] = useState(false);
   const [participantMessage, setParticipantMessage] = useState<string | null>(null);
   const [participantError, setParticipantError] = useState<string | null>(null);
   const [participantBusy, setParticipantBusy] = useState(false);
+  const [participantInviteToken] = useState(() => new URLSearchParams(window.location.search).get("invite"));
+  const [participantInvite, setParticipantInvite] = useState<ParticipantInvitationContext | null>(null);
   const [runtimeData, setRuntimeData] = useState<RuntimeStudyData>(emptyRuntimeStudyData);
   const [runtimeActionBusy, setRuntimeActionBusy] = useState<string | null>(null);
   const [roundTwoRatings, setRoundTwoRatings] = useState<RatingDraft>({});
@@ -266,6 +378,49 @@ function App() {
   useEffect(() => {
     void loadSavedStudies();
   }, [role]);
+
+  useEffect(() => {
+    if (!participantInviteToken) return;
+    const inviteToken = participantInviteToken;
+
+    async function loadInvite() {
+      try {
+        setRole("panelist");
+        const context = await conductorApi.getParticipantInvitation(inviteToken);
+        setParticipantInvite(context);
+        setParticipantConsentChecked(Boolean(context.consent_record && !context.consent_record.withdrew_at));
+        setRoundConfigs(context.round_configs);
+
+        if (context.study && context.study_version) {
+          setWorkflow((current) => ({
+            ...current,
+            study: context.study,
+            version: context.study_version,
+            signoffs: [],
+            lastMessage: "Participant invitation opened.",
+            error: null,
+          }));
+        }
+
+        const openRatingRound = context.round_configs.find((config) => config.round_number > 1 && config.status === "Open");
+        if (openRatingRound) {
+          const result = await conductorApi.listInvitationRoundItems(inviteToken, openRatingRound.round_number);
+          setRuntimeData((current) => ({
+            ...current,
+            ratingRoundItems: {
+              ...current.ratingRoundItems,
+              [openRatingRound.round_number]: result.items,
+            },
+            roundTwoItems: openRatingRound.round_number === 2 ? result.items : current.roundTwoItems,
+          }));
+        }
+      } catch (error) {
+        setParticipantError(error instanceof Error ? error.message : "Unable to open participant invitation.");
+      }
+    }
+
+    void loadInvite();
+  }, [participantInviteToken]);
 
   useEffect(() => {
     if (workflow.study && workflow.version) {
@@ -321,24 +476,58 @@ function App() {
 
     try {
       const canReadStaffData = role !== "panelist";
-      const [responsesResult, itemsResult, suggestionsResult, roundTwoResult, reportResult, exportResult] =
-        await Promise.allSettled([
+      const terminalRound = workflow.version?.terminal_round_number ?? wizard.terminalRoundNumber;
+      const ratingRounds = Array.from({ length: Math.max(terminalRound - 1, 1) }, (_, index) => index + 2);
+      const [responsesResult, itemsResult, suggestionsResult, ratingItemsResults, reportResults, exportPackagesResult] =
+        await Promise.all([
           canReadStaffData ? conductorApi.listResponses(studyId, versionId, role) : Promise.resolve({ responses: [] }),
           canReadStaffData ? conductorApi.listItems(studyId, versionId, role) : Promise.resolve({ items: [] }),
           canReadStaffData ? conductorApi.listAiSuggestions(studyId, versionId, role) : Promise.resolve({ suggestions: [] }),
-          conductorApi.listRoundItems(studyId, versionId, 2, "demo-panelist-001", role),
-          canReadStaffData ? conductorApi.getRoundReport(studyId, versionId, 2, role) : Promise.resolve({ report: null }),
-          canReadStaffData ? conductorApi.exportReport(studyId, versionId, role) : Promise.resolve({ report: null }),
+          Promise.allSettled(
+            ratingRounds.map(async (roundNumber) => ({
+              roundNumber,
+              result: await conductorApi.listRoundItems(studyId, versionId, roundNumber, "demo-panelist-001", role),
+            })),
+          ),
+          Promise.allSettled(
+            ratingRounds.map(async (roundNumber) => ({
+              roundNumber,
+              result: canReadStaffData
+                ? await conductorApi.getRoundReport(studyId, versionId, roundNumber, role)
+                : { report: null },
+            })),
+          ),
+          canReadStaffData
+            ? conductorApi.listExportPackages(studyId, versionId, role).catch(() => ({ export_packages: [] }))
+            : Promise.resolve({ export_packages: [] }),
         ]);
+
+      const ratingRoundItems = Object.fromEntries(
+        ratingItemsResults.flatMap((entry) =>
+          entry.status === "fulfilled" ? [[entry.value.roundNumber, entry.value.result.items]] : [],
+        ),
+      );
+      const roundReports = Object.fromEntries(
+        reportResults.flatMap((entry) =>
+          entry.status === "fulfilled" ? [[entry.value.roundNumber, entry.value.result.report]] : [],
+        ),
+      );
 
       setRuntimeData((current) => ({
         ...current,
-        responses: responsesResult.status === "fulfilled" ? responsesResult.value.responses : [],
-        items: itemsResult.status === "fulfilled" ? itemsResult.value.items : [],
-        aiSuggestions: suggestionsResult.status === "fulfilled" ? suggestionsResult.value.suggestions : [],
-        roundTwoItems: roundTwoResult.status === "fulfilled" ? roundTwoResult.value.items : [],
-        roundReport: reportResult.status === "fulfilled" ? reportResult.value.report : null,
-        exportReport: exportResult.status === "fulfilled" ? exportResult.value.report : null,
+        responses: responsesResult.responses,
+        items: itemsResult.items,
+        aiSuggestions: suggestionsResult.suggestions,
+        roundTwoItems: ratingRoundItems[2] ?? [],
+        ratingRoundItems,
+        roundReport: roundReports[2] ?? null,
+        roundReports,
+        exportPackages: exportPackagesResult.export_packages,
+        selectedExportPackageId:
+          current.selectedExportPackageId &&
+          exportPackagesResult.export_packages.some((pkg) => pkg.export_package_id === current.selectedExportPackageId)
+            ? current.selectedExportPackageId
+            : exportPackagesResult.export_packages.at(-1)?.export_package_id ?? null,
         loading: false,
         error: null,
       }));
@@ -417,36 +606,45 @@ function App() {
   }
 
   async function saveRoundTwoConfiguration() {
+    await saveRatingRoundConfiguration(2);
+  }
+
+  async function saveRatingRoundConfiguration(roundNumber: number) {
     if (!workflow.study || !workflow.version) {
-      setRoundActionError("Save and activate the study before configuring Round 2.");
+      setRoundActionError("Save and activate the study before configuring rating rounds.");
       return;
     }
 
-    setRoundActionBusy("save-r2");
+    setRoundActionBusy(`save-r${roundNumber}`);
     setRoundActionError(null);
     setRoundActionMessage(null);
 
     try {
-      const result = await conductorApi.saveRoundConfig(workflow.study.id, workflow.version.id, 2, role, {
+      const isTerminal = roundNumber === (workflow.version.terminal_round_number ?? wizard.terminalRoundNumber);
+      const result = await conductorApi.saveRoundConfig(workflow.study.id, workflow.version.id, roundNumber, role, {
         task_type: "rating",
-        title: roundTwoSetup.title,
-        prompt: roundTwoSetup.prompt,
-        participant_instructions: roundTwoSetup.participantInstructions,
+        title: roundNumber === 2 ? roundTwoSetup.title : `Round ${roundNumber}: ${isTerminal ? "Terminal rating" : "Structured rating"}`,
+        prompt: roundNumber === 2
+          ? roundTwoSetup.prompt
+          : "For each carried-forward statement, indicate how much you agree it should remain prioritized for this study.",
+        participant_instructions: roundNumber === 2
+          ? roundTwoSetup.participantInstructions
+          : "Review the controlled feedback neutrally and use your own judgment. You may retain or revise prior responses where available.",
         response_window_days: roundTwoSetup.responseWindowDays,
-        reminder_subject: roundTwoSetup.reminderSubject,
-        reminder_body: roundTwoSetup.reminderBody,
+        reminder_subject: roundNumber === 2 ? roundTwoSetup.reminderSubject : `Round ${roundNumber} rating window is open`,
+        reminder_body: roundNumber === 2 ? roundTwoSetup.reminderBody : `This is a neutral reminder that Round ${roundNumber} is open.`,
         controlled_feedback_enabled: roundTwoSetup.controlledFeedbackEnabled,
         ai_curation_enabled: false,
         status: "Ready",
       });
 
       setRoundConfigs((current) => [
-        ...current.filter((config) => config.round_number !== 2),
+        ...current.filter((config) => config.round_number !== roundNumber),
         result.round_config,
       ]);
-      setRoundActionMessage("Round 2 participant task configured.");
+      setRoundActionMessage(`Round ${roundNumber} participant task configured.`);
     } catch (error) {
-      setRoundActionError(error instanceof Error ? error.message : "Unable to save Round 2 setup.");
+      setRoundActionError(error instanceof Error ? error.message : `Unable to save Round ${roundNumber} setup.`);
     } finally {
       setRoundActionBusy(null);
     }
@@ -463,6 +661,30 @@ function App() {
     setRoundActionMessage(null);
 
     try {
+      if (
+        action === "close" &&
+        roundNumber === 1 &&
+        workflow.version.opened_round1_at &&
+        !roundConfigs.some((config) => config.round_number === 1)
+      ) {
+        const repairedConfig = await conductorApi.saveRoundConfig(workflow.study.id, workflow.version.id, 1, role, {
+          task_type: "open_text",
+          title: roundOneSetup.title,
+          prompt: roundOneSetup.prompt,
+          participant_instructions: roundOneSetup.participantInstructions,
+          response_window_days: roundOneSetup.responseWindowDays,
+          reminder_subject: roundOneSetup.reminderSubject,
+          reminder_body: roundOneSetup.reminderBody,
+          controlled_feedback_enabled: false,
+          ai_curation_enabled: roundOneSetup.aiCurationEnabled,
+          status: "Open",
+        });
+        setRoundConfigs((current) => [
+          ...current.filter((config) => config.round_number !== 1),
+          repairedConfig.round_config,
+        ]);
+      }
+
       const result = action === "open"
         ? await conductorApi.openRound(workflow.study.id, workflow.version.id, roundNumber, role)
         : await conductorApi.closeRound(workflow.study.id, workflow.version.id, roundNumber, role);
@@ -501,16 +723,62 @@ function App() {
     setParticipantMessage(null);
 
     try {
-      const participantId = "demo-panelist-001";
-      await conductorApi.recordConsent(workflow.study.id, workflow.version.id, participantId, "panelist");
-      await conductorApi.submitRoundOneResponse(
-        workflow.study.id,
-        workflow.version.id,
-        participantId,
-        "panelist",
-        participantResponseText.trim(),
-      );
-      setParticipantMessage("Round 1 response submitted.");
+      const submittedText = participantResponseText.trim();
+      const roundOneConfig = roundConfigs.find((config) => config.round_number === 1);
+      if (!roundOneConfig && workflow.version.opened_round1_at) {
+        const repairedConfig = await conductorApi.saveRoundConfig(workflow.study.id, workflow.version.id, 1, "study_owner", {
+          task_type: "open_text",
+          title: roundOneSetup.title,
+          prompt: roundOneSetup.prompt,
+          participant_instructions: roundOneSetup.participantInstructions,
+          response_window_days: roundOneSetup.responseWindowDays,
+          reminder_subject: roundOneSetup.reminderSubject,
+          reminder_body: roundOneSetup.reminderBody,
+          controlled_feedback_enabled: false,
+          ai_curation_enabled: roundOneSetup.aiCurationEnabled,
+          status: "Open",
+        });
+
+        const consentText = [
+          `# ${wizard.consentVersion}`,
+          "",
+          wizard.consentSummary,
+          "",
+          `Confidentiality: ${wizard.confidentialityStatement}`,
+          "",
+          `Withdrawal: ${wizard.withdrawalProcess}`,
+        ].join("\n");
+        const consent = await conductorApi.createConsentVersion(workflow.study.id, workflow.version.id, "study_owner", consentText);
+        await conductorApi.activateConsentVersion(
+          workflow.study.id,
+          workflow.version.id,
+          consent.consent_version.consent_version_id,
+          "study_owner",
+        );
+        setRoundConfigs((current) => [
+          ...current.filter((config) => config.round_number !== 1),
+          repairedConfig.round_config,
+        ]);
+      }
+
+      if (participantInviteToken) {
+        await conductorApi.recordInvitationConsent(participantInviteToken);
+        await conductorApi.submitInvitationRoundOneResponse(participantInviteToken, submittedText);
+      } else {
+        const participantId = "demo-panelist-001";
+        await conductorApi.recordConsent(workflow.study.id, workflow.version.id, participantId, "panelist");
+        await conductorApi.submitRoundOneResponse(
+          workflow.study.id,
+          workflow.version.id,
+          participantId,
+          "panelist",
+          submittedText,
+        );
+      }
+      setParticipantSubmittedRoundOneText(submittedText);
+      setParticipantRoundOneEditing(false);
+      setParticipantRoundOneComplete(false);
+      setParticipantMessage("Round 1 response submitted. Please review what was recorded.");
       setParticipantResponseText("");
       void loadRuntimeData(workflow.study.id, workflow.version.id);
     } catch (error) {
@@ -518,6 +786,23 @@ function App() {
     } finally {
       setParticipantBusy(false);
     }
+  }
+
+  function editSubmittedRoundOneResponse() {
+    if (!participantSubmittedRoundOneText) return;
+    setParticipantResponseText(participantSubmittedRoundOneText);
+    setParticipantRoundOneEditing(true);
+    setParticipantRoundOneComplete(false);
+    setParticipantMessage("You can revise your Round 1 response below.");
+    setParticipantError(null);
+  }
+
+  function finishRoundOneTask() {
+    setParticipantRoundOneEditing(false);
+    setParticipantRoundOneComplete(true);
+    setParticipantResponseText("");
+    setParticipantMessage("Round 1 task complete. Your submitted response is recorded.");
+    setParticipantError(null);
   }
 
   async function createManualItemFromResponse(response: ResponseRecord) {
@@ -552,15 +837,19 @@ function App() {
   }
 
   async function synthesizeRoundTwoCandidates() {
+    await synthesizeRoundCandidates(2);
+  }
+
+  async function synthesizeRoundCandidates(targetRoundNumber: number) {
     if (!workflow.study || !workflow.version) return;
 
-    setRuntimeActionBusy("synthesize-r2");
+    setRuntimeActionBusy(`synthesize-r${targetRoundNumber}`);
     try {
-      await conductorApi.synthesizeInterRound(workflow.study.id, workflow.version.id, role, 2);
-      setRuntimeMessage("AI Suggestion (Not Final) created from Round 1 responses.");
+      await conductorApi.synthesizeInterRound(workflow.study.id, workflow.version.id, role, targetRoundNumber);
+      setRuntimeMessage(`AI Suggestion (Not Final) created for Round ${targetRoundNumber}.`);
       await loadRuntimeData(workflow.study.id, workflow.version.id);
     } catch (error) {
-      setRuntimeError(error, "Unable to synthesize Round 2 candidates.");
+      setRuntimeError(error, `Unable to synthesize Round ${targetRoundNumber} candidates.`);
     } finally {
       setRuntimeActionBusy(null);
     }
@@ -648,6 +937,90 @@ function App() {
     }
   }
 
+  async function editItemText(item: ItemRecord) {
+    if (!workflow.study || !workflow.version) return;
+    const revised = window.prompt("Edit candidate wording. Preserve meaning and document rationale in the audit trail.", item.text);
+    if (!revised || revised.trim() === item.text.trim()) return;
+
+    setRuntimeActionBusy(`edit-${item.item_id}`);
+    try {
+      await conductorApi.updateItem(workflow.study.id, workflow.version.id, item.item_id, role, {
+        text: revised.trim(),
+        rationale: "Human curation edit from frontend.",
+      });
+      setRuntimeMessage("Candidate item wording updated.");
+      await loadRuntimeData(workflow.study.id, workflow.version.id);
+    } catch (error) {
+      setRuntimeError(error, "Unable to edit item.");
+    } finally {
+      setRuntimeActionBusy(null);
+    }
+  }
+
+  async function rejectItem(item: ItemRecord) {
+    if (!workflow.study || !workflow.version) return;
+    const confirmed = window.confirm("Reject this candidate item? The record and provenance remain in the audit trail.");
+    if (!confirmed) return;
+
+    setRuntimeActionBusy(`reject-${item.item_id}`);
+    try {
+      await conductorApi.updateItem(workflow.study.id, workflow.version.id, item.item_id, role, {
+        status: "Rejected",
+        rationale: "Human curator rejected this candidate item.",
+      });
+      setRuntimeMessage("Candidate item rejected.");
+      await loadRuntimeData(workflow.study.id, workflow.version.id);
+    } catch (error) {
+      setRuntimeError(error, "Unable to reject item.");
+    } finally {
+      setRuntimeActionBusy(null);
+    }
+  }
+
+  async function splitItem(item: ItemRecord) {
+    if (!workflow.study || !workflow.version) return;
+    const raw = window.prompt("Split into two or more statements. Separate each new statement with a semicolon.", item.text);
+    const newTexts = raw?.split(";").map((entry) => entry.trim()).filter(Boolean) ?? [];
+    if (newTexts.length < 2) return;
+
+    setRuntimeActionBusy(`split-${item.item_id}`);
+    try {
+      await conductorApi.splitItem(workflow.study.id, workflow.version.id, item.item_id, role, {
+        new_texts: newTexts,
+        rationale: "Human curator split a multi-concept candidate item.",
+      });
+      setRuntimeMessage("Candidate item split into new draft items.");
+      await loadRuntimeData(workflow.study.id, workflow.version.id);
+    } catch (error) {
+      setRuntimeError(error, "Unable to split item.");
+    } finally {
+      setRuntimeActionBusy(null);
+    }
+  }
+
+  async function mergeItemInto(item: ItemRecord, target: ItemRecord) {
+    if (!workflow.study || !workflow.version) return;
+
+    setRuntimeActionBusy(`merge-${item.item_id}`);
+    try {
+      await conductorApi.mergeItems(workflow.study.id, workflow.version.id, role, {
+        from_item_ids: [item.item_id],
+        to_item_id: target.item_id,
+        rationale: "Human curator documented that these candidate items should be interpreted together.",
+      });
+      await conductorApi.updateItem(workflow.study.id, workflow.version.id, item.item_id, role, {
+        status: "Rejected",
+        rationale: `Merged into ${target.item_id}.`,
+      });
+      setRuntimeMessage("Candidate items merged with rationale; source item rejected to avoid duplication.");
+      await loadRuntimeData(workflow.study.id, workflow.version.id);
+    } catch (error) {
+      setRuntimeError(error, "Unable to merge items.");
+    } finally {
+      setRuntimeActionBusy(null);
+    }
+  }
+
   function updateRoundTwoRating(itemId: string, rating: number) {
     setRoundTwoRatings((current) => ({ ...current, [itemId]: rating }));
   }
@@ -659,9 +1032,11 @@ function App() {
     }
 
     const participantId = "demo-panelist-001";
-    const missing = runtimeData.roundTwoItems.some((item) => !roundTwoRatings[item.item_id]);
+    const currentRound = roundConfigs.find((config) => config.round_number > 1 && config.status === "Open")?.round_number ?? 2;
+    const currentItems = runtimeData.ratingRoundItems[currentRound] ?? runtimeData.roundTwoItems;
+    const missing = currentItems.some((item) => !roundTwoRatings[item.item_id]);
     if (missing) {
-      setParticipantError("A rating is required for each available Round 2 item.");
+      setParticipantError(`A response option is required for each available Round ${currentRound} statement.`);
       return;
     }
 
@@ -670,25 +1045,212 @@ function App() {
     setParticipantMessage(null);
 
     try {
-      await conductorApi.recordConsent(workflow.study.id, workflow.version.id, participantId, "panelist");
-      for (const item of runtimeData.roundTwoItems) {
-        await conductorApi.submitRating(
-          workflow.study.id,
-          workflow.version.id,
-          2,
-          participantId,
-          item.item_id,
-          "panelist",
-          roundTwoRatings[item.item_id] ?? 0,
-        );
+      if (participantInviteToken) {
+        await conductorApi.recordInvitationConsent(participantInviteToken);
+      } else {
+        await conductorApi.recordConsent(workflow.study.id, workflow.version.id, participantId, "panelist");
       }
-      setParticipantMessage("Round 2 ratings submitted.");
+      for (const item of currentItems) {
+        if (participantInviteToken) {
+          await conductorApi.submitInvitationRating(
+            participantInviteToken,
+            currentRound,
+            item.item_id,
+            roundTwoRatings[item.item_id] ?? 0,
+          );
+        } else {
+          await conductorApi.submitRating(
+            workflow.study.id,
+            workflow.version.id,
+            currentRound,
+            participantId,
+            item.item_id,
+            "panelist",
+            roundTwoRatings[item.item_id] ?? 0,
+          );
+        }
+      }
+      const submittedRatings = Object.fromEntries(
+        currentItems.map((item) => [item.item_id, roundTwoRatings[item.item_id] ?? 0]),
+      );
+      setParticipantSubmittedRatings((current) => ({
+        ...current,
+        [currentRound]: submittedRatings,
+      }));
+      setParticipantRatingRoundEditing((current) => ({
+        ...current,
+        [currentRound]: false,
+      }));
+      setParticipantRatingRoundComplete((current) => ({
+        ...current,
+        [currentRound]: false,
+      }));
+      setParticipantMessage(`Round ${currentRound} responses submitted. Please review what was recorded.`);
       setRoundTwoRatings({});
       await loadRuntimeData(workflow.study.id, workflow.version.id);
     } catch (error) {
       setParticipantError(error instanceof Error ? error.message : "Unable to submit Round 2 ratings.");
     } finally {
       setParticipantBusy(false);
+    }
+  }
+
+  function editSubmittedRatings(roundNumber: number) {
+    const submitted = participantSubmittedRatings[roundNumber];
+    if (!submitted) return;
+    setRoundTwoRatings(submitted);
+    setParticipantRatingRoundEditing((current) => ({
+      ...current,
+      [roundNumber]: true,
+    }));
+    setParticipantRatingRoundComplete((current) => ({
+      ...current,
+      [roundNumber]: false,
+    }));
+    setParticipantMessage(`You can revise your Round ${roundNumber} responses below.`);
+    setParticipantError(null);
+  }
+
+  function finishRatingRoundTask(roundNumber: number) {
+    setParticipantRatingRoundEditing((current) => ({
+      ...current,
+      [roundNumber]: false,
+    }));
+    setParticipantRatingRoundComplete((current) => ({
+      ...current,
+      [roundNumber]: true,
+    }));
+    setRoundTwoRatings({});
+    setParticipantMessage(`Round ${roundNumber} task complete. Your submitted responses are recorded.`);
+    setParticipantError(null);
+  }
+
+  async function withdrawParticipantInvitation() {
+    if (!participantInviteToken) {
+      setParticipantError("Withdrawal is available from a participant invitation link.");
+      return;
+    }
+
+    setParticipantBusy(true);
+    setParticipantError(null);
+    setParticipantMessage(null);
+
+    try {
+      await conductorApi.withdrawInvitationConsent(participantInviteToken);
+      setParticipantConsentChecked(false);
+      setParticipantMessage("Withdrawal recorded. No further study tasks are required.");
+    } catch (error) {
+      setParticipantError(error instanceof Error ? error.message : "Unable to record withdrawal.");
+    } finally {
+      setParticipantBusy(false);
+    }
+  }
+
+  async function requestOutputExport(outputId: string) {
+    if (!workflow.study || !workflow.version) {
+      setRuntimeData((current) => ({ ...current, error: "Open a backend study before preparing an export.", message: null }));
+      return;
+    }
+
+    setRuntimeActionBusy(`export-${outputId}`);
+    try {
+      if (outputId === "final-delphi-report") {
+        const result = await conductorApi.exportReport(workflow.study.id, workflow.version.id, role);
+        const packages = await conductorApi.listExportPackages(workflow.study.id, workflow.version.id, role);
+        setRuntimeData((current) => ({
+          ...current,
+          exportReport: result.report,
+          exportPackages: packages.export_packages,
+          selectedExportPackageId: result.export_package?.export_package_id ?? packages.export_packages.at(-1)?.export_package_id ?? current.selectedExportPackageId,
+          message: "Final Delphi report package prepared and audit logged.",
+          error: null,
+        }));
+      } else {
+        setRuntimeData((current) => ({
+          ...current,
+          message: `${outputModelRegistry.find((output) => output.id === outputId)?.label ?? "Export"} package surface prepared. Backend package generation is the next integration step.`,
+          error: null,
+        }));
+      }
+    } catch (error) {
+      setRuntimeError(error, "Unable to prepare export.");
+    } finally {
+      setRuntimeActionBusy(null);
+    }
+  }
+
+  async function selectExportPackage(packageId: string) {
+    if (!workflow.study || !workflow.version) return;
+    setRuntimeActionBusy(`files-${packageId}`);
+
+    try {
+      const result = await conductorApi.listExportPackageFiles(workflow.study.id, workflow.version.id, packageId, role);
+      setRuntimeData((current) => ({
+        ...current,
+        selectedExportPackageId: packageId,
+        exportPackageFiles: {
+          ...current.exportPackageFiles,
+          [packageId]: result.files,
+        },
+        error: null,
+      }));
+    } catch (error) {
+      setRuntimeError(error, "Unable to load export package files.");
+    } finally {
+      setRuntimeActionBusy(null);
+    }
+  }
+
+  async function reviewExportPackage(packageId: string, reviewStatus: "approved" | "rejected", note: string) {
+    if (!workflow.study || !workflow.version) return;
+
+    setRuntimeActionBusy(`review-${packageId}`);
+    try {
+      const result = await conductorApi.reviewExportPackage(
+        workflow.study.id,
+        workflow.version.id,
+        packageId,
+        role,
+        reviewStatus,
+        note,
+      );
+      setRuntimeData((current) => ({
+        ...current,
+        exportPackages: current.exportPackages.map((pkg) =>
+          pkg.export_package_id === packageId ? { ...pkg, reviews: result.reviews } : pkg,
+        ),
+        message: `Export package ${reviewStatus}. Review event audit logged.`,
+        error: null,
+      }));
+    } catch (error) {
+      setRuntimeError(error, "Unable to review export package.");
+    } finally {
+      setRuntimeActionBusy(null);
+    }
+  }
+
+  async function downloadExportPackageFile(packageId: string, fileId: string) {
+    if (!workflow.study || !workflow.version) return;
+
+    setRuntimeActionBusy(`download-${fileId}`);
+    try {
+      const result = await conductorApi.downloadExportPackageFile(
+        workflow.study.id,
+        workflow.version.id,
+        packageId,
+        fileId,
+        role,
+      );
+      downloadPackageFile(result.file);
+      setRuntimeData((current) => ({
+        ...current,
+        message: `${result.file.path} downloaded and audit logged.`,
+        error: null,
+      }));
+    } catch (error) {
+      setRuntimeError(error, "Unable to download export package file.");
+    } finally {
+      setRuntimeActionBusy(null);
     }
   }
 
@@ -710,6 +1272,36 @@ function App() {
       await loadSavedStudies();
     } catch (error) {
       setSavedStudiesError(error instanceof Error ? error.message : "Unable to archive study.");
+    }
+  }
+
+  async function archiveSmokeTestStudies() {
+    const candidates = savedStudies.filter((record) =>
+      /smoke|test|debug|transition|round config|title sync/i.test(record.study.title),
+    );
+
+    if (candidates.length === 0) {
+      setSavedStudiesError("No smoke-test studies were found in the visible saved studies list.");
+      return;
+    }
+
+    const confirmed = window.confirm(
+      `Archive ${candidates.length} smoke-test or debug study workspace${candidates.length === 1 ? "" : "s"}?\n\nRecords and audit trails are retained; they are hidden from the default Saved Studies list.`,
+    );
+    if (!confirmed) return;
+
+    try {
+      for (const record of candidates) {
+        await conductorApi.archiveStudy(record.study.id, role);
+      }
+      if (workflow.study && candidates.some((record) => record.study.id === workflow.study?.id)) {
+        setWorkflow(initialWorkflow);
+        setWizard(defaultWizardState);
+        setActiveWizardStep("purpose");
+      }
+      await loadSavedStudies();
+    } catch (error) {
+      setSavedStudiesError(error instanceof Error ? error.message : "Unable to archive smoke-test studies.");
     }
   }
 
@@ -846,12 +1438,44 @@ function App() {
       }
 
       const result = await conductorApi.openRoundOne(workflow.study.id, workflow.version.id, role);
+      const roundConfig = await conductorApi.saveRoundConfig(workflow.study.id, workflow.version.id, 1, role, {
+        task_type: "open_text",
+        title: roundOneSetup.title,
+        prompt: roundOneSetup.prompt,
+        participant_instructions: roundOneSetup.participantInstructions,
+        response_window_days: roundOneSetup.responseWindowDays,
+        reminder_subject: roundOneSetup.reminderSubject,
+        reminder_body: roundOneSetup.reminderBody,
+        controlled_feedback_enabled: false,
+        ai_curation_enabled: roundOneSetup.aiCurationEnabled,
+        status: "Open",
+      });
+      const consentText = [
+        `# ${wizard.consentVersion}`,
+        "",
+        wizard.consentSummary,
+        "",
+        `Confidentiality: ${wizard.confidentialityStatement}`,
+        "",
+        `Withdrawal: ${wizard.withdrawalProcess}`,
+      ].join("\n");
+      const consent = await conductorApi.createConsentVersion(workflow.study.id, workflow.version.id, role, consentText);
+      await conductorApi.activateConsentVersion(
+        workflow.study.id,
+        workflow.version.id,
+        consent.consent_version.consent_version_id,
+        role,
+      );
       setWorkflow((current) => ({
         ...current,
         version: result.studyVersion,
         busyStep: null,
-        lastMessage: "Round 1 opened.",
+        lastMessage: "Round 1 opened with participant task and consent text.",
       }));
+      setRoundConfigs((current) => [
+        ...current.filter((config) => config.round_number !== 1),
+        roundConfig.round_config,
+      ]);
       void loadSavedStudies();
     } catch (error) {
       setWorkflow((current) => ({
@@ -868,9 +1492,17 @@ function App() {
   )
     ? activeModule
     : accessibleModules[0]?.id ?? "participant";
+  const nextAction = buildNextAction({ workflow, wizard, roundConfigs, runtimeData });
+
+  async function runNextActionCommand(command: NonNullable<NextAction["command"]>) {
+    if (command.kind === "transition-round") {
+      setActiveModule("round-manager");
+      await transitionRound(command.roundNumber, command.action);
+    }
+  }
 
   return (
-    <main className="app-shell">
+    <main className={role === "panelist" ? "app-shell participant-mode" : "app-shell"}>
       <aside className="sidebar" aria-label="Application modules">
         <div className="brand-block">
           <span className="brand-mark">eD</span>
@@ -917,6 +1549,8 @@ function App() {
           </div>
         </header>
 
+        <NextActionPanel nextAction={nextAction} onNavigate={setActiveModule} onRunCommand={runNextActionCommand} />
+
         <ModuleRenderer
           activeModule={visibleModule}
           role={role}
@@ -934,10 +1568,17 @@ function App() {
           roundActionError={roundActionError}
           roundActionBusy={roundActionBusy}
           participantResponseText={participantResponseText}
+          participantSubmittedRoundOneText={participantSubmittedRoundOneText}
+          participantRoundOneEditing={participantRoundOneEditing}
+          participantRoundOneComplete={participantRoundOneComplete}
+          participantSubmittedRatings={participantSubmittedRatings}
+          participantRatingRoundEditing={participantRatingRoundEditing}
+          participantRatingRoundComplete={participantRatingRoundComplete}
           participantConsentChecked={participantConsentChecked}
           participantMessage={participantMessage}
           participantError={participantError}
           participantBusy={participantBusy}
+          participantInvite={participantInvite}
           runtimeData={runtimeData}
           runtimeActionBusy={runtimeActionBusy}
           roundTwoRatings={roundTwoRatings}
@@ -949,25 +1590,41 @@ function App() {
           onRoundTwoSetupChange={setRoundTwoSetup}
           onSaveRoundOneSetup={saveRoundOneConfiguration}
           onSaveRoundTwoSetup={saveRoundTwoConfiguration}
+          onSaveRatingRoundSetup={saveRatingRoundConfiguration}
           onTransitionRound={transitionRound}
           onParticipantResponseChange={setParticipantResponseText}
           onParticipantConsentChange={setParticipantConsentChecked}
           onSubmitParticipantRoundOne={submitParticipantRoundOne}
+          onEditSubmittedRoundOne={editSubmittedRoundOneResponse}
+          onFinishRoundOneTask={finishRoundOneTask}
+          onEditSubmittedRatings={editSubmittedRatings}
+          onFinishRatingRoundTask={finishRatingRoundTask}
+          onWithdrawParticipant={withdrawParticipantInvitation}
           onRefreshRuntimeData={loadRuntimeData}
           onCreateManualItemFromResponse={createManualItemFromResponse}
           onSynthesizeRoundTwoCandidates={synthesizeRoundTwoCandidates}
+          onSynthesizeRoundCandidates={synthesizeRoundCandidates}
           onAcceptSuggestion={acceptSuggestion}
           onMaterializeSuggestion={materializeSuggestion}
           onSignoffSuggestionRelease={signoffSuggestionRelease}
           onPublishItem={publishItem}
+          onEditItemText={editItemText}
+          onRejectItem={rejectItem}
+          onSplitItem={splitItem}
+          onMergeItemInto={mergeItemInto}
           onRoundTwoRatingChange={updateRoundTwoRating}
           onSubmitRoundTwoRatings={submitRoundTwoRatings}
+          onExportOutput={requestOutputExport}
+          onSelectExportPackage={selectExportPackage}
+          onReviewExportPackage={reviewExportPackage}
+          onDownloadExportPackageFile={downloadExportPackageFile}
           savedStudies={savedStudies}
           savedStudiesLoading={savedStudiesLoading}
           savedStudiesError={savedStudiesError}
           onRefreshSavedStudies={loadSavedStudies}
           onOpenSavedStudy={openSavedStudy}
           onArchiveSavedStudy={archiveSavedStudy}
+          onArchiveSmokeTestStudies={archiveSmokeTestStudies}
         />
       </section>
     </main>
@@ -991,10 +1648,17 @@ function ModuleRenderer({
   roundActionError,
   roundActionBusy,
   participantResponseText,
+  participantSubmittedRoundOneText,
+  participantRoundOneEditing,
+  participantRoundOneComplete,
+  participantSubmittedRatings,
+  participantRatingRoundEditing,
+  participantRatingRoundComplete,
   participantConsentChecked,
   participantMessage,
   participantError,
   participantBusy,
+  participantInvite,
   runtimeData,
   runtimeActionBusy,
   roundTwoRatings,
@@ -1006,25 +1670,41 @@ function ModuleRenderer({
   onRoundTwoSetupChange,
   onSaveRoundOneSetup,
   onSaveRoundTwoSetup,
+  onSaveRatingRoundSetup,
   onTransitionRound,
   onParticipantResponseChange,
   onParticipantConsentChange,
   onSubmitParticipantRoundOne,
+  onEditSubmittedRoundOne,
+  onFinishRoundOneTask,
+  onEditSubmittedRatings,
+  onFinishRatingRoundTask,
+  onWithdrawParticipant,
   onRefreshRuntimeData,
   onCreateManualItemFromResponse,
   onSynthesizeRoundTwoCandidates,
+  onSynthesizeRoundCandidates,
   onAcceptSuggestion,
   onMaterializeSuggestion,
   onSignoffSuggestionRelease,
   onPublishItem,
+  onEditItemText,
+  onRejectItem,
+  onSplitItem,
+  onMergeItemInto,
   onRoundTwoRatingChange,
   onSubmitRoundTwoRatings,
+  onExportOutput,
+  onSelectExportPackage,
+  onReviewExportPackage,
+  onDownloadExportPackageFile,
   savedStudies,
   savedStudiesLoading,
   savedStudiesError,
   onRefreshSavedStudies,
   onOpenSavedStudy,
   onArchiveSavedStudy,
+  onArchiveSmokeTestStudies,
 }: {
   activeModule: ModuleId;
   role: UserRole;
@@ -1042,10 +1722,17 @@ function ModuleRenderer({
   roundActionError: string | null;
   roundActionBusy: string | null;
   participantResponseText: string;
+  participantSubmittedRoundOneText: string | null;
+  participantRoundOneEditing: boolean;
+  participantRoundOneComplete: boolean;
+  participantSubmittedRatings: Record<number, RatingDraft>;
+  participantRatingRoundEditing: Record<number, boolean>;
+  participantRatingRoundComplete: Record<number, boolean>;
   participantConsentChecked: boolean;
   participantMessage: string | null;
   participantError: string | null;
   participantBusy: boolean;
+  participantInvite: ParticipantInvitationContext | null;
   runtimeData: RuntimeStudyData;
   runtimeActionBusy: string | null;
   roundTwoRatings: RatingDraft;
@@ -1057,25 +1744,41 @@ function ModuleRenderer({
   onRoundTwoSetupChange: (state: RoundTwoSetupState) => void;
   onSaveRoundOneSetup: () => void;
   onSaveRoundTwoSetup: () => void;
+  onSaveRatingRoundSetup: (roundNumber: number) => void;
   onTransitionRound: (roundNumber: number, action: "open" | "close") => void;
   onParticipantResponseChange: (value: string) => void;
   onParticipantConsentChange: (value: boolean) => void;
   onSubmitParticipantRoundOne: () => void;
+  onEditSubmittedRoundOne: () => void;
+  onFinishRoundOneTask: () => void;
+  onEditSubmittedRatings: (roundNumber: number) => void;
+  onFinishRatingRoundTask: (roundNumber: number) => void;
+  onWithdrawParticipant: () => void;
   onRefreshRuntimeData: () => void;
   onCreateManualItemFromResponse: (response: ResponseRecord) => void;
   onSynthesizeRoundTwoCandidates: () => void;
+  onSynthesizeRoundCandidates: (targetRoundNumber: number) => void;
   onAcceptSuggestion: (suggestion: AISuggestionRecord) => void;
   onMaterializeSuggestion: (suggestion: AISuggestionRecord) => void;
   onSignoffSuggestionRelease: (suggestion: AISuggestionRecord) => void;
   onPublishItem: (item: ItemRecord) => void;
+  onEditItemText: (item: ItemRecord) => void;
+  onRejectItem: (item: ItemRecord) => void;
+  onSplitItem: (item: ItemRecord) => void;
+  onMergeItemInto: (item: ItemRecord, target: ItemRecord) => void;
   onRoundTwoRatingChange: (itemId: string, rating: number) => void;
   onSubmitRoundTwoRatings: () => void;
+  onExportOutput: (outputId: string) => void;
+  onSelectExportPackage: (packageId: string) => void;
+  onReviewExportPackage: (packageId: string, reviewStatus: "approved" | "rejected", note: string) => void;
+  onDownloadExportPackageFile: (packageId: string, fileId: string) => void;
   savedStudies: SavedStudyRecord[];
   savedStudiesLoading: boolean;
   savedStudiesError: string | null;
   onRefreshSavedStudies: () => void;
   onOpenSavedStudy: (record: SavedStudyRecord) => void;
   onArchiveSavedStudy: (record: SavedStudyRecord) => void;
+  onArchiveSmokeTestStudies: () => void;
 }) {
   switch (activeModule) {
     case "architecture":
@@ -1093,12 +1796,15 @@ function ModuleRenderer({
           study={study}
           role={role}
           workflow={workflow}
+          roundConfigs={roundConfigs}
+          runtimeData={runtimeData}
           savedStudies={savedStudies}
           savedStudiesLoading={savedStudiesLoading}
           savedStudiesError={savedStudiesError}
           onRefreshSavedStudies={onRefreshSavedStudies}
           onOpenSavedStudy={onOpenSavedStudy}
           onArchiveSavedStudy={onArchiveSavedStudy}
+          onArchiveSmokeTestStudies={onArchiveSmokeTestStudies}
         />
       );
     case "study-builder":
@@ -1131,6 +1837,7 @@ function ModuleRenderer({
           onRoundTwoSetupChange={onRoundTwoSetupChange}
           onSaveRoundOneSetup={onSaveRoundOneSetup}
           onSaveRoundTwoSetup={onSaveRoundTwoSetup}
+          onSaveRatingRoundSetup={onSaveRatingRoundSetup}
           onTransitionRound={onTransitionRound}
         />
       );
@@ -1144,10 +1851,15 @@ function ModuleRenderer({
           onRefreshRuntimeData={onRefreshRuntimeData}
           onCreateManualItemFromResponse={onCreateManualItemFromResponse}
           onSynthesizeRoundTwoCandidates={onSynthesizeRoundTwoCandidates}
+          onSynthesizeRoundCandidates={onSynthesizeRoundCandidates}
           onAcceptSuggestion={onAcceptSuggestion}
           onMaterializeSuggestion={onMaterializeSuggestion}
           onSignoffSuggestionRelease={onSignoffSuggestionRelease}
           onPublishItem={onPublishItem}
+          onEditItemText={onEditItemText}
+          onRejectItem={onRejectItem}
+          onSplitItem={onSplitItem}
+          onMergeItemInto={onMergeItemInto}
         />
       );
     case "feedback":
@@ -1159,21 +1871,45 @@ function ModuleRenderer({
           wizard={wizard}
           roundConfigs={roundConfigs}
           participantResponseText={participantResponseText}
+          participantSubmittedRoundOneText={participantSubmittedRoundOneText}
+          participantRoundOneEditing={participantRoundOneEditing}
+          participantRoundOneComplete={participantRoundOneComplete}
+          participantSubmittedRatings={participantSubmittedRatings}
+          participantRatingRoundEditing={participantRatingRoundEditing}
+          participantRatingRoundComplete={participantRatingRoundComplete}
           participantConsentChecked={participantConsentChecked}
           participantMessage={participantMessage}
           participantError={participantError}
           participantBusy={participantBusy}
+          participantInvite={participantInvite}
           runtimeData={runtimeData}
           roundTwoRatings={roundTwoRatings}
           onParticipantResponseChange={onParticipantResponseChange}
           onParticipantConsentChange={onParticipantConsentChange}
           onSubmitParticipantRoundOne={onSubmitParticipantRoundOne}
+          onEditSubmittedRoundOne={onEditSubmittedRoundOne}
+          onFinishRoundOneTask={onFinishRoundOneTask}
+          onEditSubmittedRatings={onEditSubmittedRatings}
+          onFinishRatingRoundTask={onFinishRatingRoundTask}
+          onWithdrawParticipant={onWithdrawParticipant}
           onRoundTwoRatingChange={onRoundTwoRatingChange}
           onSubmitRoundTwoRatings={onSubmitRoundTwoRatings}
         />
       );
     case "reporting":
-      return <ReportingScreen study={study} role={role} workflow={workflow} runtimeData={runtimeData} />;
+      return (
+        <ReportingScreen
+          study={study}
+          role={role}
+          workflow={workflow}
+          runtimeData={runtimeData}
+          runtimeActionBusy={runtimeActionBusy}
+          onExportOutput={onExportOutput}
+          onSelectExportPackage={onSelectExportPackage}
+          onReviewExportPackage={onReviewExportPackage}
+          onDownloadExportPackageFile={onDownloadExportPackageFile}
+        />
+      );
     case "audit":
       return <AuditScreen study={study} />;
     case "admin-security":
@@ -1237,6 +1973,37 @@ function ArchitectureScreen({
   );
 }
 
+function NextActionPanel({
+  nextAction,
+  onNavigate,
+  onRunCommand,
+}: {
+  nextAction: NextAction;
+  onNavigate: (module: ModuleId) => void;
+  onRunCommand: (command: NonNullable<NextAction["command"]>) => void;
+}) {
+  function runPrimaryAction() {
+    if (nextAction.command) {
+      onRunCommand(nextAction.command);
+      return;
+    }
+    onNavigate(nextAction.module);
+  }
+
+  return (
+    <section className={`next-action next-action-${nextAction.risk}`} aria-label="Next required action">
+      <div>
+        <span className="eyebrow">Next required action</span>
+        <h2>{nextAction.title}</h2>
+        <p>{nextAction.detail}</p>
+      </div>
+      <button className="primary-button" onClick={runPrimaryAction} type="button">
+        {nextAction.actionLabel}
+      </button>
+    </section>
+  );
+}
+
 function hasSignoff(workflow: ConductorWorkflow, requiredRole: BackendSignoff["required_role"]): boolean {
   return workflow.signoffs.some((signoff) => signoff.required_role === requiredRole);
 }
@@ -1266,28 +2033,271 @@ function workflowStepDone(workflow: ConductorWorkflow, step: WorkflowStep): bool
   }
 }
 
+function buildNextAction(input: {
+  workflow: ConductorWorkflow;
+  wizard: StudyWizardState;
+  roundConfigs: RoundConfig[];
+  runtimeData: RuntimeStudyData;
+}): NextAction {
+  const { workflow, wizard, roundConfigs, runtimeData } = input;
+  const roundOneConfig = roundConfigs.find((config) => config.round_number === 1);
+  const roundTwoConfig = roundConfigs.find((config) => config.round_number === 2);
+  const openResponses = runtimeData.responses.filter((response) => responseOpenText(response.response_json));
+  const publishedRoundTwoItems = runtimeData.items.filter((item) => item.round_number === 2 && item.status === "Published");
+  const roundTwoSubmissionCount = runtimeData.roundReport?.summary.round_submission_count ?? 0;
+
+  if (!workflow.study) {
+    return {
+      title: "Create or open a study",
+      detail: "Start a backend study workspace from Study Builder, or open an existing saved study from the Dashboard.",
+      module: "study-builder",
+      actionLabel: "Go to Study Builder",
+      risk: "warning",
+    };
+  }
+
+  if (!workflow.version) {
+    return {
+      title: "Create the governed study version",
+      detail: "The study exists, but it needs a draft StudyVersion before design, governance, and round setup can be saved.",
+      module: "study-builder",
+      actionLabel: "Continue setup",
+      risk: "warning",
+    };
+  }
+
+  if (!workflow.version.study_design_packet_json || validateWizardStep("review", wizard).length > 0) {
+    return {
+      title: "Complete and save the study design",
+      detail: "Finish the Study Builder wizard so panel criteria, consent, feedback, AI, retention, and method settings travel together.",
+      module: "study-builder",
+      actionLabel: "Review design",
+      risk: "warning",
+    };
+  }
+
+  if (!workflow.version.study_format || !workflow.version.consensus_rule_json) {
+    return {
+      title: "Apply method design and locked consensus rule",
+      detail: "The declared method and predefined consensus threshold must be saved before governance signoff.",
+      module: "governance",
+      actionLabel: "Go to Governance",
+      risk: "warning",
+    };
+  }
+
+  if (workflow.version.status === "Draft") {
+    return {
+      title: "Submit for governance signoff",
+      detail: "The study design is ready for Study Owner and Ethics & Methods Steward review.",
+      module: "governance",
+      actionLabel: "Review governance",
+      risk: "warning",
+    };
+  }
+
+  if (workflow.version.status === "ReadyForSignoff") {
+    const missing = [
+      hasSignoff(workflow, "Owner") ? null : "Study Owner",
+      hasSignoff(workflow, "MethodsSteward") ? null : "Ethics & Methods Steward",
+    ].filter(Boolean).join(" and ");
+
+    return {
+      title: missing ? `${missing} signoff required` : "Activate the governed version",
+      detail: missing
+        ? "Both required signoffs must be recorded before launch."
+        : "Both governance signoffs are recorded; activate the version before round setup.",
+      module: "governance",
+      actionLabel: "Open signoff gate",
+      risk: "warning",
+    };
+  }
+
+  if (!roundOneConfig) {
+    return {
+      title: "Configure Round 1",
+      detail: "Set the open-ended prompt, participant instructions, response window, reminder language, and consent text.",
+      module: "round-manager",
+      actionLabel: "Configure Round 1",
+      risk: "warning",
+    };
+  }
+
+  if (roundOneConfig.status !== "Open" && roundOneConfig.status !== "Closed") {
+    return {
+      title: "Open Round 1",
+      detail: "Round 1 is configured and ready. Opening it makes the participant task available.",
+      module: "round-manager",
+      actionLabel: "Open round controls",
+      risk: "warning",
+    };
+  }
+
+  if (roundOneConfig.status === "Open" && openResponses.length === 0) {
+    return {
+      title: "Collect Round 1 responses",
+      detail: "The participant portal is open for Round 1. Responses will feed the Curation Desk.",
+      module: "participant",
+      actionLabel: "View participant task",
+      risk: "info",
+    };
+  }
+
+  if (roundOneConfig.status === "Open") {
+    return {
+      title: "Close Round 1 when collection is complete",
+      detail: `${openResponses.length} Round 1 response${openResponses.length === 1 ? "" : "s"} are available for curation. Close Round 1 before opening Round 2.`,
+      module: "round-manager",
+      actionLabel: "Close Round 1",
+      risk: "info",
+      command: {
+        kind: "transition-round",
+        roundNumber: 1,
+        action: "close",
+      },
+    };
+  }
+
+  if (publishedRoundTwoItems.length === 0) {
+    return {
+      title: "Curate and publish Round 2 items",
+      detail: "Create traceable candidate items from Round 1 responses, handle AI suggestions with human decisions, and publish participant-facing items.",
+      module: "curation",
+      actionLabel: "Open Curation",
+      risk: "warning",
+    };
+  }
+
+  if (!roundTwoConfig) {
+    return {
+      title: "Configure Round 2",
+      detail: "Set the structured rating instructions, response window, reminders, and controlled feedback posture.",
+      module: "round-manager",
+      actionLabel: "Configure Round 2",
+      risk: "warning",
+    };
+  }
+
+  if (roundTwoConfig.status !== "Open" && roundTwoConfig.status !== "Closed") {
+    return {
+      title: "Open Round 2",
+      detail: `${publishedRoundTwoItems.length} published item${publishedRoundTwoItems.length === 1 ? "" : "s"} are ready for participant rating.`,
+      module: "round-manager",
+      actionLabel: "Open Round 2",
+      risk: "warning",
+      command: {
+        kind: "transition-round",
+        roundNumber: 2,
+        action: "open",
+      },
+    };
+  }
+
+  if (roundTwoConfig.status === "Open" && roundTwoSubmissionCount === 0) {
+    return {
+      title: "Collect Round 2 ratings",
+      detail: "Round 2 is open. Participant ratings will populate the real reporting dashboard.",
+      module: "participant",
+      actionLabel: "View rating task",
+      risk: "info",
+    };
+  }
+
+  return {
+    title: "Review real reporting",
+    detail: "Ratings are available. Review consensus, non-consensus, limitations, and export permissions.",
+    module: "reporting",
+    actionLabel: "Open Reporting",
+    risk: "success",
+  };
+}
+
+function buildActionableChecklist(input: {
+  workflow: ConductorWorkflow;
+  roundConfigs: RoundConfig[];
+  runtimeData: RuntimeStudyData;
+}): ActionChecklistItem[] {
+  const { workflow, roundConfigs, runtimeData } = input;
+  const roundOneConfig = roundConfigs.find((config) => config.round_number === 1);
+  const roundTwoConfig = roundConfigs.find((config) => config.round_number === 2);
+  const openResponses = runtimeData.responses.filter((response) => responseOpenText(response.response_json));
+  const publishedRoundTwoItems = runtimeData.items.filter((item) => item.round_number === 2 && item.status === "Published");
+  const roundTwoSubmissionCount = runtimeData.roundReport?.summary.round_submission_count ?? 0;
+
+  return [
+    {
+      label: "Study design saved",
+      detail: "Study Builder packet is attached to the version.",
+      complete: Boolean(workflow.version?.study_design_packet_json),
+    },
+    {
+      label: "Governance complete",
+      detail: "Method, consensus threshold, dual signoff, and activation are complete.",
+      complete: workflow.version?.status === "Active",
+    },
+    {
+      label: "Round 1 configured",
+      detail: "Prompt, instructions, consent, window, and reminders are ready.",
+      complete: Boolean(roundOneConfig),
+    },
+    {
+      label: "Round 1 collection complete",
+      detail: "Round 1 has collected responses and is closed before curation release.",
+      complete: roundOneConfig?.status === "Closed" && openResponses.length > 0,
+    },
+    {
+      label: "Round 2 items published",
+      detail: "Traceable candidate statements are participant-facing.",
+      complete: publishedRoundTwoItems.length > 0,
+    },
+    {
+      label: "Round 2 configured and open",
+      detail: "Structured rating task is available to participants.",
+      complete: roundTwoConfig?.status === "Open" || roundTwoConfig?.status === "Closed",
+    },
+    {
+      label: "Round 2 ratings received",
+      detail: "Real ratings are available for reporting.",
+      complete: roundTwoSubmissionCount > 0,
+    },
+    {
+      label: "Reporting review ready",
+      detail: "Consensus, non-consensus, limitations, and export permissions can be reviewed.",
+      complete: Boolean(runtimeData.roundReport ?? runtimeData.exportReport),
+    },
+  ];
+}
+
 function DashboardScreen({
   study,
   role,
   workflow,
+  roundConfigs,
+  runtimeData,
   savedStudies,
   savedStudiesLoading,
   savedStudiesError,
   onRefreshSavedStudies,
   onOpenSavedStudy,
   onArchiveSavedStudy,
+  onArchiveSmokeTestStudies,
 }: {
   study: StudyRecord;
   role: UserRole;
   workflow: ConductorWorkflow;
+  roundConfigs: RoundConfig[];
+  runtimeData: RuntimeStudyData;
   savedStudies: SavedStudyRecord[];
   savedStudiesLoading: boolean;
   savedStudiesError: string | null;
   onRefreshSavedStudies: () => void;
   onOpenSavedStudy: (record: SavedStudyRecord) => void;
   onArchiveSavedStudy: (record: SavedStudyRecord) => void;
+  onArchiveSmokeTestStudies: () => void;
 }) {
   const launchBlockers = evaluateLaunchGate(study);
+  const actionChecklist = buildActionableChecklist({ workflow, roundConfigs, runtimeData });
+  const checklistComplete = actionChecklist.filter((item) => item.complete).length;
   const backendStepsComplete = [
     "create-study",
     "create-version",
@@ -1313,6 +2323,29 @@ function DashboardScreen({
           <StatCard label="Launch blockers" value={String(launchBlockers.length)} supporting="Governance and reporting safeguards." />
           <StatCard label="Current role" value={roleLabels[role]} supporting="UI visibility mirrors backend roles." />
           <StatCard label="Backend setup" value={`${backendStepsComplete}/10`} supporting={workflow.version?.opened_round1_at ? "Round 1 is open." : "Use Study Builder to launch."} />
+          <StatCard label="Study flow" value={`${checklistComplete}/${actionChecklist.length}`} supporting="Live conductor checklist." />
+        </div>
+      </section>
+
+      <section className="panel wide">
+        <div className="split-line">
+          <div>
+            <h3>Actionable Workflow Checklist</h3>
+            <p className="muted">Use this to see the study-level path from design through reporting.</p>
+          </div>
+          <StatusBadge risk={checklistComplete === actionChecklist.length ? "success" : "warning"} label={`${checklistComplete}/${actionChecklist.length} complete`} />
+        </div>
+        <div className="workflow-checklist">
+          {actionChecklist.map((item, index) => (
+            <article className={item.complete ? "workflow-check complete" : "workflow-check"} key={item.label}>
+              <div className="workflow-index">{index + 1}</div>
+              <div>
+                <strong>{item.label}</strong>
+                <p>{item.detail}</p>
+              </div>
+              <StatusBadge risk={item.complete ? "success" : "locked"} label={item.complete ? "Done" : "Waiting"} />
+            </article>
+          ))}
         </div>
       </section>
 
@@ -1325,11 +2358,14 @@ function DashboardScreen({
           <button className="secondary-button" onClick={onRefreshSavedStudies} type="button">
             {savedStudiesLoading ? "Refreshing..." : "Refresh"}
           </button>
+          <button className="secondary-button danger-button" onClick={onArchiveSmokeTestStudies} type="button">
+            Archive smoke tests
+          </button>
         </div>
 
         {savedStudiesError ? (
           <WarningBanner title="Unable to load saved studies" risk="danger">
-            {savedStudiesError}
+            {humanizeBackendMessage(savedStudiesError)}
           </WarningBanner>
         ) : null}
 
@@ -1527,7 +2563,7 @@ function StudyBuilderScreen({
 
         {workflow.error ? (
           <WarningBanner title="Save did not complete" risk="danger">
-            {workflow.error}
+            {humanizeBackendMessage(workflow.error)}
           </WarningBanner>
         ) : null}
 
@@ -2004,7 +3040,7 @@ function ConductorWorkflowPanel({
 
       {workflow.error ? (
         <WarningBanner title="Backend action blocked" risk="danger">
-          {workflow.error}
+          {humanizeBackendMessage(workflow.error)}
         </WarningBanner>
       ) : null}
 
@@ -2307,6 +3343,7 @@ function RoundManagerScreen({
   onRoundTwoSetupChange,
   onSaveRoundOneSetup,
   onSaveRoundTwoSetup,
+  onSaveRatingRoundSetup,
   onTransitionRound,
 }: {
   workflow: ConductorWorkflow;
@@ -2322,12 +3359,15 @@ function RoundManagerScreen({
   onRoundTwoSetupChange: (state: RoundTwoSetupState) => void;
   onSaveRoundOneSetup: () => void;
   onSaveRoundTwoSetup: () => void;
+  onSaveRatingRoundSetup: (roundNumber: number) => void;
   onTransitionRound: (roundNumber: number, action: "open" | "close") => void;
 }) {
   const plannedRounds = buildPlannedRounds(wizard, workflow);
   const savedRoundOne = roundConfigs.find((config) => config.round_number === 1);
   const savedRoundTwo = roundConfigs.find((config) => config.round_number === 2);
+  const ratingRounds = plannedRounds.filter((round) => round.roundNumber > 1);
   const publishedRoundTwoCount = runtimeData.items.filter((item) => item.round_number === 2 && item.status === "Published").length;
+  const roundOneClosed = savedRoundOne?.status === "Closed";
 
   function updateRoundOne(patch: Partial<RoundOneSetupState>) {
     onRoundOneSetupChange({ ...roundOneSetup, ...patch });
@@ -2350,13 +3390,19 @@ function RoundManagerScreen({
           <StatCard label="Round 1 mode" value={wizard.roundOneMode === "open-ended" ? "Open-ended" : "Structured"} supporting="Panelists see only available tasks." />
         </div>
         <div className="round-grid">
-          {plannedRounds.map((round) => (
-            <article className="round-card" key={round.roundNumber}>
+          {plannedRounds.map((round) => {
+            const config = roundConfigs.find((entry) => entry.round_number === round.roundNumber);
+            const status = config?.status ?? round.status;
+            const canCloseRecoveredRoundOne = round.roundNumber === 1 && Boolean(workflow.version?.opened_round1_at);
+            const showRoundControls = Boolean(config) || canCloseRecoveredRoundOne;
+
+            return (
+              <article className="round-card" key={round.roundNumber}>
               <div className="split-line">
                 <strong>Round {round.roundNumber}</strong>
                 <StatusBadge
-                  risk={roundStatusRisk(roundConfigs.find((config) => config.round_number === round.roundNumber)?.status ?? round.status)}
-                  label={formatStatus(roundConfigs.find((config) => config.round_number === round.roundNumber)?.status ?? round.status)}
+                  risk={roundStatusRisk(status)}
+                  label={formatStatus(status)}
                 />
               </div>
               <h3>{round.label}</h3>
@@ -2366,11 +3412,11 @@ function RoundManagerScreen({
               {round.blocker ? (
                 <WarningBanner title="Blocker">{round.blocker}</WarningBanner>
               ) : null}
-              {roundConfigs.find((config) => config.round_number === round.roundNumber) ? (
+              {showRoundControls ? (
                 <div className="candidate-actions">
                   <button
                     className="secondary-button"
-                    disabled={roundActionBusy === `open-${round.roundNumber}`}
+                    disabled={status === "Open" || status === "Closed" || roundActionBusy === `open-${round.roundNumber}`}
                     onClick={() => onTransitionRound(round.roundNumber, "open")}
                     type="button"
                   >
@@ -2378,7 +3424,7 @@ function RoundManagerScreen({
                   </button>
                   <button
                     className="secondary-button"
-                    disabled={roundActionBusy === `close-${round.roundNumber}`}
+                    disabled={status === "Closed" || roundActionBusy === `close-${round.roundNumber}`}
                     onClick={() => onTransitionRound(round.roundNumber, "close")}
                     type="button"
                   >
@@ -2387,7 +3433,8 @@ function RoundManagerScreen({
                 </div>
               ) : null}
             </article>
-          ))}
+            );
+          })}
         </div>
       </section>
 
@@ -2399,7 +3446,7 @@ function RoundManagerScreen({
 
         {roundActionError ? (
           <WarningBanner title="Round setup not saved" risk="danger">
-            {roundActionError}
+            {humanizeBackendMessage(roundActionError)}
           </WarningBanner>
         ) : null}
         {roundActionMessage ? (
@@ -2407,15 +3454,21 @@ function RoundManagerScreen({
             {roundActionMessage}
           </WarningBanner>
         ) : null}
+        {roundOneClosed ? (
+          <WarningBanner title="Round 1 setup locked" risk="locked">
+            Round 1 is closed. Its prompt, instructions, response window, reminder text, and AI curation setting are locked for this study version.
+          </WarningBanner>
+        ) : null}
 
         <div className="form-grid">
           <label className="field">
             <span>Round title</span>
-            <input value={roundOneSetup.title} onChange={(event) => updateRoundOne({ title: event.target.value })} />
+            <input disabled={roundOneClosed} value={roundOneSetup.title} onChange={(event) => updateRoundOne({ title: event.target.value })} />
           </label>
           <label className="field">
             <span>Response window days</span>
             <input
+              disabled={roundOneClosed}
               min={1}
               max={60}
               type="number"
@@ -2425,11 +3478,12 @@ function RoundManagerScreen({
           </label>
           <label className="field wide-field">
             <span>Open-ended prompt</span>
-            <textarea value={roundOneSetup.prompt} onChange={(event) => updateRoundOne({ prompt: event.target.value })} />
+            <textarea disabled={roundOneClosed} value={roundOneSetup.prompt} onChange={(event) => updateRoundOne({ prompt: event.target.value })} />
           </label>
           <label className="field wide-field">
             <span>Participant instructions</span>
             <textarea
+              disabled={roundOneClosed}
               value={roundOneSetup.participantInstructions}
               onChange={(event) => updateRoundOne({ participantInstructions: event.target.value })}
             />
@@ -2437,16 +3491,18 @@ function RoundManagerScreen({
           <label className="field">
             <span>Reminder subject</span>
             <input
+              disabled={roundOneClosed}
               value={roundOneSetup.reminderSubject}
               onChange={(event) => updateRoundOne({ reminderSubject: event.target.value })}
             />
           </label>
           <label className="field">
             <span>Reminder body</span>
-            <textarea value={roundOneSetup.reminderBody} onChange={(event) => updateRoundOne({ reminderBody: event.target.value })} />
+            <textarea disabled={roundOneClosed} value={roundOneSetup.reminderBody} onChange={(event) => updateRoundOne({ reminderBody: event.target.value })} />
           </label>
           <label className="check-field wide-field">
             <input
+              disabled={roundOneClosed}
               checked={roundOneSetup.aiCurationEnabled}
               onChange={(event) => updateRoundOne({ aiCurationEnabled: event.target.checked })}
               type="checkbox"
@@ -2457,16 +3513,16 @@ function RoundManagerScreen({
 
         <div className="wizard-actions">
           <StatusBadge risk={savedRoundOne ? "success" : "warning"} label={savedRoundOne ? "Round 1 configured" : "Draft setup"} />
-          <button className="primary-button" disabled={roundActionBusy === "save-r1"} onClick={onSaveRoundOneSetup} type="button">
-            {roundActionBusy === "save-r1" ? "Saving..." : "Save Round 1 setup"}
+          <button className="primary-button" disabled={roundOneClosed || roundActionBusy === "save-r1"} onClick={onSaveRoundOneSetup} type="button">
+            {roundOneClosed ? "Round 1 setup locked" : roundActionBusy === "save-r1" ? "Saving..." : "Save Round 1 setup"}
           </button>
         </div>
       </section>
 
       <section className="panel wide">
         <div className="section-heading">
-          <span className="eyebrow">Round 2 Setup</span>
-          <h2>Structured rating task, controlled feedback, and release readiness</h2>
+          <span className="eyebrow">Rating Round Setup</span>
+          <h2>Structured rating tasks, controlled feedback, and release readiness</h2>
         </div>
         <WarningBanner title="Readiness gate" risk={publishedRoundTwoCount > 0 ? "success" : "warning"}>
           {publishedRoundTwoCount > 0
@@ -2522,6 +3578,31 @@ function RoundManagerScreen({
             {roundActionBusy === "save-r2" ? "Saving..." : "Save Round 2 setup"}
           </button>
         </div>
+        <div className="rating-round-setup-list">
+          {ratingRounds.map((round) => {
+            const config = roundConfigs.find((entry) => entry.round_number === round.roundNumber);
+            const publishedCount = runtimeData.items.filter((item) => item.round_number === round.roundNumber && item.status === "Published").length;
+
+            return (
+              <article className="rating-round-setup" key={round.roundNumber}>
+                <div>
+                  <strong>Round {round.roundNumber}</strong>
+                  <p>{round.label}</p>
+                  <small>{publishedCount} published item{publishedCount === 1 ? "" : "s"} for this round.</small>
+                </div>
+                <StatusBadge risk={config ? "success" : "warning"} label={config ? formatStatus(config.status) : "Not configured"} />
+                <button
+                  className="secondary-button"
+                  disabled={roundActionBusy === `save-r${round.roundNumber}`}
+                  onClick={() => onSaveRatingRoundSetup(round.roundNumber)}
+                  type="button"
+                >
+                  {roundActionBusy === `save-r${round.roundNumber}` ? "Saving..." : `Save Round ${round.roundNumber}`}
+                </button>
+              </article>
+            );
+          })}
+        </div>
       </section>
     </div>
   );
@@ -2535,10 +3616,15 @@ function CurationScreen({
   onRefreshRuntimeData,
   onCreateManualItemFromResponse,
   onSynthesizeRoundTwoCandidates,
+  onSynthesizeRoundCandidates,
   onAcceptSuggestion,
   onMaterializeSuggestion,
   onSignoffSuggestionRelease,
   onPublishItem,
+  onEditItemText,
+  onRejectItem,
+  onSplitItem,
+  onMergeItemInto,
 }: {
   study: StudyRecord;
   workflow: ConductorWorkflow;
@@ -2547,15 +3633,22 @@ function CurationScreen({
   onRefreshRuntimeData: () => void;
   onCreateManualItemFromResponse: (response: ResponseRecord) => void;
   onSynthesizeRoundTwoCandidates: () => void;
+  onSynthesizeRoundCandidates: (targetRoundNumber: number) => void;
   onAcceptSuggestion: (suggestion: AISuggestionRecord) => void;
   onMaterializeSuggestion: (suggestion: AISuggestionRecord) => void;
   onSignoffSuggestionRelease: (suggestion: AISuggestionRecord) => void;
   onPublishItem: (item: ItemRecord) => void;
+  onEditItemText: (item: ItemRecord) => void;
+  onRejectItem: (item: ItemRecord) => void;
+  onSplitItem: (item: ItemRecord) => void;
+  onMergeItemInto: (item: ItemRecord, target: ItemRecord) => void;
 }) {
   const hasBackendStudy = Boolean(workflow.study && workflow.version);
   const openResponses = runtimeData.responses.filter((response) => responseOpenText(response.response_json));
-  const roundTwoItems = runtimeData.items.filter((item) => item.round_number === 2);
+  const roundTwoItems = runtimeData.items.filter((item) => item.round_number >= 2);
   const interRoundSuggestions = runtimeData.aiSuggestions.filter((suggestion) => suggestion.feature === "inter_round_synthesis");
+  const terminalRound = workflow.version?.terminal_round_number ?? 2;
+  const carryForwardTargets = Array.from({ length: Math.max(terminalRound - 2, 0) }, (_, index) => index + 3);
 
   if (!hasBackendStudy) {
     return (
@@ -2604,7 +3697,7 @@ function CurationScreen({
         {runtimeData.loading ? <p className="muted">Loading study data...</p> : null}
         {runtimeData.error ? (
           <WarningBanner title="Curation data issue" risk="danger">
-            {runtimeData.error}
+            {humanizeBackendMessage(runtimeData.error)}
           </WarningBanner>
         ) : null}
         {runtimeData.message ? (
@@ -2657,6 +3750,19 @@ function CurationScreen({
             Create an AI Suggestion (Not Final) after Round 1 responses are available, or create candidate items manually from responses.
           </WarningBanner>
         ) : null}
+        <div className="candidate-actions">
+          {carryForwardTargets.map((targetRound) => (
+            <button
+              className="secondary-button"
+              disabled={runtimeActionBusy === `synthesize-r${targetRound}`}
+              key={targetRound}
+              onClick={() => onSynthesizeRoundCandidates(targetRound)}
+              type="button"
+            >
+              Draft Round {targetRound}
+            </button>
+          ))}
+        </div>
         {interRoundSuggestions.map((suggestion) => {
           const output = suggestion.output_json && typeof suggestion.output_json === "object" ? suggestion.output_json as Record<string, unknown> : {};
           const candidates = Array.isArray(output.candidates) ? output.candidates : [];
@@ -2716,7 +3822,7 @@ function CurationScreen({
             Candidate items created here will keep provenance links and can be published for Round 2 rating.
           </WarningBanner>
         ) : null}
-        {roundTwoItems.map((item) => (
+        {roundTwoItems.map((item, index) => (
           <article className="candidate" key={item.item_id}>
             <div className="split-line">
               <StatusBadge risk={item.status === "Published" ? "success" : "warning"} label={item.status} />
@@ -2734,12 +3840,28 @@ function CurationScreen({
             </div>
             <button
               className="primary-button"
-              disabled={item.status === "Published" || runtimeActionBusy === `publish-${item.item_id}`}
+              disabled={item.status !== "Draft" || runtimeActionBusy === `publish-${item.item_id}`}
               onClick={() => onPublishItem(item)}
               type="button"
             >
-              Publish for Round 2
+              Publish for Round {item.round_number}
             </button>
+            <div className="candidate-actions">
+              <button className="secondary-button" disabled={runtimeActionBusy === `edit-${item.item_id}`} onClick={() => onEditItemText(item)} type="button">
+                Edit
+              </button>
+              <button className="secondary-button" disabled={runtimeActionBusy === `split-${item.item_id}`} onClick={() => onSplitItem(item)} type="button">
+                Split
+              </button>
+              <button className="secondary-button danger-button" disabled={item.status === "Rejected" || runtimeActionBusy === `reject-${item.item_id}`} onClick={() => onRejectItem(item)} type="button">
+                Reject
+              </button>
+              {index > 0 ? (
+                <button className="secondary-button" disabled={runtimeActionBusy === `merge-${item.item_id}`} onClick={() => onMergeItemInto(item, roundTwoItems[index - 1])} type="button">
+                  Merge into previous
+                </button>
+              ) : null}
+            </div>
           </article>
         ))}
       </section>
@@ -2804,15 +3926,27 @@ function ParticipantScreen({
   wizard,
   roundConfigs,
   participantResponseText,
+  participantSubmittedRoundOneText,
+  participantRoundOneEditing,
+  participantRoundOneComplete,
+  participantSubmittedRatings,
+  participantRatingRoundEditing,
+  participantRatingRoundComplete,
   participantConsentChecked,
   participantMessage,
   participantError,
   participantBusy,
+  participantInvite,
   runtimeData,
   roundTwoRatings,
   onParticipantResponseChange,
   onParticipantConsentChange,
   onSubmitParticipantRoundOne,
+  onEditSubmittedRoundOne,
+  onFinishRoundOneTask,
+  onEditSubmittedRatings,
+  onFinishRatingRoundTask,
+  onWithdrawParticipant,
   onRoundTwoRatingChange,
   onSubmitRoundTwoRatings,
 }: {
@@ -2820,27 +3954,60 @@ function ParticipantScreen({
   wizard: StudyWizardState;
   roundConfigs: RoundConfig[];
   participantResponseText: string;
+  participantSubmittedRoundOneText: string | null;
+  participantRoundOneEditing: boolean;
+  participantRoundOneComplete: boolean;
+  participantSubmittedRatings: Record<number, RatingDraft>;
+  participantRatingRoundEditing: Record<number, boolean>;
+  participantRatingRoundComplete: Record<number, boolean>;
   participantConsentChecked: boolean;
   participantMessage: string | null;
   participantError: string | null;
   participantBusy: boolean;
+  participantInvite: ParticipantInvitationContext | null;
   runtimeData: RuntimeStudyData;
   roundTwoRatings: RatingDraft;
   onParticipantResponseChange: (value: string) => void;
   onParticipantConsentChange: (value: boolean) => void;
   onSubmitParticipantRoundOne: () => void;
+  onEditSubmittedRoundOne: () => void;
+  onFinishRoundOneTask: () => void;
+  onEditSubmittedRatings: (roundNumber: number) => void;
+  onFinishRatingRoundTask: (roundNumber: number) => void;
+  onWithdrawParticipant: () => void;
   onRoundTwoRatingChange: (itemId: string, rating: number) => void;
   onSubmitRoundTwoRatings: () => void;
 }) {
   const roundOneConfig = roundConfigs.find((config) => config.round_number === 1);
-  const roundOneOpen = roundOneConfig?.status === "Open";
-  const roundTwoOpen = roundConfigs.find((config) => config.round_number === 2)?.status === "Open";
+  const effectiveRoundOneConfig = roundOneConfig ?? (workflow.version?.opened_round1_at
+    ? {
+        title: "Round 1: Open-ended elicitation",
+        prompt: "What care transition practices should this panel consider for later rating rounds?",
+        participant_instructions:
+          "Please provide one or more practices or concerns in your own words. There is no expected answer, and disagreement or uncertainty is useful to the study.",
+        status: "Open",
+      }
+    : null);
+  const roundOneOpen = effectiveRoundOneConfig?.status === "Open";
+  const openRatingRound = roundConfigs.find((config) => config.round_number > 1 && config.status === "Open");
+  const openRatingRoundItems = openRatingRound ? runtimeData.ratingRoundItems[openRatingRound.round_number] ?? [] : [];
   const hasBackendStudy = Boolean(workflow.version);
-  const hasRoundTwoTask = roundTwoOpen && runtimeData.roundTwoItems.length > 0;
-  const currentTaskLabel = hasRoundTwoTask
-      ? "Round 2: structured rating"
+  const hasRatingTask = Boolean(openRatingRound && openRatingRoundItems.length > 0);
+  const currentRatingRoundNumber = openRatingRound?.round_number ?? null;
+  const submittedRatingsForOpenRound = currentRatingRoundNumber ? participantSubmittedRatings[currentRatingRoundNumber] ?? null : null;
+  const ratingRoundIsEditing = currentRatingRoundNumber ? Boolean(participantRatingRoundEditing[currentRatingRoundNumber]) : false;
+  const ratingRoundIsComplete = currentRatingRoundNumber ? Boolean(participantRatingRoundComplete[currentRatingRoundNumber]) : false;
+  const showRatingEditor = !submittedRatingsForOpenRound || ratingRoundIsEditing;
+  const showRoundOneEditor = !participantSubmittedRoundOneText || participantRoundOneEditing;
+  const savedRatingPrompt = openRatingRound?.prompt?.trim();
+  const ratingPrompt = savedRatingPrompt && savedRatingPrompt !== legacyVagueRatingPrompt
+    ? savedRatingPrompt
+    : defaultRoundTwoSetup.prompt;
+  const ratingInstructions = openRatingRound?.participant_instructions?.trim() || defaultRoundTwoSetup.participantInstructions;
+  const currentTaskLabel = hasRatingTask
+      ? `Round ${openRatingRound?.round_number}: structured judgment`
     : roundOneOpen
-      ? roundOneConfig?.title ?? "Round 1: open-ended elicitation"
+      ? effectiveRoundOneConfig?.title ?? "Round 1: open-ended elicitation"
     : "No round task is currently open";
 
   return (
@@ -2853,6 +4020,11 @@ function ParticipantScreen({
         <WarningBanner title="Confidentiality">
           Responses are confidential to research team members with approved access and are linked across rounds through participant IDs.
         </WarningBanner>
+        {participantInvite ? (
+          <WarningBanner title="Invitation link active" risk="success">
+            You do not need an account, password, API key, or access code. This private invitation link identifies your study task.
+          </WarningBanner>
+        ) : null}
       </section>
 
       <section className="panel">
@@ -2865,7 +4037,7 @@ function ParticipantScreen({
         ) : null}
         {participantError ? (
           <WarningBanner title="Submission blocked" risk="danger">
-            {participantError}
+            {humanizeBackendMessage(participantError)}
           </WarningBanner>
         ) : null}
         {participantMessage ? (
@@ -2873,66 +4045,164 @@ function ParticipantScreen({
             {participantMessage}
           </WarningBanner>
         ) : null}
-        {hasRoundTwoTask ? (
+        {participantInvite?.active_consent_version ? (
+          <details className="consent-details">
+            <summary>Consent information</summary>
+            <p>{participantInvite.active_consent_version.text_md.replace(/^#+\s*/gm, "")}</p>
+            <small>Consent version: {shortId(participantInvite.active_consent_version.consent_version_id)}</small>
+          </details>
+        ) : null}
+        {hasRatingTask ? (
           <>
-            <WarningBanner title="Controlled feedback" risk="info">
-              Review each candidate statement independently. You may retain or revise your response in later rounds if controlled feedback is available.
+            <WarningBanner title="Structured judgment task" risk="info">
+              <div className="rating-task-copy">
+                <p>
+                  <strong>{ratingPrompt}</strong>
+                </p>
+                <p>{ratingInstructions}</p>
+              </div>
             </WarningBanner>
-            <div className="rating-task-list">
-              {runtimeData.roundTwoItems.map((item) => (
-                <article className="rating-task" key={item.item_id}>
-                  <p>{item.text}</p>
-                  {item.your_prior_response ? (
-                    <small>Your prior response: {item.your_prior_response.rating}, {item.your_prior_response.action}</small>
-                  ) : null}
-                  <label className="field">
-                    <span>Rating 1-9</span>
-                    <input
-                      min={1}
-                      max={9}
-                      type="number"
-                      value={roundTwoRatings[item.item_id] ?? ""}
-                      onChange={(event) => onRoundTwoRatingChange(item.item_id, Number(event.target.value))}
-                    />
-                  </label>
-                </article>
-              ))}
-            </div>
-            <div className="action-row">
-              <button className="primary-button" disabled={participantBusy} onClick={onSubmitRoundTwoRatings} type="button">
-                {participantBusy ? "Submitting..." : "Submit Round 2 ratings"}
-              </button>
-            </div>
+            {submittedRatingsForOpenRound && currentRatingRoundNumber ? (
+              <div className="submitted-response-review">
+                <strong>What was submitted</strong>
+                <div className="submitted-rating-list">
+                  {openRatingRoundItems.map((item) => (
+                    <article className="submitted-rating-row" key={`submitted-${item.item_id}`}>
+                      <p>{item.text}</p>
+                      <StatusBadge risk="success" label={formatRatingChoice(submittedRatingsForOpenRound[item.item_id])} />
+                    </article>
+                  ))}
+                </div>
+                {ratingRoundIsComplete ? (
+                  <StatusBadge risk="success" label={`Round ${currentRatingRoundNumber} task complete`} />
+                ) : (
+                  <div className="action-row">
+                    <button className="secondary-button" disabled={participantBusy} onClick={() => onEditSubmittedRatings(currentRatingRoundNumber)} type="button">
+                      Revise responses
+                    </button>
+                    <button className="primary-button" disabled={participantBusy} onClick={() => onFinishRatingRoundTask(currentRatingRoundNumber)} type="button">
+                      Retain submitted responses
+                    </button>
+                  </div>
+                )}
+              </div>
+            ) : null}
+            {showRatingEditor ? (
+              <>
+                <div className="rating-task-list">
+                  {openRatingRoundItems.map((item) => (
+                    <article className="rating-task" key={item.item_id}>
+                      <div className="statement-to-evaluate">
+                        <span>Statement to evaluate</span>
+                        <p>{item.text}</p>
+                      </div>
+                      {item.your_prior_response ? (
+                        <small>
+                          Your prior response: {formatRatingChoice(item.your_prior_response.rating)}. You may retain or revise it.
+                        </small>
+                      ) : null}
+                      <fieldset className="rating-scale" aria-label={`Agreement response for ${item.text}`}>
+                        <legend>
+                          {ratingRoundIsEditing
+                            ? "Revise your response"
+                            : "How much do you agree this statement should be prioritized?"}
+                        </legend>
+                        <div className="rating-options">
+                          {ratingScaleOptions.map((option) => {
+                            const selected = roundTwoRatings[item.item_id] === option.value;
+                            return (
+                              <label className={selected ? "rating-option selected" : "rating-option"} key={option.value}>
+                                <input
+                                  checked={selected}
+                                  name={`rating-${openRatingRound?.round_number}-${item.item_id}`}
+                                  onChange={() => onRoundTwoRatingChange(item.item_id, option.value)}
+                                  type="radio"
+                                  value={option.value}
+                                />
+                                <span>
+                                  <strong>{option.label}</strong>
+                                  <small>{option.detail}</small>
+                                </span>
+                              </label>
+                            );
+                          })}
+                        </div>
+                      </fieldset>
+                    </article>
+                  ))}
+                </div>
+                <div className="action-row">
+                  <button className="primary-button" disabled={participantBusy} onClick={onSubmitRoundTwoRatings} type="button">
+                    {participantBusy
+                      ? "Submitting..."
+                      : ratingRoundIsEditing
+                        ? `Submit revised Round ${openRatingRound?.round_number} responses`
+                        : `Submit Round ${openRatingRound?.round_number} responses`}
+                  </button>
+                </div>
+              </>
+            ) : null}
           </>
-        ) : roundOneOpen && roundOneConfig ? (
+        ) : roundOneOpen && effectiveRoundOneConfig ? (
           <>
             <WarningBanner title="Confidential to research team" risk="info">
               {wizard.confidentialityStatement}
             </WarningBanner>
-            <p className="callout-text">{roundOneConfig.participant_instructions}</p>
-            <label className="field wide-field">
-              <span>{roundOneConfig.prompt}</span>
-              <textarea
-                value={participantResponseText}
-                onChange={(event) => onParticipantResponseChange(event.target.value)}
-              />
-            </label>
-            <label className="check-field wide-field">
-              <input
-                checked={participantConsentChecked}
-                onChange={(event) => onParticipantConsentChange(event.target.checked)}
-                type="checkbox"
-              />
-              <span>
-                I have reviewed the consent information, confidentiality language, and withdrawal rights for this study.
-              </span>
-            </label>
-            <DataBar value={0} label="Your task progress" />
-            <div className="action-row">
-              <button className="primary-button" disabled={participantBusy} onClick={onSubmitParticipantRoundOne} type="button">
-                {participantBusy ? "Submitting..." : "Submit Round 1 response"}
-              </button>
-            </div>
+            {!roundOneConfig ? (
+              <WarningBanner title="Round 1 task setup will be finalized on submit" risk="warning">
+                Round 1 is open. The participant task and consent version will be saved before this response is recorded.
+              </WarningBanner>
+            ) : null}
+            <p className="callout-text">{effectiveRoundOneConfig.participant_instructions}</p>
+            {participantSubmittedRoundOneText ? (
+              <div className="submitted-response-review">
+                <strong>What was submitted</strong>
+                <p>{participantSubmittedRoundOneText}</p>
+                {participantRoundOneComplete ? (
+                  <StatusBadge risk="success" label="Round 1 task complete" />
+                ) : (
+                  <div className="action-row">
+                    <button className="secondary-button" disabled={participantBusy} onClick={onEditSubmittedRoundOne} type="button">
+                      Edit response
+                    </button>
+                    <button className="primary-button" disabled={participantBusy} onClick={onFinishRoundOneTask} type="button">
+                      Finish Round 1 task
+                    </button>
+                  </div>
+                )}
+              </div>
+            ) : null}
+            {showRoundOneEditor ? (
+              <>
+                <label className="field wide-field">
+                  <span>{participantRoundOneEditing ? "Revise your Round 1 response" : effectiveRoundOneConfig.prompt}</span>
+                  <textarea
+                    value={participantResponseText}
+                    onChange={(event) => onParticipantResponseChange(event.target.value)}
+                  />
+                </label>
+                <label className="check-field wide-field">
+                  <input
+                    checked={participantConsentChecked}
+                    onChange={(event) => onParticipantConsentChange(event.target.checked)}
+                    type="checkbox"
+                  />
+                  <span>
+                    I have reviewed the consent information, confidentiality language, and withdrawal rights for this study.
+                  </span>
+                </label>
+                <DataBar value={participantSubmittedRoundOneText ? 75 : 0} label="Your task progress" />
+                <div className="action-row">
+                  <button className="primary-button" disabled={participantBusy} onClick={onSubmitParticipantRoundOne} type="button">
+                    {participantBusy
+                      ? "Submitting..."
+                      : participantRoundOneEditing
+                        ? "Submit revised response"
+                        : "Submit Round 1 response"}
+                  </button>
+                </div>
+              </>
+            ) : null}
           </>
         ) : (
           <WarningBanner title="Waiting for study team" risk="info">
@@ -2957,6 +4227,11 @@ function ParticipantScreen({
           <li>You may skip items where permitted by the study protocol.</li>
           <li>AI assistance, if offered, is optional and non-directive.</li>
         </ul>
+        {participantInvite ? (
+          <button className="secondary-button danger-button" disabled={participantBusy} onClick={onWithdrawParticipant} type="button">
+            Withdraw from future participation
+          </button>
+        ) : null}
       </section>
     </div>
   );
@@ -2967,12 +4242,23 @@ function ReportingScreen({
   role,
   workflow,
   runtimeData,
+  runtimeActionBusy,
+  onExportOutput,
+  onSelectExportPackage,
+  onReviewExportPackage,
+  onDownloadExportPackageFile,
 }: {
   study: StudyRecord;
   role: UserRole;
   workflow: ConductorWorkflow;
   runtimeData: RuntimeStudyData;
+  runtimeActionBusy: string | null;
+  onExportOutput: (outputId: string) => void;
+  onSelectExportPackage: (packageId: string) => void;
+  onReviewExportPackage: (packageId: string, reviewStatus: "approved" | "rejected", note: string) => void;
+  onDownloadExportPackageFile: (packageId: string, fileId: string) => void;
 }) {
+  const [reviewNotes, setReviewNotes] = useState<Record<string, string>>({});
   const realReport = runtimeData.roundReport ?? runtimeData.exportReport;
   const realItems = realReport?.items ?? [];
   const reportSafe = reportIncludesNonConsensus(study.report);
@@ -2982,6 +4268,18 @@ function ReportingScreen({
     ? 0
     : study.report.attritionRate;
   const hasRealStudy = Boolean(workflow.study && workflow.version);
+  const selectedPackage =
+    runtimeData.exportPackages.find((pkg) => pkg.export_package_id === runtimeData.selectedExportPackageId) ??
+    runtimeData.exportPackages.at(-1) ??
+    null;
+  const selectedFiles = selectedPackage ? runtimeData.exportPackageFiles[selectedPackage.export_package_id] ?? [] : [];
+  const latestReview = selectedPackage?.reviews?.at(-1) ?? null;
+  const canReviewExports =
+    role === "study_owner" ||
+    role === "ethics_methods_steward" ||
+    role === "data_custodian" ||
+    role === "security_privacy_lead";
+  const selectedReviewNote = selectedPackage ? reviewNotes[selectedPackage.export_package_id] ?? "" : "";
 
   return (
     <div className="screen-grid">
@@ -3028,6 +4326,16 @@ function ReportingScreen({
 
       <section className="panel">
         <h3>Output Models</h3>
+        {runtimeData.message ? (
+          <WarningBanner title="Export status" risk="success">
+            {runtimeData.message}
+          </WarningBanner>
+        ) : null}
+        {runtimeData.error ? (
+          <WarningBanner title="Export blocked" risk="danger">
+            {humanizeBackendMessage(runtimeData.error)}
+          </WarningBanner>
+        ) : null}
         {outputModelRegistry.map((output) => {
           const permitted = canExportOutput(role, output);
 
@@ -3037,10 +4345,170 @@ function ReportingScreen({
                 <strong>{output.label}</strong>
                 <small>{output.sections.slice(0, 2).join(" + ")}</small>
               </div>
-              <StatusBadge risk={permitted ? "success" : "locked"} label={permitted ? "Permitted" : "Restricted"} />
+              <div className="output-actions">
+                <StatusBadge risk={permitted ? "success" : "locked"} label={permitted ? "Permitted" : "Restricted"} />
+                <button
+                  className="secondary-button"
+                  disabled={!permitted || runtimeActionBusy === `export-${output.id}`}
+                  onClick={() => onExportOutput(output.id)}
+                  type="button"
+                >
+                  Prepare
+                </button>
+              </div>
             </article>
           );
         })}
+      </section>
+
+      <section className="panel wide">
+        <div className="section-heading">
+          <span className="eyebrow">Export Package Center</span>
+          <h2>Review, approve, and download governed outputs</h2>
+        </div>
+        {!hasRealStudy ? (
+          <WarningBanner title="Backend study required" risk="info">
+            Open a saved backend study to show persistent export packages.
+          </WarningBanner>
+        ) : runtimeData.exportPackages.length === 0 ? (
+          <WarningBanner title="No export packages yet" risk="info">
+            Prepare the Final Delphi Report package to create governed files for review.
+          </WarningBanner>
+        ) : (
+          <div className="export-center">
+            <div className="export-package-list" aria-label="Export packages">
+              {runtimeData.exportPackages.map((pkg) => {
+                const review = pkg.reviews?.at(-1) ?? null;
+                const isSelected = selectedPackage?.export_package_id === pkg.export_package_id;
+                return (
+                  <button
+                    className={isSelected ? "export-package-card active" : "export-package-card"}
+                    key={pkg.export_package_id}
+                    onClick={() => onSelectExportPackage(pkg.export_package_id)}
+                    type="button"
+                  >
+                    <span>
+                      <strong>{outputModelRegistry.find((output) => output.id === pkg.export_type)?.label ?? pkg.export_type}</strong>
+                      <small>{formatDateTime(pkg.export_created_at)} by {pkg.export_created_by.role}</small>
+                    </span>
+                    <StatusBadge
+                      risk={review?.review_status === "approved" ? "success" : review?.review_status === "rejected" ? "danger" : "warning"}
+                      label={review?.review_status ?? pkg.human_review_status.replace("_", " ")}
+                    />
+                  </button>
+                );
+              })}
+            </div>
+
+            {selectedPackage ? (
+              <div className="export-package-detail">
+                <div className="summary-grid">
+                  <article className="summary-item">
+                    <strong>Anonymization</strong>
+                    <p>{selectedPackage.anonymization_level.replace("_", " ")}</p>
+                  </article>
+                  <article className="summary-item">
+                    <strong>Identifiable data</strong>
+                    <p>{selectedPackage.contains_identifiable_data ? "Present: restricted handling required" : "No direct identifiers in package metadata"}</p>
+                  </article>
+                  <article className="summary-item">
+                    <strong>Package hash</strong>
+                    <p>{shortId(selectedPackage.package_hash)}...</p>
+                  </article>
+                  <article className="summary-item">
+                    <strong>AI disclosure</strong>
+                    <p>{selectedPackage.external_ai_used ? "External AI used" : "No external AI connector recorded"}</p>
+                  </article>
+                </div>
+
+                {selectedPackage.contains_identifiable_data || selectedPackage.anonymization_level !== "aggregated_only" ? (
+                  <WarningBanner title="Sensitive export handling" risk="warning">
+                    Downloads are deliberate, permission-gated, and audit logged. Confirm the recipient and purpose before downloading.
+                  </WarningBanner>
+                ) : (
+                  <WarningBanner title="Download audit" risk="info">
+                    File downloads are still audit logged even when the package is publication-safe.
+                  </WarningBanner>
+                )}
+
+                <div className="export-file-list">
+                  {selectedFiles.length === 0 ? (
+                    <button
+                      className="secondary-button"
+                      disabled={runtimeActionBusy === `files-${selectedPackage.export_package_id}`}
+                      onClick={() => onSelectExportPackage(selectedPackage.export_package_id)}
+                      type="button"
+                    >
+                      {runtimeActionBusy === `files-${selectedPackage.export_package_id}` ? "Loading files..." : "Load file list"}
+                    </button>
+                  ) : selectedFiles.map((file) => (
+                    <article className="export-file-row" key={file.export_file_id}>
+                      <div>
+                        <strong>{file.path}</strong>
+                        <small>{file.format} · {file.content_encoding} · sha256 {shortId(file.sha256)}...</small>
+                      </div>
+                      <div className="output-actions">
+                        <StatusBadge risk={file.contains_identifiable_data ? "warning" : "success"} label={file.contains_identifiable_data ? "Sensitive" : "No identifiers"} />
+                        <button
+                          className="secondary-button"
+                          disabled={runtimeActionBusy === `download-${file.export_file_id}`}
+                          onClick={() => onDownloadExportPackageFile(selectedPackage.export_package_id, file.export_file_id)}
+                          type="button"
+                        >
+                          Download
+                        </button>
+                      </div>
+                    </article>
+                  ))}
+                </div>
+
+                <div className="review-box">
+                  <h3>Human Review</h3>
+                  {latestReview ? (
+                    <WarningBanner title={`Latest review: ${latestReview.review_status}`} risk={latestReview.review_status === "approved" ? "success" : "danger"}>
+                      {latestReview.note} Reviewed by {latestReview.reviewed_by.role} at {formatDateTime(latestReview.reviewed_at)}.
+                    </WarningBanner>
+                  ) : (
+                    <WarningBanner title="Review pending" risk="warning">
+                      The package is not released by interface review until an authorized role records approve or reject with a note.
+                    </WarningBanner>
+                  )}
+                  <label className="field wide-field">
+                    <span>Review note</span>
+                    <textarea
+                      disabled={!canReviewExports}
+                      value={selectedReviewNote}
+                      onChange={(event) =>
+                        setReviewNotes((current) => ({
+                          ...current,
+                          [selectedPackage.export_package_id]: event.target.value,
+                        }))
+                      }
+                    />
+                  </label>
+                  <div className="action-row">
+                    <button
+                      className="primary-button"
+                      disabled={!canReviewExports || selectedReviewNote.trim().length === 0 || runtimeActionBusy === `review-${selectedPackage.export_package_id}`}
+                      onClick={() => onReviewExportPackage(selectedPackage.export_package_id, "approved", selectedReviewNote)}
+                      type="button"
+                    >
+                      Approve package
+                    </button>
+                    <button
+                      className="secondary-button danger-button"
+                      disabled={!canReviewExports || selectedReviewNote.trim().length === 0 || runtimeActionBusy === `review-${selectedPackage.export_package_id}`}
+                      onClick={() => onReviewExportPackage(selectedPackage.export_package_id, "rejected", selectedReviewNote)}
+                      type="button"
+                    >
+                      Reject package
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ) : null}
+          </div>
+        )}
       </section>
 
       <section className="panel wide">
@@ -3135,6 +4603,26 @@ function AdminSecurityScreen({ role }: { role: UserRole }) {
         <WarningBanner title="Zero-trust UI posture" risk="info">
           The interface hides unavailable actions, but backend authorization remains the enforcement point.
         </WarningBanner>
+      </section>
+
+      <section className="panel wide">
+        <div className="section-heading">
+          <span className="eyebrow">Persistence and Auth Roadmap</span>
+          <h2>Next architecture move before multi-user studies</h2>
+        </div>
+        <div className="summary-grid">
+          {[
+            ["Database boundary", "Move file-store records into a relational model with migrations, backups, and tenant-aware study workspaces."],
+            ["Real authentication", "Replace local role headers with sessions, participant tokens, passwordless links, and admin-managed roles."],
+            ["Data separation", "Store identity, consent, responses, items, audit events, and exports in separately permissioned tables."],
+            ["Export controls", "Make each export a persistent package with status, requester, approval state, hash, and download audit event."],
+          ].map(([label, value]) => (
+            <article className="summary-item" key={label}>
+              <strong>{label}</strong>
+              <p>{value}</p>
+            </article>
+          ))}
+        </div>
       </section>
     </div>
   );
