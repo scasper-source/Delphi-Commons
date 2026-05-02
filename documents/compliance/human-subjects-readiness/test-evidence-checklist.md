@@ -47,10 +47,12 @@ Current automated coverage includes: invitation consent is required before submi
 - [ ] Round 1 cannot open before active study version.
 - [ ] Round 1 cannot open without predefined consensus rule.
 - [ ] Consensus rule cannot be changed after governance lock/Round 1 opening.
+- [ ] Panel- or stakeholder-informed consensus rule cannot proceed to governance signoff until pre-round input is reviewed/finalized and summarized.
+- [ ] Pre-round consensus input is reported as setup evidence and not counted as a Delphi round.
 - [ ] Exceptional method changes require new study version or audited correction workflow.
 - [ ] Reports and exports include consensus threshold and justification.
 
-Current automated coverage includes: activation is blocked without both required governance signoffs; consensus rule edits are blocked after governance lock; the Study Builder packet records modified Delphi bias-warning acknowledgement when Round 1 is structured.
+Current automated coverage includes: activation is blocked without both required governance signoffs; consensus rule edits are blocked after governance lock; panel-informed consensus cannot submit without reviewed/summarized input; the Study Builder packet records modified Delphi bias-warning acknowledgement when Round 1 is structured.
 
 ### Round Lifecycle And Participant Tasks
 

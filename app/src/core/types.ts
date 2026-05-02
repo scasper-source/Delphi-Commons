@@ -64,6 +64,8 @@ export type ConsensusRule = {
   type: "percent_agreement";
   threshold: number;
   agreementMinRating: number;
+  source?: "pi_defined" | "governance_team_defined" | "panel_informed_pre_round" | "stakeholder_informed_pre_round" | "protocol_irb_defined";
+  settingProcess?: string;
   locked: boolean;
   lockedAt?: string;
 };

@@ -68,6 +68,7 @@ export function renderFinalDelphiReportDocx(input: RenderFinalReportInput): Buff
   const studyVersion = asRecord(input.report.study_version);
   const summary = asRecord(input.report.summary);
   const methods = asRecord(input.report.methods);
+  const preRoundConsensusInput = asRecord(methods.pre_round_consensus_input);
   const limitations = Array.isArray(input.report.limitations) ? input.report.limitations.map((entry) => asText(entry)) : [];
 
   const title = asText(study.title, "Final Delphi Report");
@@ -78,6 +79,8 @@ export function renderFinalDelphiReportDocx(input: RenderFinalReportInput): Buff
     ["Consensus items", asText(summary.consensus_item_count)],
     ["Non-consensus items", asText(summary.non_consensus_item_count)],
     ["Undetermined items", asText(summary.undetermined_item_count)],
+    ["Consensus rule source", asText(methods.consensus_rule_source_label)],
+    ["Pre-round input status", asText(preRoundConsensusInput.status, "not_required")],
   ];
 
   const itemRows = input.itemResults.map((row) => [
@@ -99,6 +102,13 @@ export function renderFinalDelphiReportDocx(input: RenderFinalReportInput): Buff
     table(rows),
     paragraph("Consensus Rule", "Heading2"),
     paragraph(JSON.stringify(studyVersion.consensus_rule_json ?? methods.consensus_definition ?? {}, null, 2)),
+    paragraph("Consensus Setting Process", "Heading2"),
+    paragraph(asText(methods.consensus_setting_process)),
+    paragraph(
+      preRoundConsensusInput.counts_as_delphi_round === true
+        ? "Pre-round consensus input was counted as a Delphi round."
+        : "Pre-round consensus input was not counted as a Delphi round.",
+    ),
     paragraph("Results", "Heading1"),
     table([["Item ID", "Classification", "Median", "IQR", "Percent agree", "Item text"], ...itemRows]),
     paragraph("Limitations and Disclosures", "Heading1"),
@@ -190,6 +200,8 @@ function worksheet(rows: unknown[][]): string {
 export function renderFinalItemResultsXlsx(input: RenderFinalReportInput): Buffer {
   const study = asRecord(input.report.study);
   const summary = asRecord(input.report.summary);
+  const methods = asRecord(input.report.methods);
+  const preRoundConsensusInput = asRecord(methods.pre_round_consensus_input);
   const headers = Object.keys(input.itemResults[0] ?? {
     study_id: "",
     study_version_id: "",
@@ -207,6 +219,10 @@ export function renderFinalItemResultsXlsx(input: RenderFinalReportInput): Buffe
     ["Final round", summary.final_round_number ?? ""],
     ["Consensus items", summary.consensus_item_count ?? ""],
     ["Non-consensus items", summary.non_consensus_item_count ?? ""],
+    ["Consensus rule source", asText(methods.consensus_rule_source_label)],
+    ["Consensus setting process", asText(methods.consensus_setting_process)],
+    ["Pre-round consensus input status", asText(preRoundConsensusInput.status, "not_required")],
+    ["Pre-round input counts as Delphi round", asText(preRoundConsensusInput.counts_as_delphi_round, "false")],
     ["Required statement", "Consensus indicates agreement among this panel; it does not establish correctness."],
   ];
 

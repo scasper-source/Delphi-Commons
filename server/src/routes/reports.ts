@@ -171,6 +171,37 @@ function getAgreementMinRating(rule: unknown): number {
   return 7;
 }
 
+function consensusRuleMetadata(rule: unknown) {
+  const rec = rule && typeof rule === "object" && !Array.isArray(rule)
+    ? rule as Record<string, unknown>
+    : {};
+  const source = typeof rec.source === "string" ? rec.source : "pi_defined";
+  const input = rec.pre_round_consensus_input && typeof rec.pre_round_consensus_input === "object" && !Array.isArray(rec.pre_round_consensus_input)
+    ? rec.pre_round_consensus_input as Record<string, unknown>
+    : {};
+
+  return {
+    source,
+    source_label: {
+      pi_defined: "PI-defined",
+      governance_team_defined: "Governance team-defined",
+      panel_informed_pre_round: "Panel-informed pre-round",
+      stakeholder_informed_pre_round: "Stakeholder-informed pre-round",
+      protocol_irb_defined: "Protocol / IRB-defined",
+    }[source] ?? source,
+    setting_process:
+      typeof rec.setting_process === "string" && rec.setting_process.trim()
+        ? rec.setting_process.trim()
+        : "Consensus rule source and process were not available in older study configuration metadata.",
+    pre_round_consensus_input: {
+      enabled: input.enabled === true,
+      status: typeof input.status === "string" ? input.status : "not_required",
+      summary: typeof input.summary === "string" ? input.summary : "",
+      counts_as_delphi_round: false,
+    },
+  };
+}
+
 function evaluateConsensus(rule: unknown, ratings: number[]) {
   if (!rule || typeof rule !== "object") {
     return {
@@ -414,6 +445,7 @@ function exportManifestFile(input: {
   anonymizationLevel: string;
   redactionStatus: string;
   recordCounts: Record<string, number>;
+  consensusRule?: ReturnType<typeof consensusRuleMetadata>;
 }) {
   return JSON.stringify({
     schema_name: "edelphi_export_manifest",
@@ -428,6 +460,7 @@ function exportManifestFile(input: {
     redaction_status: input.redactionStatus,
     review_status: "pending_review",
     limitations_text_version_id: "charter-required-limitations-v1",
+    consensus_rule: input.consensusRule ?? null,
     required_disclosures: {
       consensus_not_correctness_statement_included: true,
       non_consensus_items_included: true,
@@ -872,6 +905,7 @@ export async function reportsRoutes(app: FastifyInstance) {
       });
 
       const agreementMinRating = getAgreementMinRating(studyVersion.consensus_rule_json);
+      const consensusMetadata = consensusRuleMetadata(studyVersion.consensus_rule_json);
       const isFinalForDeclaredDesign = roundNumber === studyVersion.terminal_round_number;
       const reportStage = isFinalForDeclaredDesign ? "final" : "interim";
 
@@ -899,6 +933,10 @@ export async function reportsRoutes(app: FastifyInstance) {
           rating_aggregation:
             "Per item, only the latest rating from each participant in the summarized rating round is used for summary statistics and consensus classification.",
           consensus_definition: studyVersion.consensus_rule_json,
+          consensus_rule_source: consensusMetadata.source,
+          consensus_rule_source_label: consensusMetadata.source_label,
+          consensus_setting_process: consensusMetadata.setting_process,
+          pre_round_consensus_input: consensusMetadata.pre_round_consensus_input,
           consensus_operationalization:
             "For percent_agreement, consensus is computed as the percent of latest participant ratings greater than or equal to agreement_min_rating.",
           default_agreement_min_rating_used_when_missing: agreementMinRating,
@@ -1043,6 +1081,7 @@ export async function reportsRoutes(app: FastifyInstance) {
       });
 
       const agreementMinRating = getAgreementMinRating(studyVersion.consensus_rule_json);
+      const consensusMetadata = consensusRuleMetadata(studyVersion.consensus_rule_json);
       const consensusThreshold =
         itemReports.find((item) => item.consensus.threshold_percent !== null)?.consensus.threshold_percent ?? null;
       const dataCutoffAt =
@@ -1086,6 +1125,10 @@ export async function reportsRoutes(app: FastifyInstance) {
           rating_aggregation:
             "Per item, only the latest rating from each participant in the final summarized rating round is used for summary statistics and consensus classification.",
           consensus_definition: studyVersion.consensus_rule_json,
+          consensus_rule_source: consensusMetadata.source,
+          consensus_rule_source_label: consensusMetadata.source_label,
+          consensus_setting_process: consensusMetadata.setting_process,
+          pre_round_consensus_input: consensusMetadata.pre_round_consensus_input,
           consensus_operationalization:
             "For percent_agreement, consensus is computed as the percent of latest participant ratings greater than or equal to agreement_min_rating.",
           default_agreement_min_rating_used_when_missing: agreementMinRating,
@@ -1322,6 +1365,7 @@ export async function reportsRoutes(app: FastifyInstance) {
       const itemReports = finalRoundNumber === null
         ? []
         : buildRoundItemReports(finalRoundItems, responses, finalRoundNumber, studyVersion.consensus_rule_json);
+      const consensusMetadata = consensusRuleMetadata(studyVersion.consensus_rule_json);
       const consensusCount = itemReports.filter((item) => item.consensus.status === "consensus").length;
       const nearConsensusCount = itemReports.filter((item) => item.consensus.status === "near_consensus").length;
       const nonConsensusCount = itemReports.filter((item) => item.consensus.status === "non_consensus").length;
@@ -1415,6 +1459,7 @@ export async function reportsRoutes(app: FastifyInstance) {
         anonymizationLevel: exportType === "final-delphi-report" ? "aggregated_only" : "anonymized",
         redactionStatus: "direct identifiers and identity-response mapping excluded",
         recordCounts,
+        consensusRule: consensusMetadata,
       });
 
       const baseFiles = [{
@@ -1434,6 +1479,7 @@ export async function reportsRoutes(app: FastifyInstance) {
             content: JSON.stringify({
               study,
               study_version: studyVersion,
+              consensus_rule: consensusMetadata,
               summary: {
                 consensus_item_count: consensusCount,
                 near_consensus_item_count: nearConsensusCount,

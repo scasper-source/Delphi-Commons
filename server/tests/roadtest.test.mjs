@@ -579,10 +579,59 @@ test("backend road test covers study, consent, AI, reporting, and audit flows", 
   );
   assert.equal(design.studyVersion.study_format, "ModifiedDelphi");
 
+  const panelInformedDraftConsensusRule = {
+    type: "percent_agreement",
+    threshold: 80,
+    agreement_min_rating: 7,
+    source: "panel_informed_pre_round",
+    setting_process:
+      "The Study Owner will review pre-round panel input before finalizing the consensus threshold for governance signoff.",
+    pre_round_consensus_input: {
+      enabled: true,
+      status: "planned",
+      prompt: "Please review the proposed consensus threshold and share any concerns about its appropriateness for this study.",
+      summary: "",
+      counts_as_delphi_round: false,
+    },
+  };
+
+  await expectStatus(
+    app,
+    {
+      method: "PATCH",
+      url: `/studies/${studyId}/versions/${versionId}/consensus-rule`,
+      headers: owner,
+      body: { consensus_rule_json: panelInformedDraftConsensusRule },
+    },
+    200
+  );
+
+  const blockedPanelInformedSignoff = await expectStatus(
+    app,
+    {
+      method: "POST",
+      url: `/studies/${studyId}/versions/${versionId}/submit-for-signoff`,
+      headers: owner,
+      body: {},
+    },
+    409
+  );
+  assert.equal(blockedPanelInformedSignoff.error, "pre_round_consensus_summary_missing");
+
   const consensusRule = {
     type: "percent_agreement",
     threshold: 80,
     agreement_min_rating: 7,
+    source: "panel_informed_pre_round",
+    setting_process:
+      "The Study Owner reviewed pre-round panel input and finalized the threshold before Round 1 for governance signoff.",
+    pre_round_consensus_input: {
+      enabled: true,
+      status: "reviewed",
+      prompt: "Please review the proposed consensus threshold and share any concerns about its appropriateness for this study.",
+      summary: "Pre-round panel input was reviewed; the threshold remained 80% agreement at rating 7+ before launch.",
+      counts_as_delphi_round: false,
+    },
   };
 
   await expectStatus(
@@ -1723,6 +1772,8 @@ test("backend road test covers study, consent, AI, reporting, and audit flows", 
   assert.equal(typeof finalExport.export_package.manifest_hash, "string");
   assert.equal(typeof finalExport.export_package.package_hash, "string");
   assert.ok(finalExport.report.limitations.includes("Consensus indicates agreement among this panel; it does not establish correctness."));
+  assert.equal(finalExport.report.methods.consensus_rule_source, "panel_informed_pre_round");
+  assert.equal(finalExport.report.methods.pre_round_consensus_input.counts_as_delphi_round, false);
 
   const exportPackages = await expectStatus(
     app,
@@ -1999,6 +2050,7 @@ test("backend road test covers study, consent, AI, reporting, and audit flows", 
   const governedFinalJson = governedFinalFiles.files.find((file) => file.path.endsWith("/final_delphi_report.json"));
   assert.ok(governedFinalJson);
   assert.match(governedFinalJson.content_text, /Consensus indicates agreement among this panel; it does not establish correctness/);
+  assert.match(governedFinalJson.content_text, /panel_informed_pre_round/);
   assert.match(governedFinalJson.content_text, /near_consensus_item_count/);
   assert.match(governedFinalJson.content_text, /non_consensus_item_count/);
 

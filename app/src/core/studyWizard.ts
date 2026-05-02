@@ -1,5 +1,19 @@
 export type StudyFormat = "ModifiedDelphi" | "ClassicDelphi";
 
+export type ConsensusRuleSource =
+  | "pi_defined"
+  | "governance_team_defined"
+  | "panel_informed_pre_round"
+  | "stakeholder_informed_pre_round"
+  | "protocol_irb_defined";
+
+export type PreRoundConsensusInputStatus =
+  | "not_required"
+  | "planned"
+  | "collected"
+  | "reviewed"
+  | "finalized";
+
 export type StudyWizardStepId =
   | "purpose"
   | "method"
@@ -32,6 +46,12 @@ export type StudyWizardState = {
   terminalRoundNumber: number;
   consensusThreshold: number;
   agreementMinRating: number;
+  consensusRuleSource: ConsensusRuleSource;
+  consensusRuleProcess: string;
+  preRoundConsensusInputEnabled: boolean;
+  preRoundConsensusInputStatus: PreRoundConsensusInputStatus;
+  preRoundConsensusPrompt: string;
+  preRoundConsensusSummary: string;
   feedbackMedian: boolean;
   feedbackIqr: boolean;
   feedbackDistribution: boolean;
@@ -125,6 +145,14 @@ export const defaultWizardState: StudyWizardState = {
   terminalRoundNumber: 3,
   consensusThreshold: 80,
   agreementMinRating: 7,
+  consensusRuleSource: "pi_defined",
+  consensusRuleProcess:
+    "The Study Owner defines the consensus threshold before Round 1, documents the rationale, and submits it for governance signoff.",
+  preRoundConsensusInputEnabled: false,
+  preRoundConsensusInputStatus: "not_required",
+  preRoundConsensusPrompt:
+    "Before Round 1, please review the proposed consensus threshold and share any concerns about whether it is appropriate for this study.",
+  preRoundConsensusSummary: "",
   feedbackMedian: true,
   feedbackIqr: true,
   feedbackDistribution: true,
@@ -165,12 +193,43 @@ export function expectedRoundPlan(studyFormat: StudyFormat): {
 
 export function normalizeWizardForMethod(state: StudyWizardState): StudyWizardState {
   const plan = expectedRoundPlan(state.studyFormat);
+  const preRoundConsensusInputEnabled = consensusSourceRequiresPreRoundInput(state.consensusRuleSource);
 
   return {
     ...state,
     plannedRoundCount: plan.plannedRoundCount,
     terminalRoundNumber: plan.terminalRoundNumber,
+    preRoundConsensusInputEnabled,
+    preRoundConsensusInputStatus: preRoundConsensusInputEnabled
+      ? state.preRoundConsensusInputStatus === "not_required"
+        ? "planned"
+        : state.preRoundConsensusInputStatus
+      : "not_required",
   };
+}
+
+export const consensusRuleSourceLabels: Record<ConsensusRuleSource, string> = {
+  pi_defined: "PI-defined",
+  governance_team_defined: "Governance team-defined",
+  panel_informed_pre_round: "Panel-informed pre-round",
+  stakeholder_informed_pre_round: "Stakeholder-informed pre-round",
+  protocol_irb_defined: "Protocol / IRB-defined",
+};
+
+export const preRoundConsensusStatusLabels: Record<PreRoundConsensusInputStatus, string> = {
+  not_required: "Not required",
+  planned: "Planned",
+  collected: "Collected",
+  reviewed: "Reviewed",
+  finalized: "Finalized",
+};
+
+export function consensusSourceRequiresPreRoundInput(source: ConsensusRuleSource): boolean {
+  return source === "panel_informed_pre_round" || source === "stakeholder_informed_pre_round";
+}
+
+export function isAllowedConsensusThreshold(value: number): boolean {
+  return [60, 70, 80, 90].includes(value);
 }
 
 export function containsForbiddenWizardLanguage(text: string): boolean {
@@ -218,11 +277,25 @@ export function validateWizardStep(step: StudyWizardStepId, state: StudyWizardSt
     if (state.terminalRoundNumber !== state.plannedRoundCount) {
       blockers.push("Terminal round should match the planned round count.");
     }
-    if (state.consensusThreshold < 50 || state.consensusThreshold > 100) {
-      blockers.push("Consensus threshold must be between 50% and 100%.");
+    if (!isAllowedConsensusThreshold(state.consensusThreshold)) {
+      blockers.push("Consensus threshold must be 60%, 70%, 80%, or 90%.");
     }
     if (state.agreementMinRating < 1 || state.agreementMinRating > 9) {
       blockers.push("Agreement minimum rating must be between 1 and 9.");
+    }
+    if (!state.consensusRuleProcess.trim()) {
+      blockers.push("Document how the consensus rule will be set before Round 1.");
+    }
+    if (consensusSourceRequiresPreRoundInput(state.consensusRuleSource)) {
+      if (!state.preRoundConsensusPrompt.trim()) {
+        blockers.push("Pre-round consensus input needs a neutral prompt.");
+      }
+      if (!["reviewed", "finalized"].includes(state.preRoundConsensusInputStatus)) {
+        blockers.push("Panel- or stakeholder-informed consensus input must be reviewed or finalized before governance signoff.");
+      }
+      if (!state.preRoundConsensusSummary.trim()) {
+        blockers.push("Summarize how pre-round input was considered before governance signoff.");
+      }
     }
   }
 
@@ -295,7 +368,17 @@ export function buildGovernanceSummary(state: StudyWizardState): Array<{ label: 
     { label: "Confidentiality", value: state.confidentialityStatement },
     {
       label: "Consensus threshold",
-      value: `${state.consensusThreshold}% agreement at rating ${state.agreementMinRating}+`,
+      value: `${state.consensusThreshold}% agreement at rating ${state.agreementMinRating}+ (${consensusRuleSourceLabels[state.consensusRuleSource]}).`,
+    },
+    {
+      label: "Consensus setting process",
+      value: state.consensusRuleProcess,
+    },
+    {
+      label: "Pre-round consensus input",
+      value: state.preRoundConsensusInputEnabled
+        ? `${preRoundConsensusStatusLabels[state.preRoundConsensusInputStatus]}: ${state.preRoundConsensusSummary || state.preRoundConsensusPrompt}`
+        : "Not required; PI/governance-defined rule is still locked before Round 1.",
     },
     {
       label: "Controlled feedback",

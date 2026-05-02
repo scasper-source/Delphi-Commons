@@ -85,6 +85,108 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return Boolean(value) && typeof value === "object" && !Array.isArray(value);
 }
 
+const consensusRuleSources = [
+  "pi_defined",
+  "governance_team_defined",
+  "panel_informed_pre_round",
+  "stakeholder_informed_pre_round",
+  "protocol_irb_defined",
+] as const;
+
+const preRoundConsensusStatuses = [
+  "not_required",
+  "planned",
+  "collected",
+  "reviewed",
+  "finalized",
+] as const;
+
+const allowedConsensusThresholds = [60, 70, 80, 90] as const;
+
+function consensusSourceRequiresPreRoundInput(source: string): boolean {
+  return source === "panel_informed_pre_round" || source === "stakeholder_informed_pre_round";
+}
+
+function normalizeConsensusRule(rule: unknown): { rule?: Record<string, unknown>; error?: string } {
+  if (!isRecord(rule)) return { error: "consensus_rule_required" };
+
+  if (rule.type !== "percent_agreement") return { error: "unsupported_consensus_rule_type" };
+  if (
+    typeof rule.threshold !== "number" ||
+    !Number.isFinite(rule.threshold) ||
+    !allowedConsensusThresholds.includes(rule.threshold as any)
+  ) {
+    return { error: "invalid_consensus_threshold" };
+  }
+  if (
+    typeof rule.agreement_min_rating !== "number" ||
+    !Number.isFinite(rule.agreement_min_rating) ||
+    rule.agreement_min_rating < 1 ||
+    rule.agreement_min_rating > 9
+  ) {
+    return { error: "invalid_agreement_min_rating" };
+  }
+
+  if (rule.source !== undefined && (typeof rule.source !== "string" || !consensusRuleSources.includes(rule.source as any))) {
+    return { error: "invalid_consensus_rule_source" };
+  }
+  const source = typeof rule.source === "string" ? rule.source : "pi_defined";
+  const settingProcess = hasNonEmptyText(rule.setting_process)
+    ? rule.setting_process.trim()
+    : "The Study Owner defines the consensus threshold before Round 1 and submits it for governance signoff.";
+  const rawInput = isRecord(rule.pre_round_consensus_input) ? rule.pre_round_consensus_input : {};
+  const inputRequired = consensusSourceRequiresPreRoundInput(source);
+  if (
+    rawInput.status !== undefined &&
+    (typeof rawInput.status !== "string" || !preRoundConsensusStatuses.includes(rawInput.status as any))
+  ) {
+    return { error: "invalid_pre_round_consensus_status" };
+  }
+  const status = typeof rawInput.status === "string"
+    ? rawInput.status
+    : inputRequired
+      ? "planned"
+      : "not_required";
+  const prompt = hasNonEmptyText(rawInput.prompt) ? rawInput.prompt.trim() : "";
+  const summary = hasNonEmptyText(rawInput.summary) ? rawInput.summary.trim() : "";
+
+  return {
+    rule: {
+      ...rule,
+      source,
+      setting_process: settingProcess,
+      pre_round_consensus_input: {
+        enabled: inputRequired,
+        status,
+        prompt,
+        summary,
+        counts_as_delphi_round: false,
+      },
+      finalized_before_round_1: true,
+    },
+  };
+}
+
+function validateConsensusRuleForSignoff(rule: unknown): string | null {
+  const normalized = normalizeConsensusRule(rule);
+  if (!normalized.rule) return normalized.error ?? "consensus_rule_invalid";
+
+  const source = String(normalized.rule.source);
+  if (!hasNonEmptyText(normalized.rule.setting_process)) return "consensus_setting_process_missing";
+  if (!consensusSourceRequiresPreRoundInput(source)) return null;
+
+  const input = isRecord(normalized.rule.pre_round_consensus_input)
+    ? normalized.rule.pre_round_consensus_input
+    : {};
+  if (!hasNonEmptyText(input.prompt)) return "pre_round_consensus_prompt_missing";
+  if (!hasNonEmptyText(input.summary)) return "pre_round_consensus_summary_missing";
+  if (input.status !== "reviewed" && input.status !== "finalized") {
+    return "pre_round_consensus_input_not_reviewed";
+  }
+
+  return null;
+}
+
 function isStudyRole(value: unknown): value is StudyAssignment["role"] {
   return (
     value === "Owner" ||
@@ -482,15 +584,27 @@ export async function studiesRoutes(app: FastifyInstance) {
       return reply.code(400).send({ error: "consensus_rule_required" });
     }
 
+    const normalized = normalizeConsensusRule(body.consensus_rule_json);
+    if (!normalized.rule) {
+      return reply.code(400).send({ error: normalized.error ?? "consensus_rule_invalid" });
+    }
+
     const updated = await updateStudyVersion(versionId, {
-      consensus_rule_json: body.consensus_rule_json,
+      consensus_rule_json: normalized.rule,
     });
 
     await writeAuditEvent({
       action: "study_version.set_consensus_rule",
       actor,
       object: { type: "study_version", id: versionId },
-      details: { study_id: studyId },
+      details: {
+        study_id: studyId,
+        source: normalized.rule.source,
+        pre_round_consensus_input_status:
+          isRecord(normalized.rule.pre_round_consensus_input)
+            ? normalized.rule.pre_round_consensus_input.status
+            : null,
+      },
     });
 
     return reply.send({ studyVersion: updated });
@@ -642,6 +756,11 @@ export async function studiesRoutes(app: FastifyInstance) {
 
     if (v.consensus_rule_json === null) {
       return reply.code(409).send({ error: "consensus_rule_missing" });
+    }
+
+    const consensusRuleBlocker = validateConsensusRuleForSignoff(v.consensus_rule_json);
+    if (consensusRuleBlocker) {
+      return reply.code(409).send({ error: consensusRuleBlocker });
     }
 
     if (v.study_design_packet_json === null) {

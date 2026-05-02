@@ -576,7 +576,17 @@ export const conductorApi = {
     studyId: string,
     versionId: string,
     role: UserRole,
-    input?: Pick<StudyWizardState, "consensusThreshold" | "agreementMinRating">,
+    input?: Pick<
+      StudyWizardState,
+      | "consensusThreshold"
+      | "agreementMinRating"
+      | "consensusRuleSource"
+      | "consensusRuleProcess"
+      | "preRoundConsensusInputEnabled"
+      | "preRoundConsensusInputStatus"
+      | "preRoundConsensusPrompt"
+      | "preRoundConsensusSummary"
+    >,
   ) {
     return requestJson<{ studyVersion: BackendStudyVersion }>(
       `/studies/${studyId}/versions/${versionId}/consensus-rule`,
@@ -588,6 +598,18 @@ export const conductorApi = {
             type: "percent_agreement",
             threshold: input?.consensusThreshold ?? 80,
             agreement_min_rating: input?.agreementMinRating ?? 7,
+            source: input?.consensusRuleSource ?? "pi_defined",
+            setting_process:
+              input?.consensusRuleProcess ??
+              "The Study Owner defines the consensus threshold before Round 1 and submits it for governance signoff.",
+            pre_round_consensus_input: {
+              enabled: input?.preRoundConsensusInputEnabled ?? false,
+              status: input?.preRoundConsensusInputStatus ?? "not_required",
+              prompt: input?.preRoundConsensusPrompt ?? "",
+              summary: input?.preRoundConsensusSummary ?? "",
+              counts_as_delphi_round: false,
+            },
+            finalized_before_round_1: true,
           },
         },
       },

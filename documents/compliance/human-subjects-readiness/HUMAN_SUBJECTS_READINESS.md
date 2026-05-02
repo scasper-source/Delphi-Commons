@@ -81,6 +81,8 @@ Current foundation:
 
 - Study version signoffs and activation gates exist.
 - Consensus rule is required before Round 1 and locked against mid-study edits.
+- Consensus rule source and setting process are explicit. PI-defined, governance-defined, protocol/IRB-defined, panel-informed, and stakeholder-informed pre-round paths are supported.
+- Panel- or stakeholder-informed threshold setting is documented as a pre-round input activity that does not count as a Delphi round, and it must be reviewed/finalized before governance signoff.
 - Governance summary is produced from the Study Builder.
 
 Launch gap:

@@ -35,8 +35,11 @@ import {
 } from "./policies/governance";
 import {
   buildGovernanceSummary,
+  consensusRuleSourceLabels,
+  consensusSourceRequiresPreRoundInput,
   defaultWizardState,
   normalizeWizardForMethod,
+  preRoundConsensusStatusLabels,
   validateWizardStep,
   wizardFromBackendPacket,
   wizardSteps,
@@ -156,7 +159,14 @@ function humanizeBackendMessage(message: string | null): string | null {
       "Participant-facing AI-assisted material needs both Study Owner and Ethics & Methods Steward release signoff.",
     another_round_open: "Close the currently open round before opening another round.",
     consensus_rule_locked: "The consensus threshold is locked after governance submission.",
+    consensus_setting_process_missing: "Document how the consensus rule was set before governance signoff.",
+    invalid_consensus_threshold: "Choose a consensus threshold of 60%, 70%, 80%, or 90%.",
+    invalid_consensus_rule_source: "Choose a valid consensus rule source.",
+    invalid_pre_round_consensus_status: "Choose a valid pre-round consensus input status.",
     locked_study_design_required_for_ai: "Submit the study design for governance before using AI-assisted drafting.",
+    pre_round_consensus_input_not_reviewed: "Panel- or stakeholder-informed consensus input must be reviewed or finalized before governance signoff.",
+    pre_round_consensus_prompt_missing: "Add a neutral pre-round prompt for consensus-rule input.",
+    pre_round_consensus_summary_missing: "Summarize how pre-round consensus input was considered before governance signoff.",
     previous_round_must_be_closed: "Close the previous round before opening this round.",
     published_items_required_for_round: "Publish at least one traceable candidate item before opening this round.",
     round_config_required: "Configure this round before opening it.",
@@ -2884,6 +2894,8 @@ function WizardStepFields({
   }
 
   if (step === "rounds") {
+    const preRoundInputRequired = consensusSourceRequiresPreRoundInput(wizard.consensusRuleSource);
+
     return (
       <div className="form-grid">
         <label className="field">
@@ -2896,15 +2908,78 @@ function WizardStepFields({
         </label>
         <label className="field">
           <span>Consensus threshold</span>
-          <input min={50} max={100} type="number" value={wizard.consensusThreshold} onChange={(event) => onChange({ consensusThreshold: Number(event.target.value) })} />
+          <select value={wizard.consensusThreshold} onChange={(event) => onChange({ consensusThreshold: Number(event.target.value) })}>
+            {[60, 70, 80, 90].map((threshold) => (
+              <option key={threshold} value={threshold}>{threshold}%</option>
+            ))}
+          </select>
         </label>
         <label className="field">
           <span>Agreement minimum rating</span>
           <input min={1} max={9} type="number" value={wizard.agreementMinRating} onChange={(event) => onChange({ agreementMinRating: Number(event.target.value) })} />
         </label>
-        <WarningBanner title="Locked before launch" risk="locked">
-          Consensus rules are predefined before Round 1 and locked against mid-study changes.
-        </WarningBanner>
+        <div className="method-helper wide-field">
+          <strong>Why these settings are locked before Round 1</strong>
+          <p>
+            The threshold is the percentage of respondents who must agree. The minimum rating defines which ratings count as agreement. For example, 80% at rating 7+ means an item reaches consensus only when at least 80% of respondents rate it 7, 8, or 9.
+          </p>
+        </div>
+        <label className="field">
+          <span>Consensus rule source</span>
+          <select
+            value={wizard.consensusRuleSource}
+            onChange={(event) => {
+              const source = event.target.value as StudyWizardState["consensusRuleSource"];
+              const requiresInput = consensusSourceRequiresPreRoundInput(source);
+              onChange({
+                consensusRuleSource: source,
+                preRoundConsensusInputEnabled: requiresInput,
+                preRoundConsensusInputStatus: requiresInput ? "planned" : "not_required",
+              });
+            }}
+          >
+            {Object.entries(consensusRuleSourceLabels).map(([value, label]) => (
+              <option key={value} value={value}>{label}</option>
+            ))}
+          </select>
+        </label>
+        <label className="field wide-field">
+          <span>Consensus setting process</span>
+          <textarea value={wizard.consensusRuleProcess} onChange={(event) => onChange({ consensusRuleProcess: event.target.value })} />
+        </label>
+        {preRoundInputRequired ? (
+          <>
+            <WarningBanner title="Pre-round input, not a Delphi round" risk="info">
+              This optional setup activity helps document how the threshold was considered before Round 1. It does not count as Round 1 and cannot change the locked rule after launch.
+            </WarningBanner>
+            <label className="field">
+              <span>Pre-round input status</span>
+              <select
+                value={wizard.preRoundConsensusInputStatus}
+                onChange={(event) => onChange({ preRoundConsensusInputStatus: event.target.value as StudyWizardState["preRoundConsensusInputStatus"] })}
+              >
+                {Object.entries(preRoundConsensusStatusLabels)
+                  .filter(([value]) => value !== "not_required")
+                  .map(([value, label]) => (
+                    <option key={value} value={value}>{label}</option>
+                  ))}
+              </select>
+            </label>
+            <label className="field wide-field">
+              <span>Neutral pre-round prompt</span>
+              <textarea value={wizard.preRoundConsensusPrompt} onChange={(event) => onChange({ preRoundConsensusPrompt: event.target.value })} />
+            </label>
+            <label className="field wide-field">
+              <span>How input was considered</span>
+              <textarea value={wizard.preRoundConsensusSummary} onChange={(event) => onChange({ preRoundConsensusSummary: event.target.value })} />
+            </label>
+          </>
+        ) : null}
+        <div className="wide-field">
+          <WarningBanner title="Locked before launch" risk="locked">
+            Consensus rules are predefined before Round 1 and locked against mid-study changes.
+          </WarningBanner>
+        </div>
       </div>
     );
   }
@@ -3240,10 +3315,23 @@ function buildGovernanceChecklist(wizard: StudyWizardState, workflow: ConductorW
     },
     {
       id: "threshold",
-      label: "Consensus threshold locked before launch",
-      detail: `${wizard.consensusThreshold}% agreement at rating ${wizard.agreementMinRating}+.`,
+      label: "Consensus rule locked before launch",
+      detail: `${wizard.consensusThreshold}% agreement at rating ${wizard.agreementMinRating}+; source: ${consensusRuleSourceLabels[wizard.consensusRuleSource]}.`,
       complete: thresholdLocked,
       risk: "locked",
+    },
+    {
+      id: "consensus-source",
+      label: "Consensus-setting process documented",
+      detail: wizard.preRoundConsensusInputEnabled
+        ? `${preRoundConsensusStatusLabels[wizard.preRoundConsensusInputStatus]} pre-round input documented.`
+        : wizard.consensusRuleProcess,
+      complete:
+        Boolean(wizard.consensusRuleProcess.trim()) &&
+        (!wizard.preRoundConsensusInputEnabled ||
+          (["reviewed", "finalized"].includes(wizard.preRoundConsensusInputStatus) &&
+            Boolean(wizard.preRoundConsensusSummary.trim()))),
+      risk: wizard.preRoundConsensusInputEnabled ? "warning" : "info",
     },
   ];
 }
@@ -3302,9 +3390,23 @@ function GovernanceScreen({
         <h3>Locked Method Rules</h3>
         <LockedRule
           title="Consensus threshold"
-          value={`${wizard.consensusThreshold}% agreement at rating ${wizard.agreementMinRating}+`}
+          value={`${wizard.consensusThreshold}% agreement at rating ${wizard.agreementMinRating}+ (${consensusRuleSourceLabels[wizard.consensusRuleSource]})`}
           locked={Boolean(workflow.version?.consensus_rule_json)}
         />
+        <dl className="detail-list">
+          <div>
+            <dt>Setting process</dt>
+            <dd>{wizard.consensusRuleProcess}</dd>
+          </div>
+          <div>
+            <dt>Pre-round input</dt>
+            <dd>
+              {wizard.preRoundConsensusInputEnabled
+                ? `${preRoundConsensusStatusLabels[wizard.preRoundConsensusInputStatus]} before Round 1`
+              : "Not required"}
+            </dd>
+          </div>
+        </dl>
         <WarningBanner title={editAllowed ? "Draft rule" : "Locked against mid-study change"} risk={editAllowed ? "warning" : "locked"}>
           Consensus rules must be predefined before Round 1 and cannot be changed mid-study.
         </WarningBanner>

@@ -781,6 +781,21 @@
   grid-column: 1 / -1;
 }
 
+.method-helper {
+  display: grid;
+  gap: 4px;
+  border-left: 4px solid #7db2bd;
+  border-radius: 6px;
+  background: #f1f8f9;
+  padding: 10px 12px;
+}
+
+.method-helper p {
+  margin: 0;
+  color: #39484b;
+  line-height: 1.45;
+}
+
 .check-field {
   grid-template-columns: auto minmax(0, 1fr);
   align-items: start;
