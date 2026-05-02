@@ -28,12 +28,13 @@ import {
   upsertSignoff,
   listSignoffs,
   addAssignment,
+  removeAssignment,
   listAssignments,
 } from "./store.js";
 
 import { writeAuditEvent } from "../core/audit.js";
 import { resolveActor } from "../middleware/auth.js";
-import { getUserByEmail } from "../auth/userStore.js";
+import { getUser, getUserByEmail } from "../auth/userStore.js";
 
 async function actorFromRequest(req: Parameters<typeof resolveActor>[0]) {
   const actor = await resolveActor(req);
@@ -98,7 +99,7 @@ export async function studiesRoutes(app: FastifyInstance) {
   // GET /studies  (staff roles only)
   app.get("/studies", async (req, reply) => {
     const actor = await actorFromRequest(req);
-    requireHeaderRole(actor.role, ["owner", "methods_steward", "privacy_lead", "admin"]);
+    requireHeaderRole(actor.role, ["owner", "methods_steward", "privacy_lead", "data_custodian", "admin"]);
 
     const query = (req.query ?? {}) as { include_archived?: string };
     const includeArchived = query.include_archived === "true";
@@ -106,7 +107,8 @@ export async function studiesRoutes(app: FastifyInstance) {
     const canSeeAll =
       actor.role === "admin" ||
       actor.role === "maintainer" ||
-      actor.role === "privacy_lead";
+      actor.role === "privacy_lead" ||
+      actor.role === "data_custodian";
     const studies = canSeeAll
       ? allStudies
       : (
@@ -133,7 +135,7 @@ export async function studiesRoutes(app: FastifyInstance) {
   // GET /studies/:studyId
   app.get("/studies/:studyId", async (req, reply) => {
     const actor = await actorFromRequest(req);
-    requireHeaderRole(actor.role, ["owner", "methods_steward", "privacy_lead", "admin"]);
+    requireHeaderRole(actor.role, ["owner", "methods_steward", "privacy_lead", "data_custodian", "admin"]);
 
     const { studyId } = req.params as any;
     const study = await getStudy(studyId);
@@ -152,7 +154,7 @@ export async function studiesRoutes(app: FastifyInstance) {
   // GET /studies/:studyId/versions
   app.get("/studies/:studyId/versions", async (req, reply) => {
     const actor = await actorFromRequest(req);
-    requireHeaderRole(actor.role, ["owner", "methods_steward", "privacy_lead", "admin"]);
+    requireHeaderRole(actor.role, ["owner", "methods_steward", "privacy_lead", "data_custodian", "admin"]);
 
     const { studyId } = req.params as any;
     const study = await getStudy(studyId);
@@ -173,7 +175,7 @@ export async function studiesRoutes(app: FastifyInstance) {
   // GET /studies/:studyId/versions/:versionId
   app.get("/studies/:studyId/versions/:versionId", async (req, reply) => {
     const actor = await actorFromRequest(req);
-    requireHeaderRole(actor.role, ["owner", "methods_steward", "privacy_lead", "admin"]);
+    requireHeaderRole(actor.role, ["owner", "methods_steward", "privacy_lead", "data_custodian", "admin"]);
 
     const { studyId, versionId } = req.params as any;
     const studyVersion = await getStudyVersion(versionId);
@@ -194,7 +196,7 @@ export async function studiesRoutes(app: FastifyInstance) {
   // GET /studies/:studyId/versions/:versionId/signoffs
   app.get("/studies/:studyId/versions/:versionId/signoffs", async (req, reply) => {
     const actor = await actorFromRequest(req);
-    requireHeaderRole(actor.role, ["owner", "methods_steward", "privacy_lead", "admin"]);
+    requireHeaderRole(actor.role, ["owner", "methods_steward", "privacy_lead", "data_custodian", "admin"]);
 
     const { studyId, versionId } = req.params as any;
     const studyVersion = await getStudyVersion(versionId);
@@ -247,6 +249,11 @@ export async function studiesRoutes(app: FastifyInstance) {
       return reply.code(400).send({ error: "user_id_and_valid_study_role_required" });
     }
 
+    const assignedUser = getUser(body.user_id);
+    if (!assignedUser || assignedUser.disabled_at) {
+      return reply.code(404).send({ error: "active_user_not_found" });
+    }
+
     const assignment: StudyAssignment = {
       user_id: body.user_id,
       study_id: studyId,
@@ -263,6 +270,31 @@ export async function studiesRoutes(app: FastifyInstance) {
     });
 
     return reply.code(201).send({ assignment });
+  });
+
+  app.delete("/studies/:studyId/assignments/:userId", async (req, reply) => {
+    const actor = await actorFromRequest(req);
+    requireHeaderRole(actor.role, ["owner", "admin", "maintainer"]);
+
+    const { studyId, userId } = req.params as any;
+    const study = await getStudy(studyId);
+    if (!study) return reply.code(404).send({ error: "study_not_found" });
+
+    if (actor.role === "owner" && actor.userId === userId) {
+      return reply.code(409).send({ error: "owner_cannot_remove_own_assignment" });
+    }
+
+    const removed = await removeAssignment(studyId, userId);
+    if (!removed) return reply.code(404).send({ error: "assignment_not_found" });
+
+    await writeAuditEvent({
+      action: "study.assignment.remove",
+      actor,
+      object: { type: "study", id: studyId },
+      details: { removed_user_id: userId },
+    });
+
+    return reply.send({ ok: true });
   });
 
   // POST /studies  (Owner/admin only)

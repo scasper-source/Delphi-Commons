@@ -4,7 +4,7 @@ import { listAuditEvents, verifyAuditIntegrity, writeAuditEvent } from "../core/
 import { getStorageStatus, listAppliedMigrations } from "../core/database.js";
 import { inspectDataIntegrity } from "../core/dataIntegrity.js";
 import { listExportManifests } from "../stores/exportManifestStore.js";
-import { createUser, listUsers, sanitizeUser } from "../auth/userStore.js";
+import { createUser, listUsers, revokeUserSessions, sanitizeUser, updateUser } from "../auth/userStore.js";
 import type { AuthRole } from "../auth/types.js";
 
 function isAuthRole(value: unknown): value is AuthRole {
@@ -71,6 +71,51 @@ export async function adminRoutes(app: FastifyInstance) {
         }
         throw error;
       }
+    }
+  );
+
+  app.patch(
+    "/admin/users/:userId",
+    { preHandler: requireRole(["admin", "maintainer"]) },
+    async (req, reply) => {
+      const actor = getActor(req);
+      const { userId } = req.params as { userId: string };
+      const body = (req.body ?? {}) as {
+        display_name?: string;
+        system_roles?: unknown[];
+        disabled?: boolean;
+        revoke_sessions?: boolean;
+      };
+
+      const systemRoles = Array.isArray(body.system_roles)
+        ? body.system_roles.filter(isAuthRole)
+        : undefined;
+      if (Array.isArray(body.system_roles) && (!systemRoles || systemRoles.length === 0)) {
+        return reply.code(400).send({ error: "valid_system_role_required" });
+      }
+
+      const updated = updateUser(userId, {
+        ...(typeof body.display_name === "string" ? { display_name: body.display_name } : {}),
+        ...(systemRoles ? { system_roles: systemRoles } : {}),
+        ...(typeof body.disabled === "boolean" ? { disabled_at: body.disabled ? new Date().toISOString() : null } : {}),
+      });
+
+      if (!updated) return reply.code(404).send({ error: "user_not_found" });
+
+      const revokedSessionCount = body.revoke_sessions || body.disabled ? revokeUserSessions(userId) : 0;
+
+      await writeAuditEvent({
+        actor,
+        action: "auth.user.update",
+        object: { type: "user", id: userId },
+        details: {
+          system_roles: updated.system_roles,
+          disabled_at: updated.disabled_at,
+          revoked_session_count: revokedSessionCount,
+        },
+      });
+
+      return reply.send({ user: sanitizeUser(updated), revoked_session_count: revokedSessionCount });
     }
   );
 

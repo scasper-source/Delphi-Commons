@@ -17,6 +17,8 @@ import {
   type ParticipantInvitationContext,
   type ExportPackage,
   type ExportPackageFile,
+  type BackendUser,
+  type StudyAssignment,
 } from "./core/api";
 import { mockStudies, mockStudy } from "./core/mockData";
 import { canAccessIdentityMap, canAccessModule, canExportOutput, roleLabels } from "./core/permissions";
@@ -1913,7 +1915,7 @@ function ModuleRenderer({
     case "audit":
       return <AuditScreen study={study} />;
     case "admin-security":
-      return <AdminSecurityScreen role={role} />;
+      return <AdminSecurityScreen role={role} workflow={workflow} />;
   }
 }
 
@@ -4575,8 +4577,82 @@ function AuditScreen({ study }: { study: StudyRecord }) {
   );
 }
 
-function AdminSecurityScreen({ role }: { role: UserRole }) {
+function AdminSecurityScreen({ role, workflow }: { role: UserRole; workflow: ConductorWorkflow }) {
   const identityDecision = identityAccessDecision(role, "Review data subject withdrawal request");
+  const [users, setUsers] = useState<BackendUser[]>([]);
+  const [assignments, setAssignments] = useState<StudyAssignment[]>([]);
+  const [selectedUserId, setSelectedUserId] = useState("");
+  const [selectedStudyRole, setSelectedStudyRole] = useState<StudyAssignment["role"]>("MethodsSteward");
+  const [accessMessage, setAccessMessage] = useState<string | null>(null);
+  const [accessError, setAccessError] = useState<string | null>(null);
+  const [accessBusy, setAccessBusy] = useState(false);
+  const activeStudyId = workflow.study?.id ?? null;
+  const canManageAccess = role === "study_owner" || role === "open_source_admin";
+
+  async function loadAccessReview() {
+    if (!canManageAccess) return;
+    setAccessBusy(true);
+    setAccessError(null);
+    try {
+      const userResult = await conductorApi.listUsers(role);
+      setUsers(userResult.users);
+      if (!selectedUserId && userResult.users[0]) setSelectedUserId(userResult.users[0].user_id);
+      if (activeStudyId) {
+        const assignmentResult = await conductorApi.listAssignments(activeStudyId, role);
+        setAssignments(assignmentResult.assignments);
+      } else {
+        setAssignments([]);
+      }
+    } catch (error) {
+      setAccessError(error instanceof Error ? error.message : "Unable to load users and role assignments.");
+    } finally {
+      setAccessBusy(false);
+    }
+  }
+
+  useEffect(() => {
+    void loadAccessReview();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [role, activeStudyId]);
+
+  async function assignRole() {
+    if (!activeStudyId || !selectedUserId) return;
+    setAccessBusy(true);
+    setAccessError(null);
+    setAccessMessage(null);
+    try {
+      await conductorApi.assignStudyRole(activeStudyId, selectedUserId, selectedStudyRole, role);
+      const assignmentResult = await conductorApi.listAssignments(activeStudyId, role);
+      setAssignments(assignmentResult.assignments);
+      setAccessMessage("Study membership updated and audit logged.");
+    } catch (error) {
+      setAccessError(error instanceof Error ? error.message : "Unable to update study membership.");
+    } finally {
+      setAccessBusy(false);
+    }
+  }
+
+  async function removeRole(userId: string) {
+    if (!activeStudyId) return;
+    setAccessBusy(true);
+    setAccessError(null);
+    setAccessMessage(null);
+    try {
+      await conductorApi.removeStudyAssignment(activeStudyId, userId, role);
+      const assignmentResult = await conductorApi.listAssignments(activeStudyId, role);
+      setAssignments(assignmentResult.assignments);
+      setAccessMessage("Study membership removed and audit logged.");
+    } catch (error) {
+      setAccessError(error instanceof Error ? error.message : "Unable to remove study membership.");
+    } finally {
+      setAccessBusy(false);
+    }
+  }
+
+  function userLabel(userId: string): string {
+    const user = users.find((entry) => entry.user_id === userId);
+    return user ? `${user.display_name} (${user.email})` : userId;
+  }
 
   return (
     <div className="screen-grid">
@@ -4589,9 +4665,9 @@ function AdminSecurityScreen({ role }: { role: UserRole }) {
       </section>
 
       <section className="panel">
-        <h3>Security Console Placeholders</h3>
+        <h3>Security Console</h3>
         <ul className="plain-list">
-          <li>Role management and access reviews</li>
+          <li>Role management and access reviews are backend enforced and audit logged.</li>
           <li>AI connector configuration and disclosure status</li>
           <li>Retention and deletion request workflow</li>
           <li>Export permission policy</li>
@@ -4603,6 +4679,90 @@ function AdminSecurityScreen({ role }: { role: UserRole }) {
         <WarningBanner title="Zero-trust UI posture" risk="info">
           The interface hides unavailable actions, but backend authorization remains the enforcement point.
         </WarningBanner>
+      </section>
+
+      <section className="panel wide">
+        <div className="section-heading">
+          <span className="eyebrow">Role Assignment Review</span>
+          <h2>Study membership is the backend source of truth</h2>
+        </div>
+        {!canManageAccess ? (
+          <WarningBanner title="Access review restricted" risk="locked">
+            Only Study Owners and Admins can manage study memberships from this console.
+          </WarningBanner>
+        ) : !activeStudyId ? (
+          <WarningBanner title="Open a backend study" risk="info">
+            Open or create a saved study to review and assign roles for that study.
+          </WarningBanner>
+        ) : (
+          <>
+            {accessMessage ? (
+              <WarningBanner title="Access update" risk="success">
+                {accessMessage}
+              </WarningBanner>
+            ) : null}
+            {accessError ? (
+              <WarningBanner title="Access update blocked" risk="danger">
+                {humanizeBackendMessage(accessError)}
+              </WarningBanner>
+            ) : null}
+            <div className="form-grid">
+              <label className="field">
+                <span>User</span>
+                <select value={selectedUserId} onChange={(event) => setSelectedUserId(event.target.value)}>
+                  {users.map((user) => (
+                    <option key={user.user_id} value={user.user_id}>
+                      {user.display_name} - {user.email}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className="field">
+                <span>Study role</span>
+                <select
+                  value={selectedStudyRole}
+                  onChange={(event) => setSelectedStudyRole(event.target.value as StudyAssignment["role"])}
+                >
+                  <option value="Owner">Study Owner / PI</option>
+                  <option value="MethodsSteward">Ethics & Methods Steward</option>
+                  <option value="PrivacyLead">Security & Privacy Lead</option>
+                  <option value="DataCustodian">Data Custodian</option>
+                  <option value="Maintainer">Open Source Maintainer / Admin</option>
+                </select>
+              </label>
+            </div>
+            <div className="action-row">
+              <button className="primary-button" disabled={accessBusy || !selectedUserId} onClick={assignRole} type="button">
+                {accessBusy ? "Updating..." : "Assign or update role"}
+              </button>
+              <button className="secondary-button" disabled={accessBusy} onClick={loadAccessReview} type="button">
+                Refresh review
+              </button>
+            </div>
+            <div className="assignment-list">
+              {assignments.length === 0 ? (
+                <WarningBanner title="No assignments yet" risk="warning">
+                  Add at least a Study Owner and Ethics & Methods Steward before launch.
+                </WarningBanner>
+              ) : assignments.map((assignment) => (
+                <article className="assignment-row" key={`${assignment.study_id}-${assignment.user_id}`}>
+                  <div>
+                    <strong>{userLabel(assignment.user_id)}</strong>
+                    <small>{assignment.role} assigned {formatDateTime(assignment.created_at)}</small>
+                  </div>
+                  <button
+                    className="secondary-button danger-button"
+                    disabled={accessBusy || assignment.user_id === workflow.study?.created_by}
+                    onClick={() => removeRole(assignment.user_id)}
+                    type="button"
+                  >
+                    Remove
+                  </button>
+                </article>
+              ))}
+            </div>
+          </>
+        )}
       </section>
 
       <section className="panel wide">

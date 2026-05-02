@@ -1,0 +1,210 @@
+# Human Subjects Readiness Test Evidence Checklist
+
+**Project:** eDelphi  
+**Last updated:** 2026-05-02
+
+This checklist defines the evidence required before calling eDelphi human-subjects ready. It should be completed for each release candidate.
+
+## Evidence Rules
+
+- Evidence must be reproducible from a clean checkout or documented deployment environment.
+- Automated tests must include command, date, commit hash, and pass/fail result.
+- Manual evidence must include reviewer, date, environment, screenshots or transcript where useful, and defects found.
+- Security and accessibility evidence must identify remaining residual risk, not only pass/fail.
+
+## Current Baseline Evidence
+
+| Evidence item | Current status | Current command/file | Next action |
+|---|---|---|---|
+| Frontend governance tests | Passing | `cd app && npm.cmd test` | Keep in release checklist. |
+| Backend road test | Passing | `cd server && npm.cmd test` | Expand into focused suites. |
+| Backend TypeScript build | Passing through server test | `cd server && npm.cmd run build` | Keep in CI/release script. |
+| Audit integrity test | Covered in backend road test | `server/tests/roadtest.test.mjs` | Add standalone audit package export test. |
+| Browser-level participant dry run | Manual, incomplete | In-app browser testing | Convert to Playwright or equivalent E2E. |
+| Accessibility audit | Not complete | None | Add automated and manual WCAG evidence. |
+| Security verification | Partial | Backend negative tests | Add OWASP ASVS checklist and abuse tests. |
+| Backup/restore rehearsal | Not complete | None | Build and run recovery rehearsal. |
+
+## Automated Test Evidence Required
+
+### Consent, Withdrawal, Confidentiality
+
+- [ ] No participant response can be submitted without active consent.
+- [ ] Consent record includes participant ID, consent version ID, timestamp, and study version.
+- [ ] Consent version activation is audited.
+- [ ] Participant withdrawal blocks future Round 1 responses.
+- [ ] Participant withdrawal blocks future later-round structured responses.
+- [ ] Participant-facing confidentiality copy states confidential to research team and linked by participant ID.
+- [ ] Participant-facing copy does not promise complete anonymity.
+- [ ] Consent/withdrawal language appears in IRB/Ethics Pack export.
+
+### Governance And Locked Rules
+
+- [ ] Study version cannot activate without Study Owner signoff.
+- [ ] Study version cannot activate without Ethics & Methods Steward signoff.
+- [ ] Round 1 cannot open before active study version.
+- [ ] Round 1 cannot open without predefined consensus rule.
+- [ ] Consensus rule cannot be changed after governance lock/Round 1 opening.
+- [ ] Exceptional method changes require new study version or audited correction workflow.
+- [ ] Reports and exports include consensus threshold and justification.
+
+### Round Lifecycle And Participant Tasks
+
+- [ ] Round 1 open-text task appears only when Round 1 is open.
+- [ ] Round 1 submission displays "what was submitted."
+- [ ] Round 1 closed state prevents further edits.
+- [ ] Round 2 cannot open before Round 1 closes.
+- [ ] Round 2 cannot open without published traceable candidate items.
+- [ ] Later rounds cannot exceed declared terminal round.
+- [ ] Modified Delphi blocks Round 4 unless explicitly configured otherwise.
+- [ ] Classic Delphi supports Round 4 when declared.
+- [ ] Later-round participant task uses verbal structured judgment choices, not bare numeric entry.
+- [ ] Later-round submitted response review displays words, not only numeric codes.
+- [ ] Retain and revise actions are equally available where protocol allows.
+
+### AI Governance And Provenance
+
+- [ ] AI output is labeled "AI Suggestion (Not Final)."
+- [ ] AI suggestion cannot be published without Accept/Edit/Reject.
+- [ ] Participant-facing AI-assisted content requires required signoffs.
+- [ ] AI operation audit includes feature, user/role, model identifier, template version, input scope, output hash, and human decision.
+- [ ] AI input scope excludes direct identifiers.
+- [ ] AI cannot modify consensus threshold.
+- [ ] AI cannot auto-drop dissent or minority statements.
+- [ ] Candidate item provenance links to source response IDs.
+- [ ] Merge/split/reject actions require rationale.
+- [ ] Rejected and minority/unique items remain visible in provenance/export evidence.
+
+### Identity/Response Separation And Authorization
+
+- [ ] Unauthorized roles cannot access participant master list.
+- [ ] Authorized identity access writes audit event.
+- [ ] Response records do not include direct identity fields.
+- [ ] Participant invitation token grants only scoped participant access.
+- [ ] Expired/revoked invitation token cannot access task.
+- [ ] Role downgrade removes access immediately.
+- [ ] UI-hidden actions are still rejected by backend.
+- [ ] Admin/security role actions are audited.
+
+Current automated coverage includes: participant session cannot list staff studies; steward session cannot act as owner even with manipulated role header; steward can read only after assignment; assignment removal immediately removes access; revoked invitation cannot open or submit.
+
+### Audit And Export Logging
+
+- [ ] Study create/version/signoff/activation events are audited.
+- [ ] Consent create/activate/record/withdraw events are audited.
+- [ ] Round open/close events are audited.
+- [ ] Response and rating submissions are audited.
+- [ ] Curation item changes are audited.
+- [ ] AI generation and human decisions are audited.
+- [ ] Export package creation is audited.
+- [ ] Export package review is audited.
+- [ ] Export file download is audited.
+- [ ] Audit chain verifies.
+- [ ] Attempted audit mutation fails.
+
+### Reports And Export Packages
+
+- [ ] Final Delphi Report package includes required consensus-not-correctness statement.
+- [ ] Final report includes consensus, near-consensus, non-consensus, attrition, response rates, median/IQR/distributions, and limitations.
+- [ ] IRB/Ethics Pack includes protocol, consent, withdrawal, confidentiality, recruitment, AI disclosure, retention, safeguards, and signoff history.
+- [ ] Anonymized Response Dataset excludes identity-response mapping.
+- [ ] Dataset includes data dictionary and redaction manifest.
+- [ ] Audit Package includes audit events and integrity hashes.
+- [ ] Provenance Bundle includes graph-friendly edges and transformation history.
+- [ ] Complete Locked Archive includes manifest and package hash.
+- [ ] Export manifest identifies schema version, creator, role, data cutoff, anonymization level, and file hashes.
+
+### Security Controls
+
+- [ ] Secure session handling implemented and tested.
+- [ ] CSRF strategy documented and tested where applicable.
+- [ ] Rate limits protect auth, invitation, export, and admin endpoints.
+- [ ] Security headers configured.
+- [ ] Secrets are not stored in repo or client-visible bundles.
+- [ ] No sensitive data appears in URLs, browser history, analytics, ordinary logs, or client-side local storage.
+- [ ] Free-text fields are safely rendered and XSS tests pass.
+- [ ] File downloads/uploads, if present, are permission-gated and content-type constrained.
+- [ ] Dependency scan has no unresolved critical/high vulnerabilities or has documented risk acceptance.
+- [ ] OWASP ASVS checklist is completed for selected assurance level.
+
+### Accessibility
+
+- [ ] Keyboard-only flow works for Study Builder, Governance, Rounds, Curation, Participant Portal, Reporting, Admin/Security.
+- [ ] Screen reader labels are meaningful for participant consent and round tasks.
+- [ ] Color contrast meets WCAG 2.2 AA.
+- [ ] Focus indicators are visible.
+- [ ] Error messages are associated with inputs.
+- [ ] Mobile participant flow is usable at common viewport widths.
+- [ ] No text overlap or clipped controls in supported viewports.
+- [ ] Time limits, deadlines, and reminders are understandable and accessible.
+
+### Backup, Recovery, And Operations
+
+- [ ] Fresh deployment from documentation succeeds.
+- [ ] Database migration applies from empty database.
+- [ ] Migration applies from previous release database.
+- [ ] Backup is created using documented command/process.
+- [ ] Restore from backup succeeds.
+- [ ] Audit integrity verifies after restore.
+- [ ] Export packages remain downloadable after restore.
+- [ ] Incident response drill completes.
+- [ ] Study pause blocks participant submissions.
+- [ ] Admin can revoke participant invitation/session.
+
+## Manual Dry-Run Study Evidence Required
+
+Complete and document at least one full dry-run study:
+
+- [ ] Create study as Study Owner.
+- [ ] Complete Study Builder with purpose, Delphi suitability, panel criteria, consent, rounds, feedback, AI, and retention.
+- [ ] Submit governance packet.
+- [ ] Record Study Owner and Ethics & Methods Steward signoffs.
+- [ ] Activate study version.
+- [ ] Configure and open Round 1.
+- [ ] Invite at least three test participants.
+- [ ] Participants review consent and submit Round 1 responses on desktop and mobile.
+- [ ] One participant withdraws.
+- [ ] Close Round 1.
+- [ ] Curate responses into candidate items with at least one merge/split/rationale and one minority/unique retained statement.
+- [ ] Publish Round 2 items with required signoff.
+- [ ] Participants complete structured judgment task using verbal choices.
+- [ ] Open and complete subsequent round according to study design.
+- [ ] Generate final report and all export packages.
+- [ ] Review and approve/reject an export package.
+- [ ] Download export files.
+- [ ] Verify audit log and audit integrity.
+- [ ] Verify anonymized dataset excludes identity-response mapping.
+- [ ] Verify provenance bundle traces final items to source responses.
+- [ ] Restore backup and verify study/report/audit data.
+
+## Evidence Log Template
+
+Use this template for each release candidate:
+
+```text
+Release candidate:
+Commit:
+Environment:
+Reviewer:
+Date:
+
+Automated tests:
+- Command:
+- Result:
+- Output location:
+
+Manual tests:
+- Flow tested:
+- Result:
+- Evidence:
+- Defects:
+
+Security/accessibility review:
+- Scope:
+- Result:
+- Residual risks:
+
+Release decision:
+- Ready / Not ready:
+- Blockers:
+```

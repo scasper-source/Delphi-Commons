@@ -131,6 +131,17 @@ test("backend road test covers study, consent, AI, reporting, and audit flows", 
 
   const ownerLogin = await login(app, "owner@example.test", "demo-owner");
   const stewardLogin = await login(app, "steward@example.test", "demo-steward");
+  const participantLogin = await login(app, "participant@example.test", "demo-participant");
+
+  await expectStatus(
+    app,
+    {
+      method: "GET",
+      url: "/studies",
+      headers: participantLogin.headers,
+    },
+    403
+  );
 
   const authStudy = await expectStatus(
     app,
@@ -152,6 +163,21 @@ test("backend road test covers study, consent, AI, reporting, and audit flows", 
       method: "GET",
       url: `/studies/${authStudy.study.id}`,
       headers: stewardLogin.headers,
+    },
+    403
+  );
+
+  await expectStatus(
+    app,
+    {
+      method: "POST",
+      url: `/studies/${authStudy.study.id}/versions`,
+      headers: {
+        ...stewardLogin.headers,
+        "x-user-role": "owner",
+        "x-user-id": "manipulated-owner",
+      },
+      body: {},
     },
     403
   );
@@ -178,6 +204,104 @@ test("backend road test covers study, consent, AI, reporting, and audit flows", 
     200
   );
   assert.equal(stewardStudyRead.study.id, authStudy.study.id);
+
+  await expectStatus(
+    app,
+    {
+      method: "POST",
+      url: `/studies/${authStudy.study.id}/versions`,
+      headers: {
+        ...stewardLogin.headers,
+        "x-user-role": "owner",
+      },
+      body: {},
+    },
+    403
+  );
+
+  const authVersion = await expectStatus(
+    app,
+    {
+      method: "POST",
+      url: `/studies/${authStudy.study.id}/versions`,
+      headers: ownerLogin.headers,
+      body: {},
+    },
+    201
+  );
+
+  const authParticipant = await expectStatus(
+    app,
+    {
+      method: "POST",
+      url: `/studies/${authStudy.study.id}/versions/${authVersion.studyVersion.id}/participants`,
+      headers: ownerLogin.headers,
+      body: { name: "Invitation Test Participant", email: "invitee@example.test" },
+    },
+    201
+  );
+
+  const authInvitation = await expectStatus(
+    app,
+    {
+      method: "POST",
+      url: `/studies/${authStudy.study.id}/versions/${authVersion.studyVersion.id}/participants/${authParticipant.participant_id}/invitations`,
+      headers: ownerLogin.headers,
+      body: {},
+    },
+    201
+  );
+  const revokedInviteToken = new URL(authInvitation.invitation_url).searchParams.get("invite");
+  assert.equal(typeof revokedInviteToken, "string");
+
+  await expectStatus(
+    app,
+    {
+      method: "DELETE",
+      url: `/studies/${authStudy.study.id}/versions/${authVersion.studyVersion.id}/participants/${authParticipant.participant_id}/invitations/${authInvitation.invitation.invitation_id}`,
+      headers: ownerLogin.headers,
+    },
+    200
+  );
+
+  await expectStatus(
+    app,
+    {
+      method: "GET",
+      url: `/participant/invitations/${revokedInviteToken}`,
+    },
+    404
+  );
+
+  await expectStatus(
+    app,
+    {
+      method: "POST",
+      url: `/participant/invitations/${revokedInviteToken}/responses`,
+      body: { text: "This revoked invitation should not submit." },
+    },
+    404
+  );
+
+  await expectStatus(
+    app,
+    {
+      method: "DELETE",
+      url: `/studies/${authStudy.study.id}/assignments/${stewardLogin.user.user_id}`,
+      headers: ownerLogin.headers,
+    },
+    200
+  );
+
+  await expectStatus(
+    app,
+    {
+      method: "GET",
+      url: `/studies/${authStudy.study.id}`,
+      headers: stewardLogin.headers,
+    },
+    403
+  );
 
   if (previousAuthRequirement === undefined) {
     delete process.env.EDELPHI_AUTH_REQUIRE_SESSION;

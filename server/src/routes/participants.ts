@@ -10,6 +10,7 @@ import {
   getInvitationByToken,
   listParticipantInvitations,
   markInvitationUsed,
+  revokeInvitation,
 } from "../stores/participantInvitationStore.js";
 
 import { requireRole, getActor } from "../middleware/auth.js";
@@ -230,6 +231,42 @@ export async function participantsRoutes(app: FastifyInstance) {
           revoked_at: invitation.revoked_at,
           last_used_at: invitation.last_used_at,
         })),
+      });
+    },
+  );
+
+  app.delete(
+    "/studies/:studyId/versions/:versionId/participants/:participantId/invitations/:invitationId",
+    { preHandler: allowMasterList },
+    async (req, reply) => {
+      const { studyId, versionId, participantId, invitationId } = req.params as any;
+      const actor = getActor(req);
+      const invitations = listParticipantInvitations({
+        study_id: studyId,
+        version_id: versionId,
+        participant_id: participantId,
+      });
+      const invitation = invitations.find((entry) => entry.invitation_id === invitationId);
+      if (!invitation) return reply.code(404).send({ error: "participant_invitation_not_found" });
+
+      const revoked = revokeInvitation(invitationId);
+      if (!revoked) return reply.code(404).send({ error: "participant_invitation_not_found" });
+
+      await writeAuditEvent({
+        actor,
+        action: "participant.invitation.revoke",
+        object: { type: "participant_invitation", id: invitationId },
+        details: { studyId, versionId, participant_id: participantId },
+      });
+
+      return reply.send({
+        invitation: {
+          invitation_id: revoked.invitation_id,
+          participant_id: revoked.participant_id,
+          expires_at: revoked.expires_at,
+          revoked_at: revoked.revoked_at,
+          last_used_at: revoked.last_used_at,
+        },
       });
     },
   );

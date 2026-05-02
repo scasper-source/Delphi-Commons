@@ -13,7 +13,7 @@ const assignments = new JsonCollection<StudyAssignment>("study_assignments");
 const signoffs = new JsonCollection<StudyVersionSignoff>("study_version_signoffs");
 
 function assignmentKey(assignment: StudyAssignment): string {
-  return `${assignment.study_id}:${assignment.user_id}:${assignment.role}`;
+  return `${assignment.study_id}:${assignment.user_id}`;
 }
 
 function signoffKey(signoff: Pick<StudyVersionSignoff, "study_version_id" | "required_role">): string {
@@ -49,10 +49,41 @@ export async function addAssignment(assignment: StudyAssignment): Promise<void> 
 }
 
 export async function listAssignments(studyId: string): Promise<StudyAssignment[]> {
-  return assignments
-    .all()
+  const latestByUser = new Map<string, StudyAssignment>();
+  for (const assignment of assignments.all().filter((entry) => entry.study_id === studyId)) {
+    const current = latestByUser.get(assignment.user_id);
+    if (!current || assignment.created_at >= current.created_at) {
+      latestByUser.set(assignment.user_id, assignment);
+    }
+  }
+
+  return Array.from(latestByUser.values())
     .filter((assignment) => assignment.study_id === studyId)
     .sort((a, b) => a.created_at.localeCompare(b.created_at));
+}
+
+export async function getAssignmentForUser(studyId: string, userId: string): Promise<StudyAssignment | null> {
+  return (
+    (await listAssignments(studyId)).find((assignment) => assignment.user_id === userId) ??
+    null
+  );
+}
+
+export async function removeAssignment(studyId: string, userId: string): Promise<boolean> {
+  const removedCurrentKey = assignments.delete(`${studyId}:${userId}`);
+
+  // Clean up any pre-production records keyed by study:user:role so a role downgrade
+  // takes effect immediately even when older local data exists.
+  const legacyKeys = assignments
+    .all()
+    .filter((assignment) => assignment.study_id === studyId && assignment.user_id === userId)
+    .map((assignment) => `${assignment.study_id}:${assignment.user_id}:${assignment.role}`);
+  let removedLegacy = false;
+  for (const key of legacyKeys) {
+    removedLegacy = assignments.delete(key) || removedLegacy;
+  }
+
+  return removedCurrentKey || removedLegacy;
 }
 
 export async function createStudyVersion(version: StudyVersion): Promise<void> {

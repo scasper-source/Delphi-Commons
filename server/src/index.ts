@@ -22,7 +22,7 @@ app.addHook("onRequest", async (req, reply) => {
       : config.allowedOrigins[0];
 
   reply.header("Access-Control-Allow-Origin", allowedOrigin);
-  reply.header("Access-Control-Allow-Methods", "GET,POST,PATCH,OPTIONS");
+  reply.header("Access-Control-Allow-Methods", "GET,POST,PATCH,DELETE,OPTIONS");
   reply.header("Access-Control-Allow-Headers", "Authorization,Content-Type,X-User-ID,X-User-Role");
   reply.header("Vary", "Origin");
   reply.header("X-Content-Type-Options", "nosniff");

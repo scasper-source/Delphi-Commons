@@ -79,6 +79,33 @@ export function listUsers(): UserRecord[] {
   return users.all().sort((a, b) => a.email.localeCompare(b.email));
 }
 
+export function updateUser(
+  userId: string,
+  patch: {
+    display_name?: string;
+    system_roles?: AuthRole[];
+    disabled_at?: string | null;
+  },
+): UserRecord | null {
+  return users.update(userId, (user) => ({
+    ...user,
+    ...(patch.display_name !== undefined ? { display_name: patch.display_name.trim() || user.display_name } : {}),
+    ...(patch.system_roles !== undefined ? { system_roles: Array.from(new Set(patch.system_roles)) } : {}),
+    ...(patch.disabled_at !== undefined ? { disabled_at: patch.disabled_at } : {}),
+  }));
+}
+
+export function revokeUserSessions(userId: string): number {
+  let count = 0;
+  for (const session of sessions.all()) {
+    if (session.user_id === userId && !session.revoked_at) {
+      revokeSession(session.session_id);
+      count += 1;
+    }
+  }
+  return count;
+}
+
 export function verifyPassword(user: UserRecord, password: string): boolean {
   const candidate = hashPassword(password, user.password_salt);
   const a = Buffer.from(candidate);
@@ -129,4 +156,3 @@ export function sanitizeUser(user: UserRecord) {
     disabled_at: user.disabled_at,
   };
 }
-

@@ -44,6 +44,31 @@ export type BackendSignoff = {
   note?: string;
 };
 
+export type BackendSystemRole =
+  | "owner"
+  | "methods_steward"
+  | "privacy_lead"
+  | "data_custodian"
+  | "maintainer"
+  | "admin"
+  | "participant";
+
+export type BackendUser = {
+  user_id: string;
+  email: string;
+  display_name: string;
+  system_roles: BackendSystemRole[];
+  created_at: string;
+  disabled_at: string | null;
+};
+
+export type StudyAssignment = {
+  user_id: string;
+  study_id: string;
+  role: "Owner" | "MethodsSteward" | "PrivacyLead" | "DataCustodian" | "Maintainer";
+  created_at: string;
+};
+
 export type RoundConfig = {
   round_config_id: string;
   study_id: string;
@@ -296,7 +321,14 @@ export type ParticipantInvitationContext = {
   round_configs: RoundConfig[];
 };
 
-export type BackendRole = "owner" | "methods_steward" | "privacy_lead" | "admin" | "participant";
+export type BackendRole =
+  | "owner"
+  | "methods_steward"
+  | "privacy_lead"
+  | "data_custodian"
+  | "maintainer"
+  | "admin"
+  | "participant";
 
 export const apiBoundary: ApiBoundary = {
   baseUrl: import.meta.env.VITE_API_BASE_URL ?? "http://127.0.0.1:3001",
@@ -308,7 +340,7 @@ const backendRoles: Record<UserRole, BackendRole> = {
   study_owner: "owner",
   ethics_methods_steward: "methods_steward",
   security_privacy_lead: "privacy_lead",
-  data_custodian: "privacy_lead",
+  data_custodian: "data_custodian",
   open_source_admin: "admin",
   study_coordinator: "owner",
   panelist: "participant",
@@ -471,6 +503,28 @@ export const conductorApi = {
     return requestJson<{ study: BackendStudy }>(`/studies/${studyId}/archive`, role, {
       method: "PATCH",
       body: {},
+    });
+  },
+
+  async listUsers(role: UserRole) {
+    return requestJson<{ users: BackendUser[] }>("/admin/users", role);
+  },
+
+  async listAssignments(studyId: string, role: UserRole) {
+    return requestJson<{ assignments: StudyAssignment[] }>(`/studies/${studyId}/assignments`, role);
+  },
+
+  async assignStudyRole(studyId: string, userId: string, studyRole: StudyAssignment["role"], role: UserRole) {
+    return requestJson<{ assignment: StudyAssignment }>(`/studies/${studyId}/assignments`, role, {
+      method: "POST",
+      body: { user_id: userId, role: studyRole },
+    });
+  },
+
+  async removeStudyAssignment(studyId: string, userId: string, role: UserRole) {
+    return requestJson<{ ok: true }>(`/studies/${studyId}/assignments/${userId}`, role, {
+      method: "DELETE",
+      body: undefined,
     });
   },
 

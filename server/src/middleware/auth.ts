@@ -11,7 +11,7 @@ export type Actor = {
   email?: string;
   displayName?: string;
   sessionId?: string;
-  authSource: "session" | "legacy-dev-header" | "anonymous";
+  authSource: "session" | "legacy-dev-header" | "anonymous" | "invitation";
 };
 
 const studyRoleToAuthRole: Record<StudyRole, AuthRole> = {

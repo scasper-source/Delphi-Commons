@@ -1135,6 +1135,34 @@
   overflow-wrap: anywhere;
 }
 
+.assignment-list {
+  display: grid;
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.assignment-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: center;
+  border: 1px solid #dbe4df;
+  border-radius: 8px;
+  padding: 12px;
+  background: #fbfcfa;
+}
+
+.assignment-row div {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.assignment-row strong,
+.assignment-row small {
+  overflow-wrap: anywhere;
+}
+
 .review-box {
   border-top: 1px solid #dbe4df;
   padding-top: 12px;
@@ -1185,6 +1213,7 @@
   .export-package-card,
   .export-file-row,
   .submitted-rating-row,
+  .assignment-row,
   .workflow-check,
   .rating-round-setup,
   .form-grid {
