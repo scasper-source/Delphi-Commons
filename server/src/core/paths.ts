@@ -12,3 +12,7 @@ export function getDataDir(): string {
 export function getAuditDir(): string {
   return path.resolve(process.env.EDELPHI_AUDIT_DIR ?? path.join(SERVER_ROOT, "audit"));
 }
+
+export function getBackupDir(): string {
+  return path.resolve(process.env.EDELPHI_BACKUP_DIR ?? path.join(SERVER_ROOT, "backups"));
+}

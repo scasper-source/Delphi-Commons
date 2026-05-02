@@ -72,6 +72,14 @@ const statusLabels: Record<string, string> = {
   ReadyForSignoff: "Ready for signoff",
 };
 
+function participantInviteTokenFromLocation() {
+  const queryToken = new URLSearchParams(window.location.search).get("invite");
+  if (queryToken) return queryToken;
+
+  const hash = window.location.hash.startsWith("#") ? window.location.hash.slice(1) : window.location.hash;
+  return new URLSearchParams(hash).get("invite");
+}
+
 const ratingScaleOptions = [
   { value: 1, label: "Strongly disagree", detail: "I do not support prioritizing this statement." },
   { value: 2, label: "Disagree", detail: "I mostly do not support prioritizing this statement." },
@@ -339,11 +347,12 @@ function App() {
   const [participantSubmittedRatings, setParticipantSubmittedRatings] = useState<Record<number, RatingDraft>>({});
   const [participantRatingRoundEditing, setParticipantRatingRoundEditing] = useState<Record<number, boolean>>({});
   const [participantRatingRoundComplete, setParticipantRatingRoundComplete] = useState<Record<number, boolean>>({});
+  const [participantWithdrawn, setParticipantWithdrawn] = useState(false);
   const [participantConsentChecked, setParticipantConsentChecked] = useState(false);
   const [participantMessage, setParticipantMessage] = useState<string | null>(null);
   const [participantError, setParticipantError] = useState<string | null>(null);
   const [participantBusy, setParticipantBusy] = useState(false);
-  const [participantInviteToken] = useState(() => new URLSearchParams(window.location.search).get("invite"));
+  const [participantInviteToken] = useState(participantInviteTokenFromLocation);
   const [participantInvite, setParticipantInvite] = useState<ParticipantInvitationContext | null>(null);
   const [runtimeData, setRuntimeData] = useState<RuntimeStudyData>(emptyRuntimeStudyData);
   const [runtimeActionBusy, setRuntimeActionBusy] = useState<string | null>(null);
@@ -391,6 +400,7 @@ function App() {
         const context = await conductorApi.getParticipantInvitation(inviteToken);
         setParticipantInvite(context);
         setParticipantConsentChecked(Boolean(context.consent_record && !context.consent_record.withdrew_at));
+        setParticipantWithdrawn(Boolean(context.consent_record?.withdrew_at));
         setRoundConfigs(context.round_configs);
 
         if (context.study && context.study_version) {
@@ -423,6 +433,18 @@ function App() {
 
     void loadInvite();
   }, [participantInviteToken]);
+
+  useEffect(() => {
+    if (!participantResponseText.trim() || participantSubmittedRoundOneText) return;
+
+    function warnBeforeLeaving(event: BeforeUnloadEvent) {
+      event.preventDefault();
+      event.returnValue = "";
+    }
+
+    window.addEventListener("beforeunload", warnBeforeLeaving);
+    return () => window.removeEventListener("beforeunload", warnBeforeLeaving);
+  }, [participantResponseText, participantSubmittedRoundOneText]);
 
   useEffect(() => {
     if (workflow.study && workflow.version) {
@@ -575,7 +597,7 @@ function App() {
         reminder_body: roundOneSetup.reminderBody,
         controlled_feedback_enabled: false,
         ai_curation_enabled: roundOneSetup.aiCurationEnabled,
-        status: workflow.version.opened_round1_at ? "Open" : "Ready",
+        status: "Ready",
       });
 
       const consentText = [
@@ -679,12 +701,13 @@ function App() {
           reminder_body: roundOneSetup.reminderBody,
           controlled_feedback_enabled: false,
           ai_curation_enabled: roundOneSetup.aiCurationEnabled,
-          status: "Open",
+          status: "Ready",
         });
         setRoundConfigs((current) => [
           ...current.filter((config) => config.round_number !== 1),
           repairedConfig.round_config,
         ]);
+        await conductorApi.openRound(workflow.study.id, workflow.version.id, 1, role);
       }
 
       const result = action === "open"
@@ -1140,9 +1163,33 @@ function App() {
     try {
       await conductorApi.withdrawInvitationConsent(participantInviteToken);
       setParticipantConsentChecked(false);
+      setParticipantWithdrawn(true);
       setParticipantMessage("Withdrawal recorded. No further study tasks are required.");
     } catch (error) {
       setParticipantError(error instanceof Error ? error.message : "Unable to record withdrawal.");
+    } finally {
+      setParticipantBusy(false);
+    }
+  }
+
+  async function requestParticipantDeletionReview() {
+    if (!participantInviteToken) {
+      setParticipantError("A retention or deletion review is available from a participant invitation link.");
+      return;
+    }
+
+    setParticipantBusy(true);
+    setParticipantError(null);
+    setParticipantMessage(null);
+
+    try {
+      await conductorApi.requestInvitationDeletionReview(
+        participantInviteToken,
+        "Participant requested review of retention, deletion, or restricted-use options.",
+      );
+      setParticipantMessage("Retention/deletion review request recorded. The research team will review it under the study retention policy.");
+    } catch (error) {
+      setParticipantError(error instanceof Error ? error.message : "Unable to request retention/deletion review.");
     } finally {
       setParticipantBusy(false);
     }
@@ -1168,9 +1215,18 @@ function App() {
           error: null,
         }));
       } else {
+        const result = await conductorApi.createExportPackage(
+          workflow.study.id,
+          workflow.version.id,
+          role,
+          outputId as ExportPackage["export_type"],
+        );
+        const packages = await conductorApi.listExportPackages(workflow.study.id, workflow.version.id, role);
         setRuntimeData((current) => ({
           ...current,
-          message: `${outputModelRegistry.find((output) => output.id === outputId)?.label ?? "Export"} package surface prepared. Backend package generation is the next integration step.`,
+          exportPackages: packages.export_packages,
+          selectedExportPackageId: result.export_package.export_package_id,
+          message: `${outputModelRegistry.find((output) => output.id === outputId)?.label ?? "Export"} package prepared and audit logged.`,
           error: null,
         }));
       }
@@ -1576,6 +1632,7 @@ function App() {
           participantSubmittedRatings={participantSubmittedRatings}
           participantRatingRoundEditing={participantRatingRoundEditing}
           participantRatingRoundComplete={participantRatingRoundComplete}
+          participantWithdrawn={participantWithdrawn}
           participantConsentChecked={participantConsentChecked}
           participantMessage={participantMessage}
           participantError={participantError}
@@ -1602,6 +1659,7 @@ function App() {
           onEditSubmittedRatings={editSubmittedRatings}
           onFinishRatingRoundTask={finishRatingRoundTask}
           onWithdrawParticipant={withdrawParticipantInvitation}
+          onRequestDeletionReview={requestParticipantDeletionReview}
           onRefreshRuntimeData={loadRuntimeData}
           onCreateManualItemFromResponse={createManualItemFromResponse}
           onSynthesizeRoundTwoCandidates={synthesizeRoundTwoCandidates}
@@ -1656,6 +1714,7 @@ function ModuleRenderer({
   participantSubmittedRatings,
   participantRatingRoundEditing,
   participantRatingRoundComplete,
+  participantWithdrawn,
   participantConsentChecked,
   participantMessage,
   participantError,
@@ -1682,6 +1741,7 @@ function ModuleRenderer({
   onEditSubmittedRatings,
   onFinishRatingRoundTask,
   onWithdrawParticipant,
+  onRequestDeletionReview,
   onRefreshRuntimeData,
   onCreateManualItemFromResponse,
   onSynthesizeRoundTwoCandidates,
@@ -1730,6 +1790,7 @@ function ModuleRenderer({
   participantSubmittedRatings: Record<number, RatingDraft>;
   participantRatingRoundEditing: Record<number, boolean>;
   participantRatingRoundComplete: Record<number, boolean>;
+  participantWithdrawn: boolean;
   participantConsentChecked: boolean;
   participantMessage: string | null;
   participantError: string | null;
@@ -1756,6 +1817,7 @@ function ModuleRenderer({
   onEditSubmittedRatings: (roundNumber: number) => void;
   onFinishRatingRoundTask: (roundNumber: number) => void;
   onWithdrawParticipant: () => void;
+  onRequestDeletionReview: () => void;
   onRefreshRuntimeData: () => void;
   onCreateManualItemFromResponse: (response: ResponseRecord) => void;
   onSynthesizeRoundTwoCandidates: () => void;
@@ -1879,6 +1941,7 @@ function ModuleRenderer({
           participantSubmittedRatings={participantSubmittedRatings}
           participantRatingRoundEditing={participantRatingRoundEditing}
           participantRatingRoundComplete={participantRatingRoundComplete}
+          participantWithdrawn={participantWithdrawn}
           participantConsentChecked={participantConsentChecked}
           participantMessage={participantMessage}
           participantError={participantError}
@@ -1894,6 +1957,7 @@ function ModuleRenderer({
           onEditSubmittedRatings={onEditSubmittedRatings}
           onFinishRatingRoundTask={onFinishRatingRoundTask}
           onWithdrawParticipant={onWithdrawParticipant}
+          onRequestDeletionReview={onRequestDeletionReview}
           onRoundTwoRatingChange={onRoundTwoRatingChange}
           onSubmitRoundTwoRatings={onSubmitRoundTwoRatings}
         />
@@ -2008,6 +2072,27 @@ function NextActionPanel({
 
 function hasSignoff(workflow: ConductorWorkflow, requiredRole: BackendSignoff["required_role"]): boolean {
   return workflow.signoffs.some((signoff) => signoff.required_role === requiredRole);
+}
+
+const studyRoleLabels: Record<StudyAssignment["role"], string> = {
+  Owner: "Study Owner / PI",
+  MethodsSteward: "Ethics & Methods Steward",
+  PrivacyLead: "Security & Privacy Lead",
+  DataCustodian: "Data Custodian",
+  Maintainer: "Open Source Maintainer / Admin",
+};
+
+function concentratedAssignments(assignments: StudyAssignment[]) {
+  const rolesByUser = new Map<string, Set<StudyAssignment["role"]>>();
+  for (const assignment of assignments) {
+    const roles = rolesByUser.get(assignment.user_id) ?? new Set<StudyAssignment["role"]>();
+    roles.add(assignment.role);
+    rolesByUser.set(assignment.user_id, roles);
+  }
+
+  return Array.from(rolesByUser.entries())
+    .map(([userId, roles]) => ({ userId, roles: Array.from(roles).sort() }))
+    .filter((entry) => entry.roles.length > 1);
 }
 
 function workflowStepDone(workflow: ConductorWorkflow, step: WorkflowStep): boolean {
@@ -3195,6 +3280,9 @@ function GovernanceScreen({
       signedBy: workflow.signoffs.find((signoff) => signoff.required_role === "MethodsSteward")?.signed_by_user_id,
     },
   ];
+  const ownerSignoffUser = workflow.signoffs.find((signoff) => signoff.required_role === "Owner")?.signed_by_user_id;
+  const stewardSignoffUser = workflow.signoffs.find((signoff) => signoff.required_role === "MethodsSteward")?.signed_by_user_id;
+  const sameUserSignedGovernance = Boolean(ownerSignoffUser && stewardSignoffUser && ownerSignoffUser === stewardSignoffUser);
 
   return (
     <div className="screen-grid">
@@ -3264,6 +3352,11 @@ function GovernanceScreen({
       <section className="panel wide">
         <h3>Required Signoff</h3>
         <SignoffGateList signoffs={signoffs} />
+        {sameUserSignedGovernance ? (
+          <WarningBanner title="Multiple governance roles held by same user" risk="info">
+            Study Owner and Ethics & Methods Steward signoffs were recorded by the same account. Responsibilities remain separately logged.
+          </WarningBanner>
+        ) : null}
       </section>
 
       <section className="panel wide">
@@ -3934,6 +4027,7 @@ function ParticipantScreen({
   participantSubmittedRatings,
   participantRatingRoundEditing,
   participantRatingRoundComplete,
+  participantWithdrawn,
   participantConsentChecked,
   participantMessage,
   participantError,
@@ -3949,6 +4043,7 @@ function ParticipantScreen({
   onEditSubmittedRatings,
   onFinishRatingRoundTask,
   onWithdrawParticipant,
+  onRequestDeletionReview,
   onRoundTwoRatingChange,
   onSubmitRoundTwoRatings,
 }: {
@@ -3962,6 +4057,7 @@ function ParticipantScreen({
   participantSubmittedRatings: Record<number, RatingDraft>;
   participantRatingRoundEditing: Record<number, boolean>;
   participantRatingRoundComplete: Record<number, boolean>;
+  participantWithdrawn: boolean;
   participantConsentChecked: boolean;
   participantMessage: string | null;
   participantError: string | null;
@@ -3977,6 +4073,7 @@ function ParticipantScreen({
   onEditSubmittedRatings: (roundNumber: number) => void;
   onFinishRatingRoundTask: (roundNumber: number) => void;
   onWithdrawParticipant: () => void;
+  onRequestDeletionReview: () => void;
   onRoundTwoRatingChange: (itemId: string, rating: number) => void;
   onSubmitRoundTwoRatings: () => void;
 }) {
@@ -3990,8 +4087,10 @@ function ParticipantScreen({
         status: "Open",
       }
     : null);
-  const roundOneOpen = effectiveRoundOneConfig?.status === "Open";
-  const openRatingRound = roundConfigs.find((config) => config.round_number > 1 && config.status === "Open");
+  const roundOneOpen = !participantWithdrawn && effectiveRoundOneConfig?.status === "Open";
+  const openRatingRound = participantWithdrawn
+    ? undefined
+    : roundConfigs.find((config) => config.round_number > 1 && config.status === "Open");
   const openRatingRoundItems = openRatingRound ? runtimeData.ratingRoundItems[openRatingRound.round_number] ?? [] : [];
   const hasBackendStudy = Boolean(workflow.version);
   const hasRatingTask = Boolean(openRatingRound && openRatingRoundItems.length > 0);
@@ -4027,6 +4126,9 @@ function ParticipantScreen({
             You do not need an account, password, API key, or access code. This private invitation link identifies your study task.
           </WarningBanner>
         ) : null}
+        <WarningBanner title="Draft privacy" risk="info">
+          Draft responses are not stored in browser local storage. If you type a response and try to leave before submitting, the browser will warn you.
+        </WarningBanner>
       </section>
 
       <section className="panel">
@@ -4054,7 +4156,11 @@ function ParticipantScreen({
             <small>Consent version: {shortId(participantInvite.active_consent_version.consent_version_id)}</small>
           </details>
         ) : null}
-        {hasRatingTask ? (
+        {participantWithdrawn ? (
+          <WarningBanner title="Withdrawn from future participation" risk="success">
+            Your withdrawal has been recorded. No further study tasks are required through this invitation.
+          </WarningBanner>
+        ) : hasRatingTask ? (
           <>
             <WarningBanner title="Structured judgment task" risk="info">
               <div className="rating-task-copy">
@@ -4230,9 +4336,14 @@ function ParticipantScreen({
           <li>AI assistance, if offered, is optional and non-directive.</li>
         </ul>
         {participantInvite ? (
-          <button className="secondary-button danger-button" disabled={participantBusy} onClick={onWithdrawParticipant} type="button">
-            Withdraw from future participation
-          </button>
+          <div className="participant-rights-actions">
+            <button className="secondary-button danger-button" disabled={participantBusy || participantWithdrawn} onClick={onWithdrawParticipant} type="button">
+              Withdraw from future participation
+            </button>
+            <button className="secondary-button" disabled={participantBusy} onClick={onRequestDeletionReview} type="button">
+              Request retention/deletion review
+            </button>
+          </div>
         ) : null}
       </section>
     </div>
@@ -4653,6 +4764,7 @@ function AdminSecurityScreen({ role, workflow }: { role: UserRole; workflow: Con
     const user = users.find((entry) => entry.user_id === userId);
     return user ? `${user.display_name} (${user.email})` : userId;
   }
+  const roleConcentrations = concentratedAssignments(assignments);
 
   return (
     <div className="screen-grid">
@@ -4739,16 +4851,24 @@ function AdminSecurityScreen({ role, workflow }: { role: UserRole; workflow: Con
                 Refresh review
               </button>
             </div>
+            {roleConcentrations.length > 0 ? (
+              <WarningBanner title="Multiple governance roles held by same user" risk="info">
+                {roleConcentrations.map((entry) => {
+                  const roles = entry.roles.map((assignmentRole) => studyRoleLabels[assignmentRole]).join(", ");
+                  return `${userLabel(entry.userId)}: ${roles}`;
+                }).join(" | ")}
+              </WarningBanner>
+            ) : null}
             <div className="assignment-list">
               {assignments.length === 0 ? (
                 <WarningBanner title="No assignments yet" risk="warning">
                   Add at least a Study Owner and Ethics & Methods Steward before launch.
                 </WarningBanner>
               ) : assignments.map((assignment) => (
-                <article className="assignment-row" key={`${assignment.study_id}-${assignment.user_id}`}>
+                <article className="assignment-row" key={`${assignment.study_id}-${assignment.user_id}-${assignment.role}`}>
                   <div>
                     <strong>{userLabel(assignment.user_id)}</strong>
-                    <small>{assignment.role} assigned {formatDateTime(assignment.created_at)}</small>
+                    <small>{studyRoleLabels[assignment.role]} assigned {formatDateTime(assignment.created_at)}</small>
                   </div>
                   <button
                     className="secondary-button danger-button"
@@ -4756,7 +4876,7 @@ function AdminSecurityScreen({ role, workflow }: { role: UserRole; workflow: Con
                     onClick={() => removeRole(assignment.user_id)}
                     type="button"
                   >
-                    Remove
+                    Remove user
                   </button>
                 </article>
               ))}

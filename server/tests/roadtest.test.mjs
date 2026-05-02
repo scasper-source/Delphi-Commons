@@ -15,8 +15,12 @@ const runtimeRoot = path.join(
 
 process.env.EDELPHI_DATA_DIR = path.join(runtimeRoot, "data");
 process.env.EDELPHI_AUDIT_DIR = path.join(runtimeRoot, "audit");
+process.env.EDELPHI_BACKUP_DIR = path.join(runtimeRoot, "backups");
+process.env.EDELPHI_RATE_LIMIT_AUTH_MAX = "2";
 
 const Fastify = (await import("fastify")).default;
+const { getServerConfig } = await import("../dist/core/config.js");
+const { PARTICIPANT_INVITATION_HEADER, registerSecurity, resetRateLimitsForTests } = await import("../dist/core/security.js");
 const { authRoutes } = await import("../dist/routes/auth.js");
 const { adminRoutes } = await import("../dist/routes/admin.js");
 const { studiesRoutes } = await import("../dist/studies/routes.js");
@@ -37,25 +41,35 @@ const participant = { "x-user-id": "participant-user", "x-user-role": "participa
 const dataCustodian = { "x-user-id": "custodian-1", "x-user-role": "data_custodian" };
 
 async function login(app, email, password) {
-  const body = await expectStatus(
-    app,
-    {
+  const result = await injectJson(app, {
       method: "POST",
       url: "/auth/login",
       body: { email, password },
-    },
-    200
-  );
+    });
+  assert.equal(result.response.statusCode, 200, `POST /auth/login returned ${result.response.statusCode}: ${result.response.body}`);
+  const body = result.body;
+  const setCookie = result.response.headers["set-cookie"];
+  const cookieHeader = Array.isArray(setCookie)
+    ? setCookie.map((cookie) => cookie.split(";")[0]).join("; ")
+    : typeof setCookie === "string"
+      ? setCookie.split(",").map((cookie) => cookie.split(";")[0]).join("; ")
+      : "";
   return {
     token: body.token,
+    csrfToken: body.csrf_token,
+    cookieHeader,
     user: body.user,
     headers: { authorization: `Bearer ${body.token}` },
+    cookieHeaders: { cookie: cookieHeader, "x-csrf-token": body.csrf_token },
   };
 }
 
 async function buildApp() {
-  const app = Fastify({ logger: false });
+  resetRateLimitsForTests();
+  const config = getServerConfig();
+  const app = Fastify({ logger: false, bodyLimit: config.bodyLimitBytes });
 
+  registerSecurity(app, config);
   app.get("/health", async () => ({ status: "ok", service: "edelphi-server" }));
   await app.register(authRoutes);
   await app.register(adminRoutes);
@@ -94,6 +108,13 @@ function uniqueParticipantId(index) {
   return `participant-${index}-${Date.now()}`;
 }
 
+function inviteTokenFromUrl(invitationUrl) {
+  const parsed = new URL(invitationUrl);
+  const token = new URLSearchParams(parsed.hash.replace(/^#/, "")).get("invite");
+  assert.equal(typeof token, "string");
+  return token;
+}
+
 test("backend road test covers study, consent, AI, reporting, and audit flows", async (t) => {
   const app = await buildApp();
   t.after(async () => {
@@ -102,6 +123,58 @@ test("backend road test covers study, consent, AI, reporting, and audit flows", 
 
   const health = await expectStatus(app, { method: "GET", url: "/health" }, 200);
   assert.equal(health.status, "ok");
+
+  const healthHeaders = await injectJson(app, { method: "GET", url: "/health" });
+  assert.equal(healthHeaders.response.headers["x-content-type-options"], "nosniff");
+  assert.match(String(healthHeaders.response.headers["content-security-policy"]), /default-src 'none'/);
+  assert.equal(healthHeaders.response.headers["referrer-policy"], "no-referrer");
+
+  await expectStatus(
+    app,
+    {
+      method: "OPTIONS",
+      url: "/health",
+      headers: { origin: "https://evil.example" },
+    },
+    403
+  );
+  await expectStatus(
+    app,
+    {
+      method: "GET",
+      url: "/health",
+      headers: { origin: "https://evil.example" },
+    },
+    403
+  );
+
+  await expectStatus(
+    app,
+    {
+      method: "POST",
+      url: "/auth/login",
+      body: { email: "attacker@example.test", password: "wrong" },
+    },
+    401
+  );
+  await expectStatus(
+    app,
+    {
+      method: "POST",
+      url: "/auth/login",
+      body: { email: "attacker@example.test", password: "wrong" },
+    },
+    401
+  );
+  await expectStatus(
+    app,
+    {
+      method: "POST",
+      url: "/auth/login",
+      body: { email: "attacker@example.test", password: "wrong" },
+    },
+    429
+  );
 
   const storageStatus = await expectStatus(
     app,
@@ -132,6 +205,30 @@ test("backend road test covers study, consent, AI, reporting, and audit flows", 
   const ownerLogin = await login(app, "owner@example.test", "demo-owner");
   const stewardLogin = await login(app, "steward@example.test", "demo-steward");
   const participantLogin = await login(app, "participant@example.test", "demo-participant");
+
+  assert.ok(ownerLogin.cookieHeader.includes("edelphi_session="));
+  assert.ok(ownerLogin.cookieHeader.includes("edelphi_csrf="));
+
+  await expectStatus(
+    app,
+    {
+      method: "POST",
+      url: "/auth/logout",
+      headers: { cookie: ownerLogin.cookieHeader },
+      body: {},
+    },
+    403
+  );
+
+  await expectStatus(
+    app,
+    {
+      method: "GET",
+      url: "/auth/me",
+      headers: { cookie: ownerLogin.cookieHeader },
+    },
+    200
+  );
 
   await expectStatus(
     app,
@@ -230,6 +327,63 @@ test("backend road test covers study, consent, AI, reporting, and audit flows", 
     201
   );
 
+  await expectStatus(
+    app,
+    {
+      method: "POST",
+      url: `/studies/${authStudy.study.id}/assignments`,
+      headers: ownerLogin.headers,
+      body: { user_id: ownerLogin.user.user_id, role: "PrivacyLead" },
+    },
+    201
+  );
+
+  const concentratedRoleAssignments = await expectStatus(
+    app,
+    {
+      method: "GET",
+      url: `/studies/${authStudy.study.id}/assignments`,
+      headers: ownerLogin.headers,
+    },
+    200
+  );
+  const ownerAssignedRoles = concentratedRoleAssignments.assignments
+    .filter((assignment) => assignment.user_id === ownerLogin.user.user_id)
+    .map((assignment) => assignment.role)
+    .sort();
+  assert.deepEqual(ownerAssignedRoles, ["Owner", "PrivacyLead"]);
+
+  await expectStatus(
+    app,
+    {
+      method: "GET",
+      url: `/studies/${authStudy.study.id}/versions/${authVersion.studyVersion.id}/export-packages`,
+      headers: { ...ownerLogin.headers, "x-user-role": "privacy_lead" },
+    },
+    200
+  );
+
+  await expectStatus(
+    app,
+    {
+      method: "GET",
+      url: `/studies/${authStudy.study.id}/versions/${authVersion.studyVersion.id}/export-packages`,
+      headers: participantLogin.headers,
+    },
+    403
+  );
+
+  await expectStatus(
+    app,
+    {
+      method: "POST",
+      url: `/studies/${authStudy.study.id}/versions/${authVersion.studyVersion.id}/export-packages`,
+      headers: participantLogin.headers,
+      body: { export_type: "audit-package" },
+    },
+    403
+  );
+
   const authParticipant = await expectStatus(
     app,
     {
@@ -251,8 +405,7 @@ test("backend road test covers study, consent, AI, reporting, and audit flows", 
     },
     201
   );
-  const revokedInviteToken = new URL(authInvitation.invitation_url).searchParams.get("invite");
-  assert.equal(typeof revokedInviteToken, "string");
+  const revokedInviteToken = inviteTokenFromUrl(authInvitation.invitation_url);
 
   await expectStatus(
     app,
@@ -268,7 +421,8 @@ test("backend road test covers study, consent, AI, reporting, and audit flows", 
     app,
     {
       method: "GET",
-      url: `/participant/invitations/${revokedInviteToken}`,
+      url: "/participant/invitation",
+      headers: { [PARTICIPANT_INVITATION_HEADER]: revokedInviteToken },
     },
     404
   );
@@ -277,10 +431,21 @@ test("backend road test covers study, consent, AI, reporting, and audit flows", 
     app,
     {
       method: "POST",
-      url: `/participant/invitations/${revokedInviteToken}/responses`,
+      url: "/participant/invitation/responses",
+      headers: { [PARTICIPANT_INVITATION_HEADER]: revokedInviteToken },
       body: { text: "This revoked invitation should not submit." },
     },
     404
+  );
+
+  await expectStatus(
+    app,
+    {
+      method: "GET",
+      url: "/participant/invitation",
+      headers: { [PARTICIPANT_INVITATION_HEADER]: "bad-token" },
+    },
+    400
   );
 
   await expectStatus(
@@ -504,17 +669,6 @@ test("backend road test covers study, consent, AI, reporting, and audit flows", 
   await expectStatus(
     app,
     {
-      method: "POST",
-      url: `/studies/${studyId}/versions/${versionId}/open-round-1`,
-      headers: owner,
-      body: {},
-    },
-    200
-  );
-
-  await expectStatus(
-    app,
-    {
       method: "PATCH",
       url: `/studies/${studyId}/versions/${versionId}/rounds/1/config`,
       headers: owner,
@@ -530,8 +684,30 @@ test("backend road test covers study, consent, AI, reporting, and audit flows", 
           "This is a neutral reminder that Round 1 is open. Participation is voluntary.",
         controlled_feedback_enabled: false,
         ai_curation_enabled: true,
-        status: "Open",
+        status: "Ready",
       },
+    },
+    200
+  );
+
+  await expectStatus(
+    app,
+    {
+      method: "POST",
+      url: `/studies/${studyId}/versions/${versionId}/open-round-1`,
+      headers: owner,
+      body: {},
+    },
+    200
+  );
+
+  await expectStatus(
+    app,
+    {
+      method: "POST",
+      url: `/studies/${studyId}/versions/${versionId}/rounds/1/open`,
+      headers: owner,
+      body: {},
     },
     200
   );
@@ -603,15 +779,16 @@ test("backend road test covers study, consent, AI, reporting, and audit flows", 
     },
     201
   );
-  assert.match(invitation.invitation_url, /\?invite=/);
-  const inviteToken = new URL(invitation.invitation_url).searchParams.get("invite");
-  assert.ok(inviteToken);
+  assert.match(invitation.invitation_url, /#invite=/);
+  assert.equal(new URL(invitation.invitation_url).search, "");
+  const inviteToken = inviteTokenFromUrl(invitation.invitation_url);
 
   const invitationContext = await expectStatus(
     app,
     {
       method: "GET",
-      url: `/participant/invitations/${inviteToken}`,
+      url: "/participant/invitation",
+      headers: { [PARTICIPANT_INVITATION_HEADER]: inviteToken },
     },
     200
   );
@@ -622,7 +799,8 @@ test("backend road test covers study, consent, AI, reporting, and audit flows", 
     app,
     {
       method: "POST",
-      url: `/participant/invitations/${inviteToken}/responses`,
+      url: "/participant/invitation/responses",
+      headers: { [PARTICIPANT_INVITATION_HEADER]: inviteToken },
       body: { text: "This should be blocked until the invitee consents." },
     },
     403
@@ -632,7 +810,8 @@ test("backend road test covers study, consent, AI, reporting, and audit flows", 
     app,
     {
       method: "POST",
-      url: `/participant/invitations/${inviteToken}/consent`,
+      url: "/participant/invitation/consent",
+      headers: { [PARTICIPANT_INVITATION_HEADER]: inviteToken },
       body: {},
     },
     201
@@ -643,7 +822,8 @@ test("backend road test covers study, consent, AI, reporting, and audit flows", 
     app,
     {
       method: "POST",
-      url: `/participant/invitations/${inviteToken}/responses`,
+      url: "/participant/invitation/responses",
+      headers: { [PARTICIPANT_INVITATION_HEADER]: inviteToken },
       body: { text: "Patients benefit when discharge instructions are written in plain language." },
     },
     201
@@ -654,18 +834,56 @@ test("backend road test covers study, consent, AI, reporting, and audit flows", 
     app,
     {
       method: "POST",
-      url: `/participant/invitations/${inviteToken}/withdraw`,
+      url: "/participant/invitation/withdraw",
+      headers: { [PARTICIPANT_INVITATION_HEADER]: inviteToken },
       body: {},
     },
     200
   );
   assert.equal(typeof invitationWithdrawal.consent_record.withdrew_at, "string");
 
+  const deletionReviewRequest = await expectStatus(
+    app,
+    {
+      method: "POST",
+      url: "/participant/invitation/deletion-request",
+      headers: { [PARTICIPANT_INVITATION_HEADER]: inviteToken },
+      body: { request_text: "Please review retention or deletion options for my test records." },
+    },
+    201
+  );
+  assert.equal(deletionReviewRequest.deletion_request.participant_id, invitedParticipantId);
+  assert.equal(deletionReviewRequest.deletion_request.status, "Requested");
+
+  const deletionRequests = await expectStatus(
+    app,
+    {
+      method: "GET",
+      url: `/studies/${studyId}/versions/${versionId}/deletion-requests`,
+      headers: owner,
+    },
+    200
+  );
+  assert.equal(deletionRequests.deletion_requests.length, 1);
+
+  const reviewedDeletionRequest = await expectStatus(
+    app,
+    {
+      method: "PATCH",
+      url: `/studies/${studyId}/versions/${versionId}/deletion-requests/${deletionReviewRequest.deletion_request.deletion_request_id}`,
+      headers: owner,
+      body: { status: "UnderReview", review_note: "Data custodian review opened." },
+    },
+    200
+  );
+  assert.equal(reviewedDeletionRequest.deletion_request.status, "UnderReview");
+
   await expectStatus(
     app,
     {
       method: "POST",
-      url: `/participant/invitations/${inviteToken}/responses`,
+      url: "/participant/invitation/responses",
+      headers: { [PARTICIPANT_INVITATION_HEADER]: inviteToken },
       body: { text: "This should be blocked after withdrawal." },
     },
     403
@@ -717,6 +935,137 @@ test("backend road test covers study, consent, AI, reporting, and audit flows", 
   );
   assert.equal(summary.response_count, 4);
   assert.equal(summary.unique_participant_count, 4);
+
+  const blockedEarlySynthesis = await expectStatus(
+    app,
+    {
+      method: "POST",
+      url: `/studies/${studyId}/versions/${versionId}/ai/synthesize-inter-round`,
+      headers: owner,
+      body: { target_round_number: 2 },
+    },
+    409
+  );
+  assert.equal(blockedEarlySynthesis.error, "round1_must_be_closed_before_curation");
+
+  const blockedEarlyManualCuration = await expectStatus(
+    app,
+    {
+      method: "POST",
+      url: `/studies/${studyId}/versions/${versionId}/items`,
+      headers: owner,
+      body: {
+        round_number: 2,
+        text: "This candidate should not be created while Round 1 is still open.",
+        provenance_links: [
+          {
+            source_type: "response",
+            source_id: "not-yet-curated",
+            source_round_number: 1,
+            excerpt: "Round 1 is still open.",
+          },
+        ],
+        rationale: "Negative lifecycle test.",
+      },
+    },
+    409
+  );
+  assert.equal(blockedEarlyManualCuration.error, "round1_must_be_closed_before_curation");
+
+  await expectStatus(
+    app,
+    {
+      method: "POST",
+      url: `/studies/${studyId}/versions/${versionId}/rounds/1/close`,
+      headers: owner,
+      body: {},
+    },
+    200
+  );
+
+  const blockedReopenRoundOne = await expectStatus(
+    app,
+    {
+      method: "POST",
+      url: `/studies/${studyId}/versions/${versionId}/rounds/1/open`,
+      headers: owner,
+      body: {},
+    },
+    409
+  );
+  assert.equal(blockedReopenRoundOne.error, "round_already_closed");
+
+  await expectStatus(
+    app,
+    {
+      method: "POST",
+      url: `/studies/${studyId}/versions/${versionId}/responses`,
+      headers: participant,
+      body: {
+        participant_id: participantIds[0],
+        response_json: { round_number: 1, text: "Closed Round 1 should not accept edits." },
+      },
+    },
+    409
+  );
+
+  const blockedRoundOneConfigEditAfterClose = await expectStatus(
+    app,
+    {
+      method: "PATCH",
+      url: `/studies/${studyId}/versions/${versionId}/rounds/1/config`,
+      headers: owner,
+      body: {
+        task_type: "open_text",
+        title: "Round 1 altered after closure",
+        prompt: "This should be blocked.",
+        participant_instructions: "This should be blocked.",
+        response_window_days: 7,
+        reminder_subject: "Blocked",
+        reminder_body: "Blocked",
+        controlled_feedback_enabled: false,
+        ai_curation_enabled: true,
+        status: "Ready",
+      },
+    },
+    409
+  );
+  assert.equal(blockedRoundOneConfigEditAfterClose.error, "round_config_locked_after_open");
+
+  await expectStatus(
+    app,
+    {
+      method: "PATCH",
+      url: `/studies/${studyId}/versions/${versionId}/rounds/2/config`,
+      headers: owner,
+      body: {
+        task_type: "rating",
+        title: "Round 2 structured rating",
+        prompt: "Please rate each candidate statement.",
+        participant_instructions:
+          "Review each statement independently. Ratings should reflect your judgment for this study.",
+        response_window_days: 7,
+        reminder_subject: "Round 2 rating is open",
+        reminder_body: "This is a neutral reminder that Round 2 is open.",
+        controlled_feedback_enabled: true,
+        ai_curation_enabled: false,
+        status: "Ready",
+      },
+    },
+    200
+  );
+
+  const blockedRoundTwoOpenWithoutItems = await expectStatus(
+    app,
+    {
+      method: "POST",
+      url: `/studies/${studyId}/versions/${versionId}/rounds/2/open`,
+      headers: owner,
+      body: {},
+    },
+    409
+  );
+  assert.equal(blockedRoundTwoOpenWithoutItems.error, "published_traceable_items_required_for_round");
 
   const roundTwoSynthesis = await expectStatus(
     app,
@@ -798,6 +1147,63 @@ test("backend road test covers study, consent, AI, reporting, and audit flows", 
   assert.equal(roundTwoItems[0].created_from, "ai");
   assert.equal(roundTwoItems[0].source_ai_suggestion_id, roundTwoSuggestion.suggestion_id);
   assert.ok(roundTwoItems[0].ai_provenance_links.length >= 1);
+  assert.ok(roundTwoItems.every((item) => item.status === "Draft"));
+
+  await expectStatus(
+    app,
+    {
+      method: "POST",
+      url: `/studies/${studyId}/versions/${versionId}/items/${roundTwoItems[1].item_id}/split`,
+      headers: owner,
+      body: { new_texts: ["Split candidate A", "Split candidate B"] },
+    },
+    400
+  );
+
+  const splitForProvenance = await expectStatus(
+    app,
+    {
+      method: "POST",
+      url: `/studies/${studyId}/versions/${versionId}/items/${roundTwoItems[1].item_id}/split`,
+      headers: owner,
+      body: {
+        new_texts: ["Split candidate A", "Split candidate B"],
+        rationale: "Human curator split a multi-concept statement for provenance testing.",
+      },
+    },
+    201
+  );
+  assert.equal(splitForProvenance.items.length, 2);
+
+  await expectStatus(
+    app,
+    {
+      method: "POST",
+      url: `/studies/${studyId}/versions/${versionId}/items/merge`,
+      headers: owner,
+      body: {
+        from_item_ids: [splitForProvenance.items[0].item_id],
+        to_item_id: splitForProvenance.items[1].item_id,
+      },
+    },
+    400
+  );
+
+  const mergeForProvenance = await expectStatus(
+    app,
+    {
+      method: "POST",
+      url: `/studies/${studyId}/versions/${versionId}/items/merge`,
+      headers: owner,
+      body: {
+        from_item_ids: [splitForProvenance.items[0].item_id],
+        to_item_id: splitForProvenance.items[1].item_id,
+        rationale: "Human curator merged related split statements with rationale.",
+      },
+    },
+    201
+  );
+  assert.equal(typeof mergeForProvenance.merge.merge_id, "string");
 
   const manualCandidate = await expectStatus(
     app,
@@ -1020,17 +1426,6 @@ test("backend road test covers study, consent, AI, reporting, and audit flows", 
     );
     assert.equal(published.item.status, "Published");
   }
-
-  await expectStatus(
-    app,
-    {
-      method: "POST",
-      url: `/studies/${studyId}/versions/${versionId}/rounds/1/close`,
-      headers: owner,
-      body: {},
-    },
-    200
-  );
 
   await expectStatus(
     app,
@@ -1502,6 +1897,111 @@ test("backend road test covers study, consent, AI, reporting, and audit flows", 
   assert.equal(officialIrb.export_manifest.package_type, "irb-pack");
   assert.equal(officialIrb.export_manifest.audit_event_id.length > 0, true);
 
+  const governedPackageTypes = [
+    "final-delphi-report",
+    "irb-pack",
+    "anonymized-response-dataset",
+    "audit-package",
+    "provenance-bundle",
+    "complete-archive",
+  ];
+  const governedPackages = new Map();
+
+  for (const exportType of governedPackageTypes) {
+    const createdPackage = await expectStatus(
+      app,
+      {
+        method: "POST",
+        url: `/studies/${studyId}/versions/${versionId}/export-packages`,
+        headers: dataCustodian,
+        body: { export_type: exportType },
+      },
+      201
+    );
+    assert.equal(createdPackage.export_manifest.package_type, exportType);
+    assert.equal(createdPackage.export_package.export_type, exportType);
+    assert.equal(createdPackage.export_package.human_review_status, "pending_review");
+    assert.equal(createdPackage.export_package.manifest_hash.length, 64);
+    assert.equal(createdPackage.export_package.package_hash.length, 64);
+    assert.ok(
+      createdPackage.export_package.files.some((file) => file.path === `${exportType}/export_manifest.json`),
+      `${exportType} missing package manifest file`,
+    );
+    governedPackages.set(exportType, createdPackage.export_package);
+  }
+
+  const anonymizedDatasetPackage = governedPackages.get("anonymized-response-dataset");
+  const anonymizedDatasetFiles = await expectStatus(
+    app,
+    {
+      method: "GET",
+      url: `/studies/${studyId}/versions/${versionId}/export-packages/${anonymizedDatasetPackage.export_package_id}/files`,
+      headers: dataCustodian,
+    },
+    200
+  );
+  const anonymizedResponsesCsv = anonymizedDatasetFiles.files.find((file) => file.path.endsWith("/responses.csv"));
+  assert.ok(anonymizedResponsesCsv);
+  assert.match(anonymizedResponsesCsv.content_text, /participant_pseudonym/);
+  assert.doesNotMatch(anonymizedResponsesCsv.content_text, /Panelist|example\.test|participant_id/);
+
+  const auditPackage = governedPackages.get("audit-package");
+  const auditPackageFiles = await expectStatus(
+    app,
+    {
+      method: "GET",
+      url: `/studies/${studyId}/versions/${versionId}/export-packages/${auditPackage.export_package_id}/files`,
+      headers: dataCustodian,
+    },
+    200
+  );
+  const auditEventsCsv = auditPackageFiles.files.find((file) => file.path.endsWith("/audit_events.csv"));
+  assert.ok(auditEventsCsv);
+  assert.match(auditEventsCsv.content_text, /study_version.signoff/);
+  assert.match(auditEventsCsv.content_text, /export.file_download/);
+  assert.match(auditEventsCsv.content_text, /export.package_review/);
+  assert.match(auditEventsCsv.content_text, /ai\.suggestion/);
+  assert.match(auditEventsCsv.content_text, /item\.update|item\.reject/);
+
+  const provenancePackage = governedPackages.get("provenance-bundle");
+  const provenanceFiles = await expectStatus(
+    app,
+    {
+      method: "GET",
+      url: `/studies/${studyId}/versions/${versionId}/export-packages/${provenancePackage.export_package_id}/files`,
+      headers: dataCustodian,
+    },
+    200
+  );
+  const provenanceEdgesCsv = provenanceFiles.files.find((file) => file.path.endsWith("/provenance_edges.csv"));
+  const transformationsCsv = provenanceFiles.files.find((file) => file.path.endsWith("/item_transformation_history.csv"));
+  const aiHashesCsv = provenanceFiles.files.find((file) => file.path.endsWith("/ai_suggestion_hashes.csv"));
+  assert.ok(provenanceEdgesCsv);
+  assert.ok(transformationsCsv);
+  assert.ok(aiHashesCsv);
+  assert.match(provenanceEdgesCsv.content_text, /contributed_to|carried_forward_to/);
+  assert.match(transformationsCsv.content_text, /reject|finalize|merge|split/);
+  assert.match(transformationsCsv.content_text, /Edited manual candidate retained for audit but not published/);
+  assert.match(transformationsCsv.content_text, /Human review accepted the neutralized wording/);
+  assert.match(aiHashesCsv.content_text, /prompt_template_version_id/);
+  assert.match(aiHashesCsv.content_text, /ai_output_hash/);
+
+  const governedFinalPackage = governedPackages.get("final-delphi-report");
+  const governedFinalFiles = await expectStatus(
+    app,
+    {
+      method: "GET",
+      url: `/studies/${studyId}/versions/${versionId}/export-packages/${governedFinalPackage.export_package_id}/files`,
+      headers: dataCustodian,
+    },
+    200
+  );
+  const governedFinalJson = governedFinalFiles.files.find((file) => file.path.endsWith("/final_delphi_report.json"));
+  assert.ok(governedFinalJson);
+  assert.match(governedFinalJson.content_text, /Consensus indicates agreement among this panel; it does not establish correctness/);
+  assert.match(governedFinalJson.content_text, /near_consensus_item_count/);
+  assert.match(governedFinalJson.content_text, /non_consensus_item_count/);
+
   await expectStatus(
     app,
     {
@@ -1581,10 +2081,14 @@ test("backend road test covers study, consent, AI, reporting, and audit flows", 
     "round.config.upsert",
     "study_version.save_wizard_packet",
     "response.submit",
+    "round.open_blocked_already_closed",
+    "round.open_blocked_published_traceable_items_required",
+    "ai.synthesis_blocked_lifecycle_gate",
     "ai.suggestion.synthesize_inter_round",
     "ai.suggestion.lint_wording",
     "ai.suggestion.generate_irb_pack",
     "ai.suggestion.export_irb_pack",
+    "item.create_blocked_lifecycle_gate",
     "item.update",
     "item.reject",
     "item.publish_blocked_rejected",
@@ -1647,4 +2151,31 @@ test("backend road test covers study, consent, AI, reporting, and audit flows", 
     200
   );
   assert.equal(dataIntegrityEndpoint.data_integrity.ok, true);
+
+  const backup = await expectStatus(
+    app,
+    {
+      method: "POST",
+      url: "/admin/backups",
+      headers: dataCustodian,
+      body: { reason: "road test restore rehearsal" },
+    },
+    200
+  );
+  assert.equal(backup.backup.audit_integrity.ok, true);
+  assert.equal(backup.backup.data_integrity.ok, true);
+  assert.ok(backup.backup.files.some((file) => file.label === "database"));
+
+  const restored = await expectStatus(
+    app,
+    {
+      method: "POST",
+      url: `/admin/backups/${backup.backup.backup_id}/restore`,
+      headers: dataCustodian,
+      body: {},
+    },
+    200
+  );
+  assert.equal(restored.audit_integrity.ok, true);
+  assert.equal(restored.data_integrity.ok, true);
 });

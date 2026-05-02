@@ -69,6 +69,20 @@ export type StudyAssignment = {
   created_at: string;
 };
 
+export type DeletionRequest = {
+  deletion_request_id: string;
+  study_id: string;
+  version_id: string;
+  participant_id: string;
+  requested_at: string;
+  requested_by: "participant" | "staff";
+  request_text: string;
+  status: "Requested" | "UnderReview" | "Approved" | "Rejected" | "Completed";
+  reviewed_by_user_id: string | null;
+  reviewed_at: string | null;
+  review_note: string | null;
+};
+
 export type RoundConfig = {
   round_config_id: string;
   study_id: string;
@@ -415,13 +429,17 @@ async function requestJson<T>(
   return payload as T;
 }
 
-async function requestPublicJson<T>(
+async function requestInvitationJson<T>(
   path: string,
+  token: string,
   options: { method?: string; body?: unknown } = {},
 ): Promise<T> {
   const response = await fetch(`${apiBoundary.baseUrl}${path}`, {
     method: options.method ?? "GET",
-    headers: { "Content-Type": "application/json" },
+    headers: {
+      "Content-Type": "application/json",
+      "X-Participant-Invitation": token,
+    },
     body: options.body === undefined ? undefined : JSON.stringify(options.body),
   });
 
@@ -691,35 +709,45 @@ export const conductorApi = {
   },
 
   async getParticipantInvitation(token: string) {
-    return requestPublicJson<ParticipantInvitationContext>(
-      `/participant/invitations/${encodeURIComponent(token)}`,
-    );
+    return requestInvitationJson<ParticipantInvitationContext>("/participant/invitation", token);
   },
 
   async recordInvitationConsent(token: string) {
-    return requestPublicJson<{ consent_record: unknown }>(
-      `/participant/invitations/${encodeURIComponent(token)}/consent`,
+    return requestInvitationJson<{ consent_record: unknown }>(
+      "/participant/invitation/consent",
+      token,
       { method: "POST", body: {} },
     );
   },
 
   async withdrawInvitationConsent(token: string) {
-    return requestPublicJson<{ consent_record: unknown }>(
-      `/participant/invitations/${encodeURIComponent(token)}/withdraw`,
+    return requestInvitationJson<{ consent_record: unknown }>(
+      "/participant/invitation/withdraw",
+      token,
       { method: "POST", body: {} },
     );
   },
 
+  async requestInvitationDeletionReview(token: string, requestText: string) {
+    return requestInvitationJson<{ deletion_request: DeletionRequest }>(
+      "/participant/invitation/deletion-request",
+      token,
+      { method: "POST", body: { request_text: requestText } },
+    );
+  },
+
   async submitInvitationRoundOneResponse(token: string, text: string) {
-    return requestPublicJson<{ response_id: string }>(
-      `/participant/invitations/${encodeURIComponent(token)}/responses`,
+    return requestInvitationJson<{ response_id: string }>(
+      "/participant/invitation/responses",
+      token,
       { method: "POST", body: { text } },
     );
   },
 
   async listInvitationRoundItems(token: string, roundNumber: number) {
-    return requestPublicJson<{ items: RoundItemForParticipant[] }>(
-      `/participant/invitations/${encodeURIComponent(token)}/rounds/${roundNumber}/items`,
+    return requestInvitationJson<{ items: RoundItemForParticipant[] }>(
+      `/participant/invitation/rounds/${roundNumber}/items`,
+      token,
     );
   },
 
@@ -730,8 +758,9 @@ export const conductorApi = {
     rating: number,
     action: "keep" | "revise" = "revise",
   ) {
-    return requestPublicJson<{ response_id: string }>(
-      `/participant/invitations/${encodeURIComponent(token)}/rounds/${roundNumber}/ratings`,
+    return requestInvitationJson<{ response_id: string }>(
+      `/participant/invitation/rounds/${roundNumber}/ratings`,
+      token,
       { method: "POST", body: { item_id: itemId, rating, action } },
     );
   },
@@ -951,6 +980,19 @@ export const conductorApi = {
     return requestJson<{ export_packages: ExportPackage[] }>(
       `/studies/${studyId}/versions/${versionId}/export-packages`,
       role,
+    );
+  },
+
+  async createExportPackage(
+    studyId: string,
+    versionId: string,
+    role: UserRole,
+    exportType: ExportPackage["export_type"],
+  ) {
+    return requestJson<{ export_manifest: unknown; export_package: ExportPackage }>(
+      `/studies/${studyId}/versions/${versionId}/export-packages`,
+      role,
+      { method: "POST", body: { export_type: exportType } },
     );
   },
 

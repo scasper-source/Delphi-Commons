@@ -1141,6 +1141,13 @@
   margin-top: 14px;
 }
 
+.participant-rights-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 12px;
+}
+
 .assignment-row {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;

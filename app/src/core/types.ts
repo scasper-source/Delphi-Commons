@@ -31,7 +31,8 @@ export type OutputModelId =
   | "irb-pack"
   | "anonymized-response-dataset"
   | "audit-package"
-  | "provenance-bundle";
+  | "provenance-bundle"
+  | "complete-archive";
 
 export type StudyStatus =
   | "Draft"

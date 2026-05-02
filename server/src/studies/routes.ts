@@ -517,6 +517,25 @@ export async function studiesRoutes(app: FastifyInstance) {
 
     const title = typeof packet.title === "string" ? packet.title.trim() : "";
     const description = typeof packet.description === "string" ? packet.description.trim() : "";
+    const roundOneMode = typeof packet.roundOneMode === "string" ? packet.roundOneMode : null;
+    const modifiedDesignAcknowledged = packet.modifiedDesignAcknowledged === true;
+    const modifiedDesignRationale =
+      typeof packet.modifiedDesignRationale === "string" ? packet.modifiedDesignRationale.trim() : "";
+
+    if (roundOneMode !== null && roundOneMode !== "open-ended" && roundOneMode !== "structured") {
+      return reply.code(400).send({ error: "invalid_round1_mode" });
+    }
+
+    if (roundOneMode === "structured") {
+      if (!modifiedDesignAcknowledged) {
+        return reply.code(400).send({ error: "modified_delphi_bias_warning_acknowledgement_required" });
+      }
+
+      if (!hasNonEmptyText(modifiedDesignRationale)) {
+        return reply.code(400).send({ error: "modified_delphi_rationale_required" });
+      }
+    }
+
     if (title) {
       await updateStudy(studyId, {
         title,
@@ -532,7 +551,13 @@ export async function studiesRoutes(app: FastifyInstance) {
       action: "study_version.save_wizard_packet",
       actor,
       object: { type: "study_version", id: versionId },
-      details: { study_id: studyId, synced_study_title: Boolean(title) },
+      details: {
+        study_id: studyId,
+        synced_study_title: Boolean(title),
+        round1_mode: roundOneMode,
+        modified_delphi_bias_warning_acknowledged:
+          roundOneMode === "structured" ? modifiedDesignAcknowledged : null,
+      },
     });
 
     return reply.send({ studyVersion: updated });

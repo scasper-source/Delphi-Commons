@@ -13,6 +13,7 @@ import {
 
 import { requireRole, getActor } from "../middleware/auth.js";
 import { writeAuditEvent } from "../core/audit.js";
+import { getPublishedTraceableItemsForRound } from "../core/roundLifecycle.js";
 
 type RatingRoundPayload = {
   round_number: number;
@@ -243,6 +244,15 @@ export async function responsesRoutes(app: FastifyInstance) {
         return reply.code(400).send({ error: "round1_must_be_open_text_for_current_setup" });
       }
 
+      const existingConfig = getRoundConfig({ study_id: studyId, version_id: versionId, round_number: roundNumber });
+      if (existingConfig?.status === "Open" || existingConfig?.status === "Closed") {
+        return reply.code(409).send({ error: "round_config_locked_after_open" });
+      }
+
+      if (body.status === "Open" || body.status === "Closed") {
+        return reply.code(400).send({ error: "use_round_transition_endpoint" });
+      }
+
       const config = upsertRoundConfig({
         study_id: studyId,
         version_id: versionId,
@@ -256,7 +266,7 @@ export async function responsesRoutes(app: FastifyInstance) {
         reminder_body: body.reminder_body.trim(),
         controlled_feedback_enabled: Boolean(body.controlled_feedback_enabled),
         ai_curation_enabled: Boolean(body.ai_curation_enabled),
-        status: body.status === "Ready" || body.status === "Open" || body.status === "Closed" ? body.status : "Draft",
+        status: body.status === "Ready" ? body.status : "Draft",
       });
 
       await writeAuditEvent({
@@ -298,7 +308,16 @@ export async function responsesRoutes(app: FastifyInstance) {
 
       const config = getRoundConfig({ study_id: studyId, version_id: versionId, round_number: roundNumber });
       if (!config) return reply.code(409).send({ error: "round_config_required" });
-      if (config.status === "Closed") return reply.code(409).send({ error: "round_already_closed" });
+      if (config.status === "Closed") {
+        await writeAuditEvent({
+          actor,
+          action: "round.open_blocked_already_closed",
+          object: { type: "study_version", id: `${studyId}:${versionId}` },
+          details: { studyId, versionId, round_number: roundNumber },
+        });
+
+        return reply.code(409).send({ error: "round_already_closed" });
+      }
 
       const openRound = listRoundConfigs({ study_id: studyId, version_id: versionId }).find(
         (entry) => entry.status === "Open" && entry.round_number !== roundNumber,
@@ -313,14 +332,36 @@ export async function responsesRoutes(app: FastifyInstance) {
       if (roundNumber > 1) {
         const previous = getRoundConfig({ study_id: studyId, version_id: versionId, round_number: roundNumber - 1 });
         if (!previous || previous.status !== "Closed") {
+          await writeAuditEvent({
+            actor,
+            action: "round.open_blocked_previous_not_closed",
+            object: { type: "study_version", id: `${studyId}:${versionId}` },
+            details: {
+              studyId,
+              versionId,
+              round_number: roundNumber,
+              previous_round_number: roundNumber - 1,
+              previous_round_status: previous?.status ?? null,
+            },
+          });
+
           return reply.code(409).send({ error: "previous_round_must_be_closed" });
         }
 
-        const publishedItems = listItems({ study_id: studyId, version_id: versionId }).filter(
-          (item) => item.round_number === roundNumber && item.status === "Published",
-        );
-        if (publishedItems.length === 0) {
-          return reply.code(409).send({ error: "published_items_required_for_round" });
+        const publishedTraceableItems = getPublishedTraceableItemsForRound({
+          study_id: studyId,
+          version_id: versionId,
+          round_number: roundNumber,
+        });
+        if (publishedTraceableItems.length === 0) {
+          await writeAuditEvent({
+            actor,
+            action: "round.open_blocked_published_traceable_items_required",
+            object: { type: "study_version", id: `${studyId}:${versionId}` },
+            details: { studyId, versionId, round_number: roundNumber },
+          });
+
+          return reply.code(409).send({ error: "published_traceable_items_required_for_round" });
         }
       }
 
@@ -363,6 +404,8 @@ export async function responsesRoutes(app: FastifyInstance) {
 
       const config = getRoundConfig({ study_id: studyId, version_id: versionId, round_number: roundNumber });
       if (!config) return reply.code(409).send({ error: "round_config_required" });
+      if (config.status === "Closed") return reply.code(409).send({ error: "round_already_closed" });
+      if (config.status !== "Open") return reply.code(409).send({ error: "round_must_be_open_to_close" });
 
       const updated = updateRoundConfigStatus({
         study_id: studyId,

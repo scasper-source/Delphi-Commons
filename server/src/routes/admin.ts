@@ -3,6 +3,7 @@ import { requireRole, getActor } from "../middleware/auth.js";
 import { listAuditEvents, verifyAuditIntegrity, writeAuditEvent } from "../core/audit.js";
 import { getStorageStatus, listAppliedMigrations } from "../core/database.js";
 import { inspectDataIntegrity } from "../core/dataIntegrity.js";
+import { createBackup, listBackups, restoreBackup } from "../core/backup.js";
 import { listExportManifests } from "../stores/exportManifestStore.js";
 import { createUser, listUsers, revokeUserSessions, sanitizeUser, updateUser } from "../auth/userStore.js";
 import type { AuthRole } from "../auth/types.js";
@@ -150,6 +151,69 @@ export async function adminRoutes(app: FastifyInstance) {
       return {
         data_integrity: inspectDataIntegrity(),
       };
+    }
+  );
+
+  app.get(
+    "/admin/backups",
+    { preHandler: requireRole(["data_custodian", "privacy_lead", "maintainer", "admin"]) },
+    async (req) => {
+      const actor = getActor(req);
+      await writeAuditEvent({
+        actor,
+        action: "backup.list",
+        object: { type: "system" },
+        details: {},
+      });
+      return { backups: listBackups() };
+    }
+  );
+
+  app.post(
+    "/admin/backups",
+    { preHandler: requireRole(["data_custodian", "privacy_lead", "maintainer", "admin"]) },
+    async (req) => {
+      const actor = getActor(req);
+      const body = (req.body ?? {}) as { reason?: string };
+      const backup = createBackup(body.reason ?? "manual");
+
+      await writeAuditEvent({
+        actor,
+        action: "backup.create",
+        object: { type: "backup", id: backup.backup_id },
+        details: {
+          reason: backup.reason,
+          audit_ok: backup.audit_integrity.ok,
+          data_ok: backup.data_integrity.ok,
+        },
+      });
+
+      return { backup };
+    }
+  );
+
+  app.post(
+    "/admin/backups/:backupId/restore",
+    { preHandler: requireRole(["data_custodian", "maintainer", "admin"]) },
+    async (req, reply) => {
+      const actor = getActor(req);
+      const { backupId } = req.params as { backupId: string };
+
+      try {
+        const backup = restoreBackup(backupId);
+        await writeAuditEvent({
+          actor,
+          action: "backup.restore",
+          object: { type: "backup", id: backupId },
+          details: { restored_at: new Date().toISOString() },
+        });
+        return { backup, audit_integrity: verifyAuditIntegrity(), data_integrity: inspectDataIntegrity() };
+      } catch (error) {
+        if (error instanceof Error && error.message === "backup_not_found") {
+          return reply.code(404).send({ error: "backup_not_found" });
+        }
+        throw error;
+      }
     }
   );
 

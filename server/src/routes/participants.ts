@@ -26,6 +26,44 @@ import {
 import { createResponse, listResponses } from "../stores/responseStore.js";
 import { getRoundConfig } from "../stores/roundConfigStore.js";
 import { getItem, listItems } from "../stores/itemStore.js";
+import {
+  participantInvitationToken,
+} from "../core/security.js";
+import {
+  createDeletionRequest,
+  listDeletionRequests,
+  updateDeletionRequest,
+  type DeletionRequestStatus,
+} from "../stores/deletionRequestStore.js";
+
+function isDeletionRequestStatus(value: unknown): value is DeletionRequestStatus {
+  return (
+    value === "Requested" ||
+    value === "UnderReview" ||
+    value === "Approved" ||
+    value === "Rejected" ||
+    value === "Completed"
+  );
+}
+
+const INVITATION_TOKEN_PATTERN = /^[A-Za-z0-9_-]{32,128}$/;
+
+function invitationFromRequest(req: Parameters<typeof participantInvitationToken>[0]):
+  | { ok: true; invitation: NonNullable<ReturnType<typeof getInvitationByToken>> }
+  | { ok: false; statusCode: number; error: string } {
+  const token = participantInvitationToken(req);
+  if (!token || !INVITATION_TOKEN_PATTERN.test(token)) {
+    return { ok: false, statusCode: 400, error: "valid_participant_invitation_token_required" };
+  }
+
+  const invitation = getInvitationByToken(token);
+  if (!invitation) return { ok: false, statusCode: 404, error: "participant_invitation_not_found" };
+  return { ok: true, invitation };
+}
+
+function deprecatedTokenUrl(reply: any) {
+  return reply.code(410).send({ error: "participant_invitation_token_url_deprecated" });
+}
 
 export async function participantsRoutes(app: FastifyInstance) {
   const allowMasterList = requireRole(["owner", "methods_steward"]);
@@ -177,7 +215,7 @@ export async function participantsRoutes(app: FastifyInstance) {
         created_by_user_id: actor.userId,
         ...(body.expires_at ? { expires_at: body.expires_at } : {}),
       });
-      const invitationUrl = `${getFrontendOrigin(req)}/?invite=${encodeURIComponent(token)}`;
+      const invitationUrl = `${getFrontendOrigin(req)}/#invite=${encodeURIComponent(token)}`;
 
       await writeAuditEvent({
         actor,
@@ -235,6 +273,60 @@ export async function participantsRoutes(app: FastifyInstance) {
     },
   );
 
+  app.get(
+    "/studies/:studyId/versions/:versionId/deletion-requests",
+    { preHandler: allowMasterList },
+    async (req, reply) => {
+      const { studyId, versionId } = req.params as any;
+      const actor = getActor(req);
+      const requests = listDeletionRequests({ study_id: studyId, version_id: versionId });
+
+      await writeAuditEvent({
+        actor,
+        action: "participant.deletion_request.list",
+        object: { type: "study_version", id: `${studyId}:${versionId}` },
+        details: { studyId, versionId, count: requests.length },
+      });
+
+      return reply.send({ deletion_requests: requests });
+    },
+  );
+
+  app.patch(
+    "/studies/:studyId/versions/:versionId/deletion-requests/:requestId",
+    { preHandler: allowMasterList },
+    async (req, reply) => {
+      const { studyId, versionId, requestId } = req.params as any;
+      const actor = getActor(req);
+      const body = (req.body ?? {}) as { status?: unknown; review_note?: string };
+      if (!isDeletionRequestStatus(body.status)) {
+        return reply.code(400).send({ error: "valid_deletion_request_status_required" });
+      }
+      if (body.status !== "UnderReview" && !String(body.review_note ?? "").trim()) {
+        return reply.code(400).send({ error: "review_note_required" });
+      }
+
+      const updated = updateDeletionRequest({
+        deletion_request_id: requestId,
+        reviewed_by_user_id: actor.userId,
+        status: body.status,
+        review_note: body.review_note ?? "",
+      });
+      if (!updated || updated.study_id !== studyId || updated.version_id !== versionId) {
+        return reply.code(404).send({ error: "deletion_request_not_found" });
+      }
+
+      await writeAuditEvent({
+        actor,
+        action: "participant.deletion_request.review",
+        object: { type: "deletion_request", id: requestId },
+        details: { studyId, versionId, status: updated.status },
+      });
+
+      return reply.send({ deletion_request: updated });
+    },
+  );
+
   app.delete(
     "/studies/:studyId/versions/:versionId/participants/:participantId/invitations/:invitationId",
     { preHandler: allowMasterList },
@@ -271,10 +363,10 @@ export async function participantsRoutes(app: FastifyInstance) {
     },
   );
 
-  app.get("/participant/invitations/:token", async (req, reply) => {
-    const { token } = req.params as any;
-    const invitation = getInvitationByToken(String(token));
-    if (!invitation) return reply.code(404).send({ error: "participant_invitation_not_found" });
+  app.get("/participant/invitation", async (req, reply) => {
+    const resolved = invitationFromRequest(req);
+    if (!resolved.ok) return reply.code(resolved.statusCode).send({ error: resolved.error });
+    const { invitation } = resolved;
 
     markInvitationUsed(invitation.invitation_id);
     const study = await getStudy(invitation.study_id);
@@ -309,10 +401,10 @@ export async function participantsRoutes(app: FastifyInstance) {
     });
   });
 
-  app.post("/participant/invitations/:token/consent", async (req, reply) => {
-    const { token } = req.params as any;
-    const invitation = getInvitationByToken(String(token));
-    if (!invitation) return reply.code(404).send({ error: "participant_invitation_not_found" });
+  app.post("/participant/invitation/consent", async (req, reply) => {
+    const resolved = invitationFromRequest(req);
+    if (!resolved.ok) return reply.code(resolved.statusCode).send({ error: resolved.error });
+    const { invitation } = resolved;
 
     const active = getActiveConsentVersion({ study_id: invitation.study_id, version_id: invitation.version_id });
     if (!active) return reply.code(400).send({ error: "active_consent_version_not_found" });
@@ -334,10 +426,10 @@ export async function participantsRoutes(app: FastifyInstance) {
     return reply.code(201).send({ consent_record: rec });
   });
 
-  app.post("/participant/invitations/:token/withdraw", async (req, reply) => {
-    const { token } = req.params as any;
-    const invitation = getInvitationByToken(String(token));
-    if (!invitation) return reply.code(404).send({ error: "participant_invitation_not_found" });
+  app.post("/participant/invitation/withdraw", async (req, reply) => {
+    const resolved = invitationFromRequest(req);
+    if (!resolved.ok) return reply.code(resolved.statusCode).send({ error: resolved.error });
+    const { invitation } = resolved;
 
     const rec = withdrawConsent({
       participant_id: invitation.participant_id,
@@ -356,11 +448,37 @@ export async function participantsRoutes(app: FastifyInstance) {
     return reply.send({ consent_record: rec });
   });
 
-  app.post("/participant/invitations/:token/responses", async (req, reply) => {
-    const { token } = req.params as any;
+  app.post("/participant/invitation/deletion-request", async (req, reply) => {
+    const body = (req.body ?? {}) as { request_text?: string };
+    const resolved = invitationFromRequest(req);
+    if (!resolved.ok) return reply.code(resolved.statusCode).send({ error: resolved.error });
+    const { invitation } = resolved;
+
+    const request = createDeletionRequest({
+      study_id: invitation.study_id,
+      version_id: invitation.version_id,
+      participant_id: invitation.participant_id,
+      requested_by: "participant",
+      request_text:
+        body.request_text?.trim() ||
+        "Participant requested review of retention, withdrawal, deletion, or restricted-use options.",
+    });
+
+    await writeAuditEvent({
+      actor: { userId: invitation.participant_id, role: "participant", systemRoles: ["participant"], authSource: "invitation" },
+      action: "participant.deletion_request.create",
+      object: { type: "deletion_request", id: request.deletion_request_id },
+      details: { studyId: invitation.study_id, versionId: invitation.version_id },
+    });
+
+    return reply.code(201).send({ deletion_request: request });
+  });
+
+  app.post("/participant/invitation/responses", async (req, reply) => {
     const body = (req.body ?? {}) as Record<string, unknown>;
-    const invitation = getInvitationByToken(String(token));
-    if (!invitation) return reply.code(404).send({ error: "participant_invitation_not_found" });
+    const resolved = invitationFromRequest(req);
+    if (!resolved.ok) return reply.code(resolved.statusCode).send({ error: resolved.error });
+    const { invitation } = resolved;
 
     const roundOneConfig = getRoundConfig({ study_id: invitation.study_id, version_id: invitation.version_id, round_number: 1 });
     if (!roundOneConfig || roundOneConfig.status !== "Open") return reply.code(409).send({ error: "round1_not_open" });
@@ -370,6 +488,7 @@ export async function participantsRoutes(app: FastifyInstance) {
 
     const text = typeof body.text === "string" ? body.text.trim() : "";
     if (!text) return reply.code(400).send({ error: "response_text_required" });
+    if (text.length > 10000) return reply.code(400).send({ error: "response_text_too_long" });
 
     const rec = createResponse({
       study_id: invitation.study_id,
@@ -388,10 +507,11 @@ export async function participantsRoutes(app: FastifyInstance) {
     return reply.code(201).send({ response_id: rec.response_id });
   });
 
-  app.get("/participant/invitations/:token/rounds/:roundNumber/items", async (req, reply) => {
-    const { token, roundNumber: rawRoundNumber } = req.params as any;
-    const invitation = getInvitationByToken(String(token));
-    if (!invitation) return reply.code(404).send({ error: "participant_invitation_not_found" });
+  app.get("/participant/invitation/rounds/:roundNumber/items", async (req, reply) => {
+    const { roundNumber: rawRoundNumber } = req.params as any;
+    const resolved = invitationFromRequest(req);
+    if (!resolved.ok) return reply.code(resolved.statusCode).send({ error: resolved.error });
+    const { invitation } = resolved;
     const roundNumber = Number(rawRoundNumber);
     if (!Number.isInteger(roundNumber) || roundNumber < 2) return reply.code(400).send({ error: "rating_round_must_be_gte_2" });
 
@@ -419,11 +539,12 @@ export async function participantsRoutes(app: FastifyInstance) {
     return reply.send({ items });
   });
 
-  app.post("/participant/invitations/:token/rounds/:roundNumber/ratings", async (req, reply) => {
-    const { token, roundNumber: rawRoundNumber } = req.params as any;
+  app.post("/participant/invitation/rounds/:roundNumber/ratings", async (req, reply) => {
+    const { roundNumber: rawRoundNumber } = req.params as any;
     const body = (req.body ?? {}) as Record<string, unknown>;
-    const invitation = getInvitationByToken(String(token));
-    if (!invitation) return reply.code(404).send({ error: "participant_invitation_not_found" });
+    const resolved = invitationFromRequest(req);
+    if (!resolved.ok) return reply.code(resolved.statusCode).send({ error: resolved.error });
+    const { invitation } = resolved;
     const roundNumber = Number(rawRoundNumber);
     if (!Number.isInteger(roundNumber) || roundNumber < 2) return reply.code(400).send({ error: "rating_round_must_be_gte_2" });
 
@@ -459,4 +580,12 @@ export async function participantsRoutes(app: FastifyInstance) {
 
     return reply.code(201).send({ response_id: rec.response_id });
   });
+
+  app.get("/participant/invitations/:token", async (_req, reply) => deprecatedTokenUrl(reply));
+  app.post("/participant/invitations/:token/consent", async (_req, reply) => deprecatedTokenUrl(reply));
+  app.post("/participant/invitations/:token/withdraw", async (_req, reply) => deprecatedTokenUrl(reply));
+  app.post("/participant/invitations/:token/deletion-request", async (_req, reply) => deprecatedTokenUrl(reply));
+  app.post("/participant/invitations/:token/responses", async (_req, reply) => deprecatedTokenUrl(reply));
+  app.get("/participant/invitations/:token/rounds/:roundNumber/items", async (_req, reply) => deprecatedTokenUrl(reply));
+  app.post("/participant/invitations/:token/rounds/:roundNumber/ratings", async (_req, reply) => deprecatedTokenUrl(reply));
 }

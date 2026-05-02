@@ -53,4 +53,13 @@ export const outputModelRegistry: OutputModelDefinition[] = [
     redactionRules: ["Anonymized excerpts only", "No identity-response mapping"],
     auditAction: "provenance_bundle.export",
   },
+  {
+    id: "complete-archive",
+    label: "Complete Locked Archive",
+    requiredRoles: ["data_custodian", "security_privacy_lead"],
+    requiredSignoffs: ["security_privacy_lead", "data_custodian"],
+    sections: ["Study version", "Anonymized dataset", "Items and provenance", "Audit summary", "Limitations"],
+    redactionRules: ["No identity-response mapping", "Participant identity excluded unless separately authorized"],
+    auditAction: "complete_archive.export",
+  },
 ];

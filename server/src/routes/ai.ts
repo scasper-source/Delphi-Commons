@@ -27,6 +27,7 @@ import { requireRole, getActor } from "../middleware/auth.js";
 import { writeAuditEvent } from "../core/audit.js";
 import type { Study, StudyVersion } from "../studies/types.js";
 import { recordExportManifest } from "../stores/exportManifestStore.js";
+import { getCurationGate, getPublishedTraceableItemsForRound } from "../core/roundLifecycle.js";
 
 type ItemInput = {
   text: string;
@@ -1171,6 +1172,31 @@ export async function aiRoutes(app: FastifyInstance) {
         });
       }
 
+      const curationGate = getCurationGate({
+        study_id: studyId,
+        version_id: versionId,
+        target_round_number: targetRoundNumber,
+      });
+      if (!curationGate.ok) {
+        await writeAuditEvent({
+          actor,
+          action: "ai.synthesis_blocked_lifecycle_gate",
+          object: { type: "study_version", id: `${studyId}:${versionId}` },
+          details: {
+            studyId,
+            versionId,
+            target_round_number: targetRoundNumber,
+            error: curationGate.error,
+            ...curationGate.details,
+          },
+        });
+
+        return reply.code(curationGate.statusCode).send({
+          error: curationGate.error,
+          ...curationGate.details,
+        });
+      }
+
       const responses = listResponses({ study_id: studyId, version_id: versionId });
       const synthesis =
         targetRoundNumber === 2
@@ -1179,7 +1205,11 @@ export async function aiRoutes(app: FastifyInstance) {
               target_round_number: targetRoundNumber,
             })
           : buildCarryForwardSynthesisOutput({
-              items: listItems({ study_id: studyId, version_id: versionId }),
+              items: getPublishedTraceableItemsForRound({
+                study_id: studyId,
+                version_id: versionId,
+                round_number: targetRoundNumber - 1,
+              }),
               responses,
               source_round_number: targetRoundNumber - 1,
               target_round_number: targetRoundNumber,
@@ -1655,6 +1685,33 @@ export async function aiRoutes(app: FastifyInstance) {
         });
       }
 
+      for (const itemInput of itemInputs) {
+        const curationGate = getCurationGate({
+          study_id: studyId,
+          version_id: versionId,
+          target_round_number: itemInput.round_number,
+        });
+        if (!curationGate.ok) {
+          await writeAuditEvent({
+            actor,
+            action: "ai.materialize_items_blocked_lifecycle_gate",
+            object: { type: "ai_suggestion", id: suggestionId },
+            details: {
+              studyId,
+              versionId,
+              target_round_number: itemInput.round_number,
+              error: curationGate.error,
+              ...curationGate.details,
+            },
+          });
+
+          return reply.code(curationGate.statusCode).send({
+            error: curationGate.error,
+            ...curationGate.details,
+          });
+        }
+      }
+
       const items: ItemRecord[] = itemInputs.map((item) =>
         createItem({
           study_id: studyId,
@@ -1760,6 +1817,31 @@ export async function aiRoutes(app: FastifyInstance) {
         const item = getItem(change.item_id);
         if (!item || item.study_id !== studyId || item.version_id !== versionId) {
           return reply.code(404).send({ error: "item_not_found", item_id: change.item_id });
+        }
+
+        const curationGate = getCurationGate({
+          study_id: studyId,
+          version_id: versionId,
+          target_round_number: item.round_number,
+        });
+        if (!curationGate.ok) {
+          await writeAuditEvent({
+            actor,
+            action: "ai.wording_apply_blocked_lifecycle_gate",
+            object: { type: "item", id: change.item_id },
+            details: {
+              studyId,
+              versionId,
+              target_round_number: item.round_number,
+              error: curationGate.error,
+              ...curationGate.details,
+            },
+          });
+
+          return reply.code(curationGate.statusCode).send({
+            error: curationGate.error,
+            ...curationGate.details,
+          });
         }
 
         const updated = applyAIWordingRevision({

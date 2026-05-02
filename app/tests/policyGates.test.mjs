@@ -1,5 +1,18 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import fs from "node:fs";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+
+const appRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+
+function sourceFiles(dir) {
+  return fs.readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
+    const full = path.join(dir, entry.name);
+    if (entry.isDirectory()) return sourceFiles(full);
+    return /\.(tsx?|jsx?)$/.test(entry.name) ? [full] : [];
+  });
+}
 
 const forbiddenParticipantTerms = [
   "truth",
@@ -111,4 +124,15 @@ test("cannot access identity mapping without proper role", () => {
   assert.equal(canAccessIdentityMap("panelist"), false);
   assert.equal(canAccessIdentityMap("data_custodian"), true);
   assert.equal(canAccessIdentityMap("security_privacy_lead"), true);
+});
+
+test("frontend does not use unsafe HTML sinks or browser storage for sensitive data", () => {
+  const files = sourceFiles(path.join(appRoot, "src"));
+  for (const file of files) {
+    const content = fs.readFileSync(file, "utf8");
+    assert.equal(content.includes("dangerouslySetInnerHTML"), false, `${file} uses dangerouslySetInnerHTML`);
+    assert.equal(content.includes(".innerHTML"), false, `${file} writes innerHTML`);
+    assert.equal(content.includes("localStorage"), false, `${file} uses localStorage`);
+    assert.equal(content.includes("sessionStorage"), false, `${file} uses sessionStorage`);
+  }
 });

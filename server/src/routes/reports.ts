@@ -2,11 +2,17 @@ import type { FastifyInstance } from "fastify";
 import { listItems, type ItemRecord } from "../stores/itemStore.js";
 import { listResponses, type ResponseRecord } from "../stores/responseStore.js";
 import { getStudy, getStudyVersion, listSignoffs } from "../studies/store.js";
+import { listConsentVersions } from "../stores/consentStore.js";
+import { listRoundConfigs } from "../stores/roundConfigStore.js";
+import { listAISuggestions } from "../stores/aiSuggestionStore.js";
+import { listMergeActions, listSplitActions } from "../stores/mergeActionStore.js";
 import { sha256Json } from "../studies/hash.js";
 import { requireRole, getActor } from "../middleware/auth.js";
-import { writeAuditEvent } from "../core/audit.js";
+import { listAuditEvents, verifyAuditIntegrity, writeAuditEvent } from "../core/audit.js";
 import {
   createExportPackage,
+  type ExportPackageType,
+  listExportManifests,
   listExportPackageFiles,
   listExportPackageReviews,
   listExportPackages,
@@ -200,18 +206,24 @@ function evaluateConsensus(rule: unknown, ratings: number[]) {
     const agreementCount = ratings.filter((rating) => rating >= agreementMinRating).length;
     const agreementPercent =
       ratings.length > 0 ? Number(((agreementCount / ratings.length) * 100).toFixed(2)) : null;
+    const nearConsensusFloor = Math.max(0, threshold - 15);
 
     return {
       status:
         agreementPercent !== null && agreementPercent >= threshold
           ? "consensus"
+          : agreementPercent !== null && agreementPercent >= nearConsensusFloor
+            ? "near_consensus"
           : "non_consensus",
       method: "percent_agreement",
       threshold_percent: threshold,
       agreement_min_rating: agreementMinRating,
       agreement_count: agreementCount,
       agreement_percent: agreementPercent,
-      reason: null,
+      reason:
+        agreementPercent !== null && agreementPercent < threshold && agreementPercent >= nearConsensusFloor
+          ? "near_predefined_consensus_threshold"
+          : null,
     };
   }
 
@@ -379,7 +391,7 @@ function finalItemResultsRows(input: {
         ? "Non-consensus ratings are retained as meaningful study findings."
         : "Distinct lower-frequency views should be reviewed in the provenance bundle where available.",
       minority_view_retained: consensusStatus === "non_consensus",
-      near_consensus_flag: false,
+      near_consensus_flag: consensusStatus === "near_consensus",
       non_consensus_flag: consensusStatus === "non_consensus",
       included_in_final_report: true,
       exclusion_reason: "",
@@ -390,6 +402,271 @@ function finalItemResultsRows(input: {
 
 function finalItemResultsCsv(input: Parameters<typeof finalItemResultsRows>[0]) {
   return toCsv(finalItemResultsRows(input));
+}
+
+function exportManifestFile(input: {
+  export_type: ExportPackageType;
+  studyId: string;
+  versionId: string;
+  actorRole: string;
+  dataCutoffAt: string;
+  containsIdentifiableData: boolean;
+  anonymizationLevel: string;
+  redactionStatus: string;
+  recordCounts: Record<string, number>;
+}) {
+  return JSON.stringify({
+    schema_name: "edelphi_export_manifest",
+    schema_version: "1.0.0",
+    export_type: input.export_type,
+    study_id: input.studyId,
+    study_version_id: input.versionId,
+    created_by_role: input.actorRole,
+    data_cutoff_at: input.dataCutoffAt,
+    contains_identifiable_data: input.containsIdentifiableData,
+    anonymization_level: input.anonymizationLevel,
+    redaction_status: input.redactionStatus,
+    review_status: "pending_review",
+    limitations_text_version_id: "charter-required-limitations-v1",
+    required_disclosures: {
+      consensus_not_correctness_statement_included: true,
+      non_consensus_items_included: true,
+      panel_not_random_sample_disclosure_included: true,
+      ai_disclosure_included: true,
+    },
+    record_counts: input.recordCounts,
+  }, null, 2);
+}
+
+function extractOpenResponseText(responseJson: unknown): string {
+  if (typeof responseJson === "string") return responseJson;
+  if (!responseJson || typeof responseJson !== "object") return JSON.stringify(responseJson ?? {});
+  const rec = responseJson as Record<string, unknown>;
+  for (const key of ["text", "response_text", "open_text", "answer", "comment", "comments", "rationale"]) {
+    const value = rec[key];
+    if (typeof value === "string" && value.trim()) return value.trim();
+  }
+  return JSON.stringify(responseJson);
+}
+
+function pseudonymMap(responses: ResponseRecord[]): Map<string, string> {
+  const ids = Array.from(new Set(responses.map((response) => response.participant_id))).sort();
+  return new Map(ids.map((id, index) => [id, `P${String(index + 1).padStart(3, "0")}`]));
+}
+
+function buildExportDataset(input: {
+  studyId: string;
+  versionId: string;
+  items: ItemRecord[];
+  responses: ResponseRecord[];
+  finalRoundNumber: number | null;
+}) {
+  const participantCodes = pseudonymMap(input.responses);
+  const ratingRounds = [2, 3, 4];
+  const responseRows = input.responses.flatMap((response) => {
+    if (ratingRounds.some((round) => isRatingRoundPayload(response.response_json, round))) return [];
+    return [{
+      response_id: response.response_id,
+      study_id: response.study_id,
+      round_number: 1,
+      participant_pseudonym: participantCodes.get(response.participant_id) ?? "P000",
+      item_id: "",
+      response_text_redacted: extractOpenResponseText(response.response_json),
+      submitted_at_shifted: "",
+      word_count: extractOpenResponseText(response.response_json).split(/\s+/).filter(Boolean).length,
+      redaction_applied: false,
+      redaction_level: "none",
+      withdrawal_status: "active",
+      included_in_analysis: true,
+    }];
+  });
+
+  const ratingRows = input.responses.flatMap((response) => {
+    const ratingPayload = ratingRounds.flatMap((round) =>
+      isRatingRoundPayload(response.response_json, round) ? [response.response_json] : []
+    )[0];
+    if (!ratingPayload) return [];
+    return [{
+      rating_id: response.response_id,
+      study_id: response.study_id,
+      round_number: ratingPayload.round_number,
+      participant_pseudonym: participantCodes.get(response.participant_id) ?? "P000",
+      item_id: ratingPayload.item_id,
+      item_version_id: ratingPayload.item_id,
+      scale_id: "default-1-9-verbal",
+      rating_value: ratingPayload.rating,
+      rating_label: ratingLabel(ratingPayload.rating),
+      prior_rating_value: "",
+      changed_from_prior: "",
+      rationale_text_redacted: "",
+      submitted_at_shifted: "",
+      included_in_analysis: true,
+    }];
+  });
+
+  const itemRows = input.items.map((item) => {
+    const sourceResponseCount = item.ai_provenance_links.filter((link) => link.source_type === "response").length;
+    return {
+      item_id: item.item_id,
+      item_version_id: item.item_id,
+      item_text: item.text,
+      item_origin: item.created_from === "ai" ? "ai_suggested" : item.provenance_type === "LiteratureDerived" ? "literature_derived" : "panel_derived",
+      source_type: item.ai_provenance_links.at(0)?.source_type ?? "other",
+      created_round_number: item.round_number,
+      first_shown_round_number: item.status === "Published" ? item.round_number : "",
+      current_status: item.status,
+      majority_supported: false,
+      minority_or_unique: sourceResponseCount <= 1,
+      near_consensus: false,
+      non_consensus: false,
+      human_finalized: item.status === "Published",
+      human_finalized_by_role: item.status === "Published" ? "study_owner_or_methods_steward" : "",
+      ai_assisted: item.created_from === "ai" || item.ai_assisted_revisions.length > 0,
+      provenance_available: item.ai_provenance_links.length > 0,
+    };
+  });
+
+  const redactionRows = [{
+    redaction_id: "redaction-profile-default",
+    source_record_type: "package",
+    source_record_id: input.versionId,
+    redaction_type: "name_email_identity_response_mapping",
+    redaction_method: "system",
+    replacement_token: "participant_pseudonym",
+    reviewed_by_human: false,
+    reviewed_by_role: "",
+    redacted_at: new Date().toISOString(),
+    notes: "Direct participant identity fields and identity-response mapping are excluded from this package.",
+  }];
+
+  return { responseRows, ratingRows, itemRows, redactionRows };
+}
+
+function ratingLabel(value: number): string {
+  if (value >= 8) return "Strong agreement";
+  if (value >= 6) return "Moderate agreement";
+  if (value >= 4) return "Uncertain or mixed judgment";
+  if (value >= 2) return "Moderate disagreement";
+  return "Strong disagreement";
+}
+
+function provenanceEdges(input: {
+  studyId: string;
+  items: ItemRecord[];
+}) {
+  const linkEdges = input.items.flatMap((item) =>
+    item.ai_provenance_links.map((link, index) => ({
+      edge_id: `${item.item_id}:source:${index + 1}`,
+      study_id: input.studyId,
+      source_node_id: link.source_id,
+      source_node_type: link.source_type,
+      target_node_id: item.item_id,
+      target_node_type: item.status === "Published" ? "final_item" : "candidate_item",
+      relationship_type: link.source_type === "response" ? "contributed_to" : "carried_forward_to",
+      confidence_or_weight: "",
+      created_by_type: item.created_from === "ai" ? "ai" : "human",
+      created_by_user_role: "",
+      ai_operation_id: item.source_ai_suggestion_id ?? "",
+      human_review_status: item.status === "Rejected" ? "rejected" : item.status === "Published" ? "accepted" : "pending",
+      rationale: item.ai_provenance_rationale ?? "Source link retained for traceability.",
+      created_at: item.created_at,
+    }))
+  );
+
+  const revisionEdges = input.items.flatMap((item) =>
+    item.ai_assisted_revisions.map((revision, index) => ({
+      edge_id: `${item.item_id}:revision:${index + 1}`,
+      study_id: input.studyId,
+      source_node_id: revision.suggestion_id,
+      source_node_type: "ai_suggestion",
+      target_node_id: item.item_id,
+      target_node_type: "item_version",
+      relationship_type: "edited_into",
+      confidence_or_weight: "",
+      created_by_type: "human",
+      created_by_user_role: "",
+      ai_operation_id: revision.suggestion_id,
+      human_review_status: "edited",
+      rationale: revision.rationale,
+      created_at: revision.applied_at,
+    }))
+  );
+
+  return [...linkEdges, ...revisionEdges];
+}
+
+function transformationRows(input: {
+  items: ItemRecord[];
+  merges: ReturnType<typeof listMergeActions>;
+  splits: ReturnType<typeof listSplitActions>;
+}) {
+  const itemRows = input.items.map((item) => ({
+    transformation_id: `${item.item_id}:current`,
+    item_id: item.item_id,
+    from_record_id: item.ai_provenance_links.map((link) => link.source_id).join(";"),
+    from_text: item.ai_provenance_links.map((link) => link.excerpt ?? "").filter(Boolean).join(" | "),
+    to_record_id: item.item_id,
+    to_text: item.text,
+    transformation_type: item.status === "Rejected" ? "reject" : item.status === "Published" ? "finalize" : "draft",
+    reason_code: item.ai_provenance_rationale ? "human_judgment" : "other",
+    rationale_text: item.ai_provenance_rationale ?? "Candidate item retained with source links.",
+    ai_assisted: item.created_from === "ai" || item.ai_assisted_revisions.length > 0,
+    human_approved: item.status === "Published",
+    approved_by_role: item.status === "Published" ? "study_owner_or_methods_steward" : "",
+    approved_at: item.status === "Published" ? item.created_at : "",
+  }));
+
+  const revisionRows = input.items.flatMap((item) =>
+    item.ai_assisted_revisions.map((revision, index) => ({
+      transformation_id: `${item.item_id}:ai_revision:${index + 1}`,
+      item_id: item.item_id,
+      from_record_id: revision.suggestion_id,
+      from_text: revision.previous_text,
+      to_record_id: item.item_id,
+      to_text: revision.revised_text,
+      transformation_type: "edit",
+      reason_code: "human_judgment",
+      rationale_text: revision.rationale,
+      ai_assisted: true,
+      human_approved: true,
+      approved_by_role: "study_owner_or_methods_steward",
+      approved_at: revision.applied_at,
+    }))
+  );
+
+  const mergeRows = input.merges.map((merge) => ({
+    transformation_id: merge.merge_id,
+    item_id: merge.to_item_id,
+    from_record_id: merge.from_item_ids.join(";"),
+    from_text: "",
+    to_record_id: merge.to_item_id,
+    to_text: "",
+    transformation_type: "merge",
+    reason_code: "human_judgment",
+    rationale_text: merge.rationale,
+    ai_assisted: false,
+    human_approved: true,
+    approved_by_role: "study_owner_or_methods_steward",
+    approved_at: merge.created_at,
+  }));
+
+  const splitRows = input.splits.map((split) => ({
+    transformation_id: split.split_id,
+    item_id: split.source_item_id,
+    from_record_id: split.source_item_id,
+    from_text: "",
+    to_record_id: split.new_item_ids.join(";"),
+    to_text: "",
+    transformation_type: "split",
+    reason_code: "human_judgment",
+    rationale_text: split.rationale,
+    ai_assisted: false,
+    human_approved: true,
+    approved_by_role: "study_owner_or_methods_steward",
+    approved_at: split.created_at,
+  }));
+
+  return [...itemRows, ...revisionRows, ...mergeRows, ...splitRows];
 }
 
 export async function reportsRoutes(app: FastifyInstance) {
@@ -466,6 +743,7 @@ export async function reportsRoutes(app: FastifyInstance) {
       );
 
       const consensusCount = itemReports.filter((item) => item.consensus.status === "consensus").length;
+      const nearConsensusCount = itemReports.filter((item) => item.consensus.status === "near_consensus").length;
       const nonConsensusCount = itemReports.filter(
         (item) => item.consensus.status === "non_consensus"
       ).length;
@@ -492,6 +770,7 @@ export async function reportsRoutes(app: FastifyInstance) {
         summary: {
           published_item_count: publishedRoundItems.length,
           consensus_item_count: consensusCount,
+          near_consensus_item_count: nearConsensusCount,
           non_consensus_item_count: nonConsensusCount,
           undetermined_item_count: undeterminedCount,
           round_submission_count: roundResponses.length,
@@ -575,6 +854,7 @@ export async function reportsRoutes(app: FastifyInstance) {
       );
 
       const consensusCount = itemReports.filter((item) => item.consensus.status === "consensus").length;
+      const nearConsensusCount = itemReports.filter((item) => item.consensus.status === "near_consensus").length;
       const nonConsensusCount = itemReports.filter(
         (item) => item.consensus.status === "non_consensus"
       ).length;
@@ -646,6 +926,7 @@ export async function reportsRoutes(app: FastifyInstance) {
           terminal_round_number: studyVersion.terminal_round_number,
           published_item_count: publishedRoundItems.length,
           consensus_item_count: consensusCount,
+          near_consensus_item_count: nearConsensusCount,
           non_consensus_item_count: nonConsensusCount,
           undetermined_item_count: undeterminedCount,
           round_submission_count: roundResponses.length,
@@ -740,6 +1021,7 @@ export async function reportsRoutes(app: FastifyInstance) {
       );
 
       const consensusCount = itemReports.filter((item) => item.consensus.status === "consensus").length;
+      const nearConsensusCount = itemReports.filter((item) => item.consensus.status === "near_consensus").length;
       const nonConsensusCount = itemReports.filter(
         (item) => item.consensus.status === "non_consensus"
       ).length;
@@ -830,6 +1112,7 @@ export async function reportsRoutes(app: FastifyInstance) {
           final_round_number: finalRoundNumber,
           published_final_round_item_count: publishedFinalRoundItems.length,
           consensus_item_count: consensusCount,
+          near_consensus_item_count: nearConsensusCount,
           non_consensus_item_count: nonConsensusCount,
           undetermined_item_count: undeterminedCount,
           round1_response_count: round1Responses.length,
@@ -991,6 +1274,318 @@ export async function reportsRoutes(app: FastifyInstance) {
         })),
       });
     }
+  );
+
+  app.post(
+    "/studies/:studyId/versions/:versionId/export-packages",
+    { preHandler: allowExportGovernance },
+    async (req, reply) => {
+      const { studyId, versionId } = getStudyAndVersion(req.params);
+      const actor = getActor(req);
+      const body = (req.body ?? {}) as Record<string, unknown>;
+      const exportType = body.export_type as ExportPackageType;
+
+      if (
+        exportType !== "final-delphi-report" &&
+        exportType !== "irb-pack" &&
+        exportType !== "anonymized-response-dataset" &&
+        exportType !== "audit-package" &&
+        exportType !== "provenance-bundle" &&
+        exportType !== "complete-archive"
+      ) {
+        return reply.code(400).send({ error: "valid_export_type_required" });
+      }
+
+      const study = await getStudy(studyId);
+      if (!study) return reply.code(404).send({ error: "study_not_found" });
+
+      const studyVersion = await getStudyVersion(versionId);
+      if (!studyVersion || studyVersion.study_id !== studyId) {
+        return reply.code(404).send({ error: "study_version_not_found" });
+      }
+
+      const signoffs = (await listSignoffs(versionId)).sort((a, b) =>
+        a.required_role.localeCompare(b.required_role)
+      );
+      const rounds = listRoundConfigs({ study_id: studyId, version_id: versionId });
+      const items = sortItems(listItems({ study_id: studyId, version_id: versionId }));
+      const responses = sortResponses(listResponses({ study_id: studyId, version_id: versionId }));
+      const suggestions = listAISuggestions({ study_id: studyId, version_id: versionId });
+      const merges = listMergeActions({ study_id: studyId, version_id: versionId });
+      const splits = listSplitActions({ study_id: studyId, version_id: versionId });
+      const consentVersions = listConsentVersions({ study_id: studyId, version_id: versionId });
+      const exportManifests = listExportManifests({ study_id: studyId, version_id: versionId });
+      const finalRoundNumber = studyVersion.terminal_round_number;
+      const finalRoundItems = finalRoundNumber === null
+        ? []
+        : items.filter((item) => item.round_number === finalRoundNumber && item.status === "Published");
+      const itemReports = finalRoundNumber === null
+        ? []
+        : buildRoundItemReports(finalRoundItems, responses, finalRoundNumber, studyVersion.consensus_rule_json);
+      const consensusCount = itemReports.filter((item) => item.consensus.status === "consensus").length;
+      const nearConsensusCount = itemReports.filter((item) => item.consensus.status === "near_consensus").length;
+      const nonConsensusCount = itemReports.filter((item) => item.consensus.status === "non_consensus").length;
+      const limitationsMarkdown = requiredLimitationsMarkdown();
+      const datasetHash = sha256Json({ study, studyVersion, signoffs, rounds, items, responses });
+      const dataCutoffAt = [
+        ...responses.map((response) => response.created_at),
+        ...items.map((item) => item.created_at),
+        ...rounds.map((round) => round.updated_at),
+        ...suggestions.map((suggestion) => suggestion.created_at),
+      ].sort().at(-1) ?? new Date().toISOString();
+      const dataset = buildExportDataset({ studyId, versionId, items, responses, finalRoundNumber });
+      const edgeRows = provenanceEdges({ studyId, items });
+      const transformRows = transformationRows({ items, merges, splits });
+      const aiRows = suggestions.map((suggestion) => ({
+        ai_operation_id: suggestion.suggestion_id,
+        study_id: suggestion.study_id,
+        feature_invoked: suggestion.feature,
+        operation_timestamp: suggestion.created_at,
+        invoked_by_user_id: suggestion.created_by_user_id,
+        invoked_by_role: suggestion.created_by_role,
+        model_identifier: suggestion.model_id,
+        prompt_template_version_id: suggestion.prompt_template_version,
+        input_scope_ids: suggestion.input_scope_ids.join(";"),
+        direct_identifiers_included: false,
+        external_ai_connector_used: false,
+        ai_output_hash: suggestion.output_hash,
+        human_action: suggestion.decision,
+        final_content_version_id: suggestion.resulting_object_ids.join(";"),
+        reviewed_by_user_id: suggestion.decided_by_user_id ?? "",
+        reviewed_by_role: suggestion.decided_by_role ?? "",
+        reviewed_at: suggestion.decided_at ?? "",
+      }));
+      const relevantAuditEvents = listAuditEvents().filter((event) => {
+        const details = event.details ?? {};
+        return (
+          details.studyId === studyId ||
+          details.study_id === studyId ||
+          details.versionId === versionId ||
+          details.version_id === versionId ||
+          event.object?.id === studyId ||
+          event.object?.id === versionId ||
+          event.object?.id === `${studyId}:${versionId}`
+        );
+      });
+      const auditRows = relevantAuditEvents.map((event) => ({
+        audit_event_id: event.id,
+        study_id: studyId,
+        event_timestamp: event.ts,
+        actor_user_id: event.actor.userId,
+        actor_role: event.actor.role,
+        event_category: event.action.split(".")[0],
+        event_type: event.action,
+        target_record_type: event.object?.type ?? "",
+        target_record_id: event.object?.id ?? "",
+        action_summary: event.action,
+        integrity_hash: event.eventHash ?? "",
+        previous_event_hash: event.previousHash ?? "",
+        export_included: true,
+      }));
+
+      const itemResultRows = finalRoundNumber === null
+        ? []
+        : finalItemResultsRows({
+            studyId,
+            versionId,
+            finalRoundNumber,
+            itemReports,
+            publishedItems: finalRoundItems,
+            nInvited: new Set(responses.map((response) => response.participant_id)).size,
+            consensusThreshold:
+              itemReports.find((item) => item.consensus.threshold_percent !== null)?.consensus.threshold_percent ?? null,
+          });
+
+      const recordCounts = {
+        items: items.length,
+        responses: responses.length,
+        ratings: dataset.ratingRows.length,
+        audit_events: auditRows.length,
+        provenance_edges: edgeRows.length,
+        ai_operations: aiRows.length,
+      };
+
+      const manifestContent = exportManifestFile({
+        export_type: exportType,
+        studyId,
+        versionId,
+        actorRole: actor.role,
+        dataCutoffAt,
+        containsIdentifiableData: false,
+        anonymizationLevel: exportType === "final-delphi-report" ? "aggregated_only" : "anonymized",
+        redactionStatus: "direct identifiers and identity-response mapping excluded",
+        recordCounts,
+      });
+
+      const baseFiles = [{
+        path: `${exportType}/export_manifest.json`,
+        content: manifestContent,
+        format: ".json" as const,
+        record_count: null,
+        contains_identifiable_data: false,
+        redaction_profile: { manifest: "package-level metadata" },
+      }];
+
+      const filesByType: Record<ExportPackageType, Parameters<typeof createExportPackage>[0]["files"]> = {
+        "final-delphi-report": [
+          ...baseFiles,
+          {
+            path: "final-delphi-report/final_delphi_report.json",
+            content: JSON.stringify({
+              study,
+              study_version: studyVersion,
+              summary: {
+                consensus_item_count: consensusCount,
+                near_consensus_item_count: nearConsensusCount,
+                non_consensus_item_count: nonConsensusCount,
+              },
+              required_statement: "Consensus indicates agreement among this panel; it does not establish correctness.",
+              items: itemReports,
+              limitations: limitationsMarkdown,
+            }, null, 2),
+            format: ".json",
+            record_count: itemReports.length,
+            contains_identifiable_data: false,
+            redaction_profile: { direct_identifiers: "excluded", identity_response_mapping: "excluded" },
+          },
+          {
+            path: "final-delphi-report/final_item_results.csv",
+            content: toCsv(itemResultRows),
+            format: ".csv",
+            record_count: itemResultRows.length,
+            contains_identifiable_data: false,
+            redaction_profile: { direct_identifiers: "excluded", identity_response_mapping: "excluded" },
+          },
+          {
+            path: "final-delphi-report/required_limitations_and_disclosures.md",
+            content: limitationsMarkdown,
+            format: ".md",
+            record_count: null,
+            contains_identifiable_data: false,
+            redaction_profile: { direct_identifiers: "not_applicable" },
+          },
+        ],
+        "irb-pack": [
+          ...baseFiles,
+          {
+            path: "irb-pack/irb_protocol_summary.md",
+            content: [
+              `# ${study.title}`,
+              "",
+              "## Delphi Suitability",
+              studyVersion.method_rationale ?? "",
+              "",
+              "## Consent, Confidentiality, Withdrawal",
+              consentVersions.map((version) => version.text_md).join("\n\n---\n\n"),
+              "",
+              "## AI Disclosure",
+              "AI assistance is limited to draft generation and organization. AI Suggestion (Not Final) outputs require human Accept/Edit/Reject action before use.",
+              "",
+              "## Signoff History",
+              ...signoffs.map((signoff) => `- ${signoff.required_role}: ${signoff.signed_at}`),
+            ].join("\n"),
+            format: ".md",
+            record_count: signoffs.length,
+            contains_identifiable_data: false,
+            redaction_profile: { participant_response_data: "excluded" },
+          },
+          {
+            path: "irb-pack/irb_governance_checklist.csv",
+            content: toCsv([
+              { control: "Study Owner signoff", status: signoffs.some((signoff) => signoff.required_role === "Owner") ? "complete" : "open" },
+              { control: "Ethics & Methods signoff", status: signoffs.some((signoff) => signoff.required_role === "MethodsSteward") ? "complete" : "open" },
+              { control: "Consensus rule locked", status: studyVersion.config_hash ? "complete" : "open" },
+              { control: "Consent versions", status: consentVersions.length > 0 ? "complete" : "open" },
+            ]),
+            format: ".csv",
+            record_count: 4,
+            contains_identifiable_data: false,
+            redaction_profile: { participant_response_data: "excluded" },
+          },
+        ],
+        "anonymized-response-dataset": [
+          ...baseFiles,
+          { path: "anonymized-response-dataset/responses.csv", content: toCsv(dataset.responseRows), format: ".csv", record_count: dataset.responseRows.length, contains_identifiable_data: false, redaction_profile: { participant_ids: "pseudonymized", names_emails: "excluded" } },
+          { path: "anonymized-response-dataset/ratings.csv", content: toCsv(dataset.ratingRows), format: ".csv", record_count: dataset.ratingRows.length, contains_identifiable_data: false, redaction_profile: { participant_ids: "pseudonymized", names_emails: "excluded" } },
+          { path: "anonymized-response-dataset/items.csv", content: toCsv(dataset.itemRows), format: ".csv", record_count: dataset.itemRows.length, contains_identifiable_data: false, redaction_profile: { direct_identifiers: "excluded" } },
+          { path: "anonymized-response-dataset/redaction_manifest.csv", content: toCsv(dataset.redactionRows), format: ".csv", record_count: dataset.redactionRows.length, contains_identifiable_data: false, redaction_profile: { identity_response_mapping: "excluded" } },
+          { path: "anonymized-response-dataset/data_dictionary.txt", content: "responses.csv, ratings.csv, and items.csv use participant_pseudonym values only. No name, email, or identity-response mapping is included.", format: ".txt", record_count: null, contains_identifiable_data: false, redaction_profile: { direct_identifiers: "excluded" } },
+        ],
+        "audit-package": [
+          ...baseFiles,
+          { path: "audit-package/audit_events.csv", content: toCsv(auditRows), format: ".csv", record_count: auditRows.length, contains_identifiable_data: false, redaction_profile: { participant_direct_identifiers: "excluded" } },
+          { path: "audit-package/audit_events.json", content: JSON.stringify(relevantAuditEvents, null, 2), format: ".json", record_count: relevantAuditEvents.length, contains_identifiable_data: false, redaction_profile: { participant_direct_identifiers: "excluded" } },
+          { path: "audit-package/integrity_hashes.json", content: JSON.stringify({ audit_integrity: verifyAuditIntegrity(), export_manifest_count: exportManifests.length, dataset_hash: datasetHash }, null, 2), format: ".json", record_count: null, contains_identifiable_data: false, redaction_profile: { direct_identifiers: "not_applicable" } },
+          { path: "audit-package/audit_chain_summary.txt", content: `Audit events included: ${auditRows.length}\nIntegrity verified: ${verifyAuditIntegrity().ok}\n`, format: ".txt", record_count: null, contains_identifiable_data: false, redaction_profile: { direct_identifiers: "not_applicable" } },
+        ],
+        "provenance-bundle": [
+          ...baseFiles,
+          { path: "provenance-bundle/provenance_edges.csv", content: toCsv(edgeRows), format: ".csv", record_count: edgeRows.length, contains_identifiable_data: false, redaction_profile: { response_excerpts: "anonymized" } },
+          { path: "provenance-bundle/item_transformation_history.csv", content: toCsv(transformRows), format: ".csv", record_count: transformRows.length, contains_identifiable_data: false, redaction_profile: { response_excerpts: "anonymized" } },
+          { path: "provenance-bundle/ai_suggestion_hashes.csv", content: toCsv(aiRows), format: ".csv", record_count: aiRows.length, contains_identifiable_data: false, redaction_profile: { input_scope_ids: "record_ids_only" } },
+          { path: "provenance-bundle/provenance_narrative.md", content: "Rejected items, minority or unique statements, AI suggestions, human edits, merge/split rationales, and final wording are retained for traceability.", format: ".md", record_count: null, contains_identifiable_data: false, redaction_profile: { response_excerpts: "anonymized" } },
+        ],
+        "complete-archive": [
+          ...baseFiles,
+          { path: "complete-archive/study_version.json", content: JSON.stringify({ study, studyVersion, rounds, signoffs, consentVersions }, null, 2), format: ".json", record_count: 1, contains_identifiable_data: false, redaction_profile: { participant_identity: "excluded" } },
+          { path: "complete-archive/anonymized_dataset.json", content: JSON.stringify(dataset, null, 2), format: ".json", record_count: responses.length, contains_identifiable_data: false, redaction_profile: { participant_identity: "excluded" } },
+          { path: "complete-archive/items_and_provenance.json", content: JSON.stringify({ items, edges: edgeRows, transformations: transformRows, ai_operations: aiRows }, null, 2), format: ".json", record_count: items.length, contains_identifiable_data: false, redaction_profile: { participant_identity: "excluded" } },
+          { path: "complete-archive/audit_summary.json", content: JSON.stringify({ auditRows, audit_integrity: verifyAuditIntegrity() }, null, 2), format: ".json", record_count: auditRows.length, contains_identifiable_data: false, redaction_profile: { participant_identity: "excluded" } },
+          { path: "complete-archive/limitations_and_disclosures.md", content: limitationsMarkdown, format: ".md", record_count: null, contains_identifiable_data: false, redaction_profile: { direct_identifiers: "not_applicable" } },
+        ],
+      };
+
+      const auditEvent = await writeAuditEvent({
+        actor,
+        action: `export.${exportType}.create`,
+        object: { type: "study_version", id: `${studyId}:${versionId}` },
+        details: {
+          studyId,
+          versionId,
+          export_type: exportType,
+          data_cutoff_at: dataCutoffAt,
+          dataset_hash: datasetHash,
+        },
+      });
+
+      const manifest = recordExportManifest({
+        study_id: studyId,
+        version_id: versionId,
+        package_type: exportType,
+        generated_by: actor,
+        audit_event_id: auditEvent.id,
+        config_hash: studyVersion.config_hash,
+        dataset_hash: datasetHash,
+        content: { exportType, recordCounts },
+        data_scope: { export_type: exportType, package_builder: "governed_package_v1" },
+        redaction_profile: {
+          direct_identifiers: "excluded",
+          identity_response_mapping: "excluded",
+          redaction_status: "package_files_review_required",
+        },
+      });
+
+      const exportPackage = createExportPackage({
+        study_id: studyId,
+        study_version_id: versionId,
+        export_type: exportType,
+        generated_by: actor,
+        audit_event_id: auditEvent.id,
+        data_cutoff_at: dataCutoffAt,
+        consensus_rule_version_id: studyVersion.config_hash,
+        feedback_config_version_id: studyVersion.config_hash,
+        instrument_version_ids: [versionId],
+        contains_identifiable_data: false,
+        anonymization_level: exportType === "final-delphi-report" ? "aggregated_only" : "anonymized",
+        external_ai_used: false,
+        human_review_required: true,
+        human_review_status: "pending_review",
+        limitations_text_version_id: "charter-required-limitations-v1",
+        files: filesByType[exportType],
+      });
+
+      return reply.code(201).send({ export_manifest: manifest, export_package: exportPackage });
+    },
   );
 
   app.get(

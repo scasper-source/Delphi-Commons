@@ -22,8 +22,8 @@ This checklist defines the evidence required before calling eDelphi human-subjec
 | Audit integrity test | Covered in backend road test | `server/tests/roadtest.test.mjs` | Add standalone audit package export test. |
 | Browser-level participant dry run | Manual, incomplete | In-app browser testing | Convert to Playwright or equivalent E2E. |
 | Accessibility audit | Not complete | None | Add automated and manual WCAG evidence. |
-| Security verification | Partial | Backend negative tests | Add OWASP ASVS checklist and abuse tests. |
-| Backup/restore rehearsal | Not complete | None | Build and run recovery rehearsal. |
+| Security verification | Partial | Backend negative tests plus Phase 8 ASVS-oriented controls | Add CI dependency scanning, deployment secret review, and external security review evidence. |
+| Backup/restore rehearsal | Partial | `server/tests/roadtest.test.mjs` | Add production runbook and off-host restore rehearsal. |
 
 ## Automated Test Evidence Required
 
@@ -38,6 +38,8 @@ This checklist defines the evidence required before calling eDelphi human-subjec
 - [ ] Participant-facing copy does not promise complete anonymity.
 - [ ] Consent/withdrawal language appears in IRB/Ethics Pack export.
 
+Current automated coverage includes: invitation consent is required before submission; withdrawal blocks future submission; participant retention/deletion review request can be created and staff-reviewed.
+
 ### Governance And Locked Rules
 
 - [ ] Study version cannot activate without Study Owner signoff.
@@ -47,6 +49,8 @@ This checklist defines the evidence required before calling eDelphi human-subjec
 - [ ] Consensus rule cannot be changed after governance lock/Round 1 opening.
 - [ ] Exceptional method changes require new study version or audited correction workflow.
 - [ ] Reports and exports include consensus threshold and justification.
+
+Current automated coverage includes: activation is blocked without both required governance signoffs; consensus rule edits are blocked after governance lock; the Study Builder packet records modified Delphi bias-warning acknowledgement when Round 1 is structured.
 
 ### Round Lifecycle And Participant Tasks
 
@@ -62,6 +66,8 @@ This checklist defines the evidence required before calling eDelphi human-subjec
 - [ ] Later-round submitted response review displays words, not only numeric codes.
 - [ ] Retain and revise actions are equally available where protocol allows.
 
+Current automated coverage includes: closed Round 1 rejects further response submission; closed Round 1 setup cannot be edited; closed Round 1 cannot be reopened through ordinary transition endpoints; curation and AI synthesis are blocked until Round 1 closes; Round 2 cannot open without published traceable candidate items; frontend presents submitted-response review states and a no-local-storage draft privacy policy.
+
 ### AI Governance And Provenance
 
 - [ ] AI output is labeled "AI Suggestion (Not Final)."
@@ -74,6 +80,10 @@ This checklist defines the evidence required before calling eDelphi human-subjec
 - [ ] Candidate item provenance links to source response IDs.
 - [ ] Merge/split/reject actions require rationale.
 - [ ] Rejected and minority/unique items remain visible in provenance/export evidence.
+
+Current automated coverage includes: AI inter-round synthesis is lifecycle-gated; AI item materialization requires a human Accept/Edit decision; clustered Round 1 material requires human rationale; AI-influenced publication requires dual release signoff; published items must have verifiable provenance before later-round opening.
+
+Phase 6 automated coverage also includes: AI materialized items remain draft until human action; merge/split/reject workflows require rationale; rejected items remain in the Provenance Bundle; AI output hashes, model identifiers, and prompt/template versions are exported; final wording traces through source response links and human edit rationale.
 
 ### Identity/Response Separation And Authorization
 
@@ -102,6 +112,8 @@ Current automated coverage includes: participant session cannot list staff studi
 - [ ] Audit chain verifies.
 - [ ] Attempted audit mutation fails.
 
+Current automated coverage includes: round open/close events, blocked reopen, blocked early curation, blocked untraceable later-round opening, response/rating submissions, curation edits/rejections/publication blocks, AI operations, export creation/review/download, audit verification, and append-only protection.
+
 ### Reports And Export Packages
 
 - [ ] Final Delphi Report package includes required consensus-not-correctness statement.
@@ -114,18 +126,23 @@ Current automated coverage includes: participant session cannot list staff studi
 - [ ] Complete Locked Archive includes manifest and package hash.
 - [ ] Export manifest identifies schema version, creator, role, data cutoff, anonymization level, and file hashes.
 
+Current automated coverage includes: governed Final Delphi Report, IRB/Ethics Pack, Anonymized Response Dataset, Audit Package, Provenance Bundle, and Complete Archive package creation; every package has manifest, hashes, data cutoff, creator role, redaction status, limitations/disclosures, and pending review status; the final report contains the required consensus-not-correctness statement plus consensus/near-consensus/non-consensus fields; anonymized response files exclude identity-response mapping; audit package includes signoffs, export review/download events, AI operations, identity access, and item changes.
+
 ### Security Controls
 
-- [ ] Secure session handling implemented and tested.
-- [ ] CSRF strategy documented and tested where applicable.
-- [ ] Rate limits protect auth, invitation, export, and admin endpoints.
-- [ ] Security headers configured.
+- [x] Secure session handling implemented and tested.
+- [x] CSRF strategy documented and tested where applicable.
+- [x] Rate limits protect auth, invitation, export, and admin endpoints.
+- [x] Security headers configured.
 - [ ] Secrets are not stored in repo or client-visible bundles.
-- [ ] No sensitive data appears in URLs, browser history, analytics, ordinary logs, or client-side local storage.
-- [ ] Free-text fields are safely rendered and XSS tests pass.
+- [x] No participant invitation token appears in API URLs or ordinary server request logs.
+- [x] No client-side local/session storage is used for sensitive study content.
+- [x] Free-text fields are safely rendered and XSS sink tests pass.
 - [ ] File downloads/uploads, if present, are permission-gated and content-type constrained.
 - [ ] Dependency scan has no unresolved critical/high vulnerabilities or has documented risk acceptance.
 - [ ] OWASP ASVS checklist is completed for selected assurance level.
+
+Current automated Phase 8 coverage includes: security headers on API responses, CORS origin rejection, auth rate limiting, CSRF rejection for cookie-backed mutations, cookie session readability for safe requests, forbidden export access by participant sessions, invalid/revoked invitation-token rejection, URL-fragment invitation links with header-based participant API calls, append-only audit integrity, and frontend source scans for unsafe HTML sinks and browser storage.
 
 ### Accessibility
 
@@ -150,6 +167,8 @@ Current automated coverage includes: participant session cannot list staff studi
 - [ ] Incident response drill completes.
 - [ ] Study pause blocks participant submissions.
 - [ ] Admin can revoke participant invitation/session.
+
+Current automated coverage includes: backup manifest creation, database/audit backup hashing, restore operation, and post-restore audit/data integrity verification.
 
 ## Manual Dry-Run Study Evidence Required
 

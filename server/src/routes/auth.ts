@@ -11,20 +11,35 @@ import {
 } from "../auth/userStore.js";
 import { resolveActor, userResponse } from "../middleware/auth.js";
 import { writeAuditEvent } from "../core/audit.js";
-
-function bearerToken(header: string | undefined): string | null {
-  if (!header) return null;
-  const [scheme, token] = header.split(" ");
-  return scheme?.toLowerCase() === "bearer" && token ? token : null;
-}
+import { getServerConfig } from "../core/config.js";
+import {
+  bearerToken,
+  clearSessionCookies,
+  consumeRateLimit,
+  csrfCookie,
+  generateCsrfToken,
+  parseCookies,
+  requestSessionToken,
+  sessionCookie,
+} from "../core/security.js";
 
 export async function authRoutes(app: FastifyInstance) {
   ensureDemoUsers();
+  const config = getServerConfig();
 
   app.post("/auth/login", async (req, reply) => {
     const body = (req.body ?? {}) as { email?: string; password?: string };
     const email = typeof body.email === "string" ? body.email.trim().toLowerCase() : "";
     const password = typeof body.password === "string" ? body.password : "";
+
+    const rate = consumeRateLimit(
+      `auth:${req.ip}:${email || "blank"}`,
+      config.authRateLimitMax,
+      config.rateLimitWindowMs,
+    );
+    if (!rate.ok) {
+      return reply.header("Retry-After", String(rate.retryAfterSeconds)).code(429).send({ error: "rate_limited" });
+    }
 
     const user = email ? getUserByEmail(email) : null;
     if (!user || user.disabled_at || !verifyPassword(user, password)) {
@@ -32,6 +47,7 @@ export async function authRoutes(app: FastifyInstance) {
     }
 
     const { session, token } = createSession(user.user_id);
+    const csrfToken = generateCsrfToken();
 
     await writeAuditEvent({
       actor: {
@@ -48,8 +64,14 @@ export async function authRoutes(app: FastifyInstance) {
       details: { session_id: session.session_id },
     });
 
+    reply.header("Set-Cookie", [
+      sessionCookie(token, session.expires_at, config),
+      csrfCookie(csrfToken, session.expires_at, config),
+    ]);
+
     return reply.send({
       token,
+      csrf_token: csrfToken,
       session: {
         session_id: session.session_id,
         expires_at: session.expires_at,
@@ -59,7 +81,7 @@ export async function authRoutes(app: FastifyInstance) {
   });
 
   app.post("/auth/logout", async (req, reply) => {
-    const token = bearerToken(req.headers.authorization);
+    const token = bearerToken(req) ?? parseCookies(req.headers.cookie).edelphi_session ?? requestSessionToken(req);
     const session = token ? getSessionByToken(token) : null;
 
     if (session) {
@@ -82,6 +104,7 @@ export async function authRoutes(app: FastifyInstance) {
       });
     }
 
+    reply.header("Set-Cookie", clearSessionCookies(config));
     return reply.send({ ok: true });
   });
 

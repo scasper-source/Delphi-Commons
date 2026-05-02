@@ -16,6 +16,7 @@ import {
 import { getAISuggestionPublicationGate } from "../stores/aiSuggestionStore.js";
 import { requireRole, getActor } from "../middleware/auth.js";
 import { writeAuditEvent } from "../core/audit.js";
+import { getCurationGate, itemHasVerifiableTraceability } from "../core/roundLifecycle.js";
 
 export async function itemsRoutes(app: FastifyInstance) {
   const allowCuration = requireRole(["owner", "methods_steward"]);
@@ -52,10 +53,36 @@ export async function itemsRoutes(app: FastifyInstance) {
         return reply.code(400).send({ error: "text_required" });
       }
 
+      const roundNumber = Number(body.round_number ?? 2);
+      const curationGate = getCurationGate({
+        study_id: String(studyId),
+        version_id: String(versionId),
+        target_round_number: roundNumber,
+      });
+      if (!curationGate.ok) {
+        await writeAuditEvent({
+          actor,
+          action: "item.create_blocked_lifecycle_gate",
+          object: { type: "study_version", id: `${studyId}:${versionId}` },
+          details: {
+            studyId,
+            versionId,
+            target_round_number: roundNumber,
+            error: curationGate.error,
+            ...curationGate.details,
+          },
+        });
+
+        return reply.code(curationGate.statusCode).send({
+          error: curationGate.error,
+          ...curationGate.details,
+        });
+      }
+
       const item = createItem({
         study_id: String(studyId),
         version_id: String(versionId),
-        round_number: Number(body.round_number ?? 2),
+        round_number: roundNumber,
         text: String(body.text),
         provenance_type: body.provenance_type === "LiteratureDerived"
           ? "LiteratureDerived"
@@ -134,6 +161,31 @@ export async function itemsRoutes(app: FastifyInstance) {
         return reply.code(400).send({ error: "use_publish_endpoint_for_publication_gate" });
       }
 
+      const curationGate = getCurationGate({
+        study_id: String(studyId),
+        version_id: String(versionId),
+        target_round_number: existing.round_number,
+      });
+      if (!curationGate.ok) {
+        await writeAuditEvent({
+          actor,
+          action: "item.update_blocked_lifecycle_gate",
+          object: { type: "item", id: String(itemId) },
+          details: {
+            studyId,
+            versionId,
+            target_round_number: existing.round_number,
+            error: curationGate.error,
+            ...curationGate.details,
+          },
+        });
+
+        return reply.code(curationGate.statusCode).send({
+          error: curationGate.error,
+          ...curationGate.details,
+        });
+      }
+
       if (!text && !status) {
         return reply.code(400).send({ error: "item_patch_required" });
       }
@@ -190,6 +242,47 @@ export async function itemsRoutes(app: FastifyInstance) {
         });
 
         return reply.code(409).send({ error: "item_rejected_cannot_publish" });
+      }
+
+      const curationGate = getCurationGate({
+        study_id: String(studyId),
+        version_id: String(versionId),
+        target_round_number: existing.round_number,
+      });
+      if (!curationGate.ok) {
+        await writeAuditEvent({
+          actor,
+          action: "item.publish_blocked_lifecycle_gate",
+          object: { type: "item", id: String(itemId) },
+          details: {
+            studyId,
+            versionId,
+            target_round_number: existing.round_number,
+            error: curationGate.error,
+            ...curationGate.details,
+          },
+        });
+
+        return reply.code(curationGate.statusCode).send({
+          error: curationGate.error,
+          ...curationGate.details,
+        });
+      }
+
+      if (!itemHasVerifiableTraceability(existing)) {
+        await writeAuditEvent({
+          actor,
+          action: "item.publish_blocked_provenance_required",
+          object: { type: "item", id: String(itemId) },
+          details: {
+            studyId,
+            versionId,
+            provenance_type: existing.provenance_type,
+            provenance_link_count: existing.ai_provenance_links.length,
+          },
+        });
+
+        return reply.code(409).send({ error: "published_item_traceability_required" });
       }
 
       const aiSuggestionIds = new Set<string>();
@@ -296,6 +389,31 @@ export async function itemsRoutes(app: FastifyInstance) {
         return reply.code(404).send({ error: "target_item_not_found" });
       }
 
+      const curationGate = getCurationGate({
+        study_id: String(studyId),
+        version_id: String(versionId),
+        target_round_number: target.round_number,
+      });
+      if (!curationGate.ok) {
+        await writeAuditEvent({
+          actor,
+          action: "item.merge_blocked_lifecycle_gate",
+          object: { type: "item", id: toItemId },
+          details: {
+            studyId,
+            versionId,
+            target_round_number: target.round_number,
+            error: curationGate.error,
+            ...curationGate.details,
+          },
+        });
+
+        return reply.code(curationGate.statusCode).send({
+          error: curationGate.error,
+          ...curationGate.details,
+        });
+      }
+
       for (const fromId of fromItemIds) {
         const src = getItem(fromId);
         if (!src) return reply.code(404).send({ error: "source_item_not_found", item_id: fromId });
@@ -371,6 +489,31 @@ export async function itemsRoutes(app: FastifyInstance) {
         source.version_id !== String(versionId)
       ) {
         return reply.code(404).send({ error: "item_not_found" });
+      }
+
+      const curationGate = getCurationGate({
+        study_id: String(studyId),
+        version_id: String(versionId),
+        target_round_number: source.round_number,
+      });
+      if (!curationGate.ok) {
+        await writeAuditEvent({
+          actor,
+          action: "item.split_blocked_lifecycle_gate",
+          object: { type: "item", id: String(itemId) },
+          details: {
+            studyId,
+            versionId,
+            target_round_number: source.round_number,
+            error: curationGate.error,
+            ...curationGate.details,
+          },
+        });
+
+        return reply.code(curationGate.statusCode).send({
+          error: curationGate.error,
+          ...curationGate.details,
+        });
       }
 
       const rationale = String(body.rationale ?? "").trim();

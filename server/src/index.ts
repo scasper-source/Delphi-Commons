@@ -10,30 +10,22 @@ import { reportsRoutes } from "./routes/reports.js";
 import { aiRoutes } from "./routes/ai.js";
 import { getServerConfig } from "./core/config.js";
 import { authRoutes } from "./routes/auth.js";
+import { registerSecurity } from "./core/security.js";
 
-const app = Fastify({ logger: true });
 const config = getServerConfig();
-
-app.addHook("onRequest", async (req, reply) => {
-  const requestOrigin = req.headers.origin;
-  const allowedOrigin =
-    typeof requestOrigin === "string" && config.allowedOrigins.includes(requestOrigin)
-      ? requestOrigin
-      : config.allowedOrigins[0];
-
-  reply.header("Access-Control-Allow-Origin", allowedOrigin);
-  reply.header("Access-Control-Allow-Methods", "GET,POST,PATCH,DELETE,OPTIONS");
-  reply.header("Access-Control-Allow-Headers", "Authorization,Content-Type,X-User-ID,X-User-Role");
-  reply.header("Vary", "Origin");
-  reply.header("X-Content-Type-Options", "nosniff");
-  reply.header("Referrer-Policy", "no-referrer");
-  reply.header("X-Frame-Options", "DENY");
-  reply.header("Cache-Control", "no-store");
-
-  if (req.method === "OPTIONS") {
-    reply.code(204).send();
-  }
+const app = Fastify({
+  bodyLimit: config.bodyLimitBytes,
+  disableRequestLogging: true,
+  logger:
+    config.environment === "test"
+      ? false
+      : {
+          level: "info",
+          redact: ["req.headers.authorization", "req.headers.cookie", "headers.authorization", "headers.cookie"],
+        },
 });
+
+registerSecurity(app, config);
 
 app.get("/health", async () => {
   return { status: "ok", service: "edelphi-server", environment: config.environment };

@@ -3,6 +3,7 @@ import { listAssignments } from "../studies/store.js";
 import { getSessionByToken, getUser } from "../auth/userStore.js";
 import type { AuthRole, UserRecord } from "../auth/types.js";
 import type { StudyRole } from "../studies/types.js";
+import { requestSessionToken } from "../core/security.js";
 
 export type Actor = {
   userId: string;
@@ -22,11 +23,9 @@ const studyRoleToAuthRole: Record<StudyRole, AuthRole> = {
   Maintainer: "maintainer",
 };
 
-function bearerToken(req: FastifyRequest): string | null {
-  const header = req.headers.authorization;
-  if (!header) return null;
-  const [scheme, token] = header.split(" ");
-  return scheme?.toLowerCase() === "bearer" && token ? token : null;
+function requestedRole(req: FastifyRequest): string | null {
+  const role = req.headers["x-user-role"];
+  return typeof role === "string" && role.trim() ? role.trim() : null;
 }
 
 function studyIdFromRequest(req: FastifyRequest): string | null {
@@ -34,19 +33,23 @@ function studyIdFromRequest(req: FastifyRequest): string | null {
   return typeof params.studyId === "string" && params.studyId.trim() !== "" ? params.studyId : null;
 }
 
-async function actorRoleForStudy(user: UserRecord, studyId: string | null): Promise<AuthRole | string> {
+async function actorRoleForStudy(user: UserRecord, studyId: string | null, req: FastifyRequest): Promise<AuthRole | string> {
+  const requested = requestedRole(req);
   if (user.system_roles.includes("admin") || user.system_roles.includes("maintainer")) return user.system_roles[0] ?? "anonymous";
   if (!studyId) return user.system_roles[0] ?? "anonymous";
 
   const assignments = await listAssignments(studyId);
-  const assignment = assignments.find((entry) => entry.user_id === user.user_id);
-  if (assignment) return studyRoleToAuthRole[assignment.role];
+  const userRoles = assignments
+    .filter((entry) => entry.user_id === user.user_id)
+    .map((assignment) => studyRoleToAuthRole[assignment.role]);
+  if (requested && userRoles.includes(requested as AuthRole)) return requested;
+  if (userRoles.length > 0) return userRoles[0] ?? "unassigned";
 
   return user.system_roles.includes("participant") ? "participant" : "unassigned";
 }
 
 async function getSessionActor(req: FastifyRequest): Promise<Actor | null> {
-  const token = bearerToken(req);
+  const token = requestSessionToken(req);
   if (!token) return null;
 
   const session = getSessionByToken(token);
@@ -55,7 +58,7 @@ async function getSessionActor(req: FastifyRequest): Promise<Actor | null> {
   const user = getUser(session.user_id);
   if (!user || user.disabled_at) return null;
 
-  const role = await actorRoleForStudy(user, studyIdFromRequest(req));
+  const role = await actorRoleForStudy(user, studyIdFromRequest(req), req);
   return {
     userId: user.user_id,
     role,
@@ -95,7 +98,7 @@ export function requireRole(allowed: string[]) {
     }
 
     if (!allowed.includes(actor.role)) {
-      reply.code(403).send({ error: "forbidden", allowed, role: actor.role });
+      reply.code(403).send({ error: "forbidden" });
       return;
     }
   };

@@ -34,6 +34,25 @@ function documentCollectionCount(collection: string): number {
   return row.count;
 }
 
+function collectInvalidJsonRows(): Array<{ collection: string; document_key: string }> {
+  const rows = getDatabase()
+    .prepare(
+      `SELECT collection, document_key, document_json
+       FROM documents
+       ORDER BY collection ASC, document_key ASC`,
+    )
+    .all() as Array<{ collection: string; document_key: string; document_json: string }>;
+
+  return rows.flatMap((row) => {
+    try {
+      JSON.parse(row.document_json);
+      return [];
+    } catch {
+      return [{ collection: row.collection, document_key: row.document_key }];
+    }
+  });
+}
+
 export function inspectDataIntegrity() {
   const responseRows = getDatabase()
     .prepare(
@@ -52,20 +71,33 @@ export function inspectDataIntegrity() {
       ? [{ response_id: row.document_key, direct_identity_keys: directIdentityKeys }]
       : [];
   });
+  const invalidJsonRows = collectInvalidJsonRows();
 
   return {
-    ok: identityFieldFindings.length === 0,
+    ok: identityFieldFindings.length === 0 && invalidJsonRows.length === 0,
     separation_model: {
       identity_collection: "identity_participants",
+      consent_collection: "consent_records",
       response_collection: "responses",
+      item_collection: "items",
+      audit_table: "audit_events",
+      export_tables: ["export_manifests", "export_packages", "export_files", "export_package_reviews"],
+      deletion_request_collection: "deletion_requests",
       shared_linkage_key: "participant_id",
       direct_identity_fields_allowed_in_responses: false,
     },
     counts: {
       identity_participants: documentCollectionCount("identity_participants"),
+      consent_versions: documentCollectionCount("consent_versions"),
+      consent_records: documentCollectionCount("consent_records"),
       responses: responseRows.length,
+      items: documentCollectionCount("items"),
+      deletion_requests: documentCollectionCount("deletion_requests"),
       export_manifests: listExportManifests().length,
     },
-    findings: identityFieldFindings,
+    findings: {
+      response_identity_fields: identityFieldFindings,
+      invalid_json_documents: invalidJsonRows,
+    },
   };
 }
