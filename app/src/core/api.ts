@@ -421,6 +421,42 @@ export type ParticipantFinalResponse = {
   submitted_at: string;
 };
 
+export type ParticipantIssueType =
+  | "button_or_textbox_not_working"
+  | "cannot_start_or_continue"
+  | "save_or_resume_problem"
+  | "confusing_text"
+  | "accessibility_problem"
+  | "other";
+
+export type ParticipantIssue = {
+  issue_id: string;
+  study_id: string;
+  version_id: string;
+  participant_id: string;
+  participant_alias: string;
+  round_number: number | null;
+  page_context: string;
+  issue_type: ParticipantIssueType;
+  note: string;
+  status: "open" | "reviewed" | "closed";
+  staff_response_note: string | null;
+  reviewed_at: string | null;
+  closed_at: string | null;
+  responded_at: string | null;
+  responded_by_user_id: string | null;
+  created_at: string;
+  updated_at: string;
+  created_by: "participant_invitation" | "magic_link" | "staff_preview";
+};
+
+export type ParticipantIssueInput = {
+  round_number: number | null;
+  page_context: string;
+  issue_type: ParticipantIssueType;
+  note: string;
+};
+
 export type SmsPolicy = {
   study_id: string;
   version_id: string;
@@ -1500,6 +1536,17 @@ export const conductorApi = {
     });
   },
 
+  async reportMagicParticipantIssue(input: ParticipantIssueInput) {
+    return requestMagicJson<{ issue: ParticipantIssue }>("/magic-links/issues", {
+      method: "POST",
+      body: input,
+    });
+  },
+
+  async listMagicParticipantIssues() {
+    return requestMagicJson<{ issues: ParticipantIssue[] }>("/magic-links/issues");
+  },
+
   async getParticipantInvitation(token: string) {
     return requestInvitationJson<ParticipantInvitationContext>("/participant/invitation", token);
   },
@@ -1553,6 +1600,39 @@ export const conductorApi = {
       "/participant/invitation/deletion-request",
       token,
       { method: "POST", body: { request_text: requestText } },
+    );
+  },
+
+  async reportInvitationParticipantIssue(token: string, input: ParticipantIssueInput) {
+    return requestInvitationJson<{ issue: ParticipantIssue }>(
+      "/participant/invitation/issues",
+      token,
+      { method: "POST", body: input },
+    );
+  },
+
+  async listInvitationParticipantIssues(token: string) {
+    return requestInvitationJson<{ issues: ParticipantIssue[] }>("/participant/invitation/issues", token);
+  },
+
+  async listParticipantIssues(studyId: string, versionId: string, role: UserRole) {
+    return requestJson<{ issues: ParticipantIssue[] }>(
+      `/studies/${studyId}/versions/${versionId}/participant-issues`,
+      role,
+    );
+  },
+
+  async respondParticipantIssue(
+    studyId: string,
+    versionId: string,
+    role: UserRole,
+    issueId: string,
+    body: { status: ParticipantIssue["status"]; staff_response_note: string },
+  ) {
+    return requestJson<{ issue: ParticipantIssue }>(
+      `/studies/${studyId}/versions/${versionId}/participant-issues/${issueId}`,
+      role,
+      { method: "PATCH", body },
     );
   },
 

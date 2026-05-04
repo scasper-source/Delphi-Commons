@@ -34,6 +34,7 @@ import { hasActiveConsent } from "../stores/consentStore.js";
 import { participantCanSubmit } from "../stores/participantStatusStore.js";
 import { getStudyVersion } from "../studies/store.js";
 import { createDeletionRequest } from "../stores/deletionRequestStore.js";
+import { createParticipantIssue, listParticipantIssuesForParticipant } from "../stores/participantIssueStore.js";
 
 function frontendOrigin(req: any): string {
   const origin = typeof req.headers.origin === "string" ? req.headers.origin : "http://127.0.0.1:5173";
@@ -370,5 +371,49 @@ export async function smsRoutes(app: FastifyInstance) {
       request_text: "Participant requested review from mobile magic-link entry.",
     });
     return reply.code(201).send({ deletion_request: request });
+  });
+
+  app.post("/magic-links/issues", async (req, reply) => {
+    const session = getMagicSessionOrReply(req, reply);
+    if (!session) return;
+    const body = (req.body ?? {}) as Record<string, unknown>;
+    const issue = createParticipantIssue({
+      study_id: session.study_id,
+      version_id: session.version_id,
+      participant_id: session.participant_id,
+      round_number: body.round_number ?? session.round_number,
+      page_context: body.page_context,
+      issue_type: body.issue_type,
+      note: body.note,
+      created_by: "magic_link",
+    });
+
+    await writeAuditEvent({
+      actor: participantActor(session.participant_id),
+      action: "participant_issue.create",
+      object: { type: "participant_issue", id: issue.issue_id },
+      details: {
+        studyId: session.study_id,
+        versionId: session.version_id,
+        participant_alias: issue.participant_alias,
+        round_number: issue.round_number,
+        page_context: issue.page_context,
+        issue_type: issue.issue_type,
+      },
+    });
+
+    return reply.code(201).send({ issue });
+  });
+
+  app.get("/magic-links/issues", async (req, reply) => {
+    const session = getMagicSessionOrReply(req, reply);
+    if (!session) return;
+    const issues = listParticipantIssuesForParticipant({
+      study_id: session.study_id,
+      version_id: session.version_id,
+      participant_id: session.participant_id,
+    });
+
+    return reply.send({ issues });
   });
 }

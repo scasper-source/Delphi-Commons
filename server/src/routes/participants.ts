@@ -67,6 +67,12 @@ import {
   upsertParticipantDraft,
 } from "../stores/participantDraftStore.js";
 import { getFinalResultSnapshot } from "../stores/finalResultStore.js";
+import {
+  createParticipantIssue,
+  listParticipantIssues,
+  listParticipantIssuesForParticipant,
+  updateParticipantIssue,
+} from "../stores/participantIssueStore.js";
 
 function isDeletionRequestStatus(value: unknown): value is DeletionRequestStatus {
   return (
@@ -247,6 +253,61 @@ export async function participantsRoutes(app: FastifyInstance) {
 
       return reply.send({ participants: list });
     }
+  );
+
+  app.get(
+    "/studies/:studyId/versions/:versionId/participant-issues",
+    { preHandler: allowMasterList },
+    async (req, reply) => {
+      const { studyId, versionId } = req.params as any;
+      const actor = getActor(req);
+      const issues = listParticipantIssues({ study_id: studyId, version_id: versionId });
+
+      await writeAuditEvent({
+        actor,
+        action: "participant_issue.list",
+        object: { type: "study_version", id: `${studyId}:${versionId}` },
+        details: { studyId, versionId, count: issues.length },
+      });
+
+      return reply.send({ issues });
+    },
+  );
+
+  app.patch(
+    "/studies/:studyId/versions/:versionId/participant-issues/:issueId",
+    { preHandler: allowMasterList },
+    async (req, reply) => {
+      const { studyId, versionId, issueId } = req.params as any;
+      const actor = getActor(req);
+      const body = (req.body ?? {}) as any;
+      const issue = updateParticipantIssue({
+        study_id: studyId,
+        version_id: versionId,
+        issue_id: issueId,
+        status: body.status,
+        staff_response_note: body.staff_response_note,
+        actor_user_id: actor.userId,
+      });
+
+      if (!issue) return reply.code(404).send({ error: "participant_issue_not_found" });
+
+      await writeAuditEvent({
+        actor,
+        action: "participant_issue.respond",
+        object: { type: "participant_issue", id: issue.issue_id },
+        details: {
+          studyId,
+          versionId,
+          issue_type: issue.issue_type,
+          participant_alias: issue.participant_alias,
+          status: issue.status,
+          response_present: Boolean(issue.staff_response_note),
+        },
+      });
+
+      return reply.send({ issue });
+    },
   );
 
   app.get(
@@ -1042,6 +1103,57 @@ export async function participantsRoutes(app: FastifyInstance) {
     });
 
     return reply.code(201).send({ deletion_request: request });
+  });
+
+  app.post("/participant/invitation/issues", async (req, reply) => {
+    const body = (req.body ?? {}) as Record<string, unknown>;
+    const resolved = invitationFromRequest(req);
+    if (!resolved.ok) return reply.code(resolved.statusCode).send({ error: resolved.error });
+    const { invitation } = resolved;
+    const issue = createParticipantIssue({
+      study_id: invitation.study_id,
+      version_id: invitation.version_id,
+      participant_id: invitation.participant_id,
+      round_number: body.round_number,
+      page_context: body.page_context,
+      issue_type: body.issue_type,
+      note: body.note,
+      created_by: "participant_invitation",
+    });
+
+    await writeAuditEvent({
+      actor: {
+        userId: invitation.participant_id,
+        role: "participant",
+        systemRoles: ["participant" as any],
+        authSource: "invitation",
+      },
+      action: "participant_issue.create",
+      object: { type: "participant_issue", id: issue.issue_id },
+      details: {
+        studyId: invitation.study_id,
+        versionId: invitation.version_id,
+        participant_alias: issue.participant_alias,
+        round_number: issue.round_number,
+        page_context: issue.page_context,
+        issue_type: issue.issue_type,
+      },
+    });
+
+    return reply.code(201).send({ issue });
+  });
+
+  app.get("/participant/invitation/issues", async (req, reply) => {
+    const resolved = invitationFromRequest(req);
+    if (!resolved.ok) return reply.code(resolved.statusCode).send({ error: resolved.error });
+    const { invitation } = resolved;
+    const issues = listParticipantIssuesForParticipant({
+      study_id: invitation.study_id,
+      version_id: invitation.version_id,
+      participant_id: invitation.participant_id,
+    });
+
+    return reply.send({ issues });
   });
 
   app.post("/participant/invitation/responses", async (req, reply) => {

@@ -1976,6 +1976,68 @@ summary:focus-visible,
   color: #8a2a1d;
 }
 
+.participant-issue-panel {
+  border-color: #c9d7d0;
+}
+
+.participant-issue-inbox.attention-panel {
+  border-color: #d89b2b;
+  box-shadow: inset 4px 0 0 #d89b2b;
+}
+
+.participant-issue-panel .split-line {
+  align-items: center;
+}
+
+.issue-form {
+  border-top: 1px solid #d7e2dc;
+  display: grid;
+  gap: 12px;
+  padding-top: 12px;
+}
+
+.issue-inbox-list,
+.issue-history-list {
+  display: grid;
+  gap: 12px;
+}
+
+.issue-inbox-card,
+.issue-history-card {
+  border: 1px solid #d7e2dc;
+  border-radius: 8px;
+  display: grid;
+  gap: 12px;
+  padding: 14px;
+}
+
+.issue-inbox-card.open {
+  border-color: #d89b2b;
+}
+
+.issue-inbox-card blockquote {
+  background: #f7faf8;
+  border-left: 4px solid #c9d7d0;
+  margin: 0;
+  padding: 10px 12px;
+}
+
+.issue-response-grid {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: minmax(160px, 0.35fr) minmax(220px, 1fr);
+}
+
+.issue-response-grid textarea {
+  min-height: 84px;
+}
+
+@media (max-width: 720px) {
+  .issue-response-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
 @media (max-width: 620px) {
   .sidecar-panel {
     border-left: 0;

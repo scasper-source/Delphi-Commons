@@ -39,6 +39,9 @@ import {
   type MagicRoundEntryContext,
   type StudyContextDisclosure,
   type StudyContextValidation,
+  type ParticipantIssueInput,
+  type ParticipantIssue,
+  type ParticipantIssueType,
 } from "./core/api";
 import { mockStudies, mockStudy } from "./core/mockData";
 import { canAccessIdentityMap, canAccessModule, canExportOutput, roleLabels } from "./core/permissions";
@@ -89,6 +92,7 @@ import {
   studyOrientationFacts,
   tutorialSteps,
 } from "./content/orientation";
+import { participantCopy, participantIssueTypeOptions } from "./content/participantCopy";
 import {
   buildBibtexCitation,
   buildPreferredCitation,
@@ -329,6 +333,7 @@ type RuntimeStudyData = {
   exportReport: RoundReport | null;
   exportPackages: ExportPackage[];
   exportPackageFiles: Record<string, ExportPackageFile[]>;
+  participantIssues: ParticipantIssue[];
   selectedExportPackageId: string | null;
   loading: boolean;
   error: string | null;
@@ -384,6 +389,7 @@ const emptyRuntimeStudyData: RuntimeStudyData = {
   exportReport: null,
   exportPackages: [],
   exportPackageFiles: {},
+  participantIssues: [],
   selectedExportPackageId: null,
   loading: false,
   error: null,
@@ -487,6 +493,8 @@ function App() {
         const result = await conductorApi.consumeMagicLink(token);
         setMagicContext(result.context);
         window.history.replaceState({}, document.title, "/");
+        const issueResult = await conductorApi.listMagicParticipantIssues().catch(() => ({ issues: [] }));
+        setRuntimeData((current) => ({ ...current, participantIssues: issueResult.issues }));
         if (result.context.round.round_number > 1 && result.context.round.status === "open") {
           const items = await conductorApi.listMagicRoundItems(result.context.round.round_number);
           setMagicItems(items.items);
@@ -520,6 +528,8 @@ function App() {
         setParticipantWithdrawn(Boolean(context.consent_record?.withdrew_at));
         setParticipantOrientationComplete(Boolean(context.orientation_completion));
         setRoundConfigs(context.round_configs);
+        const issueResult = await conductorApi.listInvitationParticipantIssues(inviteToken).catch(() => ({ issues: [] }));
+        setRuntimeData((current) => ({ ...current, participantIssues: issueResult.issues }));
         const roundOneDraft = context.drafts.find((draft) => draft.round_number === 1);
         if (roundOneDraft?.draft_json && typeof roundOneDraft.draft_json === "object" && "text" in roundOneDraft.draft_json) {
           const text = (roundOneDraft.draft_json as { text?: unknown }).text;
@@ -652,7 +662,7 @@ function App() {
       const canReadStaffData = role !== "panelist";
       const terminalRound = workflow.version?.terminal_round_number ?? wizard.terminalRoundNumber;
       const ratingRounds = Array.from({ length: Math.max(terminalRound - 1, 1) }, (_, index) => index + 2);
-      const [responsesResult, itemsResult, suggestionsResult, ratingItemsResults, reportResults, exportPackagesResult, finalResultsResult] =
+      const [responsesResult, itemsResult, suggestionsResult, ratingItemsResults, reportResults, exportPackagesResult, finalResultsResult, participantIssuesResult] =
         await Promise.all([
           canReadStaffData ? conductorApi.listResponses(studyId, versionId, role) : Promise.resolve({ responses: [] }),
           canReadStaffData ? conductorApi.listItems(studyId, versionId, role) : Promise.resolve({ items: [] }),
@@ -680,6 +690,9 @@ function App() {
                 release_blockers: ["final_result_snapshot_missing"],
               }))
             : Promise.resolve({ snapshot: null, release_blockers: ["participant_final_results_use_invitation"] }),
+          canReadStaffData
+            ? conductorApi.listParticipantIssues(studyId, versionId, role).catch(() => ({ issues: [] }))
+            : Promise.resolve({ issues: [] }),
         ]);
 
       setFinalResultSnapshot(finalResultsResult.snapshot);
@@ -706,6 +719,7 @@ function App() {
         roundReport: roundReports[2] ?? null,
         roundReports,
         exportPackages: exportPackagesResult.export_packages,
+        participantIssues: participantIssuesResult.issues,
         selectedExportPackageId:
           current.selectedExportPackageId &&
           exportPackagesResult.export_packages.some((pkg) => pkg.export_package_id === current.selectedExportPackageId)
@@ -1510,6 +1524,115 @@ function App() {
     }
   }
 
+  async function reportParticipantIssue(input: ParticipantIssueInput) {
+    if (magicContext) {
+      setMagicBusy(true);
+      setMagicError(null);
+      setMagicMessage(null);
+      try {
+        const result = await conductorApi.reportMagicParticipantIssue(input);
+        setRuntimeData((current) => ({ ...current, participantIssues: [result.issue, ...current.participantIssues] }));
+        setMagicMessage(participantCopy.trouble.success);
+      } catch (error) {
+        setMagicError(error instanceof Error ? error.message : "Unable to send issue note.");
+      } finally {
+        setMagicBusy(false);
+      }
+      return;
+    }
+
+    if (!participantInviteToken) {
+      setParticipantError(null);
+      const now = new Date().toISOString();
+      const issue: ParticipantIssue = {
+        issue_id: `local-${Date.now()}`,
+        study_id: workflow.study?.id ?? "local-preview-study",
+        version_id: workflow.version?.id ?? "local-preview-version",
+        participant_id: "local-preview-participant",
+        participant_alias: "participant-preview",
+        round_number: input.round_number,
+        page_context: input.page_context,
+        issue_type: input.issue_type,
+        note: input.note.trim().slice(0, 1200),
+        status: "open",
+        staff_response_note: null,
+        reviewed_at: null,
+        closed_at: null,
+        responded_at: null,
+        responded_by_user_id: null,
+        created_at: now,
+        updated_at: now,
+        created_by: "staff_preview",
+      };
+      setRuntimeData((current) => ({ ...current, participantIssues: [issue, ...current.participantIssues] }));
+      setParticipantMessage(participantCopy.trouble.success);
+      return;
+    }
+
+    setParticipantBusy(true);
+    setParticipantError(null);
+    setParticipantMessage(null);
+
+    try {
+      const result = await conductorApi.reportInvitationParticipantIssue(participantInviteToken, input);
+      setRuntimeData((current) => ({ ...current, participantIssues: [result.issue, ...current.participantIssues] }));
+      setParticipantMessage(participantCopy.trouble.success);
+    } catch (error) {
+      setParticipantError(error instanceof Error ? error.message : "Unable to send issue note.");
+    } finally {
+      setParticipantBusy(false);
+    }
+  }
+
+  async function respondParticipantIssue(issueId: string, status: ParticipantIssue["status"], responseNote: string) {
+    if (!workflow.study || !workflow.version) {
+      const now = new Date().toISOString();
+      setRuntimeData((current) => ({
+        ...current,
+        participantIssues: current.participantIssues.map((issue) =>
+          issue.issue_id === issueId
+            ? {
+                ...issue,
+                status,
+                staff_response_note: responseNote.trim() || null,
+                reviewed_at: issue.reviewed_at ?? (status !== "open" || responseNote.trim() ? now : null),
+                closed_at: status === "closed" ? issue.closed_at ?? now : null,
+                responded_at: responseNote.trim() && responseNote.trim() !== issue.staff_response_note ? now : issue.responded_at,
+                responded_by_user_id: responseNote.trim() && responseNote.trim() !== issue.staff_response_note ? role : issue.responded_by_user_id,
+                updated_at: now,
+              }
+            : issue,
+        ),
+        message: "Participant issue response recorded in this local preview.",
+        error: null,
+      }));
+      return;
+    }
+
+    setRuntimeActionBusy(`participant-issue-${issueId}`);
+    try {
+      const result = await conductorApi.respondParticipantIssue(
+        workflow.study.id,
+        workflow.version.id,
+        role,
+        issueId,
+        { status, staff_response_note: responseNote },
+      );
+      setRuntimeData((current) => ({
+        ...current,
+        participantIssues: current.participantIssues.map((issue) =>
+          issue.issue_id === issueId ? result.issue : issue,
+        ),
+        message: "Participant issue response recorded.",
+        error: null,
+      }));
+    } catch (error) {
+      setRuntimeError(error, "Unable to respond to participant issue note.");
+    } finally {
+      setRuntimeActionBusy(null);
+    }
+  }
+
   async function submitMagicRound() {
     if (!magicContext) return;
     setMagicBusy(true);
@@ -1703,12 +1826,12 @@ function App() {
     );
 
     if (candidates.length === 0) {
-      setSavedStudiesError("No smoke-test studies were found in the visible saved studies list.");
+      setSavedStudiesError("No test or debug workspaces were found in the visible saved studies list.");
       return;
     }
 
     const confirmed = window.confirm(
-      `Archive ${candidates.length} smoke-test or debug study workspace${candidates.length === 1 ? "" : "s"}?\n\nRecords and audit trails are retained; they are hidden from the default Saved Studies list.`,
+      `Archive ${candidates.length} test or debug study workspace${candidates.length === 1 ? "" : "s"}?\n\nRecords and audit trails are retained; they are hidden from the default Saved Studies list.`,
     );
     if (!confirmed) return;
 
@@ -1723,7 +1846,7 @@ function App() {
       }
       await loadSavedStudies();
     } catch (error) {
-      setSavedStudiesError(error instanceof Error ? error.message : "Unable to archive smoke-test studies.");
+      setSavedStudiesError(error instanceof Error ? error.message : "Unable to archive test or debug study workspaces.");
     }
   }
 
@@ -2069,6 +2192,7 @@ function App() {
           onSaveParticipantRatingDraft={saveParticipantRatingDraft}
           onWithdrawParticipant={withdrawParticipantInvitation}
           onRequestDeletionReview={requestParticipantDeletionReview}
+          onReportParticipantIssue={reportParticipantIssue}
           onMagicResponseTextChange={setMagicResponseText}
           onMagicRatingChange={(itemId, rating) => setMagicRatings((current) => ({ ...current, [itemId]: rating }))}
           onMagicRationaleChange={(itemId, text) => setMagicRationales((current) => ({ ...current, [itemId]: text }))}
@@ -2101,6 +2225,7 @@ function App() {
           onOpenSavedStudy={openSavedStudy}
           onArchiveSavedStudy={archiveSavedStudy}
           onArchiveSmokeTestStudies={archiveSmokeTestStudies}
+          onRespondParticipantIssue={respondParticipantIssue}
         />
         <footer className="app-footer">
           <button className="footer-link" onClick={navigateToCitation} type="button">
@@ -2185,6 +2310,7 @@ function ModuleRenderer({
   onSaveParticipantRatingDraft,
   onWithdrawParticipant,
   onRequestDeletionReview,
+  onReportParticipantIssue,
   onMagicResponseTextChange,
   onMagicRatingChange,
   onMagicRationaleChange,
@@ -2217,6 +2343,7 @@ function ModuleRenderer({
   onOpenSavedStudy,
   onArchiveSavedStudy,
   onArchiveSmokeTestStudies,
+  onRespondParticipantIssue,
 }: {
   activeModule: ModuleId;
   role: UserRole;
@@ -2290,6 +2417,7 @@ function ModuleRenderer({
   onSaveParticipantRatingDraft: (roundNumber: number) => void;
   onWithdrawParticipant: () => void;
   onRequestDeletionReview: () => void;
+  onReportParticipantIssue: (input: ParticipantIssueInput) => void;
   onMagicResponseTextChange: (value: string) => void;
   onMagicRatingChange: (itemId: string, rating: number) => void;
   onMagicRationaleChange: (itemId: string, text: string) => void;
@@ -2322,6 +2450,7 @@ function ModuleRenderer({
   onOpenSavedStudy: (record: SavedStudyRecord) => void;
   onArchiveSavedStudy: (record: SavedStudyRecord) => void;
   onArchiveSmokeTestStudies: () => void;
+  onRespondParticipantIssue: (issueId: string, status: ParticipantIssue["status"], responseNote: string) => void;
 }) {
   switch (activeModule) {
     case "about":
@@ -2343,6 +2472,7 @@ function ModuleRenderer({
           workflow={workflow}
           roundConfigs={roundConfigs}
           runtimeData={runtimeData}
+          runtimeActionBusy={runtimeActionBusy}
           savedStudies={savedStudies}
           savedStudiesLoading={savedStudiesLoading}
           savedStudiesError={savedStudiesError}
@@ -2350,6 +2480,7 @@ function ModuleRenderer({
           onOpenSavedStudy={onOpenSavedStudy}
           onArchiveSavedStudy={onArchiveSavedStudy}
           onArchiveSmokeTestStudies={onArchiveSmokeTestStudies}
+          onRespondParticipantIssue={onRespondParticipantIssue}
         />
       );
     case "study-builder":
@@ -2455,6 +2586,7 @@ function ModuleRenderer({
           onSaveParticipantRatingDraft={onSaveParticipantRatingDraft}
           onWithdrawParticipant={onWithdrawParticipant}
           onRequestDeletionReview={onRequestDeletionReview}
+          onReportParticipantIssue={onReportParticipantIssue}
           onMagicResponseTextChange={onMagicResponseTextChange}
           onMagicRatingChange={onMagicRatingChange}
           onMagicRationaleChange={onMagicRationaleChange}
@@ -3304,12 +3436,120 @@ function buildActionableChecklist(input: {
   ];
 }
 
+function ParticipantIssueInbox({
+  issues,
+  busyAction,
+  onRespond,
+}: {
+  issues: ParticipantIssue[];
+  busyAction: string | null;
+  onRespond: (issueId: string, status: ParticipantIssue["status"], responseNote: string) => void;
+}) {
+  const openIssues = issues.filter((issue) => issue.status === "open");
+  const latestIssues = issues.slice(0, 6);
+
+  return (
+    <section className={openIssues.length > 0 ? "panel wide participant-issue-inbox attention-panel" : "panel wide participant-issue-inbox"}>
+      <div className="split-line">
+        <div>
+          <span className="eyebrow">Participant support</span>
+          <h3>Participant Issue Notes</h3>
+          <p className="muted">Notes from “Having trouble?” appear here for quick PI/study-team response.</p>
+        </div>
+        <StatusBadge risk={openIssues.length > 0 ? "warning" : "success"} label={`${openIssues.length} open`} />
+      </div>
+      {issues.length === 0 ? (
+        <WarningBanner title="No participant issue notes" risk="success">
+          No button, textbox, save, or access problems have been reported for this study.
+        </WarningBanner>
+      ) : (
+        <div className="issue-inbox-list">
+          {latestIssues.map((issue) => (
+            <ParticipantIssueInboxCard
+              busy={busyAction === `participant-issue-${issue.issue_id}`}
+              issue={issue}
+              key={issue.issue_id}
+              onRespond={onRespond}
+            />
+          ))}
+        </div>
+      )}
+      {issues.length > latestIssues.length ? (
+        <p className="muted">Showing the latest {latestIssues.length} of {issues.length} issue notes.</p>
+      ) : null}
+    </section>
+  );
+}
+
+function ParticipantIssueInboxCard({
+  issue,
+  busy,
+  onRespond,
+}: {
+  issue: ParticipantIssue;
+  busy: boolean;
+  onRespond: (issueId: string, status: ParticipantIssue["status"], responseNote: string) => void;
+}) {
+  const [status, setStatus] = useState<ParticipantIssue["status"]>(issue.status);
+  const [responseNote, setResponseNote] = useState(issue.staff_response_note ?? "");
+  const issueLabel = participantIssueTypeOptions.find((option) => option.value === issue.issue_type)?.label ?? "Other issue";
+
+  return (
+    <article className={issue.status === "open" ? "issue-inbox-card open" : "issue-inbox-card"} aria-label={`Participant issue from ${issue.participant_alias}`}>
+      <div className="split-line">
+        <div>
+          <strong>{issueLabel}</strong>
+          <p className="muted">
+            {issue.participant_alias} - {issue.round_number ? `Round ${issue.round_number}` : "No round listed"} - {issue.page_context}
+          </p>
+          <small>Sent {formatDateTime(issue.created_at)}</small>
+        </div>
+        <StatusBadge risk={issue.status === "open" ? "warning" : issue.status === "closed" ? "success" : "info"} label={issue.status} />
+      </div>
+      <blockquote>{issue.note || "No note text was provided."}</blockquote>
+      {issue.staff_response_note ? (
+        <WarningBanner title="Study-team response" risk="info">
+          {issue.staff_response_note}
+        </WarningBanner>
+      ) : null}
+      <div className="issue-response-grid">
+        <label>
+          <span>Response status</span>
+          <select value={status} onChange={(event) => setStatus(event.target.value as ParticipantIssue["status"])}>
+            <option value="open">Open</option>
+            <option value="reviewed">Reviewed</option>
+            <option value="closed">Closed</option>
+          </select>
+        </label>
+        <label>
+          <span>Response note for participant</span>
+          <textarea
+            maxLength={1200}
+            value={responseNote}
+            onChange={(event) => setResponseNote(event.target.value)}
+            placeholder="Example: Thank you. We are checking this control now; please use Save again in a moment."
+          />
+        </label>
+      </div>
+      <button
+        className="primary-button"
+        disabled={busy}
+        onClick={() => onRespond(issue.issue_id, status, responseNote)}
+        type="button"
+      >
+        {busy ? "Recording..." : "Record response"}
+      </button>
+    </article>
+  );
+}
+
 function DashboardScreen({
   study,
   role,
   workflow,
   roundConfigs,
   runtimeData,
+  runtimeActionBusy,
   savedStudies,
   savedStudiesLoading,
   savedStudiesError,
@@ -3317,12 +3557,14 @@ function DashboardScreen({
   onOpenSavedStudy,
   onArchiveSavedStudy,
   onArchiveSmokeTestStudies,
+  onRespondParticipantIssue,
 }: {
   study: StudyRecord;
   role: UserRole;
   workflow: ConductorWorkflow;
   roundConfigs: RoundConfig[];
   runtimeData: RuntimeStudyData;
+  runtimeActionBusy: string | null;
   savedStudies: SavedStudyRecord[];
   savedStudiesLoading: boolean;
   savedStudiesError: string | null;
@@ -3330,6 +3572,7 @@ function DashboardScreen({
   onOpenSavedStudy: (record: SavedStudyRecord) => void;
   onArchiveSavedStudy: (record: SavedStudyRecord) => void;
   onArchiveSmokeTestStudies: () => void;
+  onRespondParticipantIssue: (issueId: string, status: ParticipantIssue["status"], responseNote: string) => void;
 }) {
   const launchBlockers = evaluateLaunchGate(study);
   const actionChecklist = buildActionableChecklist({ workflow, roundConfigs, runtimeData });
@@ -3363,6 +3606,12 @@ function DashboardScreen({
         </div>
       </section>
 
+      <ParticipantIssueInbox
+        busyAction={runtimeActionBusy}
+        issues={runtimeData.participantIssues}
+        onRespond={onRespondParticipantIssue}
+      />
+
       <section className="panel wide">
         <div className="split-line">
           <div>
@@ -3395,7 +3644,7 @@ function DashboardScreen({
             {savedStudiesLoading ? "Refreshing..." : "Refresh"}
           </button>
           <button className="secondary-button danger-button" onClick={onArchiveSmokeTestStudies} type="button">
-            Archive smoke tests
+            Archive test workspaces
           </button>
         </div>
 
@@ -5900,6 +6149,109 @@ function ProgressIndicator({ label, value, detail }: { label: string; value: num
   );
 }
 
+function ParticipantIssueReporter({
+  busy,
+  currentPage,
+  currentRoundNumber,
+  onReport,
+}: {
+  busy: boolean;
+  currentPage: string;
+  currentRoundNumber: number | null;
+  onReport: (input: ParticipantIssueInput) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [issueType, setIssueType] = useState<ParticipantIssueType>("button_or_textbox_not_working");
+  const [note, setNote] = useState("");
+
+  function submitIssue() {
+    onReport({
+      round_number: currentRoundNumber,
+      page_context: currentPage,
+      issue_type: issueType,
+      note,
+    });
+    setNote("");
+    setOpen(false);
+  }
+
+  return (
+    <section className="panel participant-issue-panel" aria-labelledby="participant-issue-title">
+      <div className="split-line">
+        <div>
+          <h3 id="participant-issue-title">{participantCopy.trouble.title}</h3>
+          <p className="muted">{participantCopy.trouble.intro}</p>
+        </div>
+        <button className="secondary-button" onClick={() => setOpen((current) => !current)} type="button">
+          {participantCopy.trouble.button}
+        </button>
+      </div>
+      {open ? (
+        <div className="issue-form">
+          <label className="field">
+            <span>{participantCopy.trouble.typeLabel}</span>
+            <select value={issueType} onChange={(event) => setIssueType(event.target.value as ParticipantIssueType)}>
+              {participantIssueTypeOptions.map((option) => (
+                <option key={option.value} value={option.value}>{option.label}</option>
+              ))}
+            </select>
+          </label>
+          <label className="field">
+            <span>{participantCopy.trouble.pageLabel}</span>
+            <input readOnly value={currentRoundNumber ? `${currentPage} / Round ${currentRoundNumber}` : currentPage} />
+          </label>
+          <label className="field wide-field">
+            <span>{participantCopy.trouble.noteLabel}</span>
+            <textarea
+              maxLength={1200}
+              value={note}
+              onChange={(event) => setNote(event.target.value)}
+              placeholder="Example: I tapped Save progress and did not see a saved message."
+            />
+          </label>
+          <button className="primary-button" disabled={busy} onClick={submitIssue} type="button">
+            {busy ? participantCopy.trouble.submitting : participantCopy.trouble.submit}
+          </button>
+        </div>
+      ) : null}
+    </section>
+  );
+}
+
+function ParticipantIssueHistory({ issues }: { issues: ParticipantIssue[] }) {
+  if (issues.length === 0) return null;
+  return (
+    <section className="panel participant-issue-history" aria-labelledby="participant-issue-history-title">
+      <h3 id="participant-issue-history-title">Issue note updates</h3>
+      <div className="issue-history-list">
+        {issues.slice(0, 4).map((issue) => {
+          const label = participantIssueTypeOptions.find((option) => option.value === issue.issue_type)?.label ?? "Other issue";
+          return (
+            <article className="issue-history-card" key={issue.issue_id}>
+              <div className="split-line">
+                <div>
+                  <strong>{label}</strong>
+                  <p className="muted">
+                    Sent {formatDateTime(issue.created_at)} - {issue.round_number ? `Round ${issue.round_number}` : "No round listed"}
+                  </p>
+                </div>
+                <StatusBadge risk={issue.status === "open" ? "warning" : issue.status === "closed" ? "success" : "info"} label={issue.status} />
+              </div>
+              {issue.staff_response_note ? (
+                <WarningBanner title="Study-team response" risk="info">
+                  {issue.staff_response_note}
+                </WarningBanner>
+              ) : (
+                <p className="muted">The study team has not recorded a response yet.</p>
+              )}
+            </article>
+          );
+        })}
+      </div>
+    </section>
+  );
+}
+
 function MagicRoundEntryScreen({
   context,
   items,
@@ -5909,11 +6261,13 @@ function MagicRoundEntryScreen({
   message,
   error,
   busy,
+  participantIssues,
   onResponseTextChange,
   onRatingChange,
   onRationaleChange,
   onSubmit,
   onDecline,
+  onReportIssue,
 }: {
   context: MagicRoundEntryContext | null;
   items: RoundItemForParticipant[];
@@ -5923,11 +6277,13 @@ function MagicRoundEntryScreen({
   message: string | null;
   error: string | null;
   busy: boolean;
+  participantIssues: ParticipantIssue[];
   onResponseTextChange: (value: string) => void;
   onRatingChange: (itemId: string, rating: number) => void;
   onRationaleChange: (itemId: string, rationale: string) => void;
   onSubmit: () => void;
   onDecline: () => void;
+  onReportIssue: (input: ParticipantIssueInput) => void;
 }) {
   if (!context) {
     return (
@@ -6051,6 +6407,13 @@ function MagicRoundEntryScreen({
           Withdrawal and help information
         </a>
       </section>
+      <ParticipantIssueReporter
+        busy={busy}
+        currentPage="secure_round_entry"
+        currentRoundNumber={context.round.round_number}
+        onReport={onReportIssue}
+      />
+      <ParticipantIssueHistory issues={participantIssues} />
     </div>
   );
 }
@@ -6099,6 +6462,7 @@ function ParticipantScreen({
   onSaveParticipantRatingDraft,
   onWithdrawParticipant,
   onRequestDeletionReview,
+  onReportParticipantIssue,
   onMagicResponseTextChange,
   onMagicRatingChange,
   onMagicRationaleChange,
@@ -6151,6 +6515,7 @@ function ParticipantScreen({
   onSaveParticipantRatingDraft: (roundNumber: number) => void;
   onWithdrawParticipant: () => void;
   onRequestDeletionReview: () => void;
+  onReportParticipantIssue: (input: ParticipantIssueInput) => void;
   onMagicResponseTextChange: (value: string) => void;
   onMagicRatingChange: (itemId: string, rating: number) => void;
   onMagicRationaleChange: (itemId: string, rationale: string) => void;
@@ -6171,11 +6536,13 @@ function ParticipantScreen({
         message={magicMessage}
         error={magicError}
         busy={magicBusy}
+        participantIssues={runtimeData.participantIssues}
         onResponseTextChange={onMagicResponseTextChange}
         onRatingChange={onMagicRatingChange}
         onRationaleChange={onMagicRationaleChange}
         onSubmit={onSubmitMagicRound}
         onDecline={onDeclineMagicRound}
+        onReportIssue={onReportParticipantIssue}
       />
     );
   }
@@ -6217,24 +6584,25 @@ function ParticipantScreen({
     : roundOneOpen
       ? effectiveRoundOneConfig?.title ?? "Round 1: open-ended elicitation"
     : "No round task is currently open";
+  const issueRoundNumber = currentRatingRoundNumber ?? (roundOneOpen ? 1 : null);
 
   return (
     <div className="participant-flow">
       <section className="panel wide">
         <div className="section-heading">
           <span className="eyebrow">Participant Portal</span>
-          <h2>Consent, confidentiality, rights, and current task</h2>
+          <h2>{participantCopy.portal.heading}</h2>
         </div>
-        <WarningBanner title="Confidentiality">
-          Responses are confidential to research team members with approved access and are linked across rounds through participant IDs.
+        <WarningBanner title={participantCopy.portal.confidentialityTitle}>
+          {participantCopy.portal.confidentialityBody}
         </WarningBanner>
         {participantInvite ? (
-          <WarningBanner title="Invitation link active" risk="success">
-            You do not need an account, password, API key, or access code. This private invitation link identifies your study task.
+          <WarningBanner title={participantCopy.portal.invitationActiveTitle} risk="success">
+            {participantCopy.portal.invitationActiveBody}
           </WarningBanner>
         ) : null}
-        <WarningBanner title="Draft privacy" risk="info">
-          Draft responses are not stored in browser local storage. Use Save progress if you need to pause, and submit when you are ready for the study team to receive your response.
+        <WarningBanner title={participantCopy.portal.draftPrivacyTitle} risk="info">
+          {participantCopy.portal.draftPrivacyBody}
         </WarningBanner>
       </section>
 
@@ -6243,17 +6611,17 @@ function ParticipantScreen({
         <p>{currentTaskLabel}</p>
         <div className="mobile-task-summary" aria-label="Participant task summary">
           <article>
-            <strong>What to do next</strong>
-            <p>{hasRatingTask ? "Review each statement, choose a response, add an optional rationale if useful, then submit." : roundOneOpen ? "Read the prompt, enter your response, save if you pause, and submit when ready." : "Wait for the study team to open the next task."}</p>
+            <strong>{participantCopy.taskSummary.whatNext}</strong>
+            <p>{hasRatingTask ? participantCopy.taskSummary.ratingNext : roundOneOpen ? participantCopy.taskSummary.roundOneNext : participantCopy.taskSummary.waitNext}</p>
           </article>
           <article>
-            <strong>Save and resume</strong>
-            <p>Saving progress is separate from final submission. Submitted responses can be reviewed before you finish the task.</p>
+            <strong>{participantCopy.taskSummary.saveResume}</strong>
+            <p>{participantCopy.taskSummary.saveResumeBody}</p>
           </article>
         </div>
         {!hasBackendStudy ? (
-          <WarningBanner title="No active study selected" risk="info">
-            Open a backend study workspace to show participant tasks.
+          <WarningBanner title={participantCopy.portal.noBackendTitle} risk="info">
+            {participantCopy.portal.noBackendBody}
           </WarningBanner>
         ) : null}
         {participantError ? (
@@ -6483,11 +6851,19 @@ function ParticipantScreen({
             ) : null}
           </>
         ) : (
-          <WarningBanner title="Waiting for study team" risk="info">
-            The next task will appear here when the research team opens the round and configures the participant task.
+          <WarningBanner title={participantCopy.portal.waitingTitle} risk="info">
+            {participantCopy.portal.waitingBody}
           </WarningBanner>
         )}
       </section>
+
+      <ParticipantIssueReporter
+        busy={participantBusy}
+        currentPage={`participant_portal: ${currentTaskLabel}`}
+        currentRoundNumber={issueRoundNumber}
+        onReport={onReportParticipantIssue}
+      />
+      <ParticipantIssueHistory issues={runtimeData.participantIssues} />
 
       <section className="panel">
         <h3>Study Time Commitment</h3>
@@ -6498,14 +6874,9 @@ function ParticipantScreen({
       </section>
 
       <section className="panel">
-        <h3>Participant Rights</h3>
+        <h3>{participantCopy.portal.participantRightsTitle}</h3>
         <ul className="plain-list">
-          <li>Participation is voluntary.</li>
-          <li>You may withdraw from future rounds at any time.</li>
-          <li>Depending on the study protocol and consent terms, prior submitted responses may remain in already aggregated or historical study data.</li>
-          <li>You may contact the study team about data deletion where feasible.</li>
-          <li>You may skip items where permitted by the study protocol.</li>
-          <li>AI assistance, if offered, is optional and non-directive.</li>
+          {participantCopy.portal.rights.map((right) => <li key={right}>{right}</li>)}
         </ul>
         {participantInvite ? (
           <div className="participant-rights-actions">
@@ -7813,7 +8184,7 @@ function AdminSecurityScreen({ role, workflow }: { role: UserRole; workflow: Con
                 <input autoComplete="one-time-code" disabled={smsBusy || !smsChallenge} onChange={(event) => setSmsOtpDraft(event.target.value)} value={smsOtpDraft} />
               </label>
               <label className="field">
-                <span>Round number for smoke send</span>
+                <span>Round number for test send</span>
                 <input min={1} max={4} onChange={(event) => setSmsRoundNumber(Number(event.target.value))} type="number" value={smsRoundNumber} />
               </label>
             </div>
@@ -7824,7 +8195,7 @@ function AdminSecurityScreen({ role, workflow }: { role: UserRole; workflow: Con
               <button className="secondary-button" disabled={smsBusy || !smsChallenge || !smsOtpDraft.trim()} onClick={verifySmsPhone} type="button">Verify phone</button>
               <button className="primary-button" disabled={smsBusy || !smsPolicy?.sms_enabled} onClick={sendSmsForRound} type="button">Send round-open SMS</button>
             </div>
-            {smsChallenge?.dev_otp ? <WarningBanner title="Development OTP" risk="info">Local smoke-test OTP: {smsChallenge.dev_otp}. Production builds do not expose OTP values.</WarningBanner> : null}
+            {smsChallenge?.dev_otp ? <WarningBanner title="Development OTP" risk="info">Local development OTP: {smsChallenge.dev_otp}. Production builds do not expose OTP values.</WarningBanner> : null}
             {smsPreference ? <WarningBanner title="Masked phone display" risk={smsPreference.phone_verified_at ? "success" : "warning"}>{smsPreference.masked_phone ?? "No phone on file"}; preference {smsPreference.notification_preference.replaceAll("_", " ")}; verified {smsPreference.phone_verified_at ? "yes" : "no"}.</WarningBanner> : null}
             {smsMessage ? <WarningBanner title="SMS action recorded" risk="success">{smsMessage}</WarningBanner> : null}
             {smsError ? <WarningBanner title="SMS action blocked" risk="warning">{humanizeBackendMessage(smsError)}</WarningBanner> : null}

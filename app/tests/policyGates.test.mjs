@@ -372,8 +372,8 @@ test("governed attrition UI preserves historical data and avoids removal languag
 });
 
 test("participant withdrawal copy is voluntary and preserves protocol limits", () => {
-  const source = appSource();
-  const participantRights = sourceSlice(source, "Participant Rights", "function RoundContextPanel");
+  const participantCopy = fs.readFileSync(path.join(appRoot, "src", "content", "participantCopy.ts"), "utf8");
+  const participantRights = sourceSlice(participantCopy, "participantRightsTitle", "taskSummary");
   assert.match(participantRights, /You may withdraw from future rounds at any time/);
   assert.match(participantRights, /prior submitted responses may remain in already aggregated or historical study data/);
   assert.match(participantRights, /You may contact the study team about data deletion where feasible/);
@@ -506,4 +506,32 @@ test("Study Context & Disclosures sidecar is optional, progressive, and human-re
   assert.match(apiSource, /proposal-import/);
   assert.match(css, /\.sidecar-panel/);
   assert.match(css, /\.disclosure-preview/);
+});
+
+test("participant trouble reporting and copy registry support mock-trial cleanup", () => {
+  const source = appSource();
+  const apiSource = fs.readFileSync(path.join(appRoot, "src", "core", "api.ts"), "utf8");
+  const copySource = fs.readFileSync(path.join(appRoot, "src", "content", "participantCopy.ts"), "utf8");
+  const participantSource = sourceSlice(source, "function ParticipantScreen", "function RoundContextPanel");
+  const magicSource = sourceSlice(source, "function MagicRoundEntryScreen", "function ParticipantScreen");
+
+  assert.match(copySource, /Having trouble\?/);
+  assert.match(copySource, /button_or_textbox_not_working/);
+  assert.match(participantSource, /ParticipantIssueReporter/);
+  assert.match(participantSource, /ParticipantIssueHistory/);
+  assert.match(magicSource, /ParticipantIssueReporter/);
+  assert.match(magicSource, /ParticipantIssueHistory/);
+  assert.match(source, /Participant Issue Notes/);
+  assert.match(source, /Record response/);
+  assert.match(apiSource, /reportInvitationParticipantIssue/);
+  assert.match(apiSource, /reportMagicParticipantIssue/);
+  assert.match(apiSource, /respondParticipantIssue/);
+  assert.match(apiSource, /listInvitationParticipantIssues/);
+  assert.match(apiSource, /participant-issues/);
+  assert.match(source, /local-preview-study/);
+  assert.match(source, /participant-preview/);
+  assert.match(source, /Participant issue response recorded in this local preview/);
+  assert.match(participantSource, /participantCopy\.portal/);
+  assert.equal(participantSource.toLowerCase().includes("smoke"), false);
+  assert.equal(magicSource.toLowerCase().includes("smoke"), false);
 });
