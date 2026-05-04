@@ -1,3 +1,8 @@
+/*
+ * Copyright 2026 Stephen T. Casper
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
 import test from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs/promises";
@@ -30,6 +35,8 @@ const { responsesRoutes } = await import("../dist/routes/responses.js");
 const { consentRoutes } = await import("../dist/routes/consent.js");
 const { itemsRoutes } = await import("../dist/routes/items.js");
 const { reportsRoutes } = await import("../dist/routes/reports.js");
+const { finalResultsRoutes } = await import("../dist/routes/finalResults.js");
+const { smsRoutes } = await import("../dist/routes/sms.js");
 const { aiConfigRoutes } = await import("../dist/routes/aiConfig.js");
 const { aiRoutes } = await import("../dist/routes/ai.js");
 const { verifyAuditIntegrity } = await import("../dist/core/audit.js");
@@ -81,6 +88,8 @@ async function buildApp() {
   await app.register(consentRoutes);
   await app.register(itemsRoutes);
   await app.register(reportsRoutes);
+  await app.register(finalResultsRoutes);
+  await app.register(smsRoutes);
   await app.register(aiConfigRoutes);
   await app.register(aiRoutes);
 
@@ -2235,6 +2244,81 @@ test("backend road test covers study, consent, AI, reporting, and audit flows", 
     409
   );
 
+  const closedTerminalRound = await expectStatus(
+    app,
+    {
+      method: "POST",
+      url: `/studies/${studyId}/versions/${versionId}/rounds/3/close`,
+      headers: owner,
+      body: {},
+    },
+    200
+  );
+  assert.equal(closedTerminalRound.round_config.status, "Closed");
+  assert.equal(closedTerminalRound.final_result_snapshot.terminalRoundNumber, 3);
+  assert.equal(
+    closedTerminalRound.final_result_snapshot.requiredStatement,
+    "Consensus indicates agreement among this panel; it does not establish correctness."
+  );
+  assert.ok(closedTerminalRound.final_result_snapshot.itemOutcomes.some((item) => item.outcome === "no_consensus"));
+  assert.equal(typeof closedTerminalRound.final_result_snapshot.exportHash, "string");
+
+  const finalResults = await expectStatus(
+    app,
+    {
+      method: "GET",
+      url: `/studies/${studyId}/versions/${versionId}/final-results`,
+      headers: owner,
+    },
+    200
+  );
+  assert.equal(finalResults.snapshot.snapshotId, closedTerminalRound.final_result_snapshot.snapshotId);
+  assert.ok(finalResults.release_blockers.includes("study_owner_closeout_signoff_missing"));
+
+  await expectStatus(
+    app,
+    {
+      method: "POST",
+      url: `/studies/${studyId}/versions/${versionId}/final-results/release`,
+      headers: owner,
+      body: {},
+    },
+    409
+  );
+
+  await expectStatus(
+    app,
+    {
+      method: "POST",
+      url: `/studies/${studyId}/versions/${versionId}/final-results/signoff`,
+      headers: owner,
+      body: {},
+    },
+    200
+  );
+  const stewardCloseoutSignoff = await expectStatus(
+    app,
+    {
+      method: "POST",
+      url: `/studies/${studyId}/versions/${versionId}/final-results/signoff`,
+      headers: steward,
+      body: {},
+    },
+    200
+  );
+  assert.equal(stewardCloseoutSignoff.release_blockers.length, 0);
+  const releasedCloseout = await expectStatus(
+    app,
+    {
+      method: "POST",
+      url: `/studies/${studyId}/versions/${versionId}/final-results/release`,
+      headers: owner,
+      body: {},
+    },
+    200
+  );
+  assert.equal(releasedCloseout.snapshot.status, "released");
+
   const finalExport = await expectStatus(
     app,
     {
@@ -2262,6 +2346,8 @@ test("backend road test covers study, consent, AI, reporting, and audit flows", 
   assert.equal(finalExport.export_package.files.some((file) => file.path === "final_report/final_item_results.xlsx"), true);
   assert.equal(finalExport.export_package.files.some((file) => file.path === "final_report/final_item_results.csv"), true);
   assert.equal(finalExport.export_package.files.some((file) => file.path === "final_report/required_limitations_and_disclosures.md"), true);
+  assert.equal(finalExport.export_package.files.some((file) => file.path === "final_report/final_result_snapshot.json"), true);
+  assert.equal(finalExport.export_package.files.some((file) => file.path === "final_report/final_item_outcomes_from_snapshot.csv"), true);
   assert.equal(finalExport.export_package.files.some((file) => file.path === "CITATION.md"), true);
   assert.equal(typeof finalExport.export_package.manifest_hash, "string");
   assert.equal(typeof finalExport.export_package.package_hash, "string");

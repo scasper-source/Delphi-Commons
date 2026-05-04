@@ -1,3 +1,8 @@
+/*
+ * Copyright 2026 Stephen T. Casper
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
 import type { Actor } from "../middleware/auth.js";
 import { writeAuditEvent } from "./audit.js";
 import { getStudy } from "../studies/store.js";

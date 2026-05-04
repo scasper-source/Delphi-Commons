@@ -1,3 +1,8 @@
+/*
+ * Copyright 2026 Stephen T. Casper
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
 import type { FastifyInstance } from "fastify";
 import { writeAuditEvent } from "../core/audit.js";
 import { assertAIOperationAllowed, sanitizeExternalAIPayload } from "../core/aiGateway.js";

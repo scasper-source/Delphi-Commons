@@ -1,3 +1,8 @@
+/*
+ * Copyright 2026 Stephen T. Casper
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
 import crypto from "node:crypto";
 import type { StudyFormat, StudyVersionStatus } from "../studies/types.js";
 import { sha256Json } from "../studies/hash.js";

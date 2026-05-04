@@ -1,3 +1,8 @@
+/*
+ * Copyright 2026 Stephen T. Casper
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
 import type { FastifyInstance } from "fastify";
 import { createResponse, listResponses, type ResponseRecord } from "../stores/responseStore.js";
 import { hasActiveConsent } from "../stores/consentStore.js";
@@ -18,12 +23,15 @@ import { getPublishedTraceableItemsForRound } from "../core/roundLifecycle.js";
 import { buildParticipantControlledFeedback } from "../core/participantFeedback.js";
 import { participantCanSubmit } from "../stores/participantStatusStore.js";
 import { hasOrientationCompletion } from "../stores/orientationStore.js";
+import { createFinalResultSnapshot } from "../core/finalResults.js";
+import { sendRoundOpenSmsNotifications } from "../core/smsNotifications.js";
 
 type RatingRoundPayload = {
   round_number: number;
   item_id: string;
   rating: number;
   action: "keep" | "revise";
+  rationale_text?: string;
 };
 
 function getStudyAndVersion(params: unknown): { studyId: string; versionId: string } {
@@ -55,6 +63,11 @@ function getRoundNumber(params: unknown): number | null {
     return Number.isInteger(parsed) ? parsed : null;
   }
   return null;
+}
+
+function getFrontendOrigin(req: any): string {
+  const origin = typeof req.headers.origin === "string" ? req.headers.origin : "http://127.0.0.1:5173";
+  return origin.replace(/\/$/, "");
 }
 
 function isRatingRoundPayload(value: unknown, roundNumber: number): value is RatingRoundPayload {
@@ -426,7 +439,15 @@ export async function responsesRoutes(app: FastifyInstance) {
         });
       }
 
-      return reply.send({ round_config: updated });
+      const sms = await sendRoundOpenSmsNotifications({
+        study_id: studyId,
+        version_id: versionId,
+        round_number: roundNumber,
+        actor_user_id: actor.userId,
+        frontend_origin: getFrontendOrigin(req),
+      });
+
+      return reply.send({ round_config: updated, sms });
     },
   );
 
@@ -464,7 +485,20 @@ export async function responsesRoutes(app: FastifyInstance) {
         details: { studyId, versionId, round_number: roundNumber },
       });
 
-      return reply.send({ round_config: updated });
+      const finalResultSnapshot =
+        roundNumber === studyVersion.terminal_round_number
+          ? await createFinalResultSnapshot({
+              studyId,
+              versionId,
+              terminalRoundNumber: roundNumber,
+              createdByUserId: actor.userId,
+            })
+          : null;
+
+      return reply.send({
+        round_config: updated,
+        ...(finalResultSnapshot ? { final_result_snapshot: finalResultSnapshot } : {}),
+      });
     },
   );
 
@@ -740,6 +774,10 @@ export async function responsesRoutes(app: FastifyInstance) {
       const participantId = String(body.participant_id ?? "");
       const itemId = String(body.item_id ?? "");
       const action = body.action === "keep" ? "keep" : "revise";
+      const rationaleText =
+        typeof body.rationale_text === "string"
+          ? body.rationale_text.trim().slice(0, 4000)
+          : "";
 
       if (!participantId) {
         return reply.code(400).send({ error: "participant_id_required" });
@@ -839,6 +877,7 @@ export async function responsesRoutes(app: FastifyInstance) {
           item_id: itemId,
           rating,
           action,
+          ...(rationaleText ? { rationale_text: rationaleText } : {}),
         } satisfies RatingRoundPayload,
       });
 

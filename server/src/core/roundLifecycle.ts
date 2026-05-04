@@ -1,3 +1,8 @@
+/*
+ * Copyright 2026 Stephen T. Casper
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
 import { getRoundConfig } from "../stores/roundConfigStore.js";
 import { getItem, listItems, type ItemRecord } from "../stores/itemStore.js";
 import { listResponses } from "../stores/responseStore.js";

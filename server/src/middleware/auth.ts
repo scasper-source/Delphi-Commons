@@ -1,3 +1,8 @@
+/*
+ * Copyright 2026 Stephen T. Casper
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
 import type { FastifyRequest, FastifyReply } from "fastify";
 import { listAssignments } from "../studies/store.js";
 import { getSessionByToken, getUser } from "../auth/userStore.js";

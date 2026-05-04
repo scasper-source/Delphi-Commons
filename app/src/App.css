@@ -1,3 +1,8 @@
+/*
+ * Copyright 2026 Stephen T. Casper
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
 .app-shell {
   min-height: 100vh;
   display: grid;
@@ -605,6 +610,13 @@
   gap: 10px;
 }
 
+.rating-task-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  align-items: center;
+}
+
 .rating-task-copy,
 .statement-to-evaluate,
 .rating-scale,
@@ -673,6 +685,7 @@
   padding: 10px;
   background: #ffffff;
   cursor: pointer;
+  min-height: 52px;
 }
 
 .rating-option:hover,
@@ -721,11 +734,17 @@
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
   gap: 10px;
-  align-items: center;
+  align-items: start;
   border: 1px solid #dbe4df;
   border-radius: 8px;
   padding: 10px;
   background: #ffffff;
+}
+
+.submitted-rating-row > div {
+  display: grid;
+  gap: 5px;
+  min-width: 0;
 }
 
 .rating-task small {
@@ -973,7 +992,7 @@
 .primary-button,
 .secondary-button,
 .filter-chip {
-  min-height: 40px;
+  min-height: 44px;
   border-radius: 6px;
   padding: 9px 12px;
   cursor: pointer;
@@ -1260,6 +1279,65 @@ summary:focus-visible,
   margin-top: 12px;
 }
 
+.mobile-task-summary {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: 10px;
+  margin: 12px 0;
+}
+
+.mobile-task-summary article,
+.progress-indicator,
+.save-status {
+  border: 1px solid #dbe4df;
+  border-radius: 8px;
+  background: #fbfcfa;
+  padding: 10px;
+}
+
+.mobile-task-summary p,
+.save-status {
+  margin: 0;
+  color: #4c5e62;
+}
+
+.progress-indicator {
+  display: grid;
+  gap: 8px;
+  margin: 12px 0;
+}
+
+.save-status {
+  margin: 10px 0;
+  font-weight: 700;
+}
+
+.sticky-action-bar {
+  border-top: 1px solid #dbe4df;
+  background: rgba(255, 255, 255, 0.96);
+  padding-top: 12px;
+}
+
+.rationale-field textarea {
+  min-height: 104px;
+}
+
+.magic-entry {
+  max-width: 860px;
+}
+
+.magic-entry .mobile-response-card {
+  border: 1px solid #dbe4df;
+  border-radius: 8px;
+  background: #ffffff;
+  padding: 14px;
+}
+
+.item-card-list {
+  display: grid;
+  gap: 14px;
+}
+
 .round-context-panel,
 .controlled-feedback-card {
   border: 1px solid #cfe0dc;
@@ -1521,6 +1599,54 @@ summary:focus-visible,
   padding-top: 12px;
 }
 
+.final-hero {
+  border-left: 4px solid #2f7a83;
+}
+
+.result-card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: 12px;
+}
+
+.outcome-tabs {
+  margin-bottom: 14px;
+}
+
+.item-outcome-list {
+  display: grid;
+  gap: 12px;
+}
+
+.final-item-card,
+.closeout-accordion {
+  border: 1px solid #d5e1dc;
+  border-radius: 8px;
+  background: #fbfdfc;
+  padding: 14px;
+}
+
+.final-item-card h4 {
+  margin: 10px 0;
+  overflow-wrap: anywhere;
+}
+
+.closeout-accordion summary {
+  cursor: pointer;
+  font-weight: 700;
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+}
+
+.closeout-accordion .item-outcome-list {
+  margin-top: 10px;
+}
+
+.final-item-card .compact-distribution {
+  margin: 12px 0;
+}
+
 @media (max-width: 980px) {
   .app-shell {
     grid-template-columns: 1fr;
@@ -1556,6 +1682,28 @@ summary:focus-visible,
     padding: 16px;
   }
 
+  .reference-bar {
+    margin: -16px -16px 16px;
+    padding: 8px 16px;
+  }
+
+  .reference-bar nav {
+    justify-content: flex-start;
+  }
+
+  .reference-link {
+    min-height: 40px;
+  }
+
+  .topbar h1,
+  .section-heading h2 {
+    font-size: 1.45rem;
+  }
+
+  .panel {
+    padding: 14px;
+  }
+
   .topbar,
   .next-action,
   .locked-rule,
@@ -1572,6 +1720,131 @@ summary:focus-visible,
   .form-grid {
     display: grid;
     grid-template-columns: 1fr;
+  }
+
+  .next-action {
+    gap: 12px;
+  }
+
+  .action-row,
+  .candidate-actions,
+  .output-actions,
+  .saved-study-actions,
+  .participant-rights-actions,
+  .wizard-actions,
+  .segmented-control {
+    align-items: stretch;
+  }
+
+  .action-row > button,
+  .candidate-actions > button,
+  .output-actions > button,
+  .saved-study-actions > button,
+  .participant-rights-actions > button,
+  .wizard-actions > button,
+  .segmented-control > button {
+    width: 100%;
+    min-height: 48px;
+  }
+
+  .sticky-action-bar {
+    position: sticky;
+    bottom: 0;
+    z-index: 3;
+    margin: 12px -14px -14px;
+    padding: 10px 14px 12px;
+    box-shadow: 0 -8px 20px rgba(25, 52, 58, 0.08);
+  }
+
+  .mobile-task-summary,
+  .rating-options,
+  .submitted-rating-list {
+    grid-template-columns: 1fr;
+  }
+
+  .round-context-panel ul {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+
+  .round-context-panel li {
+    border-radius: 8px;
+    padding: 8px 10px;
+  }
+
+  .rating-option {
+    min-height: 58px;
+    padding: 12px;
+  }
+
+  .rating-option input,
+  .check-field input {
+    min-width: 22px;
+    min-height: 22px;
+  }
+
+  .field input,
+  .field select,
+  .field textarea,
+  .role-picker select {
+    min-height: 46px;
+    font-size: 1rem;
+  }
+
+  .field textarea {
+    min-height: 128px;
+  }
+
+  .rationale-field textarea {
+    min-height: 116px;
+  }
+
+  .compact-distribution {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .compact-distribution i {
+    max-width: 100%;
+  }
+
+  .feedback-card-topline,
+  .badge-line,
+  .compact-actions {
+    display: grid;
+    grid-template-columns: 1fr;
+    align-items: stretch;
+  }
+
+  .feedback-metrics {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+
+  .workflow-check,
+  .workflow-step,
+  .signoff,
+  .check-row,
+  .ai-card dl div,
+  .detail-list div,
+  .saved-study-row {
+    grid-template-columns: 1fr;
+  }
+
+  .signoff span {
+    grid-column: auto;
+  }
+
+  .output-row .badge {
+    min-width: 0;
+    justify-content: flex-start;
+  }
+
+  .curation-layout > .panel {
+    max-height: none;
+  }
+
+  .app-footer {
+    justify-content: flex-start;
   }
 
   .wide-field,

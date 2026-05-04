@@ -1,3 +1,8 @@
+/*
+ * Copyright 2026 Stephen T. Casper
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
 import type { AISuggestion, ReportModel, StudyRecord, StudyStatus, UserRole } from "../core/types";
 import { canAccessIdentityMap } from "../core/permissions";
 

@@ -1,3 +1,8 @@
+/*
+ * Copyright 2026 Stephen T. Casper
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
 // server/src/studies/roleMap.ts
 import type { StudyRole } from "./types.js";
 

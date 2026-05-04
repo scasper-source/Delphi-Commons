@@ -1,3 +1,8 @@
+/*
+ * Copyright 2026 Stephen T. Casper
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
 import crypto from "node:crypto";
 import { getDatabase } from "../core/database.js";
 import type { Actor } from "../middleware/auth.js";

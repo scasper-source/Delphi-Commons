@@ -1,3 +1,8 @@
+/*
+ * Copyright 2026 Stephen T. Casper
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
 import type { StudyWizardState } from "../core/studyWizard";
 
 export const orientationContentVersion = "participant-orientation-v1";

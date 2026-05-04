@@ -1,3 +1,8 @@
+/*
+ * Copyright 2026 Stephen T. Casper
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
 import { upsertUser } from "./userStore.js";
 import type { AuthRole } from "./types.js";
 

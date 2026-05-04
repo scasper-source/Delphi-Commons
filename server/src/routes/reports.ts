@@ -1,3 +1,8 @@
+/*
+ * Copyright 2026 Stephen T. Casper
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
 import type { FastifyInstance } from "fastify";
 import { listItems, type ItemRecord } from "../stores/itemStore.js";
 import { listResponses, type ResponseRecord } from "../stores/responseStore.js";
@@ -35,12 +40,17 @@ import {
   buildPreferredCitation,
   citationMetadata,
 } from "../core/citation.js";
+import {
+  FINAL_RESULT_REQUIRED_STATEMENT,
+  getFinalResultSnapshot,
+} from "../stores/finalResultStore.js";
 
 type RatingRoundPayload = {
   round_number: number;
   item_id: string;
   rating: number;
   action: "keep" | "revise";
+  rationale_text?: string;
 };
 
 function getStudyAndVersion(params: unknown): { studyId: string; versionId: string } {
@@ -552,7 +562,7 @@ function buildExportDataset(input: {
       rating_label: ratingLabel(ratingPayload.rating),
       prior_rating_value: "",
       changed_from_prior: "",
-      rationale_text_redacted: "",
+      rationale_text_redacted: typeof ratingPayload.rationale_text === "string" ? ratingPayload.rationale_text : "",
       submitted_at_shifted: "",
       included_in_analysis: true,
     }];
@@ -1297,6 +1307,46 @@ export async function reportsRoutes(app: FastifyInstance) {
         limitationsMarkdown,
       });
       const aiConnectorDisclosure = aiConfigDisclosureForExport(studyId);
+      const finalResultSnapshot = getFinalResultSnapshot(studyId, versionId);
+      const finalReportSnapshotFiles = finalResultSnapshot
+        ? [
+            {
+              path: "final_report/final_result_snapshot.json",
+              content: JSON.stringify(finalResultSnapshot, null, 2),
+              format: ".json" as const,
+              record_count: finalResultSnapshot.itemOutcomes.length,
+              contains_identifiable_data: false,
+              redaction_profile: {
+                direct_identifiers: "excluded",
+                identity_response_mapping: "excluded",
+                canonical_source: "FinalResultSnapshot",
+              },
+            },
+            {
+              path: "final_report/final_item_outcomes_from_snapshot.csv",
+              content: toCsv(finalResultSnapshot.itemOutcomes.map((item) => ({
+                item_id: item.itemId,
+                item_text: item.finalText,
+                outcome: item.outcome,
+                final_n: item.finalN,
+                median: item.median ?? "",
+                iqr: item.iqr ?? "",
+                agreement_percent: item.agreementPercent ?? "",
+                provenance: item.provenance,
+                privacy_suppression: item.exportInclusion.suppressionReason ?? "",
+                required_statement: FINAL_RESULT_REQUIRED_STATEMENT,
+              }))),
+              format: ".csv" as const,
+              record_count: finalResultSnapshot.itemOutcomes.length,
+              contains_identifiable_data: false,
+              redaction_profile: {
+                direct_identifiers: "excluded",
+                identity_response_mapping: "excluded",
+                non_consensus_included: true,
+              },
+            },
+          ]
+        : [];
 
       const exportPackage = createExportPackage({
         study_id: studyId,
@@ -1374,6 +1424,7 @@ export async function reportsRoutes(app: FastifyInstance) {
               identity_response_mapping: "not_applicable",
             },
           },
+          ...finalReportSnapshotFiles,
         ],
       });
 
@@ -1557,15 +1608,80 @@ export async function reportsRoutes(app: FastifyInstance) {
         note:
           "Citing this software supports transparency and reproducibility; it does not validate study findings or imply platform endorsement.",
       };
+      const finalResultSnapshot = getFinalResultSnapshot(studyId, versionId);
+      const finalSnapshotFiles = finalResultSnapshot
+        ? [
+            {
+              path: `${exportType}/final_result_snapshot.json`,
+              content: JSON.stringify(finalResultSnapshot, null, 2),
+              format: ".json" as const,
+              record_count: finalResultSnapshot.itemOutcomes.length,
+              contains_identifiable_data: false,
+              redaction_profile: {
+                direct_identifiers: "excluded",
+                identity_response_mapping: "excluded",
+                canonical_source: "FinalResultSnapshot",
+              },
+            },
+            {
+              path: `${exportType}/final_item_outcomes_from_snapshot.csv`,
+              content: toCsv(finalResultSnapshot.itemOutcomes.map((item) => ({
+                item_id: item.itemId,
+                item_text: item.finalText,
+                outcome: item.outcome,
+                final_n: item.finalN,
+                median: item.median ?? "",
+                iqr: item.iqr ?? "",
+                agreement_percent: item.agreementPercent ?? "",
+                provenance: item.provenance,
+                privacy_suppression: item.exportInclusion.suppressionReason ?? "",
+                required_statement: FINAL_RESULT_REQUIRED_STATEMENT,
+              }))),
+              format: ".csv" as const,
+              record_count: finalResultSnapshot.itemOutcomes.length,
+              contains_identifiable_data: false,
+              redaction_profile: {
+                direct_identifiers: "excluded",
+                identity_response_mapping: "excluded",
+                non_consensus_included: true,
+              },
+            },
+            {
+              path: `${exportType}/participant_plain_language_summary.md`,
+              content: [
+                "# Final Results Summary",
+                "",
+                FINAL_RESULT_REQUIRED_STATEMENT,
+                "",
+                `Reached consensus: ${finalResultSnapshot.aggregateCounts.consensus}`,
+                `Descriptive near consensus: ${finalResultSnapshot.aggregateCounts.descriptiveNearConsensus}`,
+                `No consensus: ${finalResultSnapshot.aggregateCounts.noConsensus}`,
+                `Final round participation: ${finalResultSnapshot.aggregateCounts.terminalRoundCompletedCount} of ${finalResultSnapshot.aggregateCounts.terminalRoundEligibleCount}`,
+                "",
+                "Non-consensus items and preserved perspectives remain part of the study result.",
+              ].join("\n"),
+              format: ".md" as const,
+              record_count: null,
+              contains_identifiable_data: false,
+              redaction_profile: {
+                direct_identifiers: "not_applicable",
+                canonical_source: "FinalResultSnapshot",
+              },
+            },
+          ]
+        : [];
 
-      const baseFiles = [{
-        path: `${exportType}/export_manifest.json`,
-        content: manifestContent,
-        format: ".json" as const,
-        record_count: null,
-        contains_identifiable_data: false,
-        redaction_profile: { manifest: "package-level metadata" },
-      }];
+      const baseFiles = [
+        {
+          path: `${exportType}/export_manifest.json`,
+          content: manifestContent,
+          format: ".json" as const,
+          record_count: null,
+          contains_identifiable_data: false,
+          redaction_profile: { manifest: "package-level metadata" },
+        },
+        ...finalSnapshotFiles,
+      ];
 
       const filesByType: Record<ExportPackageType, Parameters<typeof createExportPackage>[0]["files"]> = {
         "final-delphi-report": [

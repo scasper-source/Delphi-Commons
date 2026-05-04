@@ -1,5 +1,10 @@
+/*
+ * Copyright 2026 Stephen T. Casper
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
 const SECRET_KEY_PATTERN =
-  /^(apiKey|api_key|authorization|encryptedKey|encrypted_key|apiKeyEncrypted|api_key_encrypted|api_key_fingerprint_hash|apiKeyFingerprintHash|providerSecret|providerSecrets|provider_secret|provider_secrets|bearerToken|accessToken|refreshToken|token)$/i;
+  /^(apiKey|api_key|authorization|encryptedKey|encrypted_key|apiKeyEncrypted|api_key_encrypted|api_key_fingerprint_hash|apiKeyFingerprintHash|providerSecret|providerSecrets|provider_secret|provider_secrets|bearerToken|accessToken|refreshToken|token|rawToken|raw_token|otp|otpHash|otp_hash|smsBody|sms_body|phone|phoneE164|phone_e164)$/i;
 
 const BEARER_PATTERN = /\bBearer\s+[A-Za-z0-9._~+/=-]+/gi;
 const API_KEY_PATTERN = /\b(?:sk|pk)[-_][A-Za-z0-9._~+/=-]{8,}\b/gi;

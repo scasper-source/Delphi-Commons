@@ -1,3 +1,8 @@
+/*
+ * Copyright 2026 Stephen T. Casper
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
 // server/src/studies/routes.ts
 // Ticket 3 routes: Study + StudyVersion + dual signoff gate (Owner + MethodsSteward)
 // Ticket 4 (partial): set consensus rule (required before Round 1 opens; locked after Draft)

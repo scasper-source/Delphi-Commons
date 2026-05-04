@@ -1,3 +1,8 @@
+/*
+ * Copyright 2026 Stephen T. Casper
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
 import type { ResponseRecord } from "../stores/responseStore.js";
 import type { ParticipantEnrollment, NonResponseEscalation } from "../stores/participantStatusStore.js";
 

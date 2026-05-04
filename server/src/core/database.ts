@@ -1,3 +1,8 @@
+/*
+ * Copyright 2026 Stephen T. Casper
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
 import fs from "node:fs";
 import path from "node:path";
 import { DatabaseSync } from "node:sqlite";
@@ -251,6 +256,114 @@ const migrations: Migration[] = [
 
       CREATE INDEX IF NOT EXISTS idx_study_ai_configs_updated
         ON study_ai_configs(updated_at);
+    `,
+  },
+  {
+    id: "008_sms_magic_links",
+    sql: `
+      CREATE TABLE IF NOT EXISTS participant_contact_preferences (
+        participant_id TEXT PRIMARY KEY,
+        notification_preference TEXT NOT NULL,
+        phone_e164 TEXT,
+        phone_hash TEXT,
+        phone_last_four TEXT,
+        sms_consent_at TEXT,
+        sms_consent_version TEXT,
+        sms_consent_revoked_at TEXT,
+        phone_verified_at TEXT,
+        phone_verification_method TEXT,
+        updated_at TEXT NOT NULL,
+        updated_by_user_id TEXT NOT NULL
+      );
+
+      CREATE TABLE IF NOT EXISTS phone_verification_challenges (
+        challenge_id TEXT PRIMARY KEY,
+        participant_id TEXT NOT NULL,
+        phone_hash TEXT NOT NULL,
+        masked_phone TEXT NOT NULL,
+        otp_hash TEXT NOT NULL,
+        expires_at TEXT NOT NULL,
+        attempts INTEGER NOT NULL,
+        consumed_at TEXT,
+        created_at TEXT NOT NULL
+      );
+
+      CREATE INDEX IF NOT EXISTS idx_phone_verification_participant
+        ON phone_verification_challenges(participant_id, created_at);
+
+      CREATE TABLE IF NOT EXISTS study_sms_policies (
+        study_id TEXT NOT NULL,
+        version_id TEXT NOT NULL,
+        sms_enabled INTEGER NOT NULL,
+        notification_safe_name TEXT,
+        safe_name_is_sensitive INTEGER NOT NULL,
+        magic_link_ttl_minutes INTEGER NOT NULL,
+        updated_at TEXT NOT NULL,
+        updated_by_user_id TEXT NOT NULL,
+        PRIMARY KEY(study_id, version_id)
+      );
+
+      CREATE TABLE IF NOT EXISTS magic_link_tokens (
+        magic_link_id TEXT PRIMARY KEY,
+        token_hash TEXT NOT NULL UNIQUE,
+        participant_id TEXT NOT NULL,
+        study_id TEXT NOT NULL,
+        version_id TEXT NOT NULL,
+        round_number INTEGER NOT NULL,
+        purpose TEXT NOT NULL,
+        created_at TEXT NOT NULL,
+        expires_at TEXT NOT NULL,
+        consumed_at TEXT,
+        revoked_at TEXT,
+        created_by_event_id TEXT,
+        metadata_json TEXT NOT NULL
+      );
+
+      CREATE INDEX IF NOT EXISTS idx_magic_link_token_hash
+        ON magic_link_tokens(token_hash);
+
+      CREATE TABLE IF NOT EXISTS magic_link_sessions (
+        session_id TEXT PRIMARY KEY,
+        session_hash TEXT NOT NULL UNIQUE,
+        participant_id TEXT NOT NULL,
+        study_id TEXT NOT NULL,
+        version_id TEXT NOT NULL,
+        round_number INTEGER NOT NULL,
+        created_at TEXT NOT NULL,
+        expires_at TEXT NOT NULL
+      );
+
+      CREATE INDEX IF NOT EXISTS idx_magic_link_session_hash
+        ON magic_link_sessions(session_hash);
+
+      CREATE TABLE IF NOT EXISTS sms_notifications (
+        sms_notification_id TEXT PRIMARY KEY,
+        participant_id TEXT NOT NULL,
+        study_id TEXT NOT NULL,
+        version_id TEXT NOT NULL,
+        round_number INTEGER NOT NULL,
+        provider TEXT NOT NULL,
+        provider_message_id TEXT,
+        status TEXT NOT NULL,
+        status_updated_at TEXT,
+        sent_at TEXT,
+        failed_at TEXT,
+        failure_code TEXT,
+        preference_snapshot_json TEXT NOT NULL,
+        magic_link_id TEXT,
+        created_at TEXT NOT NULL
+      );
+
+      CREATE INDEX IF NOT EXISTS idx_sms_notifications_study_round
+        ON sms_notifications(study_id, version_id, round_number, created_at);
+
+      CREATE TABLE IF NOT EXISTS sms_delivery_events (
+        delivery_event_id TEXT PRIMARY KEY,
+        provider_message_id TEXT NOT NULL,
+        event_id TEXT NOT NULL UNIQUE,
+        status TEXT NOT NULL,
+        received_at TEXT NOT NULL
+      );
     `,
   },
 ];

@@ -1,3 +1,8 @@
+/*
+ * Copyright 2026 Stephen T. Casper
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
 export type ServerConfig = {
   port: number;
   host: string;
@@ -9,6 +14,10 @@ export type ServerConfig = {
   mutationRateLimitMax: number;
   invitationRateLimitMax: number;
   secureCookies: boolean;
+  magicLinkTtlMinutes: number;
+  phoneOtpTtlMinutes: number;
+  smsProvider: "mock" | "twilio";
+  smsWebhookSecret: string | null;
 };
 
 function parsePort(value: string | undefined): number {
@@ -62,5 +71,12 @@ export function getServerConfig(): ServerConfig {
     mutationRateLimitMax: parsePositiveInt(process.env.EDELPHI_RATE_LIMIT_MUTATION_MAX, 300, "rate_limit_mutation_max"),
     invitationRateLimitMax: parsePositiveInt(process.env.EDELPHI_RATE_LIMIT_INVITATION_MAX, 120, "rate_limit_invitation_max"),
     secureCookies: environment === "production" || process.env.EDELPHI_SECURE_COOKIES === "true",
+    magicLinkTtlMinutes: Math.min(
+      parsePositiveInt(process.env.EDELPHI_MAGIC_LINK_TTL_MINUTES, 60, "magic_link_ttl_minutes"),
+      24 * 60,
+    ),
+    phoneOtpTtlMinutes: parsePositiveInt(process.env.EDELPHI_PHONE_OTP_TTL_MINUTES, 10, "phone_otp_ttl_minutes"),
+    smsProvider: process.env.EDELPHI_SMS_PROVIDER === "twilio" ? "twilio" : "mock",
+    smsWebhookSecret: process.env.EDELPHI_SMS_WEBHOOK_SECRET ?? null,
   };
 }

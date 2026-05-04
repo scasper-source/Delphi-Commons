@@ -1,3 +1,8 @@
+/*
+ * Copyright 2026 Stephen T. Casper
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
 import Fastify from "fastify";
 import { adminRoutes } from "./routes/admin.js";
 import { studiesRoutes } from "./studies/routes.js";
@@ -7,6 +12,8 @@ import { responsesRoutes } from "./routes/responses.js";
 import { consentRoutes } from "./routes/consent.js";
 import { itemsRoutes } from "./routes/items.js";
 import { reportsRoutes } from "./routes/reports.js";
+import { finalResultsRoutes } from "./routes/finalResults.js";
+import { smsRoutes } from "./routes/sms.js";
 import { aiRoutes } from "./routes/ai.js";
 import { aiConfigRoutes } from "./routes/aiConfig.js";
 import { getServerConfig } from "./core/config.js";
@@ -40,6 +47,8 @@ await app.register(responsesRoutes);
 await app.register(consentRoutes);
 await app.register(itemsRoutes);
 await app.register(reportsRoutes);
+await app.register(finalResultsRoutes);
+await app.register(smsRoutes);
 await app.register(aiConfigRoutes);
 await app.register(aiRoutes);
 

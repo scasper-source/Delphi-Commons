@@ -1,4 +1,9 @@
-﻿import type { FastifyInstance } from "fastify";
+/*
+ * Copyright 2026 Stephen T. Casper
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+import type { FastifyInstance } from "fastify";
 import {
   createParticipantMaster,
   listParticipantMasters,
@@ -56,6 +61,12 @@ import {
   recordOrientationCompletion,
   PARTICIPANT_ORIENTATION_VERSION,
 } from "../stores/orientationStore.js";
+import {
+  deleteParticipantDraft,
+  listParticipantDrafts,
+  upsertParticipantDraft,
+} from "../stores/participantDraftStore.js";
+import { getFinalResultSnapshot } from "../stores/finalResultStore.js";
 
 function isDeletionRequestStatus(value: unknown): value is DeletionRequestStatus {
   return (
@@ -802,6 +813,11 @@ export async function participantsRoutes(app: FastifyInstance) {
     const roundConfigs = [1, 2, 3, 4]
       .map((roundNumber) => getRoundConfig({ study_id: invitation.study_id, version_id: invitation.version_id, round_number: roundNumber }))
       .filter(Boolean);
+    const drafts = listParticipantDrafts({
+      participant_id: invitation.participant_id,
+      study_id: invitation.study_id,
+      version_id: invitation.version_id,
+    });
 
     await writeAuditEvent({
       actor: { userId: invitation.participant_id, role: "participant", systemRoles: ["participant"], authSource: "invitation" },
@@ -820,7 +836,82 @@ export async function participantsRoutes(app: FastifyInstance) {
       orientation_completion: orientationCompletion,
       orientation_version: PARTICIPANT_ORIENTATION_VERSION,
       round_configs: roundConfigs,
+      drafts,
     });
+  });
+
+  app.get("/participant/invitation/final-results", async (req, reply) => {
+    const resolved = invitationFromRequest(req);
+    if (!resolved.ok) return reply.code(resolved.statusCode).send({ error: resolved.error });
+    const { invitation } = resolved;
+    const snapshot = getFinalResultSnapshot(invitation.study_id, invitation.version_id);
+    if (!snapshot || (snapshot.status !== "released" && snapshot.status !== "archived")) {
+      return reply.code(409).send({ error: "final_results_not_released" });
+    }
+
+    const responses = listResponses({ study_id: invitation.study_id, version_id: invitation.version_id });
+    const myFinalResponses = responses.flatMap((response) => {
+      const payload = response.response_json as any;
+      if (
+        response.participant_id === invitation.participant_id &&
+        payload &&
+        payload.round_number === snapshot.terminalRoundNumber &&
+        typeof payload.item_id === "string" &&
+        typeof payload.rating === "number"
+      ) {
+        const item = getItem(payload.item_id);
+        return [{
+          item_id: payload.item_id,
+          item_text: item?.text ?? "",
+          rating: payload.rating,
+          rationale_text: typeof payload.rationale_text === "string" ? payload.rationale_text : "",
+          submitted_at: response.created_at,
+        }];
+      }
+      return [];
+    });
+
+    await writeAuditEvent({
+      actor: { userId: invitation.participant_id, role: "participant", systemRoles: ["participant"], authSource: "invitation" },
+      action: "final_results.participant_view",
+      object: { type: "final_result_snapshot", id: snapshot.snapshotId },
+      details: { studyId: invitation.study_id, versionId: invitation.version_id },
+    });
+
+    return reply.send({ snapshot, my_final_responses: myFinalResponses });
+  });
+
+  app.put("/participant/invitation/rounds/:roundNumber/draft", async (req, reply) => {
+    const { roundNumber: rawRoundNumber } = req.params as any;
+    const body = (req.body ?? {}) as Record<string, unknown>;
+    const resolved = invitationFromRequest(req);
+    if (!resolved.ok) return reply.code(resolved.statusCode).send({ error: resolved.error });
+    const { invitation } = resolved;
+    const roundNumber = Number(rawRoundNumber);
+    if (!Number.isInteger(roundNumber) || roundNumber < 1) return reply.code(400).send({ error: "round_number_required" });
+
+    const roundConfig = getRoundConfig({ study_id: invitation.study_id, version_id: invitation.version_id, round_number: roundNumber });
+    if (!roundConfig || roundConfig.status !== "Open") return reply.code(409).send({ error: "round_not_open" });
+    if (!participantCanSubmit({ study_id: invitation.study_id, version_id: invitation.version_id, participant_id: invitation.participant_id, round_number: roundNumber })) {
+      return reply.code(403).send({ error: "participant_inactive_or_withdrawn_for_round" });
+    }
+
+    const draft = upsertParticipantDraft({
+      study_id: invitation.study_id,
+      version_id: invitation.version_id,
+      participant_id: invitation.participant_id,
+      round_number: roundNumber,
+      draft_json: body.draft_json ?? {},
+    });
+
+    await writeAuditEvent({
+      actor: { userId: invitation.participant_id, role: "participant", systemRoles: ["participant"], authSource: "invitation" },
+      action: "participant.draft.save",
+      object: { type: "participant_draft", id: `${invitation.participant_id}:${roundNumber}` },
+      details: { studyId: invitation.study_id, versionId: invitation.version_id, round_number: roundNumber },
+    });
+
+    return reply.send({ draft });
   });
 
   app.post("/participant/invitation/orientation/complete", async (req, reply) => {
@@ -981,6 +1072,12 @@ export async function participantsRoutes(app: FastifyInstance) {
       participant_id: invitation.participant_id,
       response_json: { round_number: 1, text },
     });
+    deleteParticipantDraft({
+      study_id: invitation.study_id,
+      version_id: invitation.version_id,
+      participant_id: invitation.participant_id,
+      round_number: 1,
+    });
 
     await writeAuditEvent({
       actor: { userId: invitation.participant_id, role: "participant", systemRoles: ["participant"], authSource: "invitation" },
@@ -1052,6 +1149,10 @@ export async function participantsRoutes(app: FastifyInstance) {
     const itemId = String(body.item_id ?? "");
     const rating = Number(body.rating);
     const action = body.action === "keep" ? "keep" : "revise";
+    const rationaleText =
+      typeof body.rationale_text === "string"
+        ? body.rationale_text.trim().slice(0, 4000)
+        : "";
     if (!Number.isInteger(rating) || rating < 1 || rating > 9) return reply.code(400).send({ error: "rating_1_to_9_required" });
 
     const item = getItem(itemId);
@@ -1063,7 +1164,7 @@ export async function participantsRoutes(app: FastifyInstance) {
       study_id: invitation.study_id,
       version_id: invitation.version_id,
       participant_id: invitation.participant_id,
-      response_json: { round_number: roundNumber, item_id: itemId, rating, action },
+      response_json: { round_number: roundNumber, item_id: itemId, rating, action, ...(rationaleText ? { rationale_text: rationaleText } : {}) },
     });
 
     await writeAuditEvent({

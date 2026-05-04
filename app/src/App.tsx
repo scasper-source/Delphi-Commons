@@ -1,4 +1,9 @@
-import { useEffect, useMemo, useState } from "react";
+/*
+ * Copyright 2026 Stephen T. Casper
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+import { useEffect, useMemo, useState, type CSSProperties } from "react";
 import "./App.css";
 import {
   conductorApi,
@@ -25,6 +30,13 @@ import {
   type ParticipantEnrollment,
   type NonResponseEscalation,
   type NonResponsePolicy,
+  type FinalResultSnapshot,
+  type ParticipantFinalResponse,
+  type SmsPolicy,
+  type ParticipantContactPreference,
+  type SmsNotification,
+  type PhoneVerificationChallengeResponse,
+  type MagicRoundEntryContext,
 } from "./core/api";
 import { mockStudies, mockStudy } from "./core/mockData";
 import { canAccessIdentityMap, canAccessModule, canExportOutput, roleLabels } from "./core/permissions";
@@ -104,6 +116,15 @@ function participantInviteTokenFromLocation() {
 
   const hash = window.location.hash.startsWith("#") ? window.location.hash.slice(1) : window.location.hash;
   return new URLSearchParams(hash).get("invite");
+}
+
+function magicTokenFromLocation() {
+  const pathMatch = window.location.pathname.match(/^\/m\/([A-Za-z0-9_-]{32,256})$/);
+  if (pathMatch?.[1]) return pathMatch[1];
+  const queryToken = new URLSearchParams(window.location.search).get("m");
+  if (queryToken) return queryToken;
+  const hash = window.location.hash.startsWith("#") ? window.location.hash.slice(1) : window.location.hash;
+  return new URLSearchParams(hash).get("m");
 }
 
 const ratingScaleOptions = [
@@ -313,6 +334,7 @@ type RuntimeStudyData = {
 };
 
 type RatingDraft = Record<string, number>;
+type RationaleDraft = Record<string, string>;
 
 const initialWorkflow: ConductorWorkflow = {
   study: null,
@@ -383,8 +405,11 @@ function App() {
   const [participantRoundOneEditing, setParticipantRoundOneEditing] = useState(false);
   const [participantRoundOneComplete, setParticipantRoundOneComplete] = useState(false);
   const [participantSubmittedRatings, setParticipantSubmittedRatings] = useState<Record<number, RatingDraft>>({});
+  const [participantSubmittedRationales, setParticipantSubmittedRationales] = useState<Record<number, RationaleDraft>>({});
   const [participantRatingRoundEditing, setParticipantRatingRoundEditing] = useState<Record<number, boolean>>({});
   const [participantRatingRoundComplete, setParticipantRatingRoundComplete] = useState<Record<number, boolean>>({});
+  const [participantDraftSavedAt, setParticipantDraftSavedAt] = useState<string | null>(null);
+  const [participantRatingDraftSavedAt, setParticipantRatingDraftSavedAt] = useState<Record<number, string | null>>({});
   const [participantWithdrawn, setParticipantWithdrawn] = useState(false);
   const [participantConsentChecked, setParticipantConsentChecked] = useState(false);
   const [participantOrientationComplete, setParticipantOrientationComplete] = useState(false);
@@ -392,10 +417,26 @@ function App() {
   const [participantError, setParticipantError] = useState<string | null>(null);
   const [participantBusy, setParticipantBusy] = useState(false);
   const [participantInviteToken] = useState(participantInviteTokenFromLocation);
+  const [magicToken] = useState(magicTokenFromLocation);
+  const [magicContext, setMagicContext] = useState<MagicRoundEntryContext | null>(null);
+  const [magicItems, setMagicItems] = useState<RoundItemForParticipant[]>([]);
+  const [magicResponseText, setMagicResponseText] = useState("");
+  const [magicRatings, setMagicRatings] = useState<RatingDraft>({});
+  const [magicRationales, setMagicRationales] = useState<RationaleDraft>({});
+  const [magicMessage, setMagicMessage] = useState<string | null>(null);
+  const [magicError, setMagicError] = useState<string | null>(null);
+  const [magicBusy, setMagicBusy] = useState(false);
   const [participantInvite, setParticipantInvite] = useState<ParticipantInvitationContext | null>(null);
   const [runtimeData, setRuntimeData] = useState<RuntimeStudyData>(emptyRuntimeStudyData);
   const [runtimeActionBusy, setRuntimeActionBusy] = useState<string | null>(null);
   const [roundTwoRatings, setRoundTwoRatings] = useState<RatingDraft>({});
+  const [roundTwoRationales, setRoundTwoRationales] = useState<RationaleDraft>({});
+  const [finalResultSnapshot, setFinalResultSnapshot] = useState<FinalResultSnapshot | null>(null);
+  const [finalResultBlockers, setFinalResultBlockers] = useState<string[]>(["final_result_snapshot_missing"]);
+  const [participantFinalResponses, setParticipantFinalResponses] = useState<ParticipantFinalResponse[]>([]);
+  const [finalResultMessage, setFinalResultMessage] = useState<string | null>(null);
+  const [finalResultError, setFinalResultError] = useState<string | null>(null);
+  const [finalResultBusy, setFinalResultBusy] = useState<string | null>(null);
   const [savedStudies, setSavedStudies] = useState<SavedStudyRecord[]>([]);
   const [savedStudiesLoading, setSavedStudiesLoading] = useState(false);
   const [savedStudiesError, setSavedStudiesError] = useState<string | null>(null);
@@ -433,6 +474,37 @@ function App() {
   }, [role]);
 
   useEffect(() => {
+    if (!magicToken) return;
+    const token = magicToken;
+    async function loadMagicEntry() {
+      setMagicBusy(true);
+      setMagicError(null);
+      try {
+        setRole("panelist");
+        setActiveModule("participant");
+        const result = await conductorApi.consumeMagicLink(token);
+        setMagicContext(result.context);
+        window.history.replaceState({}, document.title, "/");
+        if (result.context.round.round_number > 1 && result.context.round.status === "open") {
+          const items = await conductorApi.listMagicRoundItems(result.context.round.round_number);
+          setMagicItems(items.items);
+        }
+      } catch (error) {
+        setRole("panelist");
+        setActiveModule("participant");
+        setMagicError(
+          error instanceof Error
+            ? error.message
+            : "This secure link has expired or has already been used.",
+        );
+      } finally {
+        setMagicBusy(false);
+      }
+    }
+    void loadMagicEntry();
+  }, [magicToken]);
+
+  useEffect(() => {
     if (!participantInviteToken) return;
     const inviteToken = participantInviteToken;
 
@@ -446,6 +518,14 @@ function App() {
         setParticipantWithdrawn(Boolean(context.consent_record?.withdrew_at));
         setParticipantOrientationComplete(Boolean(context.orientation_completion));
         setRoundConfigs(context.round_configs);
+        const roundOneDraft = context.drafts.find((draft) => draft.round_number === 1);
+        if (roundOneDraft?.draft_json && typeof roundOneDraft.draft_json === "object" && "text" in roundOneDraft.draft_json) {
+          const text = (roundOneDraft.draft_json as { text?: unknown }).text;
+          if (typeof text === "string") {
+            setParticipantResponseText(text);
+            setParticipantDraftSavedAt(roundOneDraft.updated_at);
+          }
+        }
 
         if (context.study && context.study_version) {
           setWorkflow((current) => ({
@@ -461,6 +541,17 @@ function App() {
         const openRatingRound = context.round_configs.find((config) => config.round_number > 1 && config.status === "Open");
         if (openRatingRound) {
           const result = await conductorApi.listInvitationRoundItems(inviteToken, openRatingRound.round_number);
+          const ratingDraft = context.drafts.find((draft) => draft.round_number === openRatingRound.round_number);
+          if (ratingDraft?.draft_json && typeof ratingDraft.draft_json === "object") {
+            const draftJson = ratingDraft.draft_json as { ratings?: unknown; rationales?: unknown };
+            if (draftJson.ratings && typeof draftJson.ratings === "object" && !Array.isArray(draftJson.ratings)) {
+              setRoundTwoRatings(draftJson.ratings as RatingDraft);
+            }
+            if (draftJson.rationales && typeof draftJson.rationales === "object" && !Array.isArray(draftJson.rationales)) {
+              setRoundTwoRationales(draftJson.rationales as RationaleDraft);
+            }
+            setParticipantRatingDraftSavedAt((current) => ({ ...current, [openRatingRound.round_number]: ratingDraft.updated_at }));
+          }
           setRuntimeData((current) => ({
             ...current,
             ratingRoundItems: {
@@ -469,6 +560,14 @@ function App() {
             },
             roundTwoItems: openRatingRound.round_number === 2 ? result.items : current.roundTwoItems,
           }));
+        }
+        try {
+          const finalResults = await conductorApi.getInvitationFinalResults(inviteToken);
+          setFinalResultSnapshot(finalResults.snapshot);
+          setParticipantFinalResponses(finalResults.my_final_responses);
+          setFinalResultBlockers([]);
+        } catch {
+          setParticipantFinalResponses([]);
         }
       } catch (error) {
         setParticipantError(error instanceof Error ? error.message : "Unable to open participant invitation.");
@@ -498,6 +597,9 @@ function App() {
       setRoundConfigs([]);
       setRuntimeData(emptyRuntimeStudyData);
       setRoundTwoRatings({});
+      setFinalResultSnapshot(null);
+      setFinalResultBlockers(["final_result_snapshot_missing"]);
+      setParticipantFinalResponses([]);
     }
   }, [role, workflow.study?.id, workflow.version?.id]);
 
@@ -537,6 +639,8 @@ function App() {
   async function loadRuntimeData(studyId = workflow.study?.id, versionId = workflow.version?.id) {
     if (!studyId || !versionId) {
       setRuntimeData(emptyRuntimeStudyData);
+      setFinalResultSnapshot(null);
+      setFinalResultBlockers(["final_result_snapshot_missing"]);
       return;
     }
 
@@ -546,7 +650,7 @@ function App() {
       const canReadStaffData = role !== "panelist";
       const terminalRound = workflow.version?.terminal_round_number ?? wizard.terminalRoundNumber;
       const ratingRounds = Array.from({ length: Math.max(terminalRound - 1, 1) }, (_, index) => index + 2);
-      const [responsesResult, itemsResult, suggestionsResult, ratingItemsResults, reportResults, exportPackagesResult] =
+      const [responsesResult, itemsResult, suggestionsResult, ratingItemsResults, reportResults, exportPackagesResult, finalResultsResult] =
         await Promise.all([
           canReadStaffData ? conductorApi.listResponses(studyId, versionId, role) : Promise.resolve({ responses: [] }),
           canReadStaffData ? conductorApi.listItems(studyId, versionId, role) : Promise.resolve({ items: [] }),
@@ -568,7 +672,16 @@ function App() {
           canReadStaffData
             ? conductorApi.listExportPackages(studyId, versionId, role).catch(() => ({ export_packages: [] }))
             : Promise.resolve({ export_packages: [] }),
+          canReadStaffData
+            ? conductorApi.getFinalResults(studyId, versionId, role).catch(() => ({
+                snapshot: null,
+                release_blockers: ["final_result_snapshot_missing"],
+              }))
+            : Promise.resolve({ snapshot: null, release_blockers: ["participant_final_results_use_invitation"] }),
         ]);
+
+      setFinalResultSnapshot(finalResultsResult.snapshot);
+      setFinalResultBlockers(finalResultsResult.release_blockers);
 
       const ratingRoundItems = Object.fromEntries(
         ratingItemsResults.flatMap((entry) =>
@@ -766,20 +879,69 @@ function App() {
         await conductorApi.openRound(workflow.study.id, workflow.version.id, 1, role);
       }
 
-      const result = action === "open"
-        ? await conductorApi.openRound(workflow.study.id, workflow.version.id, roundNumber, role)
-        : await conductorApi.closeRound(workflow.study.id, workflow.version.id, roundNumber, role);
+      const result =
+        action === "open"
+          ? await conductorApi.openRound(workflow.study.id, workflow.version.id, roundNumber, role)
+          : await conductorApi.closeRound(workflow.study.id, workflow.version.id, roundNumber, role);
+      const createdSnapshot: FinalResultSnapshot | null =
+        action === "close" && "final_result_snapshot" in result
+          ? (result as { final_result_snapshot?: FinalResultSnapshot }).final_result_snapshot ?? null
+          : null;
 
       setRoundConfigs((current) => [
         ...current.filter((config) => config.round_number !== roundNumber),
         result.round_config,
       ]);
-      setRoundActionMessage(`Round ${roundNumber} ${action === "open" ? "opened" : "closed"}.`);
+      if (createdSnapshot) {
+        setFinalResultSnapshot(createdSnapshot);
+        setFinalResultBlockers(["study_owner_closeout_signoff_missing", "ethics_methods_closeout_signoff_missing"]);
+        setActiveModule("closeout");
+      }
+      setRoundActionMessage(
+        createdSnapshot
+          ? `Round ${roundNumber} closed and the Final Results & Study Closeout snapshot was created.`
+          : `Round ${roundNumber} ${action === "open" ? "opened" : "closed"}.`,
+      );
       await loadRuntimeData(workflow.study.id, workflow.version.id);
     } catch (error) {
       setRoundActionError(error instanceof Error ? error.message : `Unable to ${action} Round ${roundNumber}.`);
     } finally {
       setRoundActionBusy(null);
+    }
+  }
+
+  async function runFinalResultAction(action: "create" | "signoff" | "release" | "archive") {
+    if (!workflow.study || !workflow.version) {
+      setFinalResultError("Open a backend study before working with final results.");
+      return;
+    }
+
+    setFinalResultBusy(action);
+    setFinalResultError(null);
+    setFinalResultMessage(null);
+
+    try {
+      const result =
+        action === "create"
+          ? await conductorApi.createFinalResults(workflow.study.id, workflow.version.id, role)
+          : action === "signoff"
+            ? await conductorApi.signoffFinalResults(workflow.study.id, workflow.version.id, role)
+            : action === "release"
+              ? await conductorApi.releaseFinalResults(workflow.study.id, workflow.version.id, role)
+              : await conductorApi.archiveFinalResults(workflow.study.id, workflow.version.id, role);
+
+      setFinalResultSnapshot(result.snapshot);
+      setFinalResultBlockers(result.release_blockers);
+      setFinalResultMessage({
+        create: "FinalResultSnapshot created from the closed terminal round.",
+        signoff: "Closeout release signoff recorded.",
+        release: "Participant final results are released from the canonical snapshot.",
+        archive: "Final results archived with snapshot hashes preserved.",
+      }[action]);
+    } catch (error) {
+      setFinalResultError(error instanceof Error ? error.message : "Unable to update final results.");
+    } finally {
+      setFinalResultBusy(null);
     }
   }
 
@@ -1144,6 +1306,49 @@ function App() {
     setRoundTwoRatings((current) => ({ ...current, [itemId]: rating }));
   }
 
+  function updateRoundTwoRationale(itemId: string, rationale: string) {
+    setRoundTwoRationales((current) => ({ ...current, [itemId]: rationale }));
+  }
+
+  async function saveParticipantRoundOneDraft() {
+    setParticipantBusy(true);
+    setParticipantError(null);
+    try {
+      if (participantInviteToken) {
+        const result = await conductorApi.saveInvitationDraft(participantInviteToken, 1, { text: participantResponseText });
+        setParticipantDraftSavedAt(result.draft.updated_at);
+      } else {
+        setParticipantDraftSavedAt(new Date().toISOString());
+      }
+      setParticipantMessage("Progress saved. Submit when you are ready for the study team to receive it.");
+    } catch (error) {
+      setParticipantError(error instanceof Error ? error.message : "Unable to save progress.");
+    } finally {
+      setParticipantBusy(false);
+    }
+  }
+
+  async function saveParticipantRatingDraft(roundNumber: number) {
+    setParticipantBusy(true);
+    setParticipantError(null);
+    try {
+      if (participantInviteToken) {
+        const result = await conductorApi.saveInvitationDraft(participantInviteToken, roundNumber, {
+          ratings: roundTwoRatings,
+          rationales: roundTwoRationales,
+        });
+        setParticipantRatingDraftSavedAt((current) => ({ ...current, [roundNumber]: result.draft.updated_at }));
+      } else {
+        setParticipantRatingDraftSavedAt((current) => ({ ...current, [roundNumber]: new Date().toISOString() }));
+      }
+      setParticipantMessage(`Round ${roundNumber} progress saved. Submit when you are ready for the study team to receive it.`);
+    } catch (error) {
+      setParticipantError(error instanceof Error ? error.message : "Unable to save progress.");
+    } finally {
+      setParticipantBusy(false);
+    }
+  }
+
   async function submitRoundTwoRatings() {
     if (!workflow.study || !workflow.version) {
       setParticipantError("No active study version is selected.");
@@ -1176,6 +1381,8 @@ function App() {
             currentRound,
             item.item_id,
             roundTwoRatings[item.item_id] ?? 0,
+            "revise",
+            roundTwoRationales[item.item_id] ?? "",
           );
         } else {
           await conductorApi.submitRating(
@@ -1186,15 +1393,24 @@ function App() {
             item.item_id,
             "panelist",
             roundTwoRatings[item.item_id] ?? 0,
+            "revise",
+            roundTwoRationales[item.item_id] ?? "",
           );
         }
       }
       const submittedRatings = Object.fromEntries(
         currentItems.map((item) => [item.item_id, roundTwoRatings[item.item_id] ?? 0]),
       );
+      const submittedRationales = Object.fromEntries(
+        currentItems.map((item) => [item.item_id, roundTwoRationales[item.item_id] ?? ""]),
+      );
       setParticipantSubmittedRatings((current) => ({
         ...current,
         [currentRound]: submittedRatings,
+      }));
+      setParticipantSubmittedRationales((current) => ({
+        ...current,
+        [currentRound]: submittedRationales,
       }));
       setParticipantRatingRoundEditing((current) => ({
         ...current,
@@ -1206,6 +1422,7 @@ function App() {
       }));
       setParticipantMessage(`Round ${currentRound} responses submitted. Please review what was recorded.`);
       setRoundTwoRatings({});
+      setRoundTwoRationales({});
       await loadRuntimeData(workflow.study.id, workflow.version.id);
     } catch (error) {
       setParticipantError(error instanceof Error ? error.message : "Unable to submit Round 2 ratings.");
@@ -1218,6 +1435,7 @@ function App() {
     const submitted = participantSubmittedRatings[roundNumber];
     if (!submitted) return;
     setRoundTwoRatings(submitted);
+    setRoundTwoRationales(participantSubmittedRationales[roundNumber] ?? {});
     setParticipantRatingRoundEditing((current) => ({
       ...current,
       [roundNumber]: true,
@@ -1240,6 +1458,7 @@ function App() {
       [roundNumber]: true,
     }));
     setRoundTwoRatings({});
+    setRoundTwoRationales({});
     setParticipantMessage(`Round ${roundNumber} task complete. Your submitted responses are recorded.`);
     setParticipantError(null);
   }
@@ -1286,6 +1505,55 @@ function App() {
       setParticipantError(error instanceof Error ? error.message : "Unable to request retention/deletion review.");
     } finally {
       setParticipantBusy(false);
+    }
+  }
+
+  async function submitMagicRound() {
+    if (!magicContext) return;
+    setMagicBusy(true);
+    setMagicError(null);
+    setMagicMessage(null);
+    try {
+      const roundNumber = magicContext.round.round_number;
+      if (roundNumber === 1) {
+        if (!magicResponseText.trim()) throw new Error("Round response text is required.");
+        await conductorApi.submitMagicRoundOneResponse(roundNumber, magicResponseText.trim());
+      } else {
+        if (magicItems.some((item) => !magicRatings[item.item_id])) {
+          throw new Error(`A response option is required for each Round ${roundNumber} statement.`);
+        }
+        for (const item of magicItems) {
+          await conductorApi.submitMagicRating(
+            roundNumber,
+            item.item_id,
+            Number(magicRatings[item.item_id]),
+            "revise",
+            magicRationales[item.item_id] ?? "",
+          );
+        }
+      }
+      setMagicContext((current) => current ? { ...current, round: { ...current.round, status: "completed" } } : current);
+      setMagicMessage("Round response submitted. You can close this page or return through your normal participant route.");
+    } catch (error) {
+      setMagicError(error instanceof Error ? error.message : "Unable to submit from this secure link.");
+    } finally {
+      setMagicBusy(false);
+    }
+  }
+
+  async function declineMagicRound() {
+    if (!magicContext) return;
+    setMagicBusy(true);
+    setMagicError(null);
+    setMagicMessage(null);
+    try {
+      await conductorApi.declineMagicRound(magicContext.round.round_number);
+      setMagicContext((current) => current ? { ...current, round: { ...current.round, status: "declined" } } : current);
+      setMagicMessage("Round declined. Participation remains voluntary.");
+    } catch (error) {
+      setMagicError(error instanceof Error ? error.message : "Unable to decline this round.");
+    } finally {
+      setMagicBusy(false);
     }
   }
 
@@ -1747,8 +2015,11 @@ function App() {
           participantRoundOneEditing={participantRoundOneEditing}
           participantRoundOneComplete={participantRoundOneComplete}
           participantSubmittedRatings={participantSubmittedRatings}
+          participantSubmittedRationales={participantSubmittedRationales}
           participantRatingRoundEditing={participantRatingRoundEditing}
           participantRatingRoundComplete={participantRatingRoundComplete}
+          participantDraftSavedAt={participantDraftSavedAt}
+          participantRatingDraftSavedAt={participantRatingDraftSavedAt}
           participantWithdrawn={participantWithdrawn}
           participantConsentChecked={participantConsentChecked}
           participantOrientationComplete={participantOrientationComplete}
@@ -1756,9 +2027,24 @@ function App() {
           participantError={participantError}
           participantBusy={participantBusy}
           participantInvite={participantInvite}
+          magicContext={magicContext}
+          magicItems={magicItems}
+          magicResponseText={magicResponseText}
+          magicRatings={magicRatings}
+          magicRationales={magicRationales}
+          magicMessage={magicMessage}
+          magicError={magicError}
+          magicBusy={magicBusy}
           runtimeData={runtimeData}
           runtimeActionBusy={runtimeActionBusy}
           roundTwoRatings={roundTwoRatings}
+          roundTwoRationales={roundTwoRationales}
+          finalResultSnapshot={finalResultSnapshot}
+          finalResultBlockers={finalResultBlockers}
+          participantFinalResponses={participantFinalResponses}
+          finalResultMessage={finalResultMessage}
+          finalResultError={finalResultError}
+          finalResultBusy={finalResultBusy}
           activeWizardStep={activeWizardStep}
           onWizardChange={setWizard}
           onWizardStepChange={setActiveWizardStep}
@@ -1777,8 +2063,15 @@ function App() {
           onFinishRoundOneTask={finishRoundOneTask}
           onEditSubmittedRatings={editSubmittedRatings}
           onFinishRatingRoundTask={finishRatingRoundTask}
+          onSaveParticipantRoundOneDraft={saveParticipantRoundOneDraft}
+          onSaveParticipantRatingDraft={saveParticipantRatingDraft}
           onWithdrawParticipant={withdrawParticipantInvitation}
           onRequestDeletionReview={requestParticipantDeletionReview}
+          onMagicResponseTextChange={setMagicResponseText}
+          onMagicRatingChange={(itemId, rating) => setMagicRatings((current) => ({ ...current, [itemId]: rating }))}
+          onMagicRationaleChange={(itemId, text) => setMagicRationales((current) => ({ ...current, [itemId]: text }))}
+          onSubmitMagicRound={submitMagicRound}
+          onDeclineMagicRound={declineMagicRound}
           onRefreshRuntimeData={loadRuntimeData}
           onCreateManualItemFromResponse={createManualItemFromResponse}
           onSynthesizeRoundTwoCandidates={synthesizeRoundTwoCandidates}
@@ -1792,7 +2085,9 @@ function App() {
           onSplitItem={splitItem}
           onMergeItemInto={mergeItemInto}
           onRoundTwoRatingChange={updateRoundTwoRating}
+          onRoundTwoRationaleChange={updateRoundTwoRationale}
           onSubmitRoundTwoRatings={submitRoundTwoRatings}
+          onFinalResultAction={runFinalResultAction}
           onExportOutput={requestOutputExport}
           onSelectExportPackage={selectExportPackage}
           onReviewExportPackage={reviewExportPackage}
@@ -1836,8 +2131,11 @@ function ModuleRenderer({
   participantRoundOneEditing,
   participantRoundOneComplete,
   participantSubmittedRatings,
+  participantSubmittedRationales,
   participantRatingRoundEditing,
   participantRatingRoundComplete,
+  participantDraftSavedAt,
+  participantRatingDraftSavedAt,
   participantWithdrawn,
   participantConsentChecked,
   participantOrientationComplete,
@@ -1845,9 +2143,24 @@ function ModuleRenderer({
   participantError,
   participantBusy,
   participantInvite,
+  magicContext,
+  magicItems,
+  magicResponseText,
+  magicRatings,
+  magicRationales,
+  magicMessage,
+  magicError,
+  magicBusy,
   runtimeData,
   runtimeActionBusy,
   roundTwoRatings,
+  roundTwoRationales,
+  finalResultSnapshot,
+  finalResultBlockers,
+  participantFinalResponses,
+  finalResultMessage,
+  finalResultError,
+  finalResultBusy,
   activeWizardStep,
   onWizardChange,
   onWizardStepChange,
@@ -1866,8 +2179,15 @@ function ModuleRenderer({
   onFinishRoundOneTask,
   onEditSubmittedRatings,
   onFinishRatingRoundTask,
+  onSaveParticipantRoundOneDraft,
+  onSaveParticipantRatingDraft,
   onWithdrawParticipant,
   onRequestDeletionReview,
+  onMagicResponseTextChange,
+  onMagicRatingChange,
+  onMagicRationaleChange,
+  onSubmitMagicRound,
+  onDeclineMagicRound,
   onRefreshRuntimeData,
   onCreateManualItemFromResponse,
   onSynthesizeRoundTwoCandidates,
@@ -1881,7 +2201,9 @@ function ModuleRenderer({
   onSplitItem,
   onMergeItemInto,
   onRoundTwoRatingChange,
+  onRoundTwoRationaleChange,
   onSubmitRoundTwoRatings,
+  onFinalResultAction,
   onExportOutput,
   onSelectExportPackage,
   onReviewExportPackage,
@@ -1914,8 +2236,11 @@ function ModuleRenderer({
   participantRoundOneEditing: boolean;
   participantRoundOneComplete: boolean;
   participantSubmittedRatings: Record<number, RatingDraft>;
+  participantSubmittedRationales: Record<number, RationaleDraft>;
   participantRatingRoundEditing: Record<number, boolean>;
   participantRatingRoundComplete: Record<number, boolean>;
+  participantDraftSavedAt: string | null;
+  participantRatingDraftSavedAt: Record<number, string | null>;
   participantWithdrawn: boolean;
   participantConsentChecked: boolean;
   participantOrientationComplete: boolean;
@@ -1923,9 +2248,24 @@ function ModuleRenderer({
   participantError: string | null;
   participantBusy: boolean;
   participantInvite: ParticipantInvitationContext | null;
+  magicContext: MagicRoundEntryContext | null;
+  magicItems: RoundItemForParticipant[];
+  magicResponseText: string;
+  magicRatings: RatingDraft;
+  magicRationales: RationaleDraft;
+  magicMessage: string | null;
+  magicError: string | null;
+  magicBusy: boolean;
   runtimeData: RuntimeStudyData;
   runtimeActionBusy: string | null;
   roundTwoRatings: RatingDraft;
+  roundTwoRationales: RationaleDraft;
+  finalResultSnapshot: FinalResultSnapshot | null;
+  finalResultBlockers: string[];
+  participantFinalResponses: ParticipantFinalResponse[];
+  finalResultMessage: string | null;
+  finalResultError: string | null;
+  finalResultBusy: string | null;
   activeWizardStep: StudyWizardStepId;
   onWizardChange: (state: StudyWizardState) => void;
   onWizardStepChange: (step: StudyWizardStepId) => void;
@@ -1944,8 +2284,15 @@ function ModuleRenderer({
   onFinishRoundOneTask: () => void;
   onEditSubmittedRatings: (roundNumber: number) => void;
   onFinishRatingRoundTask: (roundNumber: number) => void;
+  onSaveParticipantRoundOneDraft: () => void;
+  onSaveParticipantRatingDraft: (roundNumber: number) => void;
   onWithdrawParticipant: () => void;
   onRequestDeletionReview: () => void;
+  onMagicResponseTextChange: (value: string) => void;
+  onMagicRatingChange: (itemId: string, rating: number) => void;
+  onMagicRationaleChange: (itemId: string, text: string) => void;
+  onSubmitMagicRound: () => void;
+  onDeclineMagicRound: () => void;
   onRefreshRuntimeData: () => void;
   onCreateManualItemFromResponse: (response: ResponseRecord) => void;
   onSynthesizeRoundTwoCandidates: () => void;
@@ -1959,7 +2306,9 @@ function ModuleRenderer({
   onSplitItem: (item: ItemRecord) => void;
   onMergeItemInto: (item: ItemRecord, target: ItemRecord) => void;
   onRoundTwoRatingChange: (itemId: string, rating: number) => void;
+  onRoundTwoRationaleChange: (itemId: string, rationale: string) => void;
   onSubmitRoundTwoRatings: () => void;
+  onFinalResultAction: (action: "create" | "signoff" | "release" | "archive") => void;
   onExportOutput: (outputId: string) => void;
   onSelectExportPackage: (packageId: string) => void;
   onReviewExportPackage: (packageId: string, reviewStatus: "approved" | "rejected", note: string) => void;
@@ -2069,8 +2418,11 @@ function ModuleRenderer({
           participantRoundOneEditing={participantRoundOneEditing}
           participantRoundOneComplete={participantRoundOneComplete}
           participantSubmittedRatings={participantSubmittedRatings}
+          participantSubmittedRationales={participantSubmittedRationales}
           participantRatingRoundEditing={participantRatingRoundEditing}
           participantRatingRoundComplete={participantRatingRoundComplete}
+          participantDraftSavedAt={participantDraftSavedAt}
+          participantRatingDraftSavedAt={participantRatingDraftSavedAt}
           participantWithdrawn={participantWithdrawn}
           participantConsentChecked={participantConsentChecked}
           participantOrientationComplete={participantOrientationComplete}
@@ -2078,8 +2430,17 @@ function ModuleRenderer({
           participantError={participantError}
           participantBusy={participantBusy}
           participantInvite={participantInvite}
+          magicContext={magicContext}
+          magicItems={magicItems}
+          magicResponseText={magicResponseText}
+          magicRatings={magicRatings}
+          magicRationales={magicRationales}
+          magicMessage={magicMessage}
+          magicError={magicError}
+          magicBusy={magicBusy}
           runtimeData={runtimeData}
           roundTwoRatings={roundTwoRatings}
+          roundTwoRationales={roundTwoRationales}
           onParticipantResponseChange={onParticipantResponseChange}
           onParticipantConsentChange={onParticipantConsentChange}
           onCompleteParticipantOrientation={onCompleteParticipantOrientation}
@@ -2088,10 +2449,32 @@ function ModuleRenderer({
           onFinishRoundOneTask={onFinishRoundOneTask}
           onEditSubmittedRatings={onEditSubmittedRatings}
           onFinishRatingRoundTask={onFinishRatingRoundTask}
+          onSaveParticipantRoundOneDraft={onSaveParticipantRoundOneDraft}
+          onSaveParticipantRatingDraft={onSaveParticipantRatingDraft}
           onWithdrawParticipant={onWithdrawParticipant}
           onRequestDeletionReview={onRequestDeletionReview}
+          onMagicResponseTextChange={onMagicResponseTextChange}
+          onMagicRatingChange={onMagicRatingChange}
+          onMagicRationaleChange={onMagicRationaleChange}
+          onSubmitMagicRound={onSubmitMagicRound}
+          onDeclineMagicRound={onDeclineMagicRound}
           onRoundTwoRatingChange={onRoundTwoRatingChange}
+          onRoundTwoRationaleChange={onRoundTwoRationaleChange}
           onSubmitRoundTwoRatings={onSubmitRoundTwoRatings}
+        />
+      );
+    case "closeout":
+      return (
+        <FinalResultsCloseoutScreen
+          role={role}
+          snapshot={finalResultSnapshot}
+          blockers={finalResultBlockers}
+          participantFinalResponses={participantFinalResponses}
+          message={finalResultMessage}
+          error={finalResultError}
+          busy={finalResultBusy}
+          onAction={onFinalResultAction}
+          onExportOutput={onExportOutput}
         />
       );
     case "glossary":
@@ -2179,6 +2562,331 @@ function AboutScreen() {
         </p>
       </section>
     </div>
+  );
+}
+
+const finalOutcomeLabels: Record<FinalResultSnapshot["itemOutcomes"][number]["outcome"], string> = {
+  consensus: "Consensus",
+  near_consensus: "Near consensus",
+  descriptive_near_consensus: "Descriptive near consensus",
+  no_consensus: "No consensus",
+  consensus_out: "Not endorsed",
+};
+
+const finalOutcomeRisks: Record<FinalResultSnapshot["itemOutcomes"][number]["outcome"], "success" | "info" | "warning" | "locked"> = {
+  consensus: "success",
+  near_consensus: "info",
+  descriptive_near_consensus: "info",
+  no_consensus: "warning",
+  consensus_out: "locked",
+};
+
+function FinalResultsCloseoutScreen({
+  role,
+  snapshot,
+  blockers,
+  participantFinalResponses,
+  message,
+  error,
+  busy,
+  onAction,
+  onExportOutput,
+}: {
+  role: UserRole;
+  snapshot: FinalResultSnapshot | null;
+  blockers: string[];
+  participantFinalResponses: ParticipantFinalResponse[];
+  message: string | null;
+  error: string | null;
+  busy: string | null;
+  onAction: (action: "create" | "signoff" | "release" | "archive") => void;
+  onExportOutput: (outputId: string) => void;
+}) {
+  const [activeOutcome, setActiveOutcome] = useState<FinalResultSnapshot["itemOutcomes"][number]["outcome"] | "all">("all");
+  const isParticipant = role === "panelist";
+  const visibleItems = snapshot
+    ? snapshot.itemOutcomes.filter((item) => activeOutcome === "all" || item.outcome === activeOutcome)
+    : [];
+
+  if (!snapshot) {
+    return (
+      <div className="screen-grid">
+        <section className="panel wide">
+          <div className="section-heading">
+            <span className="eyebrow">Final Results & Study Closeout</span>
+            <h2>Create the canonical final results snapshot</h2>
+          </div>
+          <WarningBanner title="Terminal round required" risk="warning">
+            Final closeout opens after the terminal round is closed. The snapshot preserves one source for PI review,
+            participant summaries, exports, audit, and provenance.
+          </WarningBanner>
+          <div className="action-row">
+            <button type="button" onClick={() => onAction("create")} disabled={busy === "create"}>
+              {busy === "create" ? "Creating..." : "Create FinalResultSnapshot"}
+            </button>
+          </div>
+          {error && <WarningBanner title="Closeout action blocked" risk="danger">{error}</WarningBanner>}
+        </section>
+      </div>
+    );
+  }
+
+  const participantSummary = (
+    <div className="screen-grid">
+      <section className="panel wide final-hero">
+        <div className="section-heading">
+          <span className="eyebrow">Final results</span>
+          <h2>Thank you - this Delphi study is complete</h2>
+        </div>
+        <p>The planned final round has closed. There are no more rating rounds.</p>
+        <WarningBanner title="How to read these results" risk="info">
+          {snapshot.requiredStatement} Disagreement is part of the result.
+        </WarningBanner>
+      </section>
+
+      <section className="panel wide">
+        <h3>How to read this</h3>
+        <div className="result-card-grid">
+          <StatCard label="Reached consensus" value={String(snapshot.aggregateCounts.consensus)} supporting="Met the pre-set rule." />
+          <StatCard label="Near consensus" value={String(snapshot.aggregateCounts.descriptiveNearConsensus + snapshot.aggregateCounts.nearConsensus)} supporting="Shown separately from formal consensus." />
+          <StatCard label="Did not reach consensus" value={String(snapshot.aggregateCounts.noConsensus)} supporting="Still part of the result." />
+          <StatCard label="Final round participation" value={`${snapshot.aggregateCounts.terminalRoundCompletedCount}/${snapshot.aggregateCounts.terminalRoundEligibleCount}`} supporting={`${snapshot.aggregateCounts.terminalRoundCompletionRate}% completed`} />
+        </div>
+        <p className="microcopy">
+          Near consensus is descriptive unless the study protocol defined it as a separate category. No consensus means
+          the panel did not reach the pre-set level of agreement; the item remains part of the study result.
+        </p>
+      </section>
+
+      <section className="panel wide">
+        <h3>Final item lists</h3>
+        {(["consensus", "descriptive_near_consensus", "no_consensus"] as const).map((outcome) => {
+          const items = snapshot.itemOutcomes.filter((item) => item.outcome === outcome);
+          return (
+            <details className="closeout-accordion" key={outcome} open={outcome !== "no_consensus"}>
+              <summary>{finalOutcomeLabels[outcome]} ({items.length})</summary>
+              <div className="item-outcome-list">
+                {items.length === 0 ? (
+                  <p className="microcopy">No items are in this category.</p>
+                ) : items.map((item) => <FinalItemOutcomeCard item={item} participantMode key={item.itemId} />)}
+              </div>
+            </details>
+          );
+        })}
+      </section>
+
+      <section className="panel wide">
+        <h3>Your final responses</h3>
+        <p className="microcopy">
+          These are visible only to you and the study team as described in the consent materials. They are not ranked
+          against other panelists.
+        </p>
+        {participantFinalResponses.length === 0 ? (
+          <p>No terminal-round responses are available in this browser session.</p>
+        ) : (
+          <div className="item-outcome-list">
+            {participantFinalResponses.map((response) => (
+              <article className="report-row" key={`${response.item_id}-${response.submitted_at}`}>
+                <strong>{response.item_text}</strong>
+                <span>Final rating: {response.rating}</span>
+                {response.rationale_text && <small>Rationale: {response.rationale_text}</small>}
+              </article>
+            ))}
+          </div>
+        )}
+      </section>
+
+      <section className="panel wide">
+        <h3>Your participation and data</h3>
+        <p>
+          Your identifiable information remains confidential to the study team under the study protocol. Complete
+          anonymity from the study team may not be possible because responses are linked across rounds. Aggregated
+          results may already include your response.
+        </p>
+      </section>
+    </div>
+  );
+
+  if (isParticipant) return participantSummary;
+
+  return (
+    <div className="screen-grid">
+      <section className="panel wide final-hero">
+        <div className="section-heading">
+          <span className="eyebrow">Final Results & Study Closeout</span>
+          <h2>Terminal round complete</h2>
+        </div>
+        <p>
+          Round {snapshot.terminalRoundNumber} closed on {formatDateTime(snapshot.closedAt)}. This was the final
+          analytic round defined in the study design.
+        </p>
+        <div className="badge-line">
+          <StatusBadge risk="locked" label={snapshot.consensusRule.lockStatus === "locked" ? "Consensus rule locked" : "Consensus rule warning"} />
+          <StatusBadge risk={snapshot.status === "released" || snapshot.status === "archived" ? "success" : "warning"} label={snapshot.status.replaceAll("_", " ")} />
+        </div>
+        <WarningBanner title="Required interpretation" risk="info">{snapshot.requiredStatement}</WarningBanner>
+        <p className="microcopy">{snapshot.consensusRule.description}</p>
+      </section>
+
+      {message && <WarningBanner title="Closeout update" risk="success">{message}</WarningBanner>}
+      {error && <WarningBanner title="Closeout action blocked" risk="danger">{error}</WarningBanner>}
+
+      <section className="panel wide">
+        <h3>Closeout Summary</h3>
+        <div className="result-card-grid">
+          <StatCard label="Consensus reached" value={String(snapshot.aggregateCounts.consensus)} supporting="Items meeting the locked rule." />
+          <StatCard label="Near consensus" value={String(snapshot.aggregateCounts.nearConsensus + snapshot.aggregateCounts.descriptiveNearConsensus)} supporting="Descriptive unless pre-specified." />
+          <StatCard label="No consensus" value={String(snapshot.aggregateCounts.noConsensus)} supporting="Retained as study findings." />
+          <StatCard label="Preserved perspectives" value={String(snapshot.aggregateCounts.preservedPerspectiveCount)} supporting="Shown or privacy-suppressed with reason." />
+          <StatCard label="Final-round response rate" value={`${snapshot.aggregateCounts.terminalRoundCompletionRate}%`} supporting={`${snapshot.aggregateCounts.terminalRoundCompletedCount}/${snapshot.aggregateCounts.terminalRoundEligibleCount} completed`} />
+          <StatCard label="Overall attrition" value={snapshot.aggregateCounts.overallAttritionLabel} supporting="Included in exports." />
+        </div>
+      </section>
+
+      <section className="panel wide">
+        <h3>Item Outcome Explorer</h3>
+        <div className="segmented-control outcome-tabs" role="tablist" aria-label="Final item outcome filters">
+          {(["all", "consensus", "descriptive_near_consensus", "no_consensus", "consensus_out"] as const).map((outcome) => (
+            <button
+              className={activeOutcome === outcome ? "active" : ""}
+              key={outcome}
+              onClick={() => setActiveOutcome(outcome)}
+              type="button"
+            >
+              {outcome === "all" ? "All items" : finalOutcomeLabels[outcome]}
+            </button>
+          ))}
+        </div>
+        <div className="item-outcome-list">
+          {visibleItems.length === 0 ? (
+            <p className="microcopy">No items are in this category.</p>
+          ) : visibleItems.map((item) => <FinalItemOutcomeCard item={item} key={item.itemId} />)}
+        </div>
+      </section>
+
+      <section className="panel">
+        <h3>Unresolved and preserved perspectives</h3>
+        {snapshot.itemOutcomes.flatMap((item) => item.preservedPerspectives.map((perspective) => ({ item, perspective }))).length === 0 ? (
+          <p className="microcopy">No preserved perspective entries are attached to the snapshot.</p>
+        ) : (
+          <div className="item-outcome-list">
+            {snapshot.itemOutcomes.flatMap((item) =>
+              item.preservedPerspectives.map((perspective) => (
+                <article className="report-row" key={`${item.itemId}-${perspective.summary}`}>
+                  <strong>{item.finalText}</strong>
+                  <span>{perspective.summary}</span>
+                  {perspective.privacySuppressed && <small>Privacy detail suppressed: {perspective.privacySuppressionReason}</small>}
+                </article>
+              )),
+            )}
+          </div>
+        )}
+      </section>
+
+      <section className="panel">
+        <h3>Governance and integrity</h3>
+        <Checklist
+          items={[
+            { id: "terminal", label: "Terminal round verified", detail: `Round ${snapshot.terminalRoundNumber} matches the study design.`, complete: true, risk: "success" },
+            { id: "rule", label: "Consensus rule locked", detail: snapshot.consensusRule.description, complete: snapshot.consensusRule.lockStatus === "locked", risk: snapshot.consensusRule.lockStatus === "locked" ? "success" : "danger" },
+            { id: "rates", label: "Response rates calculated", detail: `${snapshot.roundSummaries.length} rounds summarized.`, complete: snapshot.roundSummaries.length > 0, risk: "success" },
+            { id: "non-consensus", label: "Non-consensus retained", detail: `${snapshot.aggregateCounts.noConsensus} no-consensus items are retained.`, complete: true, risk: "success" },
+            { id: "limits", label: "Limitations included", detail: snapshot.requiredStatement, complete: snapshot.limitations.includes(snapshot.requiredStatement), risk: "success" },
+            { id: "hashes", label: "Export hashes generated", detail: `Export hash ${snapshot.exportHash.slice(0, 12)}...`, complete: Boolean(snapshot.exportHash && snapshot.provenanceHash), risk: "locked" },
+          ]}
+        />
+        {snapshot.methodWarnings.map((warning) => (
+          <WarningBanner key={warning.code} title={warning.severity === "blocking" ? "Blocking warning" : "Method warning"} risk={warning.severity === "blocking" ? "danger" : "warning"}>
+            {warning.message}
+          </WarningBanner>
+        ))}
+        {blockers.length > 0 && (
+          <WarningBanner title="Release blockers" risk="warning">
+            {blockers.map((blocker) => blocker.replaceAll("_", " ")).join("; ")}
+          </WarningBanner>
+        )}
+      </section>
+
+      <section className="panel wide">
+        <h3>Export and release actions</h3>
+        <div className="action-row">
+          <button type="button" onClick={() => onAction("signoff")} disabled={busy === "signoff"}>
+            {busy === "signoff" ? "Signing..." : "Sign off closeout"}
+          </button>
+          <button type="button" onClick={() => onAction("release")} disabled={busy === "release" || blockers.length > 0}>
+            Release to participants
+          </button>
+          <button type="button" onClick={() => onExportOutput("final-delphi-report")}>
+            Export full methods report
+          </button>
+          <button type="button" onClick={() => onExportOutput("provenance-bundle")}>
+            Export audit/provenance pack
+          </button>
+          <button type="button" onClick={() => onAction("archive")} disabled={busy === "archive"}>
+            Archive study results
+          </button>
+        </div>
+      </section>
+    </div>
+  );
+}
+
+function FinalItemOutcomeCard({
+  item,
+  participantMode = false,
+}: {
+  item: FinalResultSnapshot["itemOutcomes"][number];
+  participantMode?: boolean;
+}) {
+  const total = Object.values(item.distribution).reduce((sum, count) => sum + count, 0);
+  return (
+    <article className="final-item-card">
+      <div className="feedback-card-topline">
+        <StatusBadge risk={finalOutcomeRisks[item.outcome]} label={finalOutcomeLabels[item.outcome]} />
+        <span className="microcopy">Item source: {item.provenance.replaceAll("_", " ")}</span>
+      </div>
+      <h4>{item.finalText}</h4>
+      <div className="feedback-metrics">
+        <span>Final N: <strong>{item.finalN}</strong></span>
+        <span>Median: <strong>{item.median ?? "n/a"}</strong></span>
+        <span>IQR: <strong>{item.iqr ?? "n/a"}</strong></span>
+        <span>Agreement: <strong>{item.agreementPercent ?? "n/a"}%</strong></span>
+      </div>
+      <div className="compact-distribution" aria-label={`Distribution across ${total} responses`}>
+        {Object.entries(item.distribution).map(([rating, count]) => (
+          <span key={rating}>
+            <small>{rating}</small>
+            <i style={{ "--bar-height": `${Math.max(8, total ? (count / total) * 48 : 8)}px` } as CSSProperties} />
+            <small>{count}</small>
+          </span>
+        ))}
+      </div>
+      {item.neutralSummary && <p>{item.neutralSummary}</p>}
+      {!participantMode && item.roundTrend.length > 0 && (
+        <details>
+          <summary>Round-to-round movement</summary>
+          <div className="detail-list">
+            {item.roundTrend.map((trend) => (
+              <div key={trend.roundNumber}>
+                <dt>Round {trend.roundNumber}</dt>
+                <dd>Median {trend.median ?? "n/a"}; IQR {trend.iqr ?? "n/a"}; agreement {trend.agreementPercent ?? "n/a"}%</dd>
+              </div>
+            ))}
+          </div>
+        </details>
+      )}
+      {item.preservedPerspectives.length > 0 && (
+        <details>
+          <summary>{participantMode ? "Preserved perspective summary" : "Dissent and preserved perspectives"}</summary>
+          {item.preservedPerspectives.map((perspective) => (
+            <p className="microcopy" key={perspective.summary}>
+              {perspective.summary}
+              {perspective.privacySuppressed && perspective.privacySuppressionReason ? ` ${perspective.privacySuppressionReason}` : ""}
+            </p>
+          ))}
+        </details>
+      )}
+    </article>
   );
 }
 
@@ -4490,6 +5198,183 @@ function ParticipantOrientationPanel({
   );
 }
 
+function SaveStatusIndicator({ savedAt, scope }: { savedAt: string | null | undefined; scope: string }) {
+  return (
+    <p className="save-status" aria-live="polite">
+      {savedAt ? `${scope} saved ${formatDateTime(savedAt)}.` : `${scope} not saved yet.`}
+    </p>
+  );
+}
+
+function ProgressIndicator({ label, value, detail }: { label: string; value: number; detail: string }) {
+  return (
+    <div className="progress-indicator" aria-label={`${label}: ${detail}`}>
+      <div className="data-bar-row">
+        <strong>{label}</strong>
+        <span>{detail}</span>
+      </div>
+      <div className="data-bar-track" aria-hidden="true">
+        <span style={{ width: `${Math.max(0, Math.min(100, value))}%` }} />
+      </div>
+    </div>
+  );
+}
+
+function MagicRoundEntryScreen({
+  context,
+  items,
+  responseText,
+  ratings,
+  rationales,
+  message,
+  error,
+  busy,
+  onResponseTextChange,
+  onRatingChange,
+  onRationaleChange,
+  onSubmit,
+  onDecline,
+}: {
+  context: MagicRoundEntryContext | null;
+  items: RoundItemForParticipant[];
+  responseText: string;
+  ratings: RatingDraft;
+  rationales: RationaleDraft;
+  message: string | null;
+  error: string | null;
+  busy: boolean;
+  onResponseTextChange: (value: string) => void;
+  onRatingChange: (itemId: string, rating: number) => void;
+  onRationaleChange: (itemId: string, rationale: string) => void;
+  onSubmit: () => void;
+  onDecline: () => void;
+}) {
+  if (!context) {
+    return (
+      <div className="participant-flow magic-entry">
+        <section className="panel wide">
+          <span className="eyebrow">Secure round link</span>
+          <h2>This secure link has expired or has already been used.</h2>
+          <p>
+            You can request a new link through the approved participant route or contact the study team. This page does
+            not reveal whether any participant, phone number, study, or round exists.
+          </p>
+          {error ? <WarningBanner title="Secure link unavailable" risk="warning">{error}</WarningBanner> : null}
+        </section>
+      </div>
+    );
+  }
+
+  const isOpen = context.round.status === "open";
+  const isRoundOne = context.round.round_number === 1;
+  const selectedCount = items.filter((item) => Boolean(ratings[item.item_id])).length;
+
+  return (
+    <div className="participant-flow magic-entry">
+      <section className="panel wide">
+        <div className="section-heading">
+          <span className="eyebrow">Secure mobile round entry</span>
+          <h2>{context.study.safe_display_name}</h2>
+        </div>
+        <div className="mobile-task-summary" aria-label="Secure round status">
+          <article>
+            <strong>{context.round.title}</strong>
+            <p>Round {context.round.round_number} is {context.round.status}. Estimated time: {context.round.estimated_minutes} minutes.</p>
+          </article>
+          <article>
+            <strong>Study purpose</strong>
+            <p>{context.study.purpose}</p>
+          </article>
+        </div>
+        <WarningBanner title="Participation remains voluntary" risk="info">
+          {context.voluntary_reminder}
+        </WarningBanner>
+        {context.controlled_feedback_explanation ? (
+          <WarningBanner title="Controlled feedback" risk="info">
+            {context.controlled_feedback_explanation}
+          </WarningBanner>
+        ) : null}
+        {message ? <WarningBanner title="Status" risk="success">{message}</WarningBanner> : null}
+        {error ? <WarningBanner title="Action needed" risk="warning">{error}</WarningBanner> : null}
+      </section>
+
+      {isOpen && isRoundOne ? (
+        <section className="panel mobile-response-card">
+          <h3>Round 1 response</h3>
+          <p>You are giving your independent judgment. There are no correct answers.</p>
+          <label className="field">
+            <span>Your response</span>
+            <textarea
+              aria-label="Round 1 response text"
+              rows={7}
+              value={responseText}
+              onChange={(event) => onResponseTextChange(event.target.value)}
+            />
+          </label>
+        </section>
+      ) : null}
+
+      {isOpen && !isRoundOne ? (
+        <section className="panel wide">
+          <h3>Round {context.round.round_number} statements</h3>
+          <p>You may keep or revise your response. Different views are valuable. Consensus does not mean correctness.</p>
+          <ProgressIndicator
+            label="Item progress"
+            value={items.length ? (selectedCount / items.length) * 100 : 0}
+            detail={`${selectedCount} of ${items.length} answered`}
+          />
+          <div className="item-card-list">
+            {items.map((item, index) => (
+              <article className="mobile-response-card" key={item.item_id}>
+                <span className="eyebrow">Item {index + 1} of {items.length}</span>
+                <h4>{item.text}</h4>
+                <ControlledFeedbackCard item={item} />
+                <fieldset className="rating-options" aria-label={`Response options for item ${index + 1}`}>
+                  <legend>Your new response</legend>
+                  {ratingScaleOptions.map((option) => (
+                    <label className="rating-option" key={option.value}>
+                      <input
+                        checked={ratings[item.item_id] === option.value}
+                        name={`magic-rating-${item.item_id}`}
+                        onChange={() => onRatingChange(item.item_id, option.value)}
+                        type="radio"
+                      />
+                      <span>
+                        <strong>{option.label}</strong>
+                        <small>{option.detail}</small>
+                      </span>
+                    </label>
+                  ))}
+                </fieldset>
+                <label className="field">
+                  <span>Optional rationale</span>
+                  <textarea
+                    rows={4}
+                    value={rationales[item.item_id] ?? ""}
+                    onChange={(event) => onRationaleChange(item.item_id, event.target.value)}
+                  />
+                </label>
+              </article>
+            ))}
+          </div>
+        </section>
+      ) : null}
+
+      <section className="panel sticky-action-bar" aria-label="Round actions">
+        <button className="primary-button" disabled={!isOpen || busy} onClick={onSubmit} type="button">
+          {busy ? "Submitting..." : "Submit round"}
+        </button>
+        <button className="secondary-button" disabled={!isOpen || busy} onClick={onDecline} type="button">
+          Decline this round
+        </button>
+        <a className="footer-link" href="#participant-rights">
+          Withdrawal and help information
+        </a>
+      </section>
+    </div>
+  );
+}
+
 function ParticipantScreen({
   workflow,
   wizard,
@@ -4499,8 +5384,11 @@ function ParticipantScreen({
   participantRoundOneEditing,
   participantRoundOneComplete,
   participantSubmittedRatings,
+  participantSubmittedRationales,
   participantRatingRoundEditing,
   participantRatingRoundComplete,
+  participantDraftSavedAt,
+  participantRatingDraftSavedAt,
   participantWithdrawn,
   participantConsentChecked,
   participantOrientationComplete,
@@ -4508,8 +5396,17 @@ function ParticipantScreen({
   participantError,
   participantBusy,
   participantInvite,
+  magicContext,
+  magicItems,
+  magicResponseText,
+  magicRatings,
+  magicRationales,
+  magicMessage,
+  magicError,
+  magicBusy,
   runtimeData,
   roundTwoRatings,
+  roundTwoRationales,
   onParticipantResponseChange,
   onParticipantConsentChange,
   onCompleteParticipantOrientation,
@@ -4518,9 +5415,17 @@ function ParticipantScreen({
   onFinishRoundOneTask,
   onEditSubmittedRatings,
   onFinishRatingRoundTask,
+  onSaveParticipantRoundOneDraft,
+  onSaveParticipantRatingDraft,
   onWithdrawParticipant,
   onRequestDeletionReview,
+  onMagicResponseTextChange,
+  onMagicRatingChange,
+  onMagicRationaleChange,
+  onSubmitMagicRound,
+  onDeclineMagicRound,
   onRoundTwoRatingChange,
+  onRoundTwoRationaleChange,
   onSubmitRoundTwoRatings,
 }: {
   workflow: ConductorWorkflow;
@@ -4531,8 +5436,11 @@ function ParticipantScreen({
   participantRoundOneEditing: boolean;
   participantRoundOneComplete: boolean;
   participantSubmittedRatings: Record<number, RatingDraft>;
+  participantSubmittedRationales: Record<number, RationaleDraft>;
   participantRatingRoundEditing: Record<number, boolean>;
   participantRatingRoundComplete: Record<number, boolean>;
+  participantDraftSavedAt: string | null;
+  participantRatingDraftSavedAt: Record<number, string | null>;
   participantWithdrawn: boolean;
   participantConsentChecked: boolean;
   participantOrientationComplete: boolean;
@@ -4540,8 +5448,17 @@ function ParticipantScreen({
   participantError: string | null;
   participantBusy: boolean;
   participantInvite: ParticipantInvitationContext | null;
+  magicContext: MagicRoundEntryContext | null;
+  magicItems: RoundItemForParticipant[];
+  magicResponseText: string;
+  magicRatings: RatingDraft;
+  magicRationales: RationaleDraft;
+  magicMessage: string | null;
+  magicError: string | null;
+  magicBusy: boolean;
   runtimeData: RuntimeStudyData;
   roundTwoRatings: RatingDraft;
+  roundTwoRationales: RationaleDraft;
   onParticipantResponseChange: (value: string) => void;
   onParticipantConsentChange: (value: boolean) => void;
   onCompleteParticipantOrientation: () => void;
@@ -4550,11 +5467,39 @@ function ParticipantScreen({
   onFinishRoundOneTask: () => void;
   onEditSubmittedRatings: (roundNumber: number) => void;
   onFinishRatingRoundTask: (roundNumber: number) => void;
+  onSaveParticipantRoundOneDraft: () => void;
+  onSaveParticipantRatingDraft: (roundNumber: number) => void;
   onWithdrawParticipant: () => void;
   onRequestDeletionReview: () => void;
+  onMagicResponseTextChange: (value: string) => void;
+  onMagicRatingChange: (itemId: string, rating: number) => void;
+  onMagicRationaleChange: (itemId: string, rationale: string) => void;
+  onSubmitMagicRound: () => void;
+  onDeclineMagicRound: () => void;
   onRoundTwoRatingChange: (itemId: string, rating: number) => void;
+  onRoundTwoRationaleChange: (itemId: string, rationale: string) => void;
   onSubmitRoundTwoRatings: () => void;
 }) {
+  if (magicContext || magicError) {
+    return (
+      <MagicRoundEntryScreen
+        context={magicContext}
+        items={magicItems}
+        responseText={magicResponseText}
+        ratings={magicRatings}
+        rationales={magicRationales}
+        message={magicMessage}
+        error={magicError}
+        busy={magicBusy}
+        onResponseTextChange={onMagicResponseTextChange}
+        onRatingChange={onMagicRatingChange}
+        onRationaleChange={onMagicRationaleChange}
+        onSubmit={onSubmitMagicRound}
+        onDecline={onDeclineMagicRound}
+      />
+    );
+  }
+
   const roundOneConfig = roundConfigs.find((config) => config.round_number === 1);
   const effectiveRoundOneConfig = roundOneConfig ?? (workflow.version?.opened_round1_at
     ? {
@@ -4575,10 +5520,13 @@ function ParticipantScreen({
   const hasRatingTask = Boolean(openRatingRound && openRatingRoundItems.length > 0);
   const currentRatingRoundNumber = openRatingRound?.round_number ?? null;
   const submittedRatingsForOpenRound = currentRatingRoundNumber ? participantSubmittedRatings[currentRatingRoundNumber] ?? null : null;
+  const submittedRationalesForOpenRound = currentRatingRoundNumber ? participantSubmittedRationales[currentRatingRoundNumber] ?? null : null;
   const ratingRoundIsEditing = currentRatingRoundNumber ? Boolean(participantRatingRoundEditing[currentRatingRoundNumber]) : false;
   const ratingRoundIsComplete = currentRatingRoundNumber ? Boolean(participantRatingRoundComplete[currentRatingRoundNumber]) : false;
   const showRatingEditor = !submittedRatingsForOpenRound || ratingRoundIsEditing;
   const showRoundOneEditor = !participantSubmittedRoundOneText || participantRoundOneEditing;
+  const selectedRatingCount = openRatingRoundItems.filter((item) => Boolean(roundTwoRatings[item.item_id])).length;
+  const currentRatingDraftSavedAt = currentRatingRoundNumber ? participantRatingDraftSavedAt[currentRatingRoundNumber] ?? null : null;
   const savedRatingPrompt = openRatingRound?.prompt?.trim();
   const ratingPrompt = savedRatingPrompt && savedRatingPrompt !== legacyVagueRatingPrompt
     ? savedRatingPrompt
@@ -4606,13 +5554,23 @@ function ParticipantScreen({
           </WarningBanner>
         ) : null}
         <WarningBanner title="Draft privacy" risk="info">
-          Draft responses are not stored in browser local storage. If you type a response and try to leave before submitting, the browser will warn you.
+          Draft responses are not stored in browser local storage. Use Save progress if you need to pause, and submit when you are ready for the study team to receive your response.
         </WarningBanner>
       </section>
 
       <section className="panel">
         <h3>Your Current Round</h3>
         <p>{currentTaskLabel}</p>
+        <div className="mobile-task-summary" aria-label="Participant task summary">
+          <article>
+            <strong>What to do next</strong>
+            <p>{hasRatingTask ? "Review each statement, choose a response, add an optional rationale if useful, then submit." : roundOneOpen ? "Read the prompt, enter your response, save if you pause, and submit when ready." : "Wait for the study team to open the next task."}</p>
+          </article>
+          <article>
+            <strong>Save and resume</strong>
+            <p>Saving progress is separate from final submission. Submitted responses can be reviewed before you finish the task.</p>
+          </article>
+        </div>
         {!hasBackendStudy ? (
           <WarningBanner title="No active study selected" risk="info">
             Open a backend study workspace to show participant tasks.
@@ -4659,12 +5617,18 @@ function ParticipantScreen({
               <div className="submitted-response-review">
                 <strong>What was submitted</strong>
                 <div className="submitted-rating-list">
-                  {openRatingRoundItems.map((item) => (
+                  {openRatingRoundItems.map((item) => {
+                    const rationale = submittedRationalesForOpenRound?.[item.item_id]?.trim();
+                    return (
                     <article className="submitted-rating-row" key={`submitted-${item.item_id}`}>
-                      <p>{item.text}</p>
+                      <div>
+                        <p>{item.text}</p>
+                        {rationale ? <small>Optional rationale: {rationale}</small> : null}
+                      </div>
                       <StatusBadge risk="success" label={formatRatingChoice(submittedRatingsForOpenRound[item.item_id])} />
                     </article>
-                  ))}
+                    );
+                  })}
                 </div>
                 {ratingRoundIsComplete ? (
                   <StatusBadge risk="success" label={`Round ${currentRatingRoundNumber} task complete`} />
@@ -4682,9 +5646,20 @@ function ParticipantScreen({
             ) : null}
             {showRatingEditor ? (
               <>
+                {currentRatingRoundNumber ? (
+                  <ProgressIndicator
+                    label={`Round ${currentRatingRoundNumber} progress`}
+                    value={openRatingRoundItems.length ? (selectedRatingCount / openRatingRoundItems.length) * 100 : 0}
+                    detail={`${selectedRatingCount} of ${openRatingRoundItems.length} statements answered`}
+                  />
+                ) : null}
+                <SaveStatusIndicator savedAt={currentRatingDraftSavedAt} scope="Rating progress" />
                 <div className="rating-task-list">
-                  {openRatingRoundItems.map((item) => (
+                  {openRatingRoundItems.map((item, itemIndex) => (
                     <article className="rating-task" key={item.item_id}>
+                      <div className="rating-task-header">
+                        <StatusBadge risk="info" label={`Item ${itemIndex + 1} of ${openRatingRoundItems.length}`} />
+                      </div>
                       <div className="statement-to-evaluate">
                         <span>Statement to evaluate</span>
                         <p>{item.text}</p>
@@ -4717,10 +5692,24 @@ function ParticipantScreen({
                           })}
                         </div>
                       </fieldset>
+                      <label className="field rationale-field">
+                        <span>Optional rationale</span>
+                        <textarea
+                          aria-describedby={`rationale-help-${item.item_id}`}
+                          value={roundTwoRationales[item.item_id] ?? ""}
+                          onChange={(event) => onRoundTwoRationaleChange(item.item_id, event.target.value)}
+                        />
+                        <small id={`rationale-help-${item.item_id}`}>Add context only if it helps explain your judgment. This is optional.</small>
+                      </label>
                     </article>
                   ))}
                 </div>
-                <div className="action-row">
+                <div className="action-row sticky-action-bar">
+                  {currentRatingRoundNumber ? (
+                    <button className="secondary-button" disabled={participantBusy} onClick={() => onSaveParticipantRatingDraft(currentRatingRoundNumber)} type="button">
+                      Save progress
+                    </button>
+                  ) : null}
                   <button className="primary-button" disabled={participantBusy} onClick={onSubmitRoundTwoRatings} type="button">
                     {participantBusy
                       ? "Submitting..."
@@ -4777,6 +5766,7 @@ function ParticipantScreen({
             ) : null}
             {showRoundOneEditor ? (
               <>
+                <SaveStatusIndicator savedAt={participantDraftSavedAt} scope="Round 1 progress" />
                 <label className="field wide-field">
                   <span>{participantRoundOneEditing ? "Revise your Round 1 response" : effectiveRoundOneConfig.prompt}</span>
                   <textarea
@@ -4795,7 +5785,10 @@ function ParticipantScreen({
                   </span>
                 </label>
                 <DataBar value={participantSubmittedRoundOneText ? 75 : 0} label="Your task progress" />
-                <div className="action-row">
+                <div className="action-row sticky-action-bar">
+                  <button className="secondary-button" disabled={participantBusy} onClick={onSaveParticipantRoundOneDraft} type="button">
+                    Save progress
+                  </button>
                   <button className="primary-button" disabled={participantBusy} onClick={onSubmitParticipantRoundOne} type="button">
                     {participantBusy
                       ? "Submitting..."
@@ -5354,12 +6347,26 @@ function AdminSecurityScreen({ role, workflow }: { role: UserRole; workflow: Con
   const [attritionMessage, setAttritionMessage] = useState<string | null>(null);
   const [attritionError, setAttritionError] = useState<string | null>(null);
   const [attritionBusy, setAttritionBusy] = useState(false);
+  const [smsPolicy, setSmsPolicy] = useState<SmsPolicy | null>(null);
+  const [smsPreference, setSmsPreference] = useState<ParticipantContactPreference | null>(null);
+  const [smsNotifications, setSmsNotifications] = useState<SmsNotification[]>([]);
+  const [smsParticipantId, setSmsParticipantId] = useState("");
+  const [smsPhoneDraft, setSmsPhoneDraft] = useState("");
+  const [smsPreferenceDraft, setSmsPreferenceDraft] = useState<ParticipantContactPreference["notification_preference"]>("both");
+  const [smsConsentDraft, setSmsConsentDraft] = useState(true);
+  const [smsChallenge, setSmsChallenge] = useState<PhoneVerificationChallengeResponse | null>(null);
+  const [smsOtpDraft, setSmsOtpDraft] = useState("");
+  const [smsRoundNumber, setSmsRoundNumber] = useState(1);
+  const [smsMessage, setSmsMessage] = useState<string | null>(null);
+  const [smsError, setSmsError] = useState<string | null>(null);
+  const [smsBusy, setSmsBusy] = useState(false);
   const activeStudyId = workflow.study?.id ?? null;
   const activeVersionId = workflow.version?.id ?? null;
   const canManageAccess = role === "study_owner" || role === "open_source_admin";
   const canManageAI = role === "study_owner" || role === "open_source_admin";
   const canViewAI = canManageAI || role === "ethics_methods_steward" || role === "security_privacy_lead";
   const canManageAttrition = canManageAccess || role === "ethics_methods_steward";
+  const canManageSms = canManageAccess || role === "security_privacy_lead";
 
   async function loadAccessReview() {
     if (!canManageAccess) return;
@@ -5429,6 +6436,136 @@ function AdminSecurityScreen({ role, workflow }: { role: UserRole; workflow: Con
     void loadAttritionReview();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [role, activeStudyId, activeVersionId]);
+
+  async function loadSmsReview() {
+    if (!activeStudyId || !activeVersionId || !canManageSms) return;
+    setSmsBusy(true);
+    setSmsError(null);
+    try {
+      const [policyResult, notificationsResult] = await Promise.all([
+        conductorApi.getSmsPolicy(activeStudyId, activeVersionId, role),
+        conductorApi.listSmsNotifications(activeStudyId, activeVersionId, role),
+      ]);
+      setSmsPolicy(policyResult.policy);
+      setSmsNotifications(notificationsResult.notifications);
+      const firstParticipant = participantStatuses[0]?.participant_id ?? "";
+      setSmsParticipantId((current) => current || firstParticipant);
+    } catch (error) {
+      setSmsError(error instanceof Error ? error.message : "Unable to load SMS notification settings.");
+    } finally {
+      setSmsBusy(false);
+    }
+  }
+
+  useEffect(() => {
+    void loadSmsReview();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [role, activeStudyId, activeVersionId, canManageSms, participantStatuses.length]);
+
+  useEffect(() => {
+    if (!activeStudyId || !activeVersionId || !smsParticipantId || !canManageSms) return;
+    const studyId = activeStudyId;
+    const versionId = activeVersionId;
+    const participantId = smsParticipantId;
+    async function loadPreference() {
+      try {
+        const result = await conductorApi.getContactPreference(studyId, versionId, participantId, role);
+        setSmsPreference(result.contact_preference);
+        setSmsPreferenceDraft(result.contact_preference?.notification_preference ?? "both");
+        setSmsConsentDraft(Boolean(result.contact_preference?.sms_consent_at && !result.contact_preference?.sms_consent_revoked_at));
+      } catch {
+        setSmsPreference(null);
+      }
+    }
+    void loadPreference();
+  }, [activeStudyId, activeVersionId, smsParticipantId, role, canManageSms]);
+
+  async function saveSmsPolicy() {
+    if (!activeStudyId || !activeVersionId || !smsPolicy) return;
+    setSmsBusy(true);
+    setSmsError(null);
+    setSmsMessage(null);
+    try {
+      const result = await conductorApi.updateSmsPolicy(activeStudyId, activeVersionId, role, smsPolicy);
+      setSmsPolicy(result.policy);
+      setSmsMessage("SMS policy saved. Round-open texts remain opt-in and neutral.");
+      await loadSmsReview();
+    } catch (error) {
+      setSmsError(error instanceof Error ? error.message : "Unable to save SMS policy.");
+    } finally {
+      setSmsBusy(false);
+    }
+  }
+
+  async function saveSmsPreference() {
+    if (!activeStudyId || !activeVersionId || !smsParticipantId) return;
+    setSmsBusy(true);
+    setSmsError(null);
+    setSmsMessage(null);
+    try {
+      const result = await conductorApi.updateContactPreference(activeStudyId, activeVersionId, smsParticipantId, role, {
+        notification_preference: smsPreferenceDraft,
+        phone: smsPhoneDraft,
+        sms_consent_granted: smsConsentDraft,
+      });
+      setSmsPreference(result.contact_preference);
+      setSmsMessage("Participant SMS preference saved with masked phone display.");
+    } catch (error) {
+      setSmsError(error instanceof Error ? error.message : "Unable to save participant SMS preference.");
+    } finally {
+      setSmsBusy(false);
+    }
+  }
+
+  async function startSmsVerification() {
+    if (!activeStudyId || !activeVersionId || !smsParticipantId) return;
+    setSmsBusy(true);
+    setSmsError(null);
+    setSmsMessage(null);
+    try {
+      const challenge = await conductorApi.startPhoneVerification(activeStudyId, activeVersionId, smsParticipantId, role);
+      setSmsChallenge(challenge);
+      setSmsMessage(`Verification challenge created for ${challenge.masked_phone}.`);
+    } catch (error) {
+      setSmsError(error instanceof Error ? error.message : "Unable to start phone verification.");
+    } finally {
+      setSmsBusy(false);
+    }
+  }
+
+  async function verifySmsPhone() {
+    if (!activeStudyId || !activeVersionId || !smsParticipantId || !smsChallenge) return;
+    setSmsBusy(true);
+    setSmsError(null);
+    setSmsMessage(null);
+    try {
+      const result = await conductorApi.verifyPhoneOtp(activeStudyId, activeVersionId, smsParticipantId, role, smsChallenge.challenge_id, smsOtpDraft);
+      setSmsPreference(result.contact_preference);
+      setSmsChallenge(null);
+      setSmsOtpDraft("");
+      setSmsMessage("Phone number verified. SMS remains optional and revocable.");
+    } catch (error) {
+      setSmsError(error instanceof Error ? error.message : "Unable to verify phone.");
+    } finally {
+      setSmsBusy(false);
+    }
+  }
+
+  async function sendSmsForRound() {
+    if (!activeStudyId || !activeVersionId) return;
+    setSmsBusy(true);
+    setSmsError(null);
+    setSmsMessage(null);
+    try {
+      const result = await conductorApi.sendRoundOpenSms(activeStudyId, activeVersionId, smsRoundNumber, role);
+      setSmsMessage(`${result.sms.sent} SMS notification${result.sms.sent === 1 ? "" : "s"} sent; ${result.sms.skipped} skipped with audit reasons.`);
+      await loadSmsReview();
+    } catch (error) {
+      setSmsError(error instanceof Error ? error.message : "Unable to send round-open SMS.");
+    } finally {
+      setSmsBusy(false);
+    }
+  }
 
   async function runAttritionAction(action: "detect" | "reminder" | "final" | "expire" | "inactive" | "save-policy") {
     if (!activeStudyId || !activeVersionId) return;
@@ -5922,6 +7059,106 @@ function AdminSecurityScreen({ role, workflow }: { role: UserRole; workflow: Con
                   </article>
                 );
               })}
+            </div>
+          </>
+        )}
+      </section>
+
+      <section className="panel wide">
+        <div className="section-heading">
+          <span className="eyebrow">SMS Round Notifications</span>
+          <h2>Round-opening texts use opt-in consent, verified phones, and expiring secure links</h2>
+        </div>
+        {!canManageSms ? (
+          <WarningBanner title="SMS settings restricted" risk="locked">
+            SMS configuration is available to the Study Owner/Admin and Security/Privacy Lead.
+          </WarningBanner>
+        ) : !activeStudyId || !activeVersionId ? (
+          <WarningBanner title="Open a backend study" risk="info">
+            Open a saved study before configuring SMS notification policies.
+          </WarningBanner>
+        ) : (
+          <>
+            <WarningBanner title="Neutral SMS wording" risk="info">
+              Texts say only that a round is open, provide a secure link, and remind participants that participation remains voluntary.
+            </WarningBanner>
+            {smsPolicy ? (
+              <div className="form-grid">
+                <label className="check-field">
+                  <input checked={smsPolicy.sms_enabled} disabled={smsBusy} onChange={(event) => setSmsPolicy({ ...smsPolicy, sms_enabled: event.target.checked })} type="checkbox" />
+                  <span>Permit SMS for this study</span>
+                </label>
+                <label className="field">
+                  <span>Notification-safe study name</span>
+                  <input disabled={smsBusy} onChange={(event) => setSmsPolicy({ ...smsPolicy, notification_safe_name: event.target.value })} placeholder="Example: Care Transitions Delphi" value={smsPolicy.notification_safe_name ?? ""} />
+                </label>
+                <label className="check-field">
+                  <input checked={smsPolicy.safe_name_is_sensitive} disabled={smsBusy} onChange={(event) => setSmsPolicy({ ...smsPolicy, safe_name_is_sensitive: event.target.checked })} type="checkbox" />
+                  <span>Use generic label because the study name is sensitive</span>
+                </label>
+                <label className="field">
+                  <span>Magic link TTL minutes</span>
+                  <input disabled={smsBusy} min={1} max={1440} onChange={(event) => setSmsPolicy({ ...smsPolicy, magic_link_ttl_minutes: Number(event.target.value) })} type="number" value={smsPolicy.magic_link_ttl_minutes} />
+                </label>
+              </div>
+            ) : null}
+            <div className="form-grid">
+              <label className="field">
+                <span>Participant</span>
+                <select value={smsParticipantId} onChange={(event) => setSmsParticipantId(event.target.value)}>
+                  {participantStatuses.map((entry) => (
+                    <option key={entry.participant_id} value={entry.participant_id}>{entry.participant_id.slice(0, 8)} - {entry.status.replaceAll("_", " ").toLowerCase()}</option>
+                  ))}
+                </select>
+              </label>
+              <label className="field">
+                <span>Notification preference</span>
+                <select value={smsPreferenceDraft} onChange={(event) => setSmsPreferenceDraft(event.target.value as ParticipantContactPreference["notification_preference"])}>
+                  <option value="email_only">Email only</option>
+                  <option value="sms_only">SMS only</option>
+                  <option value="both">Email and SMS</option>
+                  <option value="no_sms">No SMS / do not text</option>
+                </select>
+              </label>
+              <label className="field">
+                <span>Phone number</span>
+                <input autoComplete="tel" disabled={smsBusy} onChange={(event) => setSmsPhoneDraft(event.target.value)} placeholder={smsPreference?.masked_phone ?? "+1 555 555 1234"} value={smsPhoneDraft} />
+              </label>
+              <label className="check-field">
+                <input checked={smsConsentDraft} disabled={smsBusy} onChange={(event) => setSmsConsentDraft(event.target.checked)} type="checkbox" />
+                <span>Participant has explicitly consented to receive study texts</span>
+              </label>
+              <label className="field">
+                <span>OTP verification code</span>
+                <input autoComplete="one-time-code" disabled={smsBusy || !smsChallenge} onChange={(event) => setSmsOtpDraft(event.target.value)} value={smsOtpDraft} />
+              </label>
+              <label className="field">
+                <span>Round number for smoke send</span>
+                <input min={1} max={4} onChange={(event) => setSmsRoundNumber(Number(event.target.value))} type="number" value={smsRoundNumber} />
+              </label>
+            </div>
+            <div className="action-row compact-actions">
+              <button className="secondary-button" disabled={smsBusy || !smsPolicy} onClick={saveSmsPolicy} type="button">Save SMS policy</button>
+              <button className="secondary-button" disabled={smsBusy || !smsParticipantId} onClick={saveSmsPreference} type="button">Save preference</button>
+              <button className="secondary-button" disabled={smsBusy || !smsParticipantId} onClick={startSmsVerification} type="button">Start phone verification</button>
+              <button className="secondary-button" disabled={smsBusy || !smsChallenge || !smsOtpDraft.trim()} onClick={verifySmsPhone} type="button">Verify phone</button>
+              <button className="primary-button" disabled={smsBusy || !smsPolicy?.sms_enabled} onClick={sendSmsForRound} type="button">Send round-open SMS</button>
+            </div>
+            {smsChallenge?.dev_otp ? <WarningBanner title="Development OTP" risk="info">Local smoke-test OTP: {smsChallenge.dev_otp}. Production builds do not expose OTP values.</WarningBanner> : null}
+            {smsPreference ? <WarningBanner title="Masked phone display" risk={smsPreference.phone_verified_at ? "success" : "warning"}>{smsPreference.masked_phone ?? "No phone on file"}; preference {smsPreference.notification_preference.replaceAll("_", " ")}; verified {smsPreference.phone_verified_at ? "yes" : "no"}.</WarningBanner> : null}
+            {smsMessage ? <WarningBanner title="SMS action recorded" risk="success">{smsMessage}</WarningBanner> : null}
+            {smsError ? <WarningBanner title="SMS action blocked" risk="warning">{humanizeBackendMessage(smsError)}</WarningBanner> : null}
+            <div className="review-stack">
+              {smsNotifications.slice(0, 5).map((entry) => (
+                <article className="review-row" key={entry.sms_notification_id}>
+                  <div>
+                    <strong>{entry.status.replaceAll("_", " ")}</strong>
+                    <p>Participant {entry.participant_id.slice(0, 8)} for Round {entry.round_number}; provider {entry.provider}</p>
+                    {entry.failure_code ? <small>Reason: {entry.failure_code}</small> : null}
+                  </div>
+                  <StatusBadge risk={entry.status === "sent" || entry.status === "delivered" ? "success" : entry.status === "skipped" ? "info" : "warning"} label={entry.status} />
+                </article>
+              ))}
             </div>
           </>
         )}

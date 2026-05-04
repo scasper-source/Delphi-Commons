@@ -1,3 +1,8 @@
+/*
+ * Copyright 2026 Stephen T. Casper
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
 export type StudyFormat = "ModifiedDelphi" | "ClassicDelphi";
 
 export type ConsensusRuleSource =

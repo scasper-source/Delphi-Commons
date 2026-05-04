@@ -1,3 +1,8 @@
+/*
+ * Copyright 2026 Stephen T. Casper
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
 import test from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
@@ -200,8 +205,9 @@ test("AI connector UI masks keys and documents No External AI mode", () => {
 test("repository citation metadata is present without a fake DOI", () => {
   const cff = fs.readFileSync(path.resolve(appRoot, "..", "CITATION.cff"), "utf8");
   assert.match(cff, /cff-version: 1\.2\.0/);
-  assert.match(cff, /title: "eDelphi Platform"/);
+  assert.match(cff, /title: "eDelphi Open Source Platform"/);
   assert.match(cff, /family-names: "Casper"/);
+  assert.match(cff, /license: "Apache-2\.0"/);
   assert.match(cff, /repository-code:/);
   assert.doesNotMatch(cff, /^doi:/m);
 });
@@ -371,4 +377,110 @@ test("participant withdrawal copy is voluntary and preserves protocol limits", (
   assert.match(participantRights, /You may withdraw from future rounds at any time/);
   assert.match(participantRights, /prior submitted responses may remain in already aggregated or historical study data/);
   assert.match(participantRights, /You may contact the study team about data deletion where feasible/);
+});
+
+test("participant mobile workflow exposes save state, item progress, rationale, and sticky actions", () => {
+  const source = appSource();
+  const css = fs.readFileSync(path.join(appRoot, "src", "App.css"), "utf8");
+  const participantSource = sourceSlice(source, "function ParticipantScreen", "function RoundContextPanel");
+
+  assert.match(source, /function SaveStatusIndicator/);
+  assert.match(source, /function ProgressIndicator/);
+  assert.match(participantSource, /mobile-task-summary/);
+  assert.match(participantSource, /Save progress/);
+  assert.match(participantSource, /Rating progress/);
+  assert.match(participantSource, /Item \$\{itemIndex \+ 1\} of/);
+  assert.match(participantSource, /Optional rationale/);
+  assert.match(participantSource, /aria-describedby=\{`rationale-help-/);
+  assert.match(participantSource, /sticky-action-bar/);
+  assert.match(css, /\.sticky-action-bar/);
+  assert.match(css, /position:\s*sticky/);
+  assert.match(css, /min-height:\s*44px/);
+  assert.match(css, /min-height:\s*48px/);
+  assert.match(css, /\.compact-distribution[\s\S]*grid-template-columns:\s*repeat\(3/);
+});
+
+test("rating rationale is submitted through API and exported as redacted rationale text", () => {
+  const apiSource = fs.readFileSync(path.join(appRoot, "src", "core", "api.ts"), "utf8");
+  const reportsSource = fs.readFileSync(path.resolve(appRoot, "..", "server", "src", "routes", "reports.ts"), "utf8");
+
+  assert.match(apiSource, /rationale_text: rationaleText/);
+  assert.match(reportsSource, /rationale_text_redacted: typeof ratingPayload\.rationale_text === "string"/);
+});
+
+test("study-designer mobile basics keep governance and AI controls touch-friendly", () => {
+  const source = appSource();
+  const css = fs.readFileSync(path.join(appRoot, "src", "App.css"), "utf8");
+  const curationSource = sourceSlice(source, "function CurationScreen", "function FeedbackScreen");
+
+  assert.match(curationSource, /AI Suggestion \(Not Final\)/);
+  assert.match(curationSource, /Accept/);
+  assert.match(curationSource, /Reject/);
+  assert.match(curationSource, /Sign release/);
+  assert.match(css, /\.workflow-check/);
+  assert.match(css, /\.signoff/);
+  assert.match(css, /\.ai-card dl div/);
+  assert.match(css, /\.action-row > button/);
+});
+
+test("final closeout uses one canonical snapshot and respectful participant language", () => {
+  const source = appSource();
+  const apiSource = fs.readFileSync(path.join(appRoot, "src", "core", "api.ts"), "utf8");
+  const serverSource = fs.readFileSync(path.resolve(appRoot, "..", "server", "src", "core", "finalResults.ts"), "utf8");
+  const closeoutSource = sourceSlice(source, "function FinalResultsCloseoutScreen", "function FinalItemOutcomeCard");
+
+  assert.match(serverSource, /createFinalResultSnapshot/);
+  assert.match(serverSource, /FINAL_RESULT_REQUIRED_STATEMENT/);
+  assert.match(apiSource, /type FinalResultSnapshot/);
+  assert.match(closeoutSource, /Final Results & Study Closeout/);
+  assert.match(closeoutSource, /Thank you - this Delphi study is complete/);
+  assert.match(closeoutSource, /snapshot\.requiredStatement/);
+  assert.match(closeoutSource, /Unresolved and preserved perspectives/);
+  assert.match(closeoutSource, /Release to participants/);
+  assert.match(closeoutSource, /No consensus/);
+
+  for (const phrase of [
+    "outlier",
+    "deviant",
+    "nonconforming",
+    "you aligned",
+    "you disagreed with the panel",
+    "success rate",
+    "failed to reach the right answer",
+  ]) {
+    assert.equal(closeoutSource.toLowerCase().includes(phrase), false, `final closeout UI includes forbidden phrase: ${phrase}`);
+  }
+});
+
+test("SMS magic-link UI is opt-in, neutral, mobile-first, and avoids browser storage", () => {
+  const source = appSource();
+  const apiSource = fs.readFileSync(path.join(appRoot, "src", "core", "api.ts"), "utf8");
+  const css = fs.readFileSync(path.join(appRoot, "src", "App.css"), "utf8");
+  const smsSource = sourceSlice(source, "SMS Round Notifications", "Role Assignment Review");
+  const magicSource = sourceSlice(source, "function MagicRoundEntryScreen", "function ParticipantScreen");
+
+  assert.match(smsSource, /Permit SMS for this study/);
+  assert.match(smsSource, /Participant has explicitly consented to receive study texts/);
+  assert.match(smsSource, /Start phone verification/);
+  assert.match(smsSource, /Verify phone/);
+  assert.match(smsSource, /Send round-open SMS/);
+  assert.match(smsSource, /masked phone display/i);
+  assert.match(magicSource, /Secure mobile round entry/);
+  assert.match(magicSource, /Participation remains voluntary/);
+  assert.match(magicSource, /Decline this round/);
+  assert.match(magicSource, /Withdrawal and help information/);
+  assert.match(apiSource, /\/magic-links\/consume/);
+  assert.match(apiSource, /credentials: "include"/);
+  assert.match(source, /window\.history\.replaceState/);
+  assert.match(css, /@media \(max-width: 620px\)/);
+
+  for (const phrase of [
+    "you must respond",
+    "the group needs you",
+    "please align with the group",
+    "consensus depends on you",
+  ]) {
+    assert.equal(smsSource.toLowerCase().includes(phrase), false, `SMS UI includes coercive phrase: ${phrase}`);
+    assert.equal(magicSource.toLowerCase().includes(phrase), false, `magic entry UI includes coercive phrase: ${phrase}`);
+  }
 });

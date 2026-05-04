@@ -1,3 +1,8 @@
+/*
+ * Copyright 2026 Stephen T. Casper
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
 import type { FastifyInstance } from "fastify";
 import { ensureDemoUsers } from "../auth/demoUsers.js";
 import {

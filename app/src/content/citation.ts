@@ -1,3 +1,8 @@
+/*
+ * Copyright 2026 Stephen T. Casper
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
 export const citationFraming =
   "If this tool contributed to study design, data collection, analysis, reporting, or reproducible documentation, please cite it to support transparency and reproducibility.";
 

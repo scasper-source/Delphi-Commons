@@ -1,3 +1,8 @@
+/*
+ * Copyright 2026 Stephen T. Casper
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
 // server/src/studies/types.ts
 // Ticket 3 models (July MVP plan)
 // Ticket 11: study design declaration fields added to StudyVersion

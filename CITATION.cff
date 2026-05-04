@@ -1,11 +1,11 @@
 cff-version: 1.2.0
-message: "If this software contributed to study design, data collection, analysis, reporting, or reproducible documentation, please cite it to support transparency and reproducibility."
-title: "eDelphi Platform"
+message: "If this software contributes to your study design, data collection, analysis, reporting, or reproducible documentation, please cite it to support transparency and reproducibility."
+title: "eDelphi Open Source Platform"
 type: software
 authors:
   - family-names: "Casper"
     given-names: "Stephen T."
-version: "1.0.0"
+version: "0.1.0"
 date-released: "2026-05-04"
 url: "https://github.com/YOUR_ORG/YOUR_REPO"
 repository-code: "https://github.com/YOUR_ORG/YOUR_REPO"
@@ -16,4 +16,4 @@ keywords:
   - consensus studies
   - research software
   - open source
-license: "LICENSE_PLACEHOLDER"
+license: "Apache-2.0"

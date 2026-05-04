@@ -1,3 +1,8 @@
+/*
+ * Copyright 2026 Stephen T. Casper
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
 import type { StudyWizardState } from "./studyWizard";
 import type { OutputModelId, StudyRecord, UserRole } from "./types";
 
@@ -309,6 +314,183 @@ export type RoundReport = {
   }>;
 };
 
+export type FinalResultSnapshot = {
+  snapshotId: string;
+  studyId: string;
+  studyVersionId: string;
+  terminalRoundId: string;
+  terminalRoundNumber: number;
+  closedAt: string;
+  status: "draft" | "signed_off" | "released" | "archived";
+  releaseSignoffs: Array<{
+    requiredRole: "Owner" | "MethodsSteward";
+    signedByUserId: string;
+    signedAt: string;
+  }>;
+  participantReleasedAt: string | null;
+  archivedAt: string | null;
+  consensusRule: {
+    ruleId: string;
+    lockedAt: string;
+    lockStatus: "locked" | "amended" | "invalid_or_missing";
+    description: string;
+    threshold: number;
+    scale: string;
+    dispersionMetric: string;
+    rationale: string;
+    nearConsensusDefinition: {
+      preSpecified: boolean;
+      description: string;
+      threshold?: number;
+      dispersionMargin?: number;
+    } | null;
+  };
+  roundSummaries: Array<{
+    roundId: string;
+    roundNumber: number;
+    openedAt: string;
+    closedAt: string;
+    invitedCount: number;
+    eligibleCount: number;
+    completedCount: number;
+    completionRate: number;
+    attritionFromPriorRound: number | null;
+  }>;
+  itemOutcomes: Array<{
+    itemId: string;
+    finalText: string;
+    wordingHistory: Array<{ roundNumber: number; text: string; changedAt?: string; changeReason?: string }>;
+    provenance: "panel_generated" | "literature_derived" | "researcher_added" | "ai_assisted";
+    finalN: number;
+    median: number | null;
+    iqr: number | null;
+    agreementPercent: number | null;
+    distribution: Record<string, number>;
+    outcome: "consensus" | "near_consensus" | "descriptive_near_consensus" | "no_consensus" | "consensus_out";
+    roundTrend: Array<{ roundNumber: number; median: number | null; iqr: number | null; agreementPercent: number | null }>;
+    neutralSummary: string | null;
+    summaryReview: {
+      draftedBy: "human" | "ai" | "template" | null;
+      aiSuggestionStatus?: "not_ai" | "pending_review" | "accepted" | "edited" | "rejected";
+      reviewedByUserId?: string;
+      reviewedAt?: string;
+      ethicsMethodsStewardSignedOff?: boolean;
+      studyOwnerSignedOff?: boolean;
+    };
+    preservedPerspectives: Array<{
+      summary: string;
+      source: "anonymized_comment" | "round1_unique_statement" | "method_note";
+      privacySuppressed: boolean;
+      privacySuppressionReason?: string | null;
+      humanReviewed: boolean;
+    }>;
+    exportInclusion: {
+      participantSummary: boolean;
+      fullReport: boolean;
+      csv: boolean;
+      json: boolean;
+      suppressionReason?: string | null;
+    };
+  }>;
+  aggregateCounts: {
+    consensus: number;
+    nearConsensus: number;
+    descriptiveNearConsensus: number;
+    noConsensus: number;
+    consensusOut: number;
+    preservedPerspectiveCount: number;
+    terminalRoundCompletedCount: number;
+    terminalRoundEligibleCount: number;
+    terminalRoundCompletionRate: number;
+    overallAttritionLabel: string;
+  };
+  methodWarnings: Array<{ code: string; severity: "info" | "caution" | "blocking"; message: string }>;
+  limitations: string[];
+  requiredStatement: "Consensus indicates agreement among this panel; it does not establish correctness.";
+  provenanceHash: string;
+  exportHash: string;
+  createdAt: string;
+  createdByUserId: string;
+};
+
+export type ParticipantFinalResponse = {
+  item_id: string;
+  item_text: string;
+  rating: number;
+  rationale_text: string;
+  submitted_at: string;
+};
+
+export type SmsPolicy = {
+  study_id: string;
+  version_id: string;
+  sms_enabled: boolean;
+  notification_safe_name: string | null;
+  safe_name_is_sensitive: boolean;
+  magic_link_ttl_minutes: number;
+  updated_at: string;
+  updated_by_user_id: string;
+};
+
+export type ParticipantContactPreference = {
+  participant_id: string;
+  notification_preference: "email_only" | "sms_only" | "both" | "no_sms";
+  phone_last_four: string | null;
+  masked_phone: string | null;
+  sms_consent_at: string | null;
+  sms_consent_version: string | null;
+  sms_consent_revoked_at: string | null;
+  phone_verified_at: string | null;
+  phone_verification_method: string | null;
+  updated_at: string;
+  updated_by_user_id: string;
+};
+
+export type SmsNotification = {
+  sms_notification_id: string;
+  participant_id: string;
+  study_id: string;
+  version_id: string;
+  round_number: number;
+  provider: string;
+  provider_message_id: string | null;
+  status: "queued" | "sent" | "failed" | "delivered" | "undelivered" | "skipped";
+  status_updated_at: string | null;
+  sent_at: string | null;
+  failed_at: string | null;
+  failure_code: string | null;
+  preference_snapshot_json: string;
+  magic_link_id: string | null;
+  created_at: string;
+};
+
+export type PhoneVerificationChallengeResponse = {
+  challenge_id: string;
+  masked_phone: string;
+  expires_at: string;
+  dev_otp?: string;
+};
+
+export type MagicRoundEntryContext = {
+  study: {
+    study_id: string;
+    version_id: string;
+    safe_display_name: string;
+    purpose: string;
+  };
+  participant_id: string;
+  round: {
+    round_number: number;
+    title: string;
+    status: "open" | "closed" | "completed" | "withdrawn" | "unavailable" | "declined";
+    estimated_minutes: number;
+    task_type: string;
+    controlled_feedback: boolean;
+  };
+  voluntary_reminder: string;
+  controlled_feedback_explanation: string | null;
+};
+
 export type ExportFormat = ".docx" | ".xlsx" | ".csv" | ".json" | ".md" | ".txt";
 export type ExportContentEncoding = "utf8" | "base64";
 
@@ -415,6 +597,16 @@ export type ParticipantInvitationContext = {
   } | null;
   orientation_version: string;
   round_configs: RoundConfig[];
+  drafts: ParticipantDraft[];
+};
+
+export type ParticipantDraft = {
+  study_id: string;
+  version_id: string;
+  participant_id: string;
+  round_number: number;
+  draft_json: unknown;
+  updated_at: string;
 };
 
 export type ParticipantStatus =
@@ -597,6 +789,29 @@ async function requestInvitationJson<T>(
       "Content-Type": "application/json",
       "X-Participant-Invitation": token,
     },
+    body: options.body === undefined ? undefined : JSON.stringify(options.body),
+  });
+
+  const payload = await response.json().catch(() => null) as unknown;
+  if (!response.ok) {
+    const message =
+      payload && typeof payload === "object" && "error" in payload
+        ? String((payload as { error: unknown }).error)
+        : `Request failed with ${response.status}`;
+    throw new Error(message);
+  }
+
+  return payload as T;
+}
+
+async function requestMagicJson<T>(
+  path: string,
+  options: { method?: string; body?: unknown } = {},
+): Promise<T> {
+  const response = await fetch(`${apiBoundary.baseUrl}${path}`, {
+    method: options.method ?? "GET",
+    headers: { "Content-Type": "application/json" },
+    credentials: "include",
     body: options.body === undefined ? undefined : JSON.stringify(options.body),
   });
 
@@ -905,8 +1120,47 @@ export const conductorApi = {
   },
 
   async closeRound(studyId: string, versionId: string, roundNumber: number, role: UserRole) {
-    return requestJson<{ round_config: RoundConfig }>(
+    return requestJson<{ round_config: RoundConfig; final_result_snapshot?: FinalResultSnapshot }>(
       `/studies/${studyId}/versions/${versionId}/rounds/${roundNumber}/close`,
+      role,
+      { method: "POST", body: {} },
+    );
+  },
+
+  async getFinalResults(studyId: string, versionId: string, role: UserRole) {
+    return requestJson<{ snapshot: FinalResultSnapshot | null; release_blockers: string[] }>(
+      `/studies/${studyId}/versions/${versionId}/final-results`,
+      role,
+    );
+  },
+
+  async createFinalResults(studyId: string, versionId: string, role: UserRole) {
+    return requestJson<{ snapshot: FinalResultSnapshot; release_blockers: string[] }>(
+      `/studies/${studyId}/versions/${versionId}/final-results`,
+      role,
+      { method: "POST", body: {} },
+    );
+  },
+
+  async signoffFinalResults(studyId: string, versionId: string, role: UserRole) {
+    return requestJson<{ snapshot: FinalResultSnapshot; release_blockers: string[] }>(
+      `/studies/${studyId}/versions/${versionId}/final-results/signoff`,
+      role,
+      { method: "POST", body: {} },
+    );
+  },
+
+  async releaseFinalResults(studyId: string, versionId: string, role: UserRole) {
+    return requestJson<{ snapshot: FinalResultSnapshot; release_blockers: string[] }>(
+      `/studies/${studyId}/versions/${versionId}/final-results/release`,
+      role,
+      { method: "POST", body: {} },
+    );
+  },
+
+  async archiveFinalResults(studyId: string, versionId: string, role: UserRole) {
+    return requestJson<{ snapshot: FinalResultSnapshot; release_blockers: string[] }>(
+      `/studies/${studyId}/versions/${versionId}/final-results/archive`,
       role,
       { method: "POST", body: {} },
     );
@@ -1016,8 +1270,115 @@ export const conductorApi = {
     }>(`/studies/${studyId}/versions/${versionId}/attrition-summary`, role);
   },
 
+  async getSmsPolicy(studyId: string, versionId: string, role: UserRole) {
+    return requestJson<{ policy: SmsPolicy }>(`/studies/${studyId}/versions/${versionId}/sms-policy`, role);
+  },
+
+  async updateSmsPolicy(studyId: string, versionId: string, role: UserRole, policy: Partial<SmsPolicy>) {
+    return requestJson<{ policy: SmsPolicy }>(
+      `/studies/${studyId}/versions/${versionId}/sms-policy`,
+      role,
+      { method: "PUT", body: policy },
+    );
+  },
+
+  async getContactPreference(studyId: string, versionId: string, participantId: string, role: UserRole) {
+    return requestJson<{ contact_preference: ParticipantContactPreference | null }>(
+      `/studies/${studyId}/versions/${versionId}/participants/${encodeURIComponent(participantId)}/contact-preferences`,
+      role,
+    );
+  },
+
+  async updateContactPreference(
+    studyId: string,
+    versionId: string,
+    participantId: string,
+    role: UserRole,
+    input: { notification_preference: ParticipantContactPreference["notification_preference"]; phone?: string; sms_consent_granted?: boolean },
+  ) {
+    return requestJson<{ contact_preference: ParticipantContactPreference }>(
+      `/studies/${studyId}/versions/${versionId}/participants/${encodeURIComponent(participantId)}/contact-preferences`,
+      role,
+      { method: "PATCH", body: input },
+    );
+  },
+
+  async startPhoneVerification(studyId: string, versionId: string, participantId: string, role: UserRole) {
+    return requestJson<PhoneVerificationChallengeResponse>(
+      `/studies/${studyId}/versions/${versionId}/participants/${encodeURIComponent(participantId)}/phone-verification/start`,
+      role,
+      { method: "POST", body: {} },
+    );
+  },
+
+  async verifyPhoneOtp(studyId: string, versionId: string, participantId: string, role: UserRole, challengeId: string, otp: string) {
+    return requestJson<{ contact_preference: ParticipantContactPreference }>(
+      `/studies/${studyId}/versions/${versionId}/participants/${encodeURIComponent(participantId)}/phone-verification/verify`,
+      role,
+      { method: "POST", body: { challenge_id: challengeId, otp } },
+    );
+  },
+
+  async sendRoundOpenSms(studyId: string, versionId: string, roundNumber: number, role: UserRole) {
+    return requestJson<{ sms: { eligible_checked: number; sent: number; skipped: number; notifications: SmsNotification[] } }>(
+      `/studies/${studyId}/versions/${versionId}/rounds/${roundNumber}/sms/send`,
+      role,
+      { method: "POST", body: {} },
+    );
+  },
+
+  async listSmsNotifications(studyId: string, versionId: string, role: UserRole, roundNumber?: number) {
+    return requestJson<{ notifications: SmsNotification[] }>(
+      `/studies/${studyId}/versions/${versionId}/sms-notifications${roundNumber ? `?round_number=${roundNumber}` : ""}`,
+      role,
+    );
+  },
+
+  async consumeMagicLink(token: string) {
+    return requestMagicJson<{ context: MagicRoundEntryContext }>("/magic-links/consume", {
+      method: "POST",
+      body: { token },
+    });
+  },
+
+  async getMagicSession() {
+    return requestMagicJson<{ context: MagicRoundEntryContext }>("/magic-links/session");
+  },
+
+  async listMagicRoundItems(roundNumber: number) {
+    return requestMagicJson<{ items: RoundItemForParticipant[] }>(`/magic-links/rounds/${roundNumber}/items`);
+  },
+
+  async submitMagicRoundOneResponse(roundNumber: number, text: string) {
+    return requestMagicJson<{ response_id: string }>(`/magic-links/rounds/${roundNumber}/responses`, {
+      method: "POST",
+      body: { text },
+    });
+  },
+
+  async submitMagicRating(roundNumber: number, itemId: string, rating: number, action: "keep" | "revise", rationaleText: string) {
+    return requestMagicJson<{ response_id: string }>(`/magic-links/rounds/${roundNumber}/ratings`, {
+      method: "POST",
+      body: { item_id: itemId, rating, action, rationale_text: rationaleText },
+    });
+  },
+
+  async declineMagicRound(roundNumber: number) {
+    return requestMagicJson<{ declined: boolean }>(`/magic-links/rounds/${roundNumber}/decline`, {
+      method: "POST",
+      body: {},
+    });
+  },
+
   async getParticipantInvitation(token: string) {
     return requestInvitationJson<ParticipantInvitationContext>("/participant/invitation", token);
+  },
+
+  async getInvitationFinalResults(token: string) {
+    return requestInvitationJson<{ snapshot: FinalResultSnapshot; my_final_responses: ParticipantFinalResponse[] }>(
+      "/participant/invitation/final-results",
+      token,
+    );
   },
 
   async recordInvitationConsent(token: string) {
@@ -1073,6 +1434,14 @@ export const conductorApi = {
     );
   },
 
+  async saveInvitationDraft(token: string, roundNumber: number, draftJson: unknown) {
+    return requestInvitationJson<{ draft: ParticipantDraft }>(
+      `/participant/invitation/rounds/${roundNumber}/draft`,
+      token,
+      { method: "PUT", body: { draft_json: draftJson } },
+    );
+  },
+
   async listInvitationRoundItems(token: string, roundNumber: number) {
     return requestInvitationJson<{ items: RoundItemForParticipant[] }>(
       `/participant/invitation/rounds/${roundNumber}/items`,
@@ -1086,11 +1455,12 @@ export const conductorApi = {
     itemId: string,
     rating: number,
     action: "keep" | "revise" = "revise",
+    rationaleText = "",
   ) {
     return requestInvitationJson<{ response_id: string }>(
       `/participant/invitation/rounds/${roundNumber}/ratings`,
       token,
-      { method: "POST", body: { item_id: itemId, rating, action } },
+      { method: "POST", body: { item_id: itemId, rating, action, rationale_text: rationaleText } },
     );
   },
 
@@ -1275,6 +1645,7 @@ export const conductorApi = {
     role: UserRole,
     rating: number,
     action: "keep" | "revise" = "revise",
+    rationaleText = "",
   ) {
     return requestJson<{ response_id: string }>(
       `/studies/${studyId}/versions/${versionId}/rounds/${roundNumber}/ratings`,
@@ -1286,6 +1657,7 @@ export const conductorApi = {
           item_id: itemId,
           rating,
           action,
+          rationale_text: rationaleText,
         },
       },
     );

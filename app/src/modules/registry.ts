@@ -1,3 +1,8 @@
+/*
+ * Copyright 2026 Stephen T. Casper
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
 import type { ModuleDefinition } from "../core/types";
 
 const staffRoles = [
@@ -71,6 +76,13 @@ export const moduleRegistry: ModuleDefinition[] = [
     label: "Participant Portal",
     purpose: "Consent, study explanation, confidentiality, withdrawal rights, tasks, retain, and revise.",
     allowedRoles: ["panelist", "study_owner", "ethics_methods_steward"],
+    maturity: "wired",
+  },
+  {
+    id: "closeout",
+    label: "Closeout",
+    purpose: "Canonical final results, preserved perspectives, release signoff, participant summary, and archive.",
+    allowedRoles: ["study_owner", "ethics_methods_steward", "data_custodian", "panelist"],
     maturity: "wired",
   },
   {

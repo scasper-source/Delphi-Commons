@@ -1,3 +1,8 @@
+/*
+ * Copyright 2026 Stephen T. Casper
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
 export type UserRole =
   | "study_owner"
   | "ethics_methods_steward"
@@ -17,6 +22,7 @@ export type ModuleId =
   | "curation"
   | "feedback"
   | "participant"
+  | "closeout"
   | "glossary"
   | "reporting"
   | "audit"
