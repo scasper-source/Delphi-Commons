@@ -28,6 +28,8 @@ import { writeAuditEvent } from "../core/audit.js";
 import type { Study, StudyVersion } from "../studies/types.js";
 import { recordExportManifest } from "../stores/exportManifestStore.js";
 import { getCurationGate, getPublishedTraceableItemsForRound } from "../core/roundLifecycle.js";
+import { assertAIOperationAllowed } from "../core/aiGateway.js";
+import type { StudyAIFeature } from "../stores/aiConfigStore.js";
 
 type ItemInput = {
   text: string;
@@ -36,6 +38,15 @@ type ItemInput = {
   ai_provenance_links: ItemProvenanceLink[];
   ai_provenance_rationale: string | null;
 };
+
+function aiFeaturePermission(feature: AISuggestionFeature): StudyAIFeature {
+  if (feature === "cluster_r1") return "clustering";
+  if (feature === "lint_wording") return "neutrality_method_linting";
+  if (feature === "irb_pack") return "irb_export_drafting";
+  if (feature === "controlled_feedback") return "report_drafting";
+  if (feature === "operational_assistance") return "reminders";
+  return "item_drafting";
+}
 
 type RatingRoundPayload = {
   round_number: number;
@@ -1102,6 +1113,15 @@ export async function aiRoutes(app: FastifyInstance) {
         return reply.code(400).send({ error: "output_json_required" });
       }
 
+      const policy = await assertAIOperationAllowed({
+        studyId,
+        actor,
+        feature: aiFeaturePermission(body.feature),
+        mode: "local",
+        inputScopeIds: getStringArray(body.input_scope_ids),
+      });
+      if (!policy.ok) return reply.code(policy.statusCode).send({ error: policy.error, details: policy.details ?? {} });
+
       const suggestion = createAISuggestion({
         study_id: studyId,
         version_id: versionId,
@@ -1194,6 +1214,20 @@ export async function aiRoutes(app: FastifyInstance) {
         return reply.code(curationGate.statusCode).send({
           error: curationGate.error,
           ...curationGate.details,
+        });
+      }
+
+      const synthesisPolicy = await assertAIOperationAllowed({
+        studyId,
+        actor,
+        feature: "item_drafting",
+        mode: "local",
+        inputScopeIds: [`target_round:${targetRoundNumber}`],
+      });
+      if (!synthesisPolicy.ok) {
+        return reply.code(synthesisPolicy.statusCode).send({
+          error: synthesisPolicy.error,
+          details: synthesisPolicy.details ?? {},
         });
       }
 
@@ -1308,6 +1342,17 @@ export async function aiRoutes(app: FastifyInstance) {
         });
       }
 
+      const lintPolicy = await assertAIOperationAllowed({
+        studyId,
+        actor,
+        feature: "neutrality_method_linting",
+        mode: "local",
+        inputScopeIds: targets.map((target) => target.target_id),
+      });
+      if (!lintPolicy.ok) {
+        return reply.code(lintPolicy.statusCode).send({ error: lintPolicy.error, details: lintPolicy.details ?? {} });
+      }
+
       const output = buildNeutralityLintOutput(targets);
       const suggestion = createAISuggestion({
         study_id: studyId,
@@ -1379,6 +1424,21 @@ export async function aiRoutes(app: FastifyInstance) {
       }
 
       const supplement = getIRBPackSupplement(body);
+      const irbPolicy = await assertAIOperationAllowed({
+        studyId,
+        actor,
+        feature: "irb_export_drafting",
+        mode: "local",
+        inputScopeIds: [
+          `study:${studyId}`,
+          `study_version:${versionId}`,
+          ...getStringArray(body.input_scope_ids),
+        ],
+      });
+      if (!irbPolicy.ok) {
+        return reply.code(irbPolicy.statusCode).send({ error: irbPolicy.error, details: irbPolicy.details ?? {} });
+      }
+
       const output = buildIRBPackOutput({
         study,
         studyVersion,

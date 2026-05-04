@@ -226,6 +226,33 @@ const migrations: Migration[] = [
       END;
     `,
   },
+  {
+    id: "007_study_ai_configs",
+    sql: `
+      CREATE TABLE IF NOT EXISTS study_ai_configs (
+        study_id TEXT PRIMARY KEY,
+        external_ai_enabled INTEGER NOT NULL,
+        no_external_ai_mode INTEGER NOT NULL,
+        provider_name TEXT,
+        model_name TEXT,
+        api_key_encrypted TEXT,
+        api_key_last_four TEXT,
+        api_key_fingerprint_hash TEXT,
+        api_key_created_at TEXT,
+        api_key_rotated_at TEXT,
+        api_key_deleted_at TEXT,
+        feature_permissions_json TEXT NOT NULL,
+        disclosure_json TEXT NOT NULL,
+        created_by_user_id TEXT NOT NULL,
+        updated_by_user_id TEXT NOT NULL,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL
+      );
+
+      CREATE INDEX IF NOT EXISTS idx_study_ai_configs_updated
+        ON study_ai_configs(updated_at);
+    `,
+  },
 ];
 
 let db: DatabaseSync | null = null;

@@ -8,6 +8,7 @@ export type UserRole =
   | "panelist";
 
 export type ModuleId =
+  | "about"
   | "architecture"
   | "dashboard"
   | "study-builder"
@@ -16,6 +17,7 @@ export type ModuleId =
   | "curation"
   | "feedback"
   | "participant"
+  | "glossary"
   | "reporting"
   | "audit"
   | "admin-security";

@@ -10,6 +10,11 @@ import {
 } from "../stores/consentStore.js";
 import { requireRole, getActor } from "../middleware/auth.js";
 import { writeAuditEvent } from "../core/audit.js";
+import {
+  ensureParticipantEnrollment,
+  getParticipantEnrollment,
+  updateParticipantStatus,
+} from "../stores/participantStatusStore.js";
 
 export async function consentRoutes(app: FastifyInstance) {
   const allowStaff = requireRole(["owner", "methods_steward"]);
@@ -149,6 +154,12 @@ export async function consentRoutes(app: FastifyInstance) {
         version_id: versionId,
         consent_version_id: active.consent_version_id,
       });
+      ensureParticipantEnrollment({
+        study_id: studyId,
+        version_id: versionId,
+        participant_id: rec.participant_id,
+        created_by_user_id: actor.userId,
+      });
 
       await writeAuditEvent({
         actor,
@@ -209,6 +220,21 @@ export async function consentRoutes(app: FastifyInstance) {
       if (!rec) {
         return reply.code(404).send({ error: "consent_record_not_found" });
       }
+      const previous = getParticipantEnrollment({ study_id: studyId, version_id: versionId, participant_id: participantId });
+      const updatedStatus = updateParticipantStatus({
+        study_id: studyId,
+        version_id: versionId,
+        participant_id: participantId,
+        status: "WITHDRAWN_PARTICIPANT",
+        actor_user_id: actor.userId,
+        reason: "participant initiated withdrawal from future rounds",
+        round_number: null,
+        inactive_from_round_number: 1,
+        withdrawal_type: "participant",
+        withdrawal_reason_code: "participant_withdrawal",
+        withdrawal_note: "Participant withdrawal recorded.",
+        withdrawn_at: rec.withdrew_at,
+      });
 
       await writeAuditEvent({
         actor,
@@ -216,8 +242,14 @@ export async function consentRoutes(app: FastifyInstance) {
         object: { type: "participant", id: participantId },
         details: { studyId, versionId, withdrew_at: rec.withdrew_at },
       });
+      await writeAuditEvent({
+        actor,
+        action: "PARTICIPANT_WITHDRAWN_BY_PARTICIPANT",
+        object: { type: "participant", id: participantId },
+        details: { studyId, versionId, participantId, previousStatus: previous?.status, newStatus: updatedStatus?.status, withdrew_at: rec.withdrew_at },
+      });
 
-      return reply.send({ consent_record: rec });
+      return reply.send({ consent_record: rec, participant_status: updatedStatus });
     }
   );
 }

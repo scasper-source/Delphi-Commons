@@ -8,12 +8,16 @@ import {
   listRoundConfigs,
   updateRoundConfigStatus,
   upsertRoundConfig,
+  normalizeFeedbackConfig,
   type RoundTaskType,
 } from "../stores/roundConfigStore.js";
 
 import { requireRole, getActor } from "../middleware/auth.js";
 import { writeAuditEvent } from "../core/audit.js";
 import { getPublishedTraceableItemsForRound } from "../core/roundLifecycle.js";
+import { buildParticipantControlledFeedback } from "../core/participantFeedback.js";
+import { participantCanSubmit } from "../stores/participantStatusStore.js";
+import { hasOrientationCompletion } from "../stores/orientationStore.js";
 
 type RatingRoundPayload = {
   round_number: number;
@@ -246,6 +250,12 @@ export async function responsesRoutes(app: FastifyInstance) {
 
       const existingConfig = getRoundConfig({ study_id: studyId, version_id: versionId, round_number: roundNumber });
       if (existingConfig?.status === "Open" || existingConfig?.status === "Closed") {
+        await writeAuditEvent({
+          actor,
+          action: "round.feedback_config.update_blocked_locked",
+          object: { type: "study_version", id: `${studyId}:${versionId}` },
+          details: { studyId, versionId, round_number: roundNumber },
+        });
         return reply.code(409).send({ error: "round_config_locked_after_open" });
       }
 
@@ -266,6 +276,7 @@ export async function responsesRoutes(app: FastifyInstance) {
         reminder_body: body.reminder_body.trim(),
         controlled_feedback_enabled: Boolean(body.controlled_feedback_enabled),
         ai_curation_enabled: Boolean(body.ai_curation_enabled),
+        feedback_config: normalizeFeedbackConfig(body.feedback_config, existingConfig?.feedback_config ?? null, roundNumber),
         status: body.status === "Ready" ? body.status : "Draft",
       });
 
@@ -275,6 +286,22 @@ export async function responsesRoutes(app: FastifyInstance) {
         object: { type: "study_version", id: `${studyId}:${versionId}` },
         details: { studyId, versionId, round_number: roundNumber, task_type: config.task_type },
       });
+
+      if (roundNumber > 1) {
+        await writeAuditEvent({
+          actor,
+          action: existingConfig?.feedback_config ? "round.feedback_config.update" : "round.feedback_config.create",
+          object: { type: "study_version", id: `${studyId}:${versionId}` },
+          details: {
+            studyId,
+            versionId,
+            round_number: roundNumber,
+            format: config.feedback_config?.format,
+            show_participant_prior_response: config.feedback_config?.show_participant_prior_response,
+            version_number: config.feedback_config?.version_number,
+          },
+        });
+      }
 
       return reply.send({ round_config: config });
     },
@@ -374,6 +401,7 @@ export async function responsesRoutes(app: FastifyInstance) {
         version_id: versionId,
         round_number: roundNumber,
         status: "Open",
+        locked_by_user_id: actor.userId,
       });
 
       await writeAuditEvent({
@@ -382,6 +410,21 @@ export async function responsesRoutes(app: FastifyInstance) {
         object: { type: "study_version", id: `${studyId}:${versionId}` },
         details: { studyId, versionId, round_number: roundNumber },
       });
+
+      if (roundNumber > 1) {
+        await writeAuditEvent({
+          actor,
+          action: "round.feedback_config.lock",
+          object: { type: "study_version", id: `${studyId}:${versionId}` },
+          details: {
+            studyId,
+            versionId,
+            round_number: roundNumber,
+            feedback_config_id: updated?.feedback_config?.feedback_config_id,
+            locked_at: updated?.feedback_config?.locked_at,
+          },
+        });
+      }
 
       return reply.send({ round_config: updated });
     },
@@ -485,6 +528,12 @@ export async function responsesRoutes(app: FastifyInstance) {
         });
 
         return reply.code(403).send({ error: "active_consent_required" });
+      }
+      if (!participantCanSubmit({ study_id: studyId, version_id: versionId, participant_id: String(body.participant_id), round_number: 1 })) {
+        return reply.code(403).send({ error: "participant_inactive_or_withdrawn_for_round" });
+      }
+      if (!hasOrientationCompletion({ study_id: studyId, version_id: versionId, participant_id: String(body.participant_id) })) {
+        return reply.code(403).send({ error: "participant_orientation_required" });
       }
 
       const rec = createResponse({
@@ -594,7 +643,7 @@ export async function responsesRoutes(app: FastifyInstance) {
       const roundNumber = getRoundNumber(req.params);
       const actor = getActor(req);
       const query = (req.query ?? {}) as Record<string, unknown>;
-      const participantId = query.participant_id ? String(query.participant_id) : null;
+      const participantId = query.participant_id ? String(query.participant_id) : "";
 
       if (roundNumber === null) {
         return reply.code(400).send({ error: "round_number_required" });
@@ -648,6 +697,13 @@ export async function responsesRoutes(app: FastifyInstance) {
           round_number: item.round_number,
           provenance_type: item.provenance_type,
           your_prior_response: yourPriorResponse,
+          controlled_feedback: buildParticipantControlledFeedback({
+            item,
+            responses,
+            roundNumber,
+            participantId,
+            feedbackConfig: roundConfig.feedback_config,
+          }),
         };
       });
 
@@ -739,6 +795,9 @@ export async function responsesRoutes(app: FastifyInstance) {
         });
 
         return reply.code(403).send({ error: "active_consent_required" });
+      }
+      if (!participantCanSubmit({ study_id: studyId, version_id: versionId, participant_id: participantId, round_number: roundNumber })) {
+        return reply.code(403).send({ error: "participant_inactive_or_withdrawn_for_round" });
       }
 
       const item = getItem(itemId);

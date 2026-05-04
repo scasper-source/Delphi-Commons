@@ -24,6 +24,17 @@ import {
   renderFinalItemResultsXlsx,
   type FinalItemResultRow,
 } from "../exports/finalReportRenderers.js";
+import { aiConfigDisclosureForExport } from "../stores/aiConfigStore.js";
+import {
+  listNonResponseEscalations,
+  listParticipantEnrollments,
+} from "../stores/participantStatusStore.js";
+import { buildAttritionSummary } from "../core/attrition.js";
+import {
+  buildBibtexCitation,
+  buildPreferredCitation,
+  citationMetadata,
+} from "../core/citation.js";
 
 type RatingRoundPayload = {
   round_number: number;
@@ -372,6 +383,9 @@ function requiredLimitationsMarkdown(): string {
     "## Non-Consensus Disclosure",
     "Items not reaching consensus are preserved as meaningful study findings and should not be interpreted as unimportant solely because they did not reach consensus.",
     "",
+    "## Attrition Disclosure",
+    "Attrition may affect interpretation of consensus. Participants marked inactive or withdrawn from future rounds remain represented in prior submitted data according to the study protocol. Consensus indicates agreement among this panel; it does not establish correctness.",
+    "",
     "## AI Assistance Disclosure",
     "Where AI assistance was used, AI-generated outputs were treated as draft suggestions only. Human reviewers made all final decisions about item wording, inclusion, exclusion, merging, splitting, reporting, and export.",
     "",
@@ -446,6 +460,7 @@ function exportManifestFile(input: {
   redactionStatus: string;
   recordCounts: Record<string, number>;
   consensusRule?: ReturnType<typeof consensusRuleMetadata>;
+  aiDisclosure?: ReturnType<typeof aiConfigDisclosureForExport>;
 }) {
   return JSON.stringify({
     schema_name: "edelphi_export_manifest",
@@ -467,6 +482,7 @@ function exportManifestFile(input: {
       panel_not_random_sample_disclosure_included: true,
       ai_disclosure_included: true,
     },
+    ai_connector_disclosure: input.aiDisclosure ?? null,
     record_counts: input.recordCounts,
   }, null, 2);
 }
@@ -493,8 +509,13 @@ function buildExportDataset(input: {
   items: ItemRecord[];
   responses: ResponseRecord[];
   finalRoundNumber: number | null;
+  participantStatuses?: ReturnType<typeof listParticipantEnrollments>;
 }) {
-  const participantCodes = pseudonymMap(input.responses);
+  const participantIds = [
+    ...input.responses.map((response) => response.participant_id),
+    ...(input.participantStatuses ?? []).map((status) => status.participant_id),
+  ];
+  const participantCodes = new Map(Array.from(new Set(participantIds)).sort().map((id, index) => [id, `P${String(index + 1).padStart(3, "0")}`]));
   const ratingRounds = [2, 3, 4];
   const responseRows = input.responses.flatMap((response) => {
     if (ratingRounds.some((round) => isRatingRoundPayload(response.response_json, round))) return [];
@@ -509,7 +530,7 @@ function buildExportDataset(input: {
       word_count: extractOpenResponseText(response.response_json).split(/\s+/).filter(Boolean).length,
       redaction_applied: false,
       redaction_level: "none",
-      withdrawal_status: "active",
+      withdrawal_status: input.participantStatuses?.find((status) => status.participant_id === response.participant_id)?.status.toLowerCase() ?? "active",
       included_in_analysis: true,
     }];
   });
@@ -572,7 +593,23 @@ function buildExportDataset(input: {
     notes: "Direct participant identity fields and identity-response mapping are excluded from this package.",
   }];
 
-  return { responseRows, ratingRows, itemRows, redactionRows };
+  const participantRows = (input.participantStatuses ?? []).map((status) => {
+    const participantResponses = input.responses.filter((response) => response.participant_id === status.participant_id);
+    return {
+      participant_pseudonym: participantCodes.get(status.participant_id) ?? "P000",
+      current_status: status.status,
+      inactive_or_withdrawal_round: status.inactive_from_round_number ?? "",
+      withdrawal_type: status.withdrawal_type ?? "none",
+      prior_round_response_presence: [1, 2, 3, 4]
+        .map((round) => `round_${round}:${participantResponses.some((response) => {
+          if (round === 1) return ![2, 3, 4].some((ratingRound) => isRatingRoundPayload(response.response_json, ratingRound));
+          return isRatingRoundPayload(response.response_json, round);
+        }) ? "yes" : "no"}`)
+        .join(";"),
+    };
+  });
+
+  return { responseRows, ratingRows, itemRows, redactionRows, participantRows };
 }
 
 function ratingLabel(value: number): string {
@@ -763,6 +800,13 @@ export async function reportsRoutes(app: FastifyInstance) {
           version_id: versionId,
         })
       );
+      const summaryAttrition = buildAttritionSummary({
+        enrollments: listParticipantEnrollments({ study_id: studyId, version_id: versionId }),
+        escalations: listNonResponseEscalations({ study_id: studyId, version_id: versionId }),
+        responses: allResponses,
+        plannedRounds: studyVersion.planned_round_count ?? 3,
+        warningThresholdPercent: 20,
+      });
 
       const roundResponses = allResponses.filter((response) =>
         isRatingRoundPayload(response.response_json, roundNumber)
@@ -814,6 +858,7 @@ export async function reportsRoutes(app: FastifyInstance) {
                 : []
             )
           ).size,
+          attrition: summaryAttrition,
         },
         items: itemReports,
       });
@@ -874,6 +919,13 @@ export async function reportsRoutes(app: FastifyInstance) {
           version_id: versionId,
         })
       );
+      const attritionSummary = buildAttritionSummary({
+        enrollments: listParticipantEnrollments({ study_id: studyId, version_id: versionId }),
+        escalations: listNonResponseEscalations({ study_id: studyId, version_id: versionId }),
+        responses: allResponses,
+        plannedRounds: studyVersion.planned_round_count ?? 3,
+        warningThresholdPercent: 20,
+      });
 
       const roundResponses = allResponses.filter((response) =>
         isRatingRoundPayload(response.response_json, roundNumber)
@@ -952,6 +1004,7 @@ export async function reportsRoutes(app: FastifyInstance) {
         },
         limitations: [
           "Consensus does not imply correctness.",
+          attritionSummary.limitations_note,
           "This MVP report defaults agreement_min_rating to 7 when the consensus rule omits an explicit cutpoint.",
           "Only the latest rating from each participant in the summarized round is counted for each item.",
           isFinalForDeclaredDesign
@@ -975,6 +1028,7 @@ export async function reportsRoutes(app: FastifyInstance) {
                 : []
             )
           ).size,
+          attrition: attritionSummary,
         },
         items: itemReports,
       };
@@ -1040,6 +1094,13 @@ export async function reportsRoutes(app: FastifyInstance) {
           version_id: versionId,
         })
       );
+      const finalAttritionSummary = buildAttritionSummary({
+        enrollments: listParticipantEnrollments({ study_id: studyId, version_id: versionId }),
+        escalations: listNonResponseEscalations({ study_id: studyId, version_id: versionId }),
+        responses: allResponses,
+        plannedRounds: studyVersion.planned_round_count ?? 3,
+        warningThresholdPercent: 20,
+      });
 
       const round1Responses = allResponses.filter(
         (response) => !getAllowedRatingRounds(studyVersion.study_format).some((round) =>
@@ -1101,6 +1162,13 @@ export async function reportsRoutes(app: FastifyInstance) {
       };
       const itemResultsRows = finalItemResultsRows(itemResultsInput);
       const itemResultsCsv = toCsv(itemResultsRows);
+      const softwareCitation = {
+        metadata: citationMetadata(),
+        preferred: buildPreferredCitation(),
+        bibtex: buildBibtexCitation(),
+        note:
+          "Citing this software supports transparency and reproducibility; it does not validate study findings or imply platform endorsement.",
+      };
 
       const report = {
         generated_at: new Date().toISOString(),
@@ -1144,6 +1212,7 @@ export async function reportsRoutes(app: FastifyInstance) {
         },
         limitations: [
           "Consensus indicates agreement among this panel; it does not establish correctness.",
+          finalAttritionSummary.limitations_note,
           "This MVP export defaults agreement_min_rating to 7 when the consensus rule omits an explicit cutpoint.",
           "Round 1 responses are stored as flexible JSON payloads, so this export treats any non-rating payload in the version as Round 1 material for summary purposes.",
           "Only the latest rating from each participant in the final summarized round is counted for each item.",
@@ -1167,9 +1236,13 @@ export async function reportsRoutes(app: FastifyInstance) {
                 : []
             )
           ).size,
+          attrition: finalAttritionSummary,
         },
         non_consensus_items: nonConsensusItems,
         items: itemReports,
+        appendices: {
+          software_citation: softwareCitation,
+        },
       };
 
       const auditEvent = await writeAuditEvent({
@@ -1213,12 +1286,17 @@ export async function reportsRoutes(app: FastifyInstance) {
         report,
         itemResults: itemResultsRows,
         limitationsMarkdown,
+        softwareCitation: {
+          preferred: softwareCitation.preferred,
+          bibtex: softwareCitation.bibtex,
+        },
       });
       const finalItemResultsXlsx = renderFinalItemResultsXlsx({
         report,
         itemResults: itemResultsRows,
         limitationsMarkdown,
       });
+      const aiConnectorDisclosure = aiConfigDisclosureForExport(studyId);
 
       const exportPackage = createExportPackage({
         study_id: studyId,
@@ -1232,7 +1310,7 @@ export async function reportsRoutes(app: FastifyInstance) {
         instrument_version_ids: [versionId],
         contains_identifiable_data: false,
         anonymization_level: "aggregated_only",
-        external_ai_used: false,
+        external_ai_used: aiConnectorDisclosure.external_ai_enabled,
         human_review_required: true,
         human_review_status: "pending_review",
         limitations_text_version_id: "charter-required-limitations-v1",
@@ -1353,6 +1431,14 @@ export async function reportsRoutes(app: FastifyInstance) {
       const rounds = listRoundConfigs({ study_id: studyId, version_id: versionId });
       const items = sortItems(listItems({ study_id: studyId, version_id: versionId }));
       const responses = sortResponses(listResponses({ study_id: studyId, version_id: versionId }));
+      const participantStatuses = listParticipantEnrollments({ study_id: studyId, version_id: versionId });
+      const attritionSummary = buildAttritionSummary({
+        enrollments: participantStatuses,
+        escalations: listNonResponseEscalations({ study_id: studyId, version_id: versionId }),
+        responses,
+        plannedRounds: studyVersion.planned_round_count ?? 3,
+        warningThresholdPercent: 20,
+      });
       const suggestions = listAISuggestions({ study_id: studyId, version_id: versionId });
       const merges = listMergeActions({ study_id: studyId, version_id: versionId });
       const splits = listSplitActions({ study_id: studyId, version_id: versionId });
@@ -1370,6 +1456,7 @@ export async function reportsRoutes(app: FastifyInstance) {
       const nearConsensusCount = itemReports.filter((item) => item.consensus.status === "near_consensus").length;
       const nonConsensusCount = itemReports.filter((item) => item.consensus.status === "non_consensus").length;
       const limitationsMarkdown = requiredLimitationsMarkdown();
+      const aiConnectorDisclosure = aiConfigDisclosureForExport(studyId);
       const datasetHash = sha256Json({ study, studyVersion, signoffs, rounds, items, responses });
       const dataCutoffAt = [
         ...responses.map((response) => response.created_at),
@@ -1377,7 +1464,7 @@ export async function reportsRoutes(app: FastifyInstance) {
         ...rounds.map((round) => round.updated_at),
         ...suggestions.map((suggestion) => suggestion.created_at),
       ].sort().at(-1) ?? new Date().toISOString();
-      const dataset = buildExportDataset({ studyId, versionId, items, responses, finalRoundNumber });
+      const dataset = buildExportDataset({ studyId, versionId, items, responses, finalRoundNumber, participantStatuses });
       const edgeRows = provenanceEdges({ studyId, items });
       const transformRows = transformationRows({ items, merges, splits });
       const aiRows = suggestions.map((suggestion) => ({
@@ -1391,7 +1478,7 @@ export async function reportsRoutes(app: FastifyInstance) {
         prompt_template_version_id: suggestion.prompt_template_version,
         input_scope_ids: suggestion.input_scope_ids.join(";"),
         direct_identifiers_included: false,
-        external_ai_connector_used: false,
+        external_ai_connector_used: aiConnectorDisclosure.external_ai_enabled,
         ai_output_hash: suggestion.output_hash,
         human_action: suggestion.decision,
         final_content_version_id: suggestion.resulting_object_ids.join(";"),
@@ -1443,6 +1530,7 @@ export async function reportsRoutes(app: FastifyInstance) {
       const recordCounts = {
         items: items.length,
         responses: responses.length,
+        participants: participantStatuses.length,
         ratings: dataset.ratingRows.length,
         audit_events: auditRows.length,
         provenance_edges: edgeRows.length,
@@ -1460,7 +1548,15 @@ export async function reportsRoutes(app: FastifyInstance) {
         redactionStatus: "direct identifiers and identity-response mapping excluded",
         recordCounts,
         consensusRule: consensusMetadata,
+        aiDisclosure: aiConnectorDisclosure,
       });
+      const softwareCitation = {
+        metadata: citationMetadata(),
+        preferred: buildPreferredCitation(),
+        bibtex: buildBibtexCitation(),
+        note:
+          "Citing this software supports transparency and reproducibility; it does not validate study findings or imply platform endorsement.",
+      };
 
       const baseFiles = [{
         path: `${exportType}/export_manifest.json`,
@@ -1484,8 +1580,13 @@ export async function reportsRoutes(app: FastifyInstance) {
                 consensus_item_count: consensusCount,
                 near_consensus_item_count: nearConsensusCount,
                 non_consensus_item_count: nonConsensusCount,
+                attrition: attritionSummary,
               },
               required_statement: "Consensus indicates agreement among this panel; it does not establish correctness.",
+              ai_connector_disclosure: aiConnectorDisclosure,
+              appendices: {
+                software_citation: softwareCitation,
+              },
               items: itemReports,
               limitations: limitationsMarkdown,
             }, null, 2),
@@ -1525,7 +1626,20 @@ export async function reportsRoutes(app: FastifyInstance) {
               consentVersions.map((version) => version.text_md).join("\n\n---\n\n"),
               "",
               "## AI Disclosure",
-              "AI assistance is limited to draft generation and organization. AI Suggestion (Not Final) outputs require human Accept/Edit/Reject action before use.",
+              aiConnectorDisclosure.no_external_ai_mode
+                ? "This study is configured for No External AI mode. Study data is not sent to external AI services by this platform configuration."
+                : [
+                    `External AI enabled: ${aiConnectorDisclosure.external_ai_enabled}`,
+                    `Provider: ${aiConnectorDisclosure.provider_name ?? "not configured"}`,
+                    `Model/version: ${aiConnectorDisclosure.model_name ?? "not configured"}`,
+                    `Enabled features: ${aiConnectorDisclosure.enabled_features.join(", ") || "none"}`,
+                    `Data that may be sent: ${aiConnectorDisclosure.data_may_be_sent || "not documented"}`,
+                    `Identifier exclusion: ${aiConnectorDisclosure.identifiers_excluded || "not documented"}`,
+                    `Opt-out / no-external-AI language: ${aiConnectorDisclosure.opt_out_or_no_external_ai_language || "not documented"}`,
+                    `Human-in-the-loop controls: ${aiConnectorDisclosure.human_in_the_loop_controls || "AI Suggestion (Not Final) outputs require human review."}`,
+                  ].join("\n"),
+              "",
+              "AI Suggestion (Not Final) outputs require explicit human Accept/Edit/Reject action before use.",
               "",
               "## Signoff History",
               ...signoffs.map((signoff) => `- ${signoff.required_role}: ${signoff.signed_at}`),
@@ -1553,6 +1667,7 @@ export async function reportsRoutes(app: FastifyInstance) {
           ...baseFiles,
           { path: "anonymized-response-dataset/responses.csv", content: toCsv(dataset.responseRows), format: ".csv", record_count: dataset.responseRows.length, contains_identifiable_data: false, redaction_profile: { participant_ids: "pseudonymized", names_emails: "excluded" } },
           { path: "anonymized-response-dataset/ratings.csv", content: toCsv(dataset.ratingRows), format: ".csv", record_count: dataset.ratingRows.length, contains_identifiable_data: false, redaction_profile: { participant_ids: "pseudonymized", names_emails: "excluded" } },
+          { path: "anonymized-response-dataset/participants_anonymized.csv", content: toCsv(dataset.participantRows), format: ".csv", record_count: dataset.participantRows.length, contains_identifiable_data: false, redaction_profile: { participant_ids: "pseudonymized", names_emails: "excluded", identity_response_mapping: "excluded" } },
           { path: "anonymized-response-dataset/items.csv", content: toCsv(dataset.itemRows), format: ".csv", record_count: dataset.itemRows.length, contains_identifiable_data: false, redaction_profile: { direct_identifiers: "excluded" } },
           { path: "anonymized-response-dataset/redaction_manifest.csv", content: toCsv(dataset.redactionRows), format: ".csv", record_count: dataset.redactionRows.length, contains_identifiable_data: false, redaction_profile: { identity_response_mapping: "excluded" } },
           { path: "anonymized-response-dataset/data_dictionary.txt", content: "responses.csv, ratings.csv, and items.csv use participant_pseudonym values only. No name, email, or identity-response mapping is included.", format: ".txt", record_count: null, contains_identifiable_data: false, redaction_profile: { direct_identifiers: "excluded" } },
@@ -1573,7 +1688,7 @@ export async function reportsRoutes(app: FastifyInstance) {
         ],
         "complete-archive": [
           ...baseFiles,
-          { path: "complete-archive/study_version.json", content: JSON.stringify({ study, studyVersion, rounds, signoffs, consentVersions }, null, 2), format: ".json", record_count: 1, contains_identifiable_data: false, redaction_profile: { participant_identity: "excluded" } },
+          { path: "complete-archive/study_version.json", content: JSON.stringify({ study, studyVersion, rounds, signoffs, consentVersions, ai_connector_disclosure: aiConnectorDisclosure, attrition: attritionSummary }, null, 2), format: ".json", record_count: 1, contains_identifiable_data: false, redaction_profile: { participant_identity: "excluded", api_keys: "excluded" } },
           { path: "complete-archive/anonymized_dataset.json", content: JSON.stringify(dataset, null, 2), format: ".json", record_count: responses.length, contains_identifiable_data: false, redaction_profile: { participant_identity: "excluded" } },
           { path: "complete-archive/items_and_provenance.json", content: JSON.stringify({ items, edges: edgeRows, transformations: transformRows, ai_operations: aiRows }, null, 2), format: ".json", record_count: items.length, contains_identifiable_data: false, redaction_profile: { participant_identity: "excluded" } },
           { path: "complete-archive/audit_summary.json", content: JSON.stringify({ auditRows, audit_integrity: verifyAuditIntegrity() }, null, 2), format: ".json", record_count: auditRows.length, contains_identifiable_data: false, redaction_profile: { participant_identity: "excluded" } },

@@ -97,6 +97,16 @@ export type RoundConfig = {
   reminder_body: string;
   controlled_feedback_enabled: boolean;
   ai_curation_enabled: boolean;
+  feedback_config: {
+    feedback_config_id: string;
+    version_number: number;
+    format: "distribution_only" | "distribution_summary" | "distribution_rationales";
+    show_participant_prior_response: boolean;
+    locked_at: string | null;
+    locked_by_user_id: string | null;
+    created_at: string;
+    updated_at: string;
+  } | null;
   status: "Draft" | "Ready" | "Open" | "Closed";
   created_at: string;
   updated_at: string;
@@ -173,6 +183,47 @@ export type AISuggestionReleaseSignoff = {
   note?: string;
 };
 
+export type AIFeaturePermissions = {
+  clustering: boolean;
+  item_drafting: boolean;
+  neutrality_method_linting: boolean;
+  reminders: boolean;
+  irb_export_drafting: boolean;
+  report_drafting: boolean;
+};
+
+export type AIConfigDisclosure = {
+  dataMayBeSentDescription: string;
+  identifiersExcludedDescription: string;
+  optOutDescription: string;
+  humanInTheLoopDescription: string;
+};
+
+export type StudyAIConfig = {
+  studyId: string;
+  externalAiEnabled: boolean;
+  noExternalAiMode: boolean;
+  providerName: string | null;
+  modelName: string | null;
+  apiKeyCreatedAt: string | null;
+  apiKeyRotatedAt: string | null;
+  apiKeyDeletedAt: string | null;
+  featurePermissions: AIFeaturePermissions;
+  disclosure: AIConfigDisclosure;
+  createdBy: string;
+  updatedBy: string;
+  createdAt: string;
+  updatedAt: string;
+  keyExists: boolean;
+  maskedApiKey: string | null;
+};
+
+export type AIConfigValidation = {
+  status: "ready" | "incomplete" | "no_external_ai_mode";
+  errors: string[];
+  warnings: string[];
+};
+
 export type RoundItemForParticipant = {
   item_id: string;
   text: string;
@@ -183,6 +234,27 @@ export type RoundItemForParticipant = {
     action: "keep" | "revise";
     submitted_at: string;
   } | null;
+  controlled_feedback?: {
+    source_round_number: number;
+    format: "distribution_only" | "distribution_summary" | "distribution_rationales";
+    show_participant_prior_response: boolean;
+    item_source: "panel-generated" | "literature-derived" | "researcher-added" | "AI-assisted draft, human approved";
+    participant_prior_response: {
+      rating: number;
+      action: "keep" | "revise";
+      submitted_at: string | null;
+    } | null;
+    group_summary: {
+      median: number | null;
+      iqr: number | null;
+      q1: number | null;
+      q3: number | null;
+      response_count: number;
+      distribution: Record<string, number>;
+    };
+    neutral_summary: { approved: boolean; text: string } | null;
+    rationale_excerpts: { approved: boolean; excerpts: string[] } | null;
+  };
 };
 
 export type RoundReport = {
@@ -208,6 +280,7 @@ export type RoundReport = {
     round1_response_count?: number;
     unique_rated_item_count?: number;
     final_round_unique_rated_item_count?: number;
+    attrition?: AttritionSummary;
   };
   items: Array<{
     item_id: string;
@@ -332,7 +405,91 @@ export type ParticipantInvitationContext = {
     consented_at: string;
     withdrew_at: string | null;
   } | null;
+  participant_status: ParticipantEnrollment | null;
+  orientation_completion: {
+    participant_id: string;
+    study_id: string;
+    version_id: string;
+    orientation_version: string;
+    completed_at: string;
+  } | null;
+  orientation_version: string;
   round_configs: RoundConfig[];
+};
+
+export type ParticipantStatus =
+  | "ACTIVE"
+  | "NON_RESPONSIVE_FLAGGED"
+  | "WITHDRAWN_PARTICIPANT"
+  | "WITHDRAWN_PI"
+  | "COMPLETED";
+
+export type ParticipantEnrollment = {
+  enrollment_id: string;
+  study_id: string;
+  version_id: string;
+  participant_id: string;
+  status: ParticipantStatus;
+  inactive_from_round_number: number | null;
+  withdrawal_type: "participant" | "pi" | null;
+  withdrawal_reason_code: string | null;
+  withdrawal_note: string | null;
+  withdrawn_at: string | null;
+  status_updated_at: string;
+  created_at: string;
+  created_by_user_id: string;
+  timeline: Array<{ status: ParticipantStatus; at: string; actor_user_id: string; reason: string; round_number: number | null }>;
+};
+
+export type NonResponsePolicy = {
+  policy_id: string;
+  study_id: string;
+  version_id: string;
+  version_number: number;
+  missed_current_round_deadline: boolean;
+  no_activity_days_threshold: number | null;
+  incomplete_submission_counts_as_non_response: boolean;
+  follow_up_window_days: number;
+  final_notice_enabled: boolean;
+  auto_progression_enabled: boolean;
+  attrition_warning_threshold_percent: number;
+  created_at: string;
+  updated_at: string;
+  changed_by_user_id: string;
+};
+
+export type NonResponseEscalation = {
+  escalation_id: string;
+  study_id: string;
+  version_id: string;
+  participant_id: string;
+  round_number: number;
+  state: string;
+  trigger_rule: string;
+  followup_window_ends_at: string | null;
+  message_texts: Array<{ kind: "reminder" | "final_notice"; text: string; queued_at: string }>;
+};
+
+export type AttritionSummary = {
+  total_participants_invited_or_enrolled: number;
+  current_active_count: number;
+  non_responsive_flagged_count: number;
+  participant_withdrawal_count: number;
+  pi_inactive_count: number;
+  completed_count: number;
+  attrition_rate: number;
+  rounds: Array<{
+    round_number: number;
+    invited_or_enrolled_count: number;
+    active_count: number;
+    submitted_count: number;
+    response_rate: number;
+    non_responsive_flagged_count: number;
+    participant_withdrawal_count: number;
+    pi_inactive_count: number;
+  }>;
+  warnings: string[];
+  limitations_note: string;
 };
 
 export type BackendRole =
@@ -546,6 +703,63 @@ export const conductorApi = {
     });
   },
 
+  async getAIConfig(studyId: string, role: UserRole) {
+    return requestJson<{ ai_config: StudyAIConfig; validation: AIConfigValidation }>(
+      `/studies/${studyId}/ai-config`,
+      role,
+    );
+  },
+
+  async updateAIConfig(
+    studyId: string,
+    role: UserRole,
+    input: Partial<Pick<StudyAIConfig, "externalAiEnabled" | "noExternalAiMode" | "providerName" | "modelName">> & {
+      featurePermissions?: Partial<AIFeaturePermissions>;
+      disclosure?: Partial<AIConfigDisclosure>;
+    },
+  ) {
+    return requestJson<{ ai_config: StudyAIConfig; validation: AIConfigValidation }>(
+      `/studies/${studyId}/ai-config`,
+      role,
+      {
+        method: "PUT",
+        body: input,
+      },
+    );
+  },
+
+  async setAIConfigApiKey(studyId: string, role: UserRole, apiKey: string) {
+    return requestJson<{ ai_config: StudyAIConfig; validation: AIConfigValidation }>(
+      `/studies/${studyId}/ai-config/api-key`,
+      role,
+      {
+        method: "POST",
+        body: { apiKey },
+      },
+    );
+  },
+
+  async deleteAIConfigApiKey(studyId: string, role: UserRole) {
+    return requestJson<{ ai_config: StudyAIConfig; validation: AIConfigValidation }>(
+      `/studies/${studyId}/ai-config/api-key`,
+      role,
+      {
+        method: "DELETE",
+      },
+    );
+  },
+
+  async validateAIConfig(studyId: string, role: UserRole) {
+    return requestJson<{ ai_config: StudyAIConfig; validation: AIConfigValidation }>(
+      `/studies/${studyId}/ai-config/validate`,
+      role,
+      {
+        method: "POST",
+        body: {},
+      },
+    );
+  },
+
   async setDesign(
     studyId: string,
     versionId: string,
@@ -730,6 +944,78 @@ export const conductorApi = {
     );
   },
 
+  async getNonResponsePolicy(studyId: string, versionId: string, role: UserRole) {
+    return requestJson<{ policy: NonResponsePolicy }>(
+      `/studies/${studyId}/versions/${versionId}/non-response-policy`,
+      role,
+    );
+  },
+
+  async updateNonResponsePolicy(studyId: string, versionId: string, role: UserRole, policy: Partial<NonResponsePolicy>) {
+    return requestJson<{ policy: NonResponsePolicy }>(
+      `/studies/${studyId}/versions/${versionId}/non-response-policy`,
+      role,
+      { method: "PUT", body: policy },
+    );
+  },
+
+  async detectNonResponse(studyId: string, versionId: string, roundNumber: number, role: UserRole) {
+    return requestJson<{ flagged: Array<{ participant_id: string; escalation: NonResponseEscalation }>; policy: NonResponsePolicy }>(
+      `/studies/${studyId}/versions/${versionId}/rounds/${roundNumber}/non-response/detect`,
+      role,
+      { method: "POST", body: { as_of: new Date(Date.now() + 31 * 24 * 60 * 60 * 1000).toISOString() } },
+    );
+  },
+
+  async queueParticipantReminder(studyId: string, versionId: string, roundNumber: number, participantId: string, role: UserRole) {
+    return requestJson<{ escalation: NonResponseEscalation }>(
+      `/studies/${studyId}/versions/${versionId}/rounds/${roundNumber}/participants/${participantId}/reminder`,
+      role,
+      { method: "POST", body: {} },
+    );
+  },
+
+  async queueParticipantFinalNotice(studyId: string, versionId: string, roundNumber: number, participantId: string, role: UserRole) {
+    return requestJson<{ escalation: NonResponseEscalation }>(
+      `/studies/${studyId}/versions/${versionId}/rounds/${roundNumber}/participants/${participantId}/final-notice`,
+      role,
+      { method: "POST", body: {} },
+    );
+  },
+
+  async expireParticipantFollowup(studyId: string, versionId: string, roundNumber: number, participantId: string, role: UserRole) {
+    return requestJson<{ escalation: NonResponseEscalation }>(
+      `/studies/${studyId}/versions/${versionId}/rounds/${roundNumber}/participants/${participantId}/followup-expire`,
+      role,
+      { method: "POST", body: { as_of: new Date(Date.now() + 31 * 24 * 60 * 60 * 1000).toISOString() } },
+    );
+  },
+
+  async markParticipantInactive(studyId: string, versionId: string, participantId: string, role: UserRole, inactiveFromRoundNumber: number) {
+    return requestJson<{ participant_status: ParticipantEnrollment; escalation: NonResponseEscalation }>(
+      `/studies/${studyId}/versions/${versionId}/participants/${participantId}/mark-inactive`,
+      role,
+      {
+        method: "POST",
+        body: {
+          inactive_from_round_number: inactiveFromRoundNumber,
+          reason_code: "no_response_after_followup",
+          note: "Marked inactive after configured follow-up window for future study progression only.",
+          safeguard_acknowledged: true,
+        },
+      },
+    );
+  },
+
+  async getAttritionSummary(studyId: string, versionId: string, role: UserRole) {
+    return requestJson<{
+      policy: NonResponsePolicy;
+      attrition_summary: AttritionSummary;
+      participant_statuses: ParticipantEnrollment[];
+      escalations: NonResponseEscalation[];
+    }>(`/studies/${studyId}/versions/${versionId}/attrition-summary`, role);
+  },
+
   async getParticipantInvitation(token: string) {
     return requestInvitationJson<ParticipantInvitationContext>("/participant/invitation", token);
   },
@@ -738,6 +1024,27 @@ export const conductorApi = {
     return requestInvitationJson<{ consent_record: unknown }>(
       "/participant/invitation/consent",
       token,
+      { method: "POST", body: {} },
+    );
+  },
+
+  async completeInvitationOrientation(token: string) {
+    return requestInvitationJson<{ orientation_completion: NonNullable<ParticipantInvitationContext["orientation_completion"]> }>(
+      "/participant/invitation/orientation/complete",
+      token,
+      { method: "POST", body: {} },
+    );
+  },
+
+  async completeParticipantOrientation(
+    studyId: string,
+    versionId: string,
+    participantId: string,
+    role: UserRole,
+  ) {
+    return requestJson<{ orientation_completion: NonNullable<ParticipantInvitationContext["orientation_completion"]> }>(
+      `/studies/${studyId}/versions/${versionId}/participants/${encodeURIComponent(participantId)}/orientation/complete`,
+      role,
       { method: "POST", body: {} },
     );
   },

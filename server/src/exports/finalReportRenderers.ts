@@ -6,6 +6,10 @@ type RenderFinalReportInput = {
   report: Record<string, unknown>;
   itemResults: FinalItemResultRow[];
   limitationsMarkdown: string;
+  softwareCitation?: {
+    preferred: string;
+    bibtex: string;
+  };
 };
 
 function asRecord(value: unknown): Record<string, unknown> {
@@ -115,6 +119,12 @@ export function renderFinalDelphiReportDocx(input: RenderFinalReportInput): Buff
     ...limitations.map((entry) => paragraph(entry)),
     paragraph("Structured Disclosure Source", "Heading2"),
     ...input.limitationsMarkdown.split(/\r?\n/).filter(Boolean).map((line) => paragraph(line)),
+    ...(input.softwareCitation ? [
+      paragraph("Appendix: Software Citation", "Heading1"),
+      paragraph(input.softwareCitation.preferred),
+      paragraph("BibTeX", "Heading2"),
+      paragraph(input.softwareCitation.bibtex),
+    ] : []),
   ].join("");
 
   const document = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>

@@ -8,6 +8,7 @@ import { consentRoutes } from "./routes/consent.js";
 import { itemsRoutes } from "./routes/items.js";
 import { reportsRoutes } from "./routes/reports.js";
 import { aiRoutes } from "./routes/ai.js";
+import { aiConfigRoutes } from "./routes/aiConfig.js";
 import { getServerConfig } from "./core/config.js";
 import { authRoutes } from "./routes/auth.js";
 import { registerSecurity } from "./core/security.js";
@@ -39,6 +40,7 @@ await app.register(responsesRoutes);
 await app.register(consentRoutes);
 await app.register(itemsRoutes);
 await app.register(reportsRoutes);
+await app.register(aiConfigRoutes);
 await app.register(aiRoutes);
 
 app.listen({ port: config.port, host: config.host }, (err, address) => {

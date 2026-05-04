@@ -17,6 +17,7 @@ process.env.EDELPHI_DATA_DIR = path.join(runtimeRoot, "data");
 process.env.EDELPHI_AUDIT_DIR = path.join(runtimeRoot, "audit");
 process.env.EDELPHI_BACKUP_DIR = path.join(runtimeRoot, "backups");
 process.env.EDELPHI_RATE_LIMIT_AUTH_MAX = "2";
+process.env.EDELPHI_AI_KEY_ENCRYPTION_SECRET = "test-only-ai-key-encryption-secret-for-roadtest";
 
 const Fastify = (await import("fastify")).default;
 const { getServerConfig } = await import("../dist/core/config.js");
@@ -29,6 +30,7 @@ const { responsesRoutes } = await import("../dist/routes/responses.js");
 const { consentRoutes } = await import("../dist/routes/consent.js");
 const { itemsRoutes } = await import("../dist/routes/items.js");
 const { reportsRoutes } = await import("../dist/routes/reports.js");
+const { aiConfigRoutes } = await import("../dist/routes/aiConfig.js");
 const { aiRoutes } = await import("../dist/routes/ai.js");
 const { verifyAuditIntegrity } = await import("../dist/core/audit.js");
 const { getDatabase } = await import("../dist/core/database.js");
@@ -79,6 +81,7 @@ async function buildApp() {
   await app.register(consentRoutes);
   await app.register(itemsRoutes);
   await app.register(reportsRoutes);
+  await app.register(aiConfigRoutes);
   await app.register(aiRoutes);
 
   return app;
@@ -113,6 +116,19 @@ function inviteTokenFromUrl(invitationUrl) {
   const token = new URLSearchParams(parsed.hash.replace(/^#/, "")).get("invite");
   assert.equal(typeof token, "string");
   return token;
+}
+
+async function completeStaffOrientation(app, studyId, versionId, participantId, headers = owner) {
+  return expectStatus(
+    app,
+    {
+      method: "POST",
+      url: `/studies/${studyId}/versions/${versionId}/participants/${participantId}/orientation/complete`,
+      headers,
+      body: {},
+    },
+    201
+  );
 }
 
 test("backend road test covers study, consent, AI, reporting, and audit flows", async (t) => {
@@ -485,6 +501,27 @@ test("backend road test covers study, consent, AI, reporting, and audit flows", 
     403
   );
 
+  const ownerUserList = await expectStatus(
+    app,
+    {
+      method: "GET",
+      url: "/admin/users",
+      headers: owner,
+    },
+    200
+  );
+  assert.ok(ownerUserList.users.some((user) => user.email === "owner@example.test"));
+
+  await expectStatus(
+    app,
+    {
+      method: "GET",
+      url: "/admin/users",
+      headers: participant,
+    },
+    403
+  );
+
   const createdStudy = await expectStatus(
     app,
     {
@@ -500,6 +537,228 @@ test("backend road test covers study, consent, AI, reporting, and audit flows", 
   );
 
   const studyId = createdStudy.study.id;
+
+  const defaultAiConfig = await expectStatus(
+    app,
+    {
+      method: "GET",
+      url: `/studies/${studyId}/ai-config`,
+      headers: owner,
+    },
+    200
+  );
+  assert.equal(defaultAiConfig.ai_config.noExternalAiMode, true);
+  assert.equal(defaultAiConfig.ai_config.externalAiEnabled, false);
+  assert.equal(defaultAiConfig.ai_config.keyExists, false);
+  assert.equal(defaultAiConfig.ai_config.apiKeyEncrypted, undefined);
+
+  await expectStatus(
+    app,
+    {
+      method: "GET",
+      url: `/studies/${studyId}/ai-config`,
+      headers: participant,
+    },
+    403
+  );
+
+  await expectStatus(
+    app,
+    {
+      method: "POST",
+      url: `/studies/${studyId}/ai-config/external-call-check`,
+      headers: owner,
+      body: { feature: "item_drafting", payload: { text: "anonymized input" } },
+    },
+    403
+  );
+
+  const incompleteExternalAI = await expectStatus(
+    app,
+    {
+      method: "PUT",
+      url: `/studies/${studyId}/ai-config`,
+      headers: owner,
+      body: {
+        noExternalAiMode: false,
+        externalAiEnabled: true,
+        providerName: "OpenAI",
+        modelName: "",
+        featurePermissions: { item_drafting: true },
+        disclosure: { dataMayBeSentDescription: "Anonymized response text may be sent for drafting." },
+      },
+    },
+    200
+  );
+  assert.match(incompleteExternalAI.validation.errors.join("|"), /external_ai_enabled_but_model_missing/);
+  assert.equal(incompleteExternalAI.ai_config.apiKeyEncrypted, undefined);
+
+  const savedKey = await expectStatus(
+    app,
+    {
+      method: "POST",
+      url: `/studies/${studyId}/ai-config/api-key`,
+      headers: owner,
+      body: { apiKey: "sk-roadtest-secret-1234" },
+    },
+    200
+  );
+  assert.equal(savedKey.ai_config.maskedApiKey, "••••••1234");
+  assert.equal(savedKey.ai_config.keyExists, true);
+  assert.equal(savedKey.ai_config.apiKey, undefined);
+
+  const aiConfigRowAfterSet = getDatabase()
+    .prepare("SELECT api_key_encrypted, api_key_last_four, api_key_fingerprint_hash FROM study_ai_configs WHERE study_id = ?")
+    .get(studyId);
+  assert.equal(aiConfigRowAfterSet.api_key_last_four, "1234");
+  assert.notEqual(aiConfigRowAfterSet.api_key_encrypted, "sk-roadtest-secret-1234");
+  assert.ok(!String(aiConfigRowAfterSet.api_key_encrypted).includes("sk-roadtest-secret-1234"));
+  assert.ok(aiConfigRowAfterSet.api_key_fingerprint_hash);
+
+  const rotatedKey = await expectStatus(
+    app,
+    {
+      method: "POST",
+      url: `/studies/${studyId}/ai-config/api-key`,
+      headers: owner,
+      body: { apiKey: "sk-roadtest-secret-9876" },
+    },
+    200
+  );
+  assert.equal(rotatedKey.ai_config.maskedApiKey, "••••••9876");
+  const aiConfigRowAfterRotate = getDatabase()
+    .prepare("SELECT api_key_encrypted, api_key_last_four FROM study_ai_configs WHERE study_id = ?")
+    .get(studyId);
+  assert.equal(aiConfigRowAfterRotate.api_key_last_four, "9876");
+  assert.notEqual(aiConfigRowAfterRotate.api_key_encrypted, aiConfigRowAfterSet.api_key_encrypted);
+
+  const completeExternalAI = await expectStatus(
+    app,
+    {
+      method: "PUT",
+      url: `/studies/${studyId}/ai-config`,
+      headers: owner,
+      body: {
+        noExternalAiMode: false,
+        externalAiEnabled: true,
+        providerName: "OpenAI",
+        modelName: "test-model",
+        featurePermissions: { item_drafting: true },
+        disclosure: {
+          dataMayBeSentDescription: "Anonymized response text and non-identifying methodological context may be sent.",
+          identifiersExcludedDescription: "Direct identifiers and identity-response mappings are excluded.",
+          optOutDescription: "No External AI mode is available when external AI processing is not permitted.",
+          humanInTheLoopDescription: "AI Suggestion (Not Final) outputs require human Accept/Edit/Reject action.",
+        },
+      },
+    },
+    200
+  );
+  assert.equal(completeExternalAI.validation.status, "ready");
+
+  await expectStatus(
+    app,
+    {
+      method: "POST",
+      url: `/studies/${studyId}/ai-config/external-call-check`,
+      headers: owner,
+      body: { feature: "item_drafting", payload: { response_text: "Safe anonymized response" } },
+    },
+    200
+  );
+
+  await expectStatus(
+    app,
+    {
+      method: "POST",
+      url: `/studies/${studyId}/ai-config/external-call-check`,
+      headers: owner,
+      body: { feature: "item_drafting", payload: { email: "panelist@example.test" } },
+    },
+    409
+  );
+
+  await expectStatus(
+    app,
+    {
+      method: "PUT",
+      url: `/studies/${studyId}/ai-config`,
+      headers: owner,
+      body: {
+        noExternalAiMode: false,
+        externalAiEnabled: false,
+        featurePermissions: { item_drafting: true },
+      },
+    },
+    200
+  );
+  await expectStatus(
+    app,
+    {
+      method: "POST",
+      url: `/studies/${studyId}/ai-config/external-call-check`,
+      headers: owner,
+      body: { feature: "item_drafting", payload: { response_text: "Safe anonymized response" } },
+    },
+    409
+  );
+
+  const deletedKey = await expectStatus(
+    app,
+    {
+      method: "DELETE",
+      url: `/studies/${studyId}/ai-config/api-key`,
+      headers: owner,
+    },
+    200
+  );
+  assert.equal(deletedKey.ai_config.keyExists, false);
+  const aiConfigRowAfterDelete = getDatabase()
+    .prepare("SELECT api_key_encrypted, api_key_deleted_at FROM study_ai_configs WHERE study_id = ?")
+    .get(studyId);
+  assert.equal(aiConfigRowAfterDelete.api_key_encrypted, null);
+  assert.ok(aiConfigRowAfterDelete.api_key_deleted_at);
+
+  const localAIConfig = await expectStatus(
+    app,
+    {
+      method: "PUT",
+      url: `/studies/${studyId}/ai-config`,
+      headers: owner,
+      body: {
+        noExternalAiMode: true,
+        externalAiEnabled: false,
+        providerName: "local",
+        modelName: "deterministic-local-assistant",
+        featurePermissions: {
+          clustering: true,
+          item_drafting: true,
+          neutrality_method_linting: true,
+          reminders: true,
+          irb_export_drafting: true,
+          report_drafting: true,
+        },
+        disclosure: {
+          dataMayBeSentDescription: "No external AI processing. Local deterministic helpers may use anonymized study content.",
+          identifiersExcludedDescription: "Direct identifiers and identity-response mappings are excluded.",
+          optOutDescription: "The study remains in No External AI mode.",
+          humanInTheLoopDescription: "AI Suggestion (Not Final) outputs require human Accept/Edit/Reject action.",
+        },
+      },
+    },
+    200
+  );
+  assert.equal(localAIConfig.validation.status, "no_external_ai_mode");
+  await expectStatus(
+    app,
+    {
+      method: "POST",
+      url: `/studies/${studyId}/ai-config/external-call-check`,
+      headers: owner,
+      body: { feature: "item_drafting", payload: { response_text: "Safe anonymized response" } },
+    },
+    409
+  );
 
   const createdVersion = await expectStatus(
     app,
@@ -703,6 +962,25 @@ test("backend road test covers study, consent, AI, reporting, and audit flows", 
     200
   );
 
+  const nonResponsePolicy = await expectStatus(
+    app,
+    {
+      method: "PUT",
+      url: `/studies/${studyId}/versions/${versionId}/non-response-policy`,
+      headers: owner,
+      body: {
+        missedCurrentRoundDeadline: true,
+        incompleteSubmissionCountsAsNonResponse: true,
+        followUpWindowDays: 3,
+        finalNoticeEnabled: true,
+        autoProgressionEnabled: false,
+      },
+    },
+    200
+  );
+  assert.equal(nonResponsePolicy.policy.follow_up_window_days, 3);
+  assert.equal(nonResponsePolicy.policy.auto_progression_enabled, false);
+
   const activated = await expectStatus(
     app,
     {
@@ -714,6 +992,17 @@ test("backend road test covers study, consent, AI, reporting, and audit flows", 
     200
   );
   assert.equal(activated.studyVersion.status, "Active");
+
+  await expectStatus(
+    app,
+    {
+      method: "PUT",
+      url: `/studies/${studyId}/versions/${versionId}/non-response-policy`,
+      headers: owner,
+      body: { followUpWindowDays: 4 },
+    },
+    409
+  );
 
   await expectStatus(
     app,
@@ -762,6 +1051,7 @@ test("backend road test covers study, consent, AI, reporting, and audit flows", 
   );
 
   const participantIds = [uniqueParticipantId(1), uniqueParticipantId(2), uniqueParticipantId(3)];
+  const nonResponseParticipantId = uniqueParticipantId(4);
   let invitedParticipantId = null;
   for (const [index, participantId] of participantIds.entries()) {
     const created = await expectStatus(
@@ -843,6 +1133,8 @@ test("backend road test covers study, consent, AI, reporting, and audit flows", 
   );
   assert.equal(invitationContext.invitation.participant_id, invitedParticipantId);
   assert.equal(invitationContext.active_consent_version.consent_version_id, consentVersion.consent_version.consent_version_id);
+  assert.equal(invitationContext.orientation_completion, null);
+  assert.equal(invitationContext.orientation_version, "participant-orientation-v1");
 
   await expectStatus(
     app,
@@ -866,6 +1158,29 @@ test("backend road test covers study, consent, AI, reporting, and audit flows", 
     201
   );
   assert.equal(invitationConsent.consent_record.participant_id, invitedParticipantId);
+
+  await expectStatus(
+    app,
+    {
+      method: "POST",
+      url: "/participant/invitation/responses",
+      headers: { [PARTICIPANT_INVITATION_HEADER]: inviteToken },
+      body: { text: "This should be blocked until orientation is completed." },
+    },
+    403
+  );
+
+  const orientationCompletion = await expectStatus(
+    app,
+    {
+      method: "POST",
+      url: "/participant/invitation/orientation/complete",
+      headers: { [PARTICIPANT_INVITATION_HEADER]: inviteToken },
+      body: {},
+    },
+    201
+  );
+  assert.equal(orientationCompletion.orientation_completion.participant_id, invitedParticipantId);
 
   const invitationResponse = await expectStatus(
     app,
@@ -938,7 +1253,7 @@ test("backend road test covers study, consent, AI, reporting, and audit flows", 
     403
   );
 
-  for (const participantId of participantIds) {
+  for (const participantId of [...participantIds, nonResponseParticipantId]) {
     await expectStatus(
       app,
       {
@@ -949,6 +1264,10 @@ test("backend road test covers study, consent, AI, reporting, and audit flows", 
       },
       201
     );
+  }
+  for (const participantId of participantIds) {
+    const completion = await completeStaffOrientation(app, studyId, versionId, participantId, owner);
+    assert.equal(completion.orientation_completion.orientation_version, "participant-orientation-v1");
   }
 
   const roundOneResponses = [
@@ -1493,13 +1812,17 @@ test("backend road test covers study, consent, AI, reporting, and audit flows", 
         reminder_body: "This is a neutral reminder that Round 2 is open.",
         controlled_feedback_enabled: true,
         ai_curation_enabled: false,
+        feedback_config: {
+          format: "distribution_summary",
+          show_participant_prior_response: false,
+        },
         status: "Ready",
       },
     },
     200
   );
 
-  await expectStatus(
+  const openedRoundTwo = await expectStatus(
     app,
     {
       method: "POST",
@@ -1509,6 +1832,47 @@ test("backend road test covers study, consent, AI, reporting, and audit flows", 
     },
     200
   );
+  assert.ok(openedRoundTwo.round_config.feedback_config.locked_at);
+
+  await expectStatus(
+    app,
+    {
+      method: "PATCH",
+      url: `/studies/${studyId}/versions/${versionId}/rounds/2/config`,
+      headers: owner,
+      body: {
+        task_type: "rating",
+        title: "Blocked Round 2 feedback edit",
+        prompt: "Blocked",
+        participant_instructions: "Blocked",
+        response_window_days: 7,
+        reminder_subject: "Blocked",
+        reminder_body: "Blocked",
+        controlled_feedback_enabled: true,
+        ai_curation_enabled: false,
+        feedback_config: { format: "distribution_rationales", show_participant_prior_response: true },
+        status: "Ready",
+      },
+    },
+    409
+  );
+
+  const participantRoundTwoItems = await expectStatus(
+    app,
+    {
+      method: "GET",
+      url: `/studies/${studyId}/versions/${versionId}/rounds/2/items?participant_id=${participantIds[0]}`,
+      headers: participant,
+    },
+    200
+  );
+  assert.equal(participantRoundTwoItems.items[0].controlled_feedback.format, "distribution_summary");
+  assert.equal(participantRoundTwoItems.items[0].controlled_feedback.show_participant_prior_response, false);
+  assert.equal(participantRoundTwoItems.items[0].controlled_feedback.participant_prior_response, null);
+  assert.equal(participantRoundTwoItems.items[0].controlled_feedback.neutral_summary.approved, true);
+  assert.equal(participantRoundTwoItems.items[0].controlled_feedback.rationale_excerpts, null);
+  assert.equal(typeof participantRoundTwoItems.items[0].controlled_feedback.item_source, "string");
+  assert.equal(JSON.stringify(participantRoundTwoItems).includes("email"), false);
 
   await expectStatus(
     app,
@@ -1549,6 +1913,99 @@ test("backend road test covers study, consent, AI, reporting, and audit flows", 
       );
     }
   }
+
+  const detectedNonResponse = await expectStatus(
+    app,
+    {
+      method: "POST",
+      url: `/studies/${studyId}/versions/${versionId}/rounds/2/non-response/detect`,
+      headers: owner,
+      body: { as_of: "2099-01-01T00:00:00.000Z" },
+    },
+    200
+  );
+  assert.ok(detectedNonResponse.flagged.some((entry) => entry.participant_id === nonResponseParticipantId));
+
+  await expectStatus(
+    app,
+    {
+      method: "POST",
+      url: `/studies/${studyId}/versions/${versionId}/participants/${nonResponseParticipantId}/mark-inactive`,
+      headers: owner,
+      body: {
+        inactive_from_round_number: 3,
+        reason_code: "no_response_after_followup",
+        note: "Should be blocked before reminder and follow-up expiration.",
+        safeguard_acknowledged: true,
+      },
+    },
+    409
+  );
+
+  const reminder = await expectStatus(
+    app,
+    {
+      method: "POST",
+      url: `/studies/${studyId}/versions/${versionId}/rounds/2/participants/${nonResponseParticipantId}/reminder`,
+      headers: owner,
+      body: {},
+    },
+    200
+  );
+  assert.match(reminder.escalation.message_texts.at(-1).text, /There is no penalty for withdrawal/);
+
+  const finalNotice = await expectStatus(
+    app,
+    {
+      method: "POST",
+      url: `/studies/${studyId}/versions/${versionId}/rounds/2/participants/${nonResponseParticipantId}/final-notice`,
+      headers: owner,
+      body: {},
+    },
+    200
+  );
+  assert.match(finalNotice.escalation.message_texts.at(-1).text, /does not erase any prior contributions/);
+
+  await expectStatus(
+    app,
+    {
+      method: "POST",
+      url: `/studies/${studyId}/versions/${versionId}/rounds/2/participants/${nonResponseParticipantId}/followup-expire`,
+      headers: owner,
+      body: { as_of: "2099-01-05T00:00:00.000Z" },
+    },
+    200
+  );
+
+  const markedInactive = await expectStatus(
+    app,
+    {
+      method: "POST",
+      url: `/studies/${studyId}/versions/${versionId}/participants/${nonResponseParticipantId}/mark-inactive`,
+      headers: owner,
+      body: {
+        inactive_from_round_number: 3,
+        reason_code: "no_response_after_followup",
+        note: "Marked inactive for future rounds after configured follow-up window.",
+        safeguard_acknowledged: true,
+      },
+    },
+    200
+  );
+  assert.equal(markedInactive.participant_status.status, "WITHDRAWN_PI");
+  assert.equal(markedInactive.participant_status.inactive_from_round_number, 3);
+
+  const attritionSummary = await expectStatus(
+    app,
+    {
+      method: "GET",
+      url: `/studies/${studyId}/versions/${versionId}/attrition-summary`,
+      headers: owner,
+    },
+    200
+  );
+  assert.ok(attritionSummary.attrition_summary.pi_inactive_count >= 1);
+  assert.match(attritionSummary.attrition_summary.limitations_note, /Consensus indicates agreement among this panel; it does not establish correctness/);
 
   const feedback = await expectStatus(
     app,
@@ -1678,13 +2135,17 @@ test("backend road test covers study, consent, AI, reporting, and audit flows", 
         reminder_body: "This is a neutral reminder that Round 3 is open.",
         controlled_feedback_enabled: true,
         ai_curation_enabled: false,
+        feedback_config: {
+          format: "distribution_rationales",
+          show_participant_prior_response: true,
+        },
         status: "Ready",
       },
     },
     200
   );
 
-  await expectStatus(
+  const openedRoundThree = await expectStatus(
     app,
     {
       method: "POST",
@@ -1693,6 +2154,38 @@ test("backend road test covers study, consent, AI, reporting, and audit flows", 
       body: {},
     },
     200
+  );
+  assert.ok(openedRoundThree.round_config.feedback_config.locked_at);
+
+  const participantRoundThreeItems = await expectStatus(
+    app,
+    {
+      method: "GET",
+      url: `/studies/${studyId}/versions/${versionId}/rounds/3/items?participant_id=${participantIds[0]}`,
+      headers: participant,
+    },
+    200
+  );
+  assert.equal(participantRoundThreeItems.items[0].controlled_feedback.format, "distribution_rationales");
+  assert.equal(participantRoundThreeItems.items[0].controlled_feedback.source_round_number, 2);
+  assert.equal(participantRoundThreeItems.items[0].controlled_feedback.participant_prior_response.rating, 8);
+  assert.equal(participantRoundThreeItems.items[0].controlled_feedback.group_summary.median, 8);
+  assert.ok(Array.isArray(participantRoundThreeItems.items[0].controlled_feedback.rationale_excerpts.excerpts));
+
+  await expectStatus(
+    app,
+    {
+      method: "POST",
+      url: `/studies/${studyId}/versions/${versionId}/rounds/3/ratings`,
+      headers: participant,
+      body: {
+        participant_id: nonResponseParticipantId,
+        item_id: roundThreeItems[0].item_id,
+        rating: 7,
+        action: "revise",
+      },
+    },
+    403
   );
 
   const roundThreeRatings = [
@@ -1769,11 +2262,15 @@ test("backend road test covers study, consent, AI, reporting, and audit flows", 
   assert.equal(finalExport.export_package.files.some((file) => file.path === "final_report/final_item_results.xlsx"), true);
   assert.equal(finalExport.export_package.files.some((file) => file.path === "final_report/final_item_results.csv"), true);
   assert.equal(finalExport.export_package.files.some((file) => file.path === "final_report/required_limitations_and_disclosures.md"), true);
+  assert.equal(finalExport.export_package.files.some((file) => file.path === "CITATION.md"), true);
   assert.equal(typeof finalExport.export_package.manifest_hash, "string");
   assert.equal(typeof finalExport.export_package.package_hash, "string");
   assert.ok(finalExport.report.limitations.includes("Consensus indicates agreement among this panel; it does not establish correctness."));
+  assert.ok(finalExport.report.limitations.some((line) => line.includes("Attrition may affect interpretation of consensus")));
+  assert.ok(finalExport.report.summary.attrition.pi_inactive_count >= 1);
   assert.equal(finalExport.report.methods.consensus_rule_source, "panel_informed_pre_round");
   assert.equal(finalExport.report.methods.pre_round_consensus_input.counts_as_delphi_round, false);
+  assert.match(finalExport.report.appendices.software_citation.preferred, /Casper, Stephen T\./);
 
   const exportPackages = await expectStatus(
     app,
@@ -1802,8 +2299,14 @@ test("backend road test covers study, consent, AI, reporting, and audit flows", 
   assert.match(itemResultsFile.content_text, /non_consensus_flag/);
   const docxFile = exportPackageFiles.files.find((file) => file.path === "final_report/final_delphi_report.docx");
   const xlsxFile = exportPackageFiles.files.find((file) => file.path === "final_report/final_item_results.xlsx");
+  const citationFile = exportPackageFiles.files.find((file) => file.path === "CITATION.md");
   assert.ok(docxFile);
   assert.ok(xlsxFile);
+  assert.ok(citationFile);
+  assert.match(citationFile.content_text, /How to Cite This Tool/);
+  assert.match(citationFile.content_text, /@software\{casper_edelphi_/);
+  assert.match(citationFile.content_text, /Software version:/);
+  assert.match(citationFile.content_text, /DOI: Not assigned for this release\./);
   assert.equal(docxFile.content_encoding, "base64");
   assert.equal(xlsxFile.content_encoding, "base64");
   const docxBuffer = Buffer.from(docxFile.content_text, "base64");
@@ -1978,6 +2481,7 @@ test("backend road test covers study, consent, AI, reporting, and audit flows", 
       createdPackage.export_package.files.some((file) => file.path === `${exportType}/export_manifest.json`),
       `${exportType} missing package manifest file`,
     );
+    assert.equal(createdPackage.export_package.files.some((file) => file.path === "CITATION.md"), true);
     governedPackages.set(exportType, createdPackage.export_package);
   }
 
@@ -1995,6 +2499,10 @@ test("backend road test covers study, consent, AI, reporting, and audit flows", 
   assert.ok(anonymizedResponsesCsv);
   assert.match(anonymizedResponsesCsv.content_text, /participant_pseudonym/);
   assert.doesNotMatch(anonymizedResponsesCsv.content_text, /Panelist|example\.test|participant_id/);
+  const anonymizedParticipantsCsv = anonymizedDatasetFiles.files.find((file) => file.path.endsWith("/participants_anonymized.csv"));
+  assert.ok(anonymizedParticipantsCsv);
+  assert.match(anonymizedParticipantsCsv.content_text, /WITHDRAWN_PI/);
+  assert.match(anonymizedParticipantsCsv.content_text, /prior_round_response_presence/);
 
   const auditPackage = governedPackages.get("audit-package");
   const auditPackageFiles = await expectStatus(
@@ -2053,6 +2561,8 @@ test("backend road test covers study, consent, AI, reporting, and audit flows", 
   assert.match(governedFinalJson.content_text, /panel_informed_pre_round/);
   assert.match(governedFinalJson.content_text, /near_consensus_item_count/);
   assert.match(governedFinalJson.content_text, /non_consensus_item_count/);
+  assert.match(governedFinalJson.content_text, /software_citation/);
+  assert.match(governedFinalJson.content_text, /Casper, Stephen T\./);
 
   await expectStatus(
     app,
@@ -2131,11 +2641,29 @@ test("backend road test covers study, consent, AI, reporting, and audit flows", 
   for (const action of [
     "study_version.open_round1",
     "round.config.upsert",
+    "round.feedback_config.create",
+    "round.feedback_config.lock",
+    "round.feedback_config.update_blocked_locked",
+    "NON_RESPONSE_POLICY_CREATED",
+    "NON_RESPONSE_POLICY_UPDATE_BLOCKED_LOCKED_STUDY",
+    "PARTICIPANT_NON_RESPONSE_FLAGGED",
+    "PARTICIPANT_REMINDER_SENT",
+    "PARTICIPANT_FOLLOWUP_WINDOW_STARTED",
+    "PARTICIPANT_FINAL_NOTICE_SENT",
+    "PARTICIPANT_FOLLOWUP_WINDOW_EXPIRED",
+    "PARTICIPANT_MARKED_INACTIVE_BY_PI",
+    "PARTICIPANT_WITHDRAWN_BY_PARTICIPANT",
+    "participant.orientation.complete",
     "study_version.save_wizard_packet",
     "response.submit",
     "round.open_blocked_already_closed",
     "round.open_blocked_published_traceable_items_required",
     "ai.synthesis_blocked_lifecycle_gate",
+    "ai.operation.blocked",
+    "ai.operation.policy_allowed",
+    "ai_config.api_key.set",
+    "ai_config.api_key.rotate",
+    "ai_config.api_key.delete",
     "ai.suggestion.synthesize_inter_round",
     "ai.suggestion.lint_wording",
     "ai.suggestion.generate_irb_pack",
@@ -2163,6 +2691,16 @@ test("backend road test covers study, consent, AI, reporting, and audit flows", 
   const manifestList = listExportManifests({ study_id: studyId, version_id: versionId });
   assert.ok(manifestList.some((manifest) => manifest.package_type === "final-delphi-report"));
   assert.ok(manifestList.some((manifest) => manifest.package_type === "irb-pack"));
+  assert.doesNotMatch(auditRaw, /sk-roadtest-secret/);
+  assert.doesNotMatch(auditRaw, /api_key_encrypted/);
+
+  const exportedContentRows = getDatabase()
+    .prepare("SELECT content_text FROM export_files WHERE export_package_id IN (SELECT export_package_id FROM export_packages WHERE study_id = ?)")
+    .all(studyId);
+  const exportedContent = JSON.stringify(exportedContentRows);
+  assert.match(exportedContent, /No External AI mode|external_ai_enabled/);
+  assert.doesNotMatch(exportedContent, /sk-roadtest-secret/);
+  assert.doesNotMatch(exportedContent, /api_key_encrypted|apiKeyEncrypted|api_key_fingerprint_hash/);
 
   const auditIntegrity = verifyAuditIntegrity();
   assert.equal(auditIntegrity.ok, true);

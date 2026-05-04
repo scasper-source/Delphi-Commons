@@ -1,0 +1,19 @@
+cff-version: 1.2.0
+message: "If this software contributed to study design, data collection, analysis, reporting, or reproducible documentation, please cite it to support transparency and reproducibility."
+title: "eDelphi Platform"
+type: software
+authors:
+  - family-names: "Casper"
+    given-names: "Stephen T."
+version: "1.0.0"
+date-released: "2026-05-04"
+url: "https://github.com/YOUR_ORG/YOUR_REPO"
+repository-code: "https://github.com/YOUR_ORG/YOUR_REPO"
+abstract: "An open-source eDelphi platform for ethically governed, transparent, reproducible Delphi studies."
+keywords:
+  - Delphi method
+  - eDelphi
+  - consensus studies
+  - research software
+  - open source
+license: "LICENSE_PLACEHOLDER"

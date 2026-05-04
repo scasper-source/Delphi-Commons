@@ -26,6 +26,8 @@ import {
 import { createResponse, listResponses } from "../stores/responseStore.js";
 import { getRoundConfig } from "../stores/roundConfigStore.js";
 import { getItem, listItems } from "../stores/itemStore.js";
+import { buildParticipantControlledFeedback } from "../core/participantFeedback.js";
+import { buildAttritionSummary, participantSubmittedInRound } from "../core/attrition.js";
 import {
   participantInvitationToken,
 } from "../core/security.js";
@@ -35,6 +37,25 @@ import {
   updateDeletionRequest,
   type DeletionRequestStatus,
 } from "../stores/deletionRequestStore.js";
+import {
+  createOrGetNonResponseEscalation,
+  ensureParticipantEnrollment,
+  getNonResponseEscalation,
+  getNonResponsePolicy,
+  getParticipantEnrollment,
+  listNonResponseEscalations,
+  listParticipantEnrollments,
+  participantCanSubmit,
+  updateNonResponseEscalation,
+  updateParticipantStatus,
+  upsertNonResponsePolicy,
+  type NonResponsePolicy,
+} from "../stores/participantStatusStore.js";
+import {
+  getOrientationCompletion,
+  recordOrientationCompletion,
+  PARTICIPANT_ORIENTATION_VERSION,
+} from "../stores/orientationStore.js";
 
 function isDeletionRequestStatus(value: unknown): value is DeletionRequestStatus {
   return (
@@ -47,6 +68,66 @@ function isDeletionRequestStatus(value: unknown): value is DeletionRequestStatus
 }
 
 const INVITATION_TOKEN_PATTERN = /^[A-Za-z0-9_-]{32,128}$/;
+const REMINDER_TEXT =
+  "Our records show that your current round response has not yet been completed. You may continue participating, skip future participation where allowed by the study protocol, or withdraw at any time. There is no penalty for withdrawal. Please contact the study team if you have questions.";
+
+function finalNoticeText(dateText: string): string {
+  return `This is a final reminder for the current study round. If no response is received by ${dateText}, you may be marked inactive for future study progression. This does not penalize you, and it does not erase any prior contributions already submitted under the study protocol. You may continue or withdraw at any time.`;
+}
+
+function addDays(date: Date, days: number): Date {
+  const copy = new Date(date);
+  copy.setUTCDate(copy.getUTCDate() + days);
+  return copy;
+}
+
+function safePolicyBody(body: Record<string, unknown>) {
+  const policy: Partial<NonResponsePolicy> = {};
+  if (typeof body.missedCurrentRoundDeadline === "boolean") policy.missed_current_round_deadline = body.missedCurrentRoundDeadline;
+  if (typeof body.missed_current_round_deadline === "boolean") policy.missed_current_round_deadline = body.missed_current_round_deadline;
+  if (body.noActivityDaysThreshold === null || typeof body.noActivityDaysThreshold === "number") policy.no_activity_days_threshold = body.noActivityDaysThreshold;
+  if (body.no_activity_days_threshold === null || typeof body.no_activity_days_threshold === "number") policy.no_activity_days_threshold = body.no_activity_days_threshold;
+  if (typeof body.incompleteSubmissionCountsAsNonResponse === "boolean") {
+    policy.incomplete_submission_counts_as_non_response = body.incompleteSubmissionCountsAsNonResponse;
+  }
+  if (typeof body.incomplete_submission_counts_as_non_response === "boolean") {
+    policy.incomplete_submission_counts_as_non_response = body.incomplete_submission_counts_as_non_response;
+  }
+  if (typeof body.followUpWindowDays === "number") policy.follow_up_window_days = body.followUpWindowDays;
+  if (typeof body.follow_up_window_days === "number") policy.follow_up_window_days = body.follow_up_window_days;
+  if (typeof body.finalNoticeEnabled === "boolean") policy.final_notice_enabled = body.finalNoticeEnabled;
+  if (typeof body.final_notice_enabled === "boolean") policy.final_notice_enabled = body.final_notice_enabled;
+  if (typeof body.autoProgressionEnabled === "boolean") policy.auto_progression_enabled = body.autoProgressionEnabled;
+  if (typeof body.auto_progression_enabled === "boolean") policy.auto_progression_enabled = body.auto_progression_enabled;
+  if (typeof body.attritionWarningThresholdPercent === "number") policy.attrition_warning_threshold_percent = body.attritionWarningThresholdPercent;
+  if (typeof body.attrition_warning_threshold_percent === "number") policy.attrition_warning_threshold_percent = body.attrition_warning_threshold_percent;
+  return policy;
+}
+
+function participantHasCompleteRoundResponse(input: {
+  participantId: string;
+  roundNumber: number;
+  responses: ReturnType<typeof listResponses>;
+  publishedItemCount: number;
+  countIncomplete: boolean;
+}): boolean {
+  if (input.roundNumber === 1) return participantSubmittedInRound(input.responses, input.participantId, 1);
+  const itemIds = new Set<string>();
+  for (const response of input.responses) {
+    const payload = response.response_json as any;
+    if (
+      response.participant_id === input.participantId &&
+      payload &&
+      payload.round_number === input.roundNumber &&
+      typeof payload.item_id === "string" &&
+      typeof payload.rating === "number"
+    ) {
+      itemIds.add(payload.item_id);
+    }
+  }
+  if (!input.countIncomplete) return itemIds.size > 0;
+  return input.publishedItemCount > 0 && itemIds.size >= input.publishedItemCount;
+}
 
 function invitationFromRequest(req: Parameters<typeof participantInvitationToken>[0]):
   | { ok: true; invitation: NonNullable<ReturnType<typeof getInvitationByToken>> }
@@ -67,6 +148,7 @@ function deprecatedTokenUrl(reply: any) {
 
 export async function participantsRoutes(app: FastifyInstance) {
   const allowMasterList = requireRole(["owner", "methods_steward"]);
+  const allowOrientationComplete = requireRole(["owner", "methods_steward", "participant"]);
 
   function getFrontendOrigin(req: any): string {
     const origin = typeof req.headers.origin === "string" ? req.headers.origin : "http://127.0.0.1:5173";
@@ -113,6 +195,12 @@ export async function participantsRoutes(app: FastifyInstance) {
         email: body.email,
         created_by_user_id: actor.userId,
       });
+      const enrollment = ensureParticipantEnrollment({
+        study_id: studyId,
+        version_id: versionId,
+        participant_id: participant.participant_id,
+        created_by_user_id: actor.userId,
+      });
 
       await writeAuditEvent({
         actor,
@@ -121,7 +209,7 @@ export async function participantsRoutes(app: FastifyInstance) {
         details: { studyId, versionId, participant_id: participant.participant_id },
       });
 
-      return reply.code(201).send({ participant_id: participant.participant_id });
+      return reply.code(201).send({ participant_id: participant.participant_id, enrollment });
     }
   );
 
@@ -132,7 +220,12 @@ export async function participantsRoutes(app: FastifyInstance) {
       const { studyId, versionId } = req.params as any;
       const actor = getActor(req);
 
-      const list = listParticipantMasters();
+      const enrollments = listParticipantEnrollments({ study_id: studyId, version_id: versionId });
+      const enrollmentByParticipant = new Map(enrollments.map((entry) => [entry.participant_id, entry]));
+      const list = listParticipantMasters().map((participant) => ({
+        ...participant,
+        enrollment: enrollmentByParticipant.get(participant.participant_id) ?? null,
+      }));
 
       await writeAuditEvent({
         actor,
@@ -273,6 +366,40 @@ export async function participantsRoutes(app: FastifyInstance) {
     },
   );
 
+  app.post(
+    "/studies/:studyId/versions/:versionId/participants/:participantId/orientation/complete",
+    { preHandler: allowOrientationComplete },
+    async (req, reply) => {
+      const { studyId, versionId, participantId } = req.params as any;
+      const actor = getActor(req);
+      const studyVersion = await getStudyVersion(versionId);
+      if (!studyVersion || studyVersion.study_id !== studyId) {
+        return reply.code(404).send({ error: "study_version_not_found" });
+      }
+
+      const completion = recordOrientationCompletion({
+        participant_id: participantId,
+        study_id: studyId,
+        version_id: versionId,
+        orientation_version: PARTICIPANT_ORIENTATION_VERSION,
+      });
+
+      await writeAuditEvent({
+        actor,
+        action: "participant.orientation.complete",
+        object: { type: "participant", id: participantId },
+        details: {
+          studyId,
+          versionId,
+          orientation_version: completion.orientation_version,
+          completed_at: completion.completed_at,
+        },
+      });
+
+      return reply.code(201).send({ orientation_completion: completion });
+    },
+  );
+
   app.get(
     "/studies/:studyId/versions/:versionId/deletion-requests",
     { preHandler: allowMasterList },
@@ -324,6 +451,288 @@ export async function participantsRoutes(app: FastifyInstance) {
       });
 
       return reply.send({ deletion_request: updated });
+    },
+  );
+
+  app.get(
+    "/studies/:studyId/versions/:versionId/non-response-policy",
+    { preHandler: allowMasterList },
+    async (req, reply) => {
+      const { studyId, versionId } = req.params as any;
+      const actor = getActor(req);
+      const policy = getNonResponsePolicy({ study_id: studyId, version_id: versionId }, actor.userId);
+      return reply.send({ policy });
+    },
+  );
+
+  app.put(
+    "/studies/:studyId/versions/:versionId/non-response-policy",
+    { preHandler: allowMasterList },
+    async (req, reply) => {
+      const { studyId, versionId } = req.params as any;
+      const actor = getActor(req);
+      const body = (req.body ?? {}) as Record<string, unknown>;
+      const studyVersion = await getStudyVersion(versionId);
+      if (!studyVersion || studyVersion.study_id !== studyId) return reply.code(404).send({ error: "study_version_not_found" });
+      if (studyVersion.opened_round1_at || studyVersion.status === "Active" || studyVersion.status === "Closed") {
+        await writeAuditEvent({
+          actor,
+          action: "NON_RESPONSE_POLICY_UPDATE_BLOCKED_LOCKED_STUDY",
+          object: { type: "study_version", id: `${studyId}:${versionId}` },
+          details: { studyId, versionId },
+        });
+        return reply.code(409).send({ error: "non_response_policy_locked_after_launch" });
+      }
+      const normalized = safePolicyBody(body);
+      const followUp = normalized.follow_up_window_days;
+      if (followUp !== undefined && (!Number.isInteger(followUp) || followUp < 1 || followUp > 30)) {
+        return reply.code(400).send({ error: "follow_up_window_days_1_to_30_required" });
+      }
+      const policy = upsertNonResponsePolicy({
+        study_id: studyId,
+        version_id: versionId,
+        changed_by_user_id: actor.userId,
+        ...normalized,
+      });
+      await writeAuditEvent({
+        actor,
+        action: policy.version_number === 1 ? "NON_RESPONSE_POLICY_CREATED" : "NON_RESPONSE_POLICY_UPDATED",
+        object: { type: "study_version", id: `${studyId}:${versionId}` },
+        details: { studyId, versionId, policy_version: policy.version_number, auto_progression_enabled: policy.auto_progression_enabled },
+      });
+      return reply.send({ policy });
+    },
+  );
+
+  app.post(
+    "/studies/:studyId/versions/:versionId/rounds/:roundNumber/non-response/detect",
+    { preHandler: allowMasterList },
+    async (req, reply) => {
+      const { studyId, versionId, roundNumber: rawRoundNumber } = req.params as any;
+      const actor = getActor(req);
+      const body = (req.body ?? {}) as Record<string, unknown>;
+      const roundNumber = Number(rawRoundNumber);
+      if (!Number.isInteger(roundNumber) || roundNumber < 1) return reply.code(400).send({ error: "round_number_required" });
+      const roundConfig = getRoundConfig({ study_id: studyId, version_id: versionId, round_number: roundNumber });
+      if (!roundConfig) return reply.code(404).send({ error: "round_config_not_found" });
+      const policy = getNonResponsePolicy({ study_id: studyId, version_id: versionId }, actor.userId);
+      const detectedAt = typeof body.as_of === "string" ? new Date(body.as_of) : new Date();
+      const deadline = addDays(new Date(roundConfig.updated_at), roundConfig.response_window_days);
+      const responses = listResponses({ study_id: studyId, version_id: versionId });
+      const publishedItemCount = roundNumber === 1 ? 1 : listItems({ study_id: studyId, version_id: versionId })
+        .filter((item) => item.round_number === roundNumber && item.status === "Published").length;
+      const flagged = [];
+      for (const enrollment of listParticipantEnrollments({ study_id: studyId, version_id: versionId })) {
+        if (enrollment.status === "WITHDRAWN_PARTICIPANT" || enrollment.status === "WITHDRAWN_PI" || enrollment.status === "COMPLETED") continue;
+        const complete = participantHasCompleteRoundResponse({
+          participantId: enrollment.participant_id,
+          roundNumber,
+          responses,
+          publishedItemCount,
+          countIncomplete: policy.incomplete_submission_counts_as_non_response,
+        });
+        let triggerRule: string | null = null;
+        if (policy.missed_current_round_deadline && detectedAt > deadline && !complete) {
+          triggerRule = policy.incomplete_submission_counts_as_non_response ? "missed_current_round_deadline_or_incomplete_submission" : "missed_current_round_deadline";
+        }
+        if (!triggerRule && policy.no_activity_days_threshold !== null) {
+          const latestActivity = responses
+            .filter((response) => response.participant_id === enrollment.participant_id)
+            .map((response) => response.created_at)
+            .sort()
+            .at(-1) ?? enrollment.created_at;
+          if (detectedAt > addDays(new Date(latestActivity), policy.no_activity_days_threshold)) triggerRule = "no_activity_days_threshold";
+        }
+        if (!triggerRule) continue;
+        const updated = updateParticipantStatus({
+          study_id: studyId,
+          version_id: versionId,
+          participant_id: enrollment.participant_id,
+          status: "NON_RESPONSIVE_FLAGGED",
+          actor_user_id: "system",
+          reason: triggerRule,
+          round_number: roundNumber,
+        });
+        const escalation = createOrGetNonResponseEscalation({
+          study_id: studyId,
+          version_id: versionId,
+          participant_id: enrollment.participant_id,
+          round_number: roundNumber,
+          trigger_rule: triggerRule,
+          policy_snapshot: policy,
+          detected_at: detectedAt.toISOString(),
+        });
+        await writeAuditEvent({
+          actor: { userId: "system", role: "system", systemRoles: ["system"], authSource: "system" },
+          action: "PARTICIPANT_NON_RESPONSE_FLAGGED",
+          object: { type: "participant", id: enrollment.participant_id },
+          details: { studyId, versionId, participantId: enrollment.participant_id, roundId: `${versionId}:round:${roundNumber}`, triggerRule, configVersionOrSnapshot: policy, detectedAt: detectedAt.toISOString(), previousStatus: enrollment.status, newStatus: updated?.status },
+        });
+        flagged.push({ participant_id: enrollment.participant_id, escalation });
+      }
+      return reply.send({ flagged, policy });
+    },
+  );
+
+  app.post(
+    "/studies/:studyId/versions/:versionId/rounds/:roundNumber/participants/:participantId/reminder",
+    { preHandler: allowMasterList },
+    async (req, reply) => {
+      const { studyId, versionId, roundNumber: rawRoundNumber, participantId } = req.params as any;
+      const actor = getActor(req);
+      const roundNumber = Number(rawRoundNumber);
+      const policy = getNonResponsePolicy({ study_id: studyId, version_id: versionId }, actor.userId);
+      const existing = getNonResponseEscalation({ study_id: studyId, version_id: versionId, participant_id: participantId, round_number: roundNumber });
+      if (!existing) return reply.code(409).send({ error: "non_response_flag_required_before_reminder" });
+      const now = new Date();
+      const followupEnd = addDays(now, policy.follow_up_window_days).toISOString();
+      const updated = updateNonResponseEscalation({
+        study_id: studyId,
+        version_id: versionId,
+        participant_id: participantId,
+        round_number: roundNumber,
+        update: (record) => ({
+          ...record,
+          state: "FOLLOWUP_STARTED",
+          reminder_queued_at: record.reminder_queued_at ?? now.toISOString(),
+          followup_window_started_at: record.followup_window_started_at ?? now.toISOString(),
+          followup_window_ends_at: record.followup_window_ends_at ?? followupEnd,
+          message_texts: record.message_texts.some((message) => message.kind === "reminder")
+            ? record.message_texts
+            : [...record.message_texts, { kind: "reminder", text: REMINDER_TEXT, queued_at: now.toISOString() }],
+        }),
+      });
+      await writeAuditEvent({ actor, action: "PARTICIPANT_REMINDER_SENT", object: { type: "participant", id: participantId }, details: { studyId, versionId, roundId: `${versionId}:round:${roundNumber}`, participantId, message_template: "fixed_neutral_non_response_reminder_v1" } });
+      await writeAuditEvent({ actor, action: "PARTICIPANT_FOLLOWUP_WINDOW_STARTED", object: { type: "participant", id: participantId }, details: { studyId, versionId, roundId: `${versionId}:round:${roundNumber}`, participantId, followup_window_ends_at: followupEnd } });
+      return reply.send({ escalation: updated });
+    },
+  );
+
+  app.post(
+    "/studies/:studyId/versions/:versionId/rounds/:roundNumber/participants/:participantId/final-notice",
+    { preHandler: allowMasterList },
+    async (req, reply) => {
+      const { studyId, versionId, roundNumber: rawRoundNumber, participantId } = req.params as any;
+      const actor = getActor(req);
+      const roundNumber = Number(rawRoundNumber);
+      const policy = getNonResponsePolicy({ study_id: studyId, version_id: versionId }, actor.userId);
+      if (!policy.final_notice_enabled) return reply.code(409).send({ error: "final_notice_disabled_by_policy" });
+      const existing = getNonResponseEscalation({ study_id: studyId, version_id: versionId, participant_id: participantId, round_number: roundNumber });
+      if (!existing?.followup_window_ends_at) return reply.code(409).send({ error: "followup_window_required_before_final_notice" });
+      const now = new Date().toISOString();
+      const message = finalNoticeText(existing.followup_window_ends_at.slice(0, 10));
+      const updated = updateNonResponseEscalation({
+        study_id: studyId,
+        version_id: versionId,
+        participant_id: participantId,
+        round_number: roundNumber,
+        update: (record) => ({
+          ...record,
+          state: "FINAL_NOTICE_QUEUED",
+          final_notice_queued_at: record.final_notice_queued_at ?? now,
+          message_texts: record.message_texts.some((entry) => entry.kind === "final_notice")
+            ? record.message_texts
+            : [...record.message_texts, { kind: "final_notice", text: message, queued_at: now }],
+        }),
+      });
+      await writeAuditEvent({ actor, action: "PARTICIPANT_FINAL_NOTICE_SENT", object: { type: "participant", id: participantId }, details: { studyId, versionId, roundId: `${versionId}:round:${roundNumber}`, participantId, message_template: "fixed_neutral_final_notice_v1" } });
+      return reply.send({ escalation: updated });
+    },
+  );
+
+  app.post(
+    "/studies/:studyId/versions/:versionId/rounds/:roundNumber/participants/:participantId/followup-expire",
+    { preHandler: allowMasterList },
+    async (req, reply) => {
+      const { studyId, versionId, roundNumber: rawRoundNumber, participantId } = req.params as any;
+      const actor = getActor(req);
+      const body = (req.body ?? {}) as Record<string, unknown>;
+      const roundNumber = Number(rawRoundNumber);
+      const asOf = typeof body.as_of === "string" ? new Date(body.as_of) : new Date();
+      const existing = getNonResponseEscalation({ study_id: studyId, version_id: versionId, participant_id: participantId, round_number: roundNumber });
+      if (!existing?.followup_window_ends_at) return reply.code(409).send({ error: "followup_window_not_started" });
+      if (asOf < new Date(existing.followup_window_ends_at)) return reply.code(409).send({ error: "followup_window_still_open" });
+      const updated = updateNonResponseEscalation({
+        study_id: studyId,
+        version_id: versionId,
+        participant_id: participantId,
+        round_number: roundNumber,
+        update: (record) => ({ ...record, state: "FOLLOWUP_EXPIRED", followup_expired_at: record.followup_expired_at ?? asOf.toISOString() }),
+      });
+      await writeAuditEvent({ actor, action: "PARTICIPANT_FOLLOWUP_WINDOW_EXPIRED", object: { type: "participant", id: participantId }, details: { studyId, versionId, roundId: `${versionId}:round:${roundNumber}`, participantId, expired_at: asOf.toISOString() } });
+      return reply.send({ escalation: updated });
+    },
+  );
+
+  app.post(
+    "/studies/:studyId/versions/:versionId/participants/:participantId/mark-inactive",
+    { preHandler: allowMasterList },
+    async (req, reply) => {
+      const { studyId, versionId, participantId } = req.params as any;
+      const actor = getActor(req);
+      const body = (req.body ?? {}) as Record<string, unknown>;
+      const inactiveFromRoundNumber = Number(body.inactive_from_round_number ?? body.inactiveFromRoundNumber);
+      const reasonCode = String(body.reason_code ?? body.reasonCode ?? "");
+      const note = String(body.note ?? "").trim();
+      const acknowledged = body.safeguard_acknowledged === true || body.safeguardAcknowledged === true;
+      const validReasons = new Set(["no_response_after_followup", "participant_unreachable_after_reminders", "administrative_withdrawal_under_protocol", "other"]);
+      if (!Number.isInteger(inactiveFromRoundNumber) || inactiveFromRoundNumber < 1) return reply.code(400).send({ error: "inactive_from_round_number_required" });
+      if (!validReasons.has(reasonCode)) return reply.code(400).send({ error: "valid_inactive_reason_required" });
+      if (reasonCode === "other" && !note) return reply.code(400).send({ error: "note_required_for_other_reason" });
+      if (!acknowledged) return reply.code(400).send({ error: "safeguard_acknowledgement_required" });
+      const escalation = listNonResponseEscalations({ study_id: studyId, version_id: versionId, participant_id: participantId })
+        .filter((record) => record.state === "FOLLOWUP_EXPIRED")
+        .sort((a, b) => b.round_number - a.round_number)[0];
+      if (!escalation) return reply.code(409).send({ error: "followup_window_must_expire_before_inactive_status" });
+      const previous = getParticipantEnrollment({ study_id: studyId, version_id: versionId, participant_id: participantId });
+      const updated = updateParticipantStatus({
+        study_id: studyId,
+        version_id: versionId,
+        participant_id: participantId,
+        status: "WITHDRAWN_PI",
+        actor_user_id: actor.userId,
+        reason: reasonCode,
+        round_number: inactiveFromRoundNumber,
+        inactive_from_round_number: inactiveFromRoundNumber,
+        withdrawal_type: "pi",
+        withdrawal_reason_code: reasonCode,
+        withdrawal_note: note,
+        withdrawn_at: new Date().toISOString(),
+      });
+      const marked = updateNonResponseEscalation({
+        study_id: escalation.study_id,
+        version_id: escalation.version_id,
+        participant_id: escalation.participant_id,
+        round_number: escalation.round_number,
+        update: (record) => ({ ...record, state: "MARKED_INACTIVE", inactive_marked_at: new Date().toISOString() }),
+      });
+      await writeAuditEvent({
+        actor,
+        action: "PARTICIPANT_MARKED_INACTIVE_BY_PI",
+        object: { type: "participant", id: participantId },
+        details: { studyId, versionId, participantId, inactiveFromRoundId: `${versionId}:round:${inactiveFromRoundNumber}`, reasonCode, note, actorUserId: actor.userId, previousStatus: previous?.status, newStatus: updated?.status, actedAt: updated?.withdrawn_at, escalationHistoryIds: [escalation.escalation_id] },
+      });
+      await writeAuditEvent({ actor, action: "PARTICIPANT_STATUS_CHANGED", object: { type: "participant", id: participantId }, details: { studyId, versionId, participantId, previousStatus: previous?.status, newStatus: updated?.status, reason: reasonCode } });
+      return reply.send({ participant_status: updated, escalation: marked });
+    },
+  );
+
+  app.get(
+    "/studies/:studyId/versions/:versionId/attrition-summary",
+    { preHandler: allowMasterList },
+    async (req, reply) => {
+      const { studyId, versionId } = req.params as any;
+      const studyVersion = await getStudyVersion(versionId);
+      if (!studyVersion || studyVersion.study_id !== studyId) return reply.code(404).send({ error: "study_version_not_found" });
+      const policy = getNonResponsePolicy({ study_id: studyId, version_id: versionId });
+      const summary = buildAttritionSummary({
+        enrollments: listParticipantEnrollments({ study_id: studyId, version_id: versionId }),
+        escalations: listNonResponseEscalations({ study_id: studyId, version_id: versionId }),
+        responses: listResponses({ study_id: studyId, version_id: versionId }),
+        plannedRounds: studyVersion.planned_round_count ?? 3,
+        warningThresholdPercent: policy.attrition_warning_threshold_percent,
+      });
+      return reply.send({ policy, attrition_summary: summary, participant_statuses: listParticipantEnrollments({ study_id: studyId, version_id: versionId }), escalations: listNonResponseEscalations({ study_id: studyId, version_id: versionId }) });
     },
   );
 
@@ -380,6 +789,16 @@ export async function participantsRoutes(app: FastifyInstance) {
       study_id: invitation.study_id,
       version_id: invitation.version_id,
     });
+    const participantStatus = getParticipantEnrollment({
+      participant_id: invitation.participant_id,
+      study_id: invitation.study_id,
+      version_id: invitation.version_id,
+    });
+    const orientationCompletion = getOrientationCompletion({
+      participant_id: invitation.participant_id,
+      study_id: invitation.study_id,
+      version_id: invitation.version_id,
+    });
     const roundConfigs = [1, 2, 3, 4]
       .map((roundNumber) => getRoundConfig({ study_id: invitation.study_id, version_id: invitation.version_id, round_number: roundNumber }))
       .filter(Boolean);
@@ -397,8 +816,37 @@ export async function participantsRoutes(app: FastifyInstance) {
       study_version: studyVersion,
       active_consent_version: activeConsent,
       consent_record: consentRecord,
+      participant_status: participantStatus,
+      orientation_completion: orientationCompletion,
+      orientation_version: PARTICIPANT_ORIENTATION_VERSION,
       round_configs: roundConfigs,
     });
+  });
+
+  app.post("/participant/invitation/orientation/complete", async (req, reply) => {
+    const resolved = invitationFromRequest(req);
+    if (!resolved.ok) return reply.code(resolved.statusCode).send({ error: resolved.error });
+    const { invitation } = resolved;
+    const completion = recordOrientationCompletion({
+      participant_id: invitation.participant_id,
+      study_id: invitation.study_id,
+      version_id: invitation.version_id,
+      orientation_version: PARTICIPANT_ORIENTATION_VERSION,
+    });
+
+    await writeAuditEvent({
+      actor: { userId: invitation.participant_id, role: "participant", systemRoles: ["participant"], authSource: "invitation" },
+      action: "participant.orientation.complete",
+      object: { type: "participant", id: invitation.participant_id },
+      details: {
+        studyId: invitation.study_id,
+        versionId: invitation.version_id,
+        orientation_version: completion.orientation_version,
+        completed_at: completion.completed_at,
+      },
+    });
+
+    return reply.code(201).send({ orientation_completion: completion });
   });
 
   app.post("/participant/invitation/consent", async (req, reply) => {
@@ -414,6 +862,12 @@ export async function participantsRoutes(app: FastifyInstance) {
       study_id: invitation.study_id,
       version_id: invitation.version_id,
       consent_version_id: active.consent_version_id,
+    });
+    ensureParticipantEnrollment({
+      study_id: invitation.study_id,
+      version_id: invitation.version_id,
+      participant_id: invitation.participant_id,
+      created_by_user_id: invitation.participant_id,
     });
 
     await writeAuditEvent({
@@ -437,6 +891,25 @@ export async function participantsRoutes(app: FastifyInstance) {
       version_id: invitation.version_id,
     });
     if (!rec) return reply.code(404).send({ error: "consent_record_not_found" });
+    const previous = getParticipantEnrollment({
+      study_id: invitation.study_id,
+      version_id: invitation.version_id,
+      participant_id: invitation.participant_id,
+    });
+    const updatedStatus = updateParticipantStatus({
+      study_id: invitation.study_id,
+      version_id: invitation.version_id,
+      participant_id: invitation.participant_id,
+      status: "WITHDRAWN_PARTICIPANT",
+      actor_user_id: invitation.participant_id,
+      reason: "participant initiated withdrawal from future rounds",
+      round_number: null,
+      inactive_from_round_number: 1,
+      withdrawal_type: "participant",
+      withdrawal_reason_code: "participant_withdrawal",
+      withdrawal_note: "Participant withdrew from future rounds through invitation portal.",
+      withdrawn_at: rec.withdrew_at,
+    });
 
     await writeAuditEvent({
       actor: { userId: invitation.participant_id, role: "participant", systemRoles: ["participant"], authSource: "invitation" },
@@ -444,8 +917,14 @@ export async function participantsRoutes(app: FastifyInstance) {
       object: { type: "participant", id: rec.participant_id },
       details: { studyId: invitation.study_id, versionId: invitation.version_id, withdrew_at: rec.withdrew_at },
     });
+    await writeAuditEvent({
+      actor: { userId: invitation.participant_id, role: "participant", systemRoles: ["participant"], authSource: "invitation" },
+      action: "PARTICIPANT_WITHDRAWN_BY_PARTICIPANT",
+      object: { type: "participant", id: rec.participant_id },
+      details: { studyId: invitation.study_id, versionId: invitation.version_id, participantId: rec.participant_id, previousStatus: previous?.status, newStatus: updatedStatus?.status, withdrew_at: rec.withdrew_at },
+    });
 
-    return reply.send({ consent_record: rec });
+    return reply.send({ consent_record: rec, participant_status: updatedStatus });
   });
 
   app.post("/participant/invitation/deletion-request", async (req, reply) => {
@@ -484,6 +963,12 @@ export async function participantsRoutes(app: FastifyInstance) {
     if (!roundOneConfig || roundOneConfig.status !== "Open") return reply.code(409).send({ error: "round1_not_open" });
     if (!hasActiveConsent({ participant_id: invitation.participant_id, study_id: invitation.study_id, version_id: invitation.version_id })) {
       return reply.code(403).send({ error: "active_consent_required" });
+    }
+    if (!getOrientationCompletion({ participant_id: invitation.participant_id, study_id: invitation.study_id, version_id: invitation.version_id })) {
+      return reply.code(403).send({ error: "participant_orientation_required" });
+    }
+    if (!participantCanSubmit({ study_id: invitation.study_id, version_id: invitation.version_id, participant_id: invitation.participant_id, round_number: 1 })) {
+      return reply.code(403).send({ error: "participant_inactive_or_withdrawn_for_round" });
     }
 
     const text = typeof body.text === "string" ? body.text.trim() : "";
@@ -525,16 +1010,23 @@ export async function participantsRoutes(app: FastifyInstance) {
     const items = publishedItems.map((item) => {
       const prior = getLatestRatingsForItem(item.item_id, roundNumber, responses).get(invitation.participant_id);
       const payload = prior?.response_json as any;
-      return {
-        item_id: item.item_id,
-        text: item.text,
-        round_number: item.round_number,
-        provenance_type: item.provenance_type,
-        your_prior_response: payload
-          ? { rating: payload.rating, action: payload.action, submitted_at: prior.created_at }
-          : null,
-      };
-    });
+        return {
+          item_id: item.item_id,
+          text: item.text,
+          round_number: item.round_number,
+          provenance_type: item.provenance_type,
+          your_prior_response: payload
+            ? { rating: payload.rating, action: payload.action, submitted_at: prior.created_at }
+            : null,
+          controlled_feedback: buildParticipantControlledFeedback({
+            item,
+            responses,
+            roundNumber,
+            participantId: invitation.participant_id,
+            feedbackConfig: roundConfig.feedback_config,
+          }),
+        };
+      });
 
     return reply.send({ items });
   });
@@ -552,6 +1044,9 @@ export async function participantsRoutes(app: FastifyInstance) {
     if (!roundConfig || roundConfig.status !== "Open") return reply.code(409).send({ error: "round_not_open" });
     if (!hasActiveConsent({ participant_id: invitation.participant_id, study_id: invitation.study_id, version_id: invitation.version_id })) {
       return reply.code(403).send({ error: "active_consent_required" });
+    }
+    if (!participantCanSubmit({ study_id: invitation.study_id, version_id: invitation.version_id, participant_id: invitation.participant_id, round_number: roundNumber })) {
+      return reply.code(403).send({ error: "participant_inactive_or_withdrawn_for_round" });
     }
 
     const itemId = String(body.item_id ?? "");

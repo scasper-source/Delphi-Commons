@@ -4,6 +4,7 @@ import { createHash } from "node:crypto";
 import { nanoid } from "nanoid";
 import { getAuditDir } from "./paths.js";
 import { getDatabase, withDatabaseTransaction } from "./database.js";
+import { redactSensitive } from "./redaction.js";
 
 export type AuditEvent = {
   id: string;
@@ -95,10 +96,11 @@ export async function writeAuditEvent(
   const full = withDatabaseTransaction(() => {
     const tip = auditChainTip();
     const sequence = tip.sequence + 1;
+    const redacted = redactSensitive(evt);
     const base: Omit<AuditEvent, "eventHash"> = {
       id: nanoid(),
       ts: new Date().toISOString(),
-      ...evt,
+      ...redacted,
       sequence,
       previousHash: tip.eventHash,
     };

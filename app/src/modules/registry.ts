@@ -11,6 +11,13 @@ const staffRoles = [
 
 export const moduleRegistry: ModuleDefinition[] = [
   {
+    id: "about",
+    label: "About",
+    purpose: "Plain-language platform orientation, ethical commitments, AI boundaries, and participant protections.",
+    allowedRoles: [...staffRoles, "panelist"],
+    maturity: "wired",
+  },
+  {
     id: "architecture",
     label: "Architecture",
     purpose: "Extension points for modules, study methods, output models, policies, and API boundaries.",
@@ -67,6 +74,13 @@ export const moduleRegistry: ModuleDefinition[] = [
     maturity: "wired",
   },
   {
+    id: "glossary",
+    label: "Glossary",
+    purpose: "Plain-language Delphi, governance, AI, consent, reporting, and statistics terms.",
+    allowedRoles: [...staffRoles, "panelist"],
+    maturity: "wired",
+  },
+  {
     id: "reporting",
     label: "Reporting",
     purpose: "Consensus, near-consensus, non-consensus, attrition, limitations, exports, and downstream review.",
@@ -84,7 +98,7 @@ export const moduleRegistry: ModuleDefinition[] = [
     id: "admin-security",
     label: "Admin / Security",
     purpose: "Role management, AI connectors, retention, export permissions, and security policy status.",
-    allowedRoles: ["security_privacy_lead", "open_source_admin", "data_custodian"],
+    allowedRoles: ["study_owner", "ethics_methods_steward", "security_privacy_lead", "open_source_admin", "data_custodian"],
     maturity: "future",
   },
 ];

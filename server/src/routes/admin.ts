@@ -23,7 +23,7 @@ function isAuthRole(value: unknown): value is AuthRole {
 export async function adminRoutes(app: FastifyInstance) {
   app.get(
     "/admin/users",
-    { preHandler: requireRole(["admin", "maintainer"]) },
+    { preHandler: requireRole(["owner", "admin", "maintainer"]) },
     async () => {
       return { users: listUsers().map(sanitizeUser) };
     }

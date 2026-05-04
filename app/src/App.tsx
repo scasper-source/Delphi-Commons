@@ -19,6 +19,12 @@ import {
   type ExportPackageFile,
   type BackendUser,
   type StudyAssignment,
+  type StudyAIConfig,
+  type AIConfigValidation,
+  type AttritionSummary,
+  type ParticipantEnrollment,
+  type NonResponseEscalation,
+  type NonResponsePolicy,
 } from "./core/api";
 import { mockStudies, mockStudy } from "./core/mockData";
 import { canAccessIdentityMap, canAccessModule, canExportOutput, roleLabels } from "./core/permissions";
@@ -58,6 +64,23 @@ import {
   StatusBadge,
   WarningBanner,
 } from "./components/ui/Primitives";
+import {
+  aiOrientationText,
+  consensusReminder,
+  glossaryTerms,
+  inlineHelp,
+  orientationContentVersion,
+  platformAboutSections,
+  roundReminder,
+  studyOrientationFacts,
+  tutorialSteps,
+} from "./content/orientation";
+import {
+  buildBibtexCitation,
+  buildPreferredCitation,
+  citationFraming,
+  citationMetadata,
+} from "./content/citation";
 
 const roleOrder: UserRole[] = [
   "study_owner",
@@ -168,6 +191,7 @@ function humanizeBackendMessage(message: string | null): string | null {
     pre_round_consensus_prompt_missing: "Add a neutral pre-round prompt for consensus-rule input.",
     pre_round_consensus_summary_missing: "Summarize how pre-round consensus input was considered before governance signoff.",
     previous_round_must_be_closed: "Close the previous round before opening this round.",
+    participant_orientation_required: "Complete the study orientation before beginning Round 1.",
     published_items_required_for_round: "Publish at least one traceable candidate item before opening this round.",
     round_config_required: "Configure this round before opening it.",
     round_not_open: "This task is not available until the study team opens the round.",
@@ -267,6 +291,8 @@ type RoundTwoSetupState = {
   reminderSubject: string;
   reminderBody: string;
   controlledFeedbackEnabled: boolean;
+  feedbackFormat: "distribution_only" | "distribution_summary" | "distribution_rationales";
+  showParticipantPriorResponse: boolean;
 };
 
 type RuntimeStudyData = {
@@ -319,6 +345,8 @@ const defaultRoundTwoSetup: RoundTwoSetupState = {
   reminderBody:
     "This is a neutral reminder that Round 2 is open. Participation is voluntary, and you may respond within the study window.",
   controlledFeedbackEnabled: true,
+  feedbackFormat: "distribution_summary",
+  showParticipantPriorResponse: true,
 };
 
 const emptyRuntimeStudyData: RuntimeStudyData = {
@@ -359,6 +387,7 @@ function App() {
   const [participantRatingRoundComplete, setParticipantRatingRoundComplete] = useState<Record<number, boolean>>({});
   const [participantWithdrawn, setParticipantWithdrawn] = useState(false);
   const [participantConsentChecked, setParticipantConsentChecked] = useState(false);
+  const [participantOrientationComplete, setParticipantOrientationComplete] = useState(false);
   const [participantMessage, setParticipantMessage] = useState<string | null>(null);
   const [participantError, setParticipantError] = useState<string | null>(null);
   const [participantBusy, setParticipantBusy] = useState(false);
@@ -372,6 +401,9 @@ function App() {
   const [savedStudiesError, setSavedStudiesError] = useState<string | null>(null);
   const studyApi = useMemo(() => createStudyApi(mockStudies), []);
   const accessibleModules = moduleRegistry.filter((module) => canAccessModule(role, module));
+  const headerModuleIds: ModuleId[] = ["about", "glossary"];
+  const headerModules = accessibleModules.filter((module) => headerModuleIds.includes(module.id));
+  const navigationModules = accessibleModules.filter((module) => !headerModuleIds.includes(module.id));
   const selectedStudy = mockStudy;
   const activeTitle = workflow.study?.title ?? selectedStudy.title;
   const activeStatus = workflow.version?.status ?? selectedStudy.status;
@@ -407,10 +439,12 @@ function App() {
     async function loadInvite() {
       try {
         setRole("panelist");
+        setActiveModule("participant");
         const context = await conductorApi.getParticipantInvitation(inviteToken);
         setParticipantInvite(context);
         setParticipantConsentChecked(Boolean(context.consent_record && !context.consent_record.withdrew_at));
         setParticipantWithdrawn(Boolean(context.consent_record?.withdrew_at));
+        setParticipantOrientationComplete(Boolean(context.orientation_completion));
         setRoundConfigs(context.round_configs);
 
         if (context.study && context.study_version) {
@@ -607,6 +641,7 @@ function App() {
         reminder_body: roundOneSetup.reminderBody,
         controlled_feedback_enabled: false,
         ai_curation_enabled: roundOneSetup.aiCurationEnabled,
+        feedback_config: null,
         status: "Ready",
       });
 
@@ -669,6 +704,16 @@ function App() {
         reminder_body: roundNumber === 2 ? roundTwoSetup.reminderBody : `This is a neutral reminder that Round ${roundNumber} is open.`,
         controlled_feedback_enabled: roundTwoSetup.controlledFeedbackEnabled,
         ai_curation_enabled: false,
+        feedback_config: {
+          feedback_config_id: "",
+          version_number: 1,
+          format: roundTwoSetup.feedbackFormat,
+          show_participant_prior_response: roundTwoSetup.showParticipantPriorResponse,
+          locked_at: null,
+          locked_by_user_id: null,
+          created_at: "",
+          updated_at: "",
+        },
         status: "Ready",
       });
 
@@ -711,6 +756,7 @@ function App() {
           reminder_body: roundOneSetup.reminderBody,
           controlled_feedback_enabled: false,
           ai_curation_enabled: roundOneSetup.aiCurationEnabled,
+          feedback_config: null,
           status: "Ready",
         });
         setRoundConfigs((current) => [
@@ -748,6 +794,11 @@ function App() {
       return;
     }
 
+    if (!participantOrientationComplete) {
+      setParticipantError("participant_orientation_required");
+      return;
+    }
+
     if (!participantResponseText.trim()) {
       setParticipantError("Round 1 response text is required.");
       return;
@@ -771,6 +822,7 @@ function App() {
           reminder_body: roundOneSetup.reminderBody,
           controlled_feedback_enabled: false,
           ai_curation_enabled: roundOneSetup.aiCurationEnabled,
+          feedback_config: null,
           status: "Open",
         });
 
@@ -818,6 +870,38 @@ function App() {
       void loadRuntimeData(workflow.study.id, workflow.version.id);
     } catch (error) {
       setParticipantError(error instanceof Error ? error.message : "Unable to submit Round 1 response.");
+    } finally {
+      setParticipantBusy(false);
+    }
+  }
+
+  async function completeParticipantOrientation() {
+    if (!workflow.study || !workflow.version) {
+      setParticipantError("No active study version is selected.");
+      return;
+    }
+
+    setParticipantBusy(true);
+    setParticipantError(null);
+    setParticipantMessage(null);
+
+    try {
+      if (participantInviteToken) {
+        const result = await conductorApi.completeInvitationOrientation(participantInviteToken);
+        setParticipantInvite((current) => current ? { ...current, orientation_completion: result.orientation_completion } : current);
+      } else {
+        const result = await conductorApi.completeParticipantOrientation(
+          workflow.study.id,
+          workflow.version.id,
+          "demo-panelist-001",
+          "study_owner",
+        );
+        setParticipantInvite((current) => current ? { ...current, orientation_completion: result.orientation_completion } : current);
+      }
+      setParticipantOrientationComplete(true);
+      setParticipantMessage("Study orientation completed. You may begin Round 1.");
+    } catch (error) {
+      setParticipantError(error instanceof Error ? error.message : "Unable to complete study orientation.");
     } finally {
       setParticipantBusy(false);
     }
@@ -1174,7 +1258,7 @@ function App() {
       await conductorApi.withdrawInvitationConsent(participantInviteToken);
       setParticipantConsentChecked(false);
       setParticipantWithdrawn(true);
-      setParticipantMessage("Withdrawal recorded. No further study tasks are required.");
+      setParticipantMessage("Withdrawal recorded for future rounds. Prior submitted responses may remain in historical study data according to the study protocol and consent terms.");
     } catch (error) {
       setParticipantError(error instanceof Error ? error.message : "Unable to record withdrawal.");
     } finally {
@@ -1516,6 +1600,7 @@ function App() {
         reminder_body: roundOneSetup.reminderBody,
         controlled_feedback_enabled: false,
         ai_curation_enabled: roundOneSetup.aiCurationEnabled,
+        feedback_config: null,
         status: "Open",
       });
       const consentText = [
@@ -1559,7 +1644,7 @@ function App() {
     moduleRegistry.find((module) => module.id === activeModule) ?? moduleRegistry[1],
   )
     ? activeModule
-    : accessibleModules[0]?.id ?? "participant";
+    : navigationModules[0]?.id ?? accessibleModules[0]?.id ?? "participant";
   const nextAction = buildNextAction({ workflow, wizard, roundConfigs, runtimeData });
 
   async function runNextActionCommand(command: NonNullable<NextAction["command"]>) {
@@ -1567,6 +1652,13 @@ function App() {
       setActiveModule("round-manager");
       await transitionRound(command.roundNumber, command.action);
     }
+  }
+
+  function navigateToCitation() {
+    setActiveModule("about");
+    window.setTimeout(() => {
+      document.getElementById("how-to-cite-this-tool")?.scrollIntoView({ block: "start", behavior: "smooth" });
+    }, 0);
   }
 
   return (
@@ -1592,7 +1684,7 @@ function App() {
         </label>
 
         <nav className="module-nav">
-          {accessibleModules.map((module) => (
+          {navigationModules.map((module) => (
             <button
               className={visibleModule === module.id ? "nav-item active" : "nav-item"}
               key={module.id}
@@ -1606,6 +1698,21 @@ function App() {
       </aside>
 
       <section className="workspace">
+        <div className="reference-bar">
+          <nav aria-label="Reference pages">
+            {headerModules.map((module) => (
+              <button
+                className={visibleModule === module.id ? "reference-link active" : "reference-link"}
+                key={module.id}
+                onClick={() => setActiveModule(module.id)}
+                type="button"
+              >
+                {module.label}
+              </button>
+            ))}
+          </nav>
+        </div>
+
         <header className="topbar">
           <div>
             <span className="eyebrow">Active study</span>
@@ -1644,6 +1751,7 @@ function App() {
           participantRatingRoundComplete={participantRatingRoundComplete}
           participantWithdrawn={participantWithdrawn}
           participantConsentChecked={participantConsentChecked}
+          participantOrientationComplete={participantOrientationComplete}
           participantMessage={participantMessage}
           participantError={participantError}
           participantBusy={participantBusy}
@@ -1663,6 +1771,7 @@ function App() {
           onTransitionRound={transitionRound}
           onParticipantResponseChange={setParticipantResponseText}
           onParticipantConsentChange={setParticipantConsentChecked}
+          onCompleteParticipantOrientation={completeParticipantOrientation}
           onSubmitParticipantRoundOne={submitParticipantRoundOne}
           onEditSubmittedRoundOne={editSubmittedRoundOneResponse}
           onFinishRoundOneTask={finishRoundOneTask}
@@ -1696,6 +1805,11 @@ function App() {
           onArchiveSavedStudy={archiveSavedStudy}
           onArchiveSmokeTestStudies={archiveSmokeTestStudies}
         />
+        <footer className="app-footer">
+          <button className="footer-link" onClick={navigateToCitation} type="button">
+            Cite this tool
+          </button>
+        </footer>
       </section>
     </main>
   );
@@ -1726,6 +1840,7 @@ function ModuleRenderer({
   participantRatingRoundComplete,
   participantWithdrawn,
   participantConsentChecked,
+  participantOrientationComplete,
   participantMessage,
   participantError,
   participantBusy,
@@ -1745,6 +1860,7 @@ function ModuleRenderer({
   onTransitionRound,
   onParticipantResponseChange,
   onParticipantConsentChange,
+  onCompleteParticipantOrientation,
   onSubmitParticipantRoundOne,
   onEditSubmittedRoundOne,
   onFinishRoundOneTask,
@@ -1802,6 +1918,7 @@ function ModuleRenderer({
   participantRatingRoundComplete: Record<number, boolean>;
   participantWithdrawn: boolean;
   participantConsentChecked: boolean;
+  participantOrientationComplete: boolean;
   participantMessage: string | null;
   participantError: string | null;
   participantBusy: boolean;
@@ -1821,6 +1938,7 @@ function ModuleRenderer({
   onTransitionRound: (roundNumber: number, action: "open" | "close") => void;
   onParticipantResponseChange: (value: string) => void;
   onParticipantConsentChange: (value: boolean) => void;
+  onCompleteParticipantOrientation: () => void;
   onSubmitParticipantRoundOne: () => void;
   onEditSubmittedRoundOne: () => void;
   onFinishRoundOneTask: () => void;
@@ -1855,6 +1973,8 @@ function ModuleRenderer({
   onArchiveSmokeTestStudies: () => void;
 }) {
   switch (activeModule) {
+    case "about":
+      return <AboutScreen />;
     case "architecture":
       return (
         <ArchitectureScreen
@@ -1953,6 +2073,7 @@ function ModuleRenderer({
           participantRatingRoundComplete={participantRatingRoundComplete}
           participantWithdrawn={participantWithdrawn}
           participantConsentChecked={participantConsentChecked}
+          participantOrientationComplete={participantOrientationComplete}
           participantMessage={participantMessage}
           participantError={participantError}
           participantBusy={participantBusy}
@@ -1961,6 +2082,7 @@ function ModuleRenderer({
           roundTwoRatings={roundTwoRatings}
           onParticipantResponseChange={onParticipantResponseChange}
           onParticipantConsentChange={onParticipantConsentChange}
+          onCompleteParticipantOrientation={onCompleteParticipantOrientation}
           onSubmitParticipantRoundOne={onSubmitParticipantRoundOne}
           onEditSubmittedRoundOne={onEditSubmittedRoundOne}
           onFinishRoundOneTask={onFinishRoundOneTask}
@@ -1972,6 +2094,8 @@ function ModuleRenderer({
           onSubmitRoundTwoRatings={onSubmitRoundTwoRatings}
         />
       );
+    case "glossary":
+      return <GlossaryScreen />;
     case "reporting":
       return (
         <ReportingScreen
@@ -1991,6 +2115,111 @@ function ModuleRenderer({
     case "admin-security":
       return <AdminSecurityScreen role={role} workflow={workflow} />;
   }
+}
+
+function AboutScreen() {
+  return (
+    <div className="screen-grid">
+      <section className="panel wide">
+        <div className="section-heading">
+          <span className="eyebrow">About the platform</span>
+          <h2>eDelphi protects method, participants, and interpretation</h2>
+        </div>
+        <div className="orientation-fact-grid">
+          {platformAboutSections.map((section) => (
+            <article className="orientation-fact" key={section.title}>
+              <h3>{section.title}</h3>
+              <p>{section.body}</p>
+            </article>
+          ))}
+        </div>
+      </section>
+
+      <section className="panel">
+        <h3>Consensus Is Limited</h3>
+        <p>
+          Delphi consensus is structured expert or stakeholder agreement under a predefined rule. It preserves uncertainty,
+          dissent, non-consensus, attrition, and methodological limits.
+        </p>
+        <WarningBanner title="Required interpretation" risk="info">
+          Consensus indicates agreement among this panel; it does not establish correctness.
+        </WarningBanner>
+      </section>
+
+      <section className="panel">
+        <h3>AI Is Governed</h3>
+        <p>
+          AI may be configured as drafting or organizing assistance only. AI suggestions are non-final, require human review,
+          and must never tell participants what to answer.
+        </p>
+      </section>
+
+      <section className="panel wide" id="how-to-cite-this-tool">
+        <div className="section-heading">
+          <span className="eyebrow">Citation guidance</span>
+          <h3>How to Cite This Tool</h3>
+        </div>
+        <p>{citationFraming}</p>
+        <div className="citation-grid">
+          <article className="orientation-fact">
+            <h4>Preferred citation</h4>
+            <p>{buildPreferredCitation()}</p>
+          </article>
+          <article className="orientation-fact">
+            <h4>BibTeX</h4>
+            <pre className="citation-code">{buildBibtexCitation()}</pre>
+          </article>
+        </div>
+        <p className="microcopy">
+          Software version: {citationMetadata.version}. DOI: {citationMetadata.doi ?? "Not assigned for this release."}
+        </p>
+        <p className="microcopy">
+          Citing this tool supports transparency and reproducibility; it does not validate study findings or imply platform
+          endorsement of a study's conclusions.
+        </p>
+      </section>
+    </div>
+  );
+}
+
+function GlossaryScreen() {
+  const [query, setQuery] = useState("");
+  const normalized = query.trim().toLowerCase();
+  const visibleTerms = glossaryTerms.filter((entry) => {
+    if (!normalized) return true;
+    return [entry.term, entry.plain, entry.technical, ...(entry.aliases ?? [])]
+      .some((value) => value.toLowerCase().includes(normalized));
+  });
+
+  return (
+    <div className="screen-grid">
+      <section className="panel wide">
+        <div className="section-heading">
+          <span className="eyebrow">Glossary</span>
+          <h2>Plain-language Delphi, ethics, AI, and reporting terms</h2>
+        </div>
+        <label className="field wide-field glossary-search">
+          <span>Search terms</span>
+          <input
+            aria-label="Search glossary terms"
+            placeholder="Search consensus, IQR, confidentiality, AI suggestion..."
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+          />
+        </label>
+      </section>
+
+      <section className="glossary-grid wide" aria-live="polite">
+        {visibleTerms.map((entry) => (
+          <article className="panel glossary-term" key={entry.id}>
+            <h3>{entry.term}</h3>
+            <p>{entry.plain}</p>
+            <small>{entry.technical}</small>
+          </article>
+        ))}
+      </section>
+    </div>
+  );
 }
 
 function ArchitectureScreen({
@@ -3768,6 +3997,28 @@ function RoundManagerScreen({
             />
             <span>Enable controlled feedback fields for later rounds. Feedback must remain neutral and non-coercive.</span>
           </label>
+          <label className="field">
+            <span>Feedback format</span>
+            <select
+              value={roundTwoSetup.feedbackFormat}
+              onChange={(event) => updateRoundTwo({ feedbackFormat: event.target.value as RoundTwoSetupState["feedbackFormat"] })}
+            >
+              <option value="distribution_only">Distribution only</option>
+              <option value="distribution_summary">Distribution + summary</option>
+              <option value="distribution_rationales">Distribution + anonymized rationales</option>
+            </select>
+          </label>
+          <label className="check-field">
+            <input
+              checked={roundTwoSetup.showParticipantPriorResponse}
+              onChange={(event) => updateRoundTwo({ showParticipantPriorResponse: event.target.checked })}
+              type="checkbox"
+            />
+            <span>Show participant prior response</span>
+          </label>
+          <div className="method-helper wide-field">
+            <p>The selected feedback format will be versioned and locked when this round opens.</p>
+          </div>
         </div>
         <div className="wizard-actions">
           <StatusBadge risk={savedRoundTwo ? "success" : "warning"} label={savedRoundTwo ? "Round 2 configured" : "Draft setup"} />
@@ -3779,6 +4030,7 @@ function RoundManagerScreen({
           {ratingRounds.map((round) => {
             const config = roundConfigs.find((entry) => entry.round_number === round.roundNumber);
             const publishedCount = runtimeData.items.filter((item) => item.round_number === round.roundNumber && item.status === "Published").length;
+            const feedbackLocked = Boolean(config?.feedback_config?.locked_at || config?.status === "Open" || config?.status === "Closed");
 
             return (
               <article className="rating-round-setup" key={round.roundNumber}>
@@ -3786,15 +4038,22 @@ function RoundManagerScreen({
                   <strong>Round {round.roundNumber}</strong>
                   <p>{round.label}</p>
                   <small>{publishedCount} published item{publishedCount === 1 ? "" : "s"} for this round.</small>
+                  {config?.feedback_config ? (
+                    <small>
+                      Feedback: {config.feedback_config.format.replaceAll("_", " ")}
+                      {config.feedback_config.show_participant_prior_response ? ", prior response shown" : ", prior response hidden"}
+                      {config.feedback_config.locked_at ? ". Feedback format locked for this round." : ""}
+                    </small>
+                  ) : null}
                 </div>
                 <StatusBadge risk={config ? "success" : "warning"} label={config ? formatStatus(config.status) : "Not configured"} />
                 <button
                   className="secondary-button"
-                  disabled={roundActionBusy === `save-r${round.roundNumber}`}
+                  disabled={feedbackLocked || roundActionBusy === `save-r${round.roundNumber}`}
                   onClick={() => onSaveRatingRoundSetup(round.roundNumber)}
                   type="button"
                 >
-                  {roundActionBusy === `save-r${round.roundNumber}` ? "Saving..." : `Save Round ${round.roundNumber}`}
+                  {feedbackLocked ? "Feedback locked" : roundActionBusy === `save-r${round.roundNumber}` ? "Saving..." : `Save Round ${round.roundNumber}`}
                 </button>
               </article>
             );
@@ -4118,6 +4377,119 @@ function FeedbackScreen() {
   );
 }
 
+function InlineHelp({ id, label, text }: { id: string; label: string; text: string }) {
+  const [open, setOpen] = useState(false);
+  const helpId = `inline-help-${id}`;
+  return (
+    <span className="inline-help">
+      <button
+        aria-controls={helpId}
+        aria-expanded={open}
+        aria-label={`Help: ${label}`}
+        className="inline-help-trigger"
+        onClick={() => setOpen((current) => !current)}
+        type="button"
+      >
+        ?
+      </button>
+      {open ? (
+        <span className="inline-help-popover" id={helpId} role="note">
+          {text}
+          <button aria-label={`Close help for ${label}`} onClick={() => setOpen(false)} type="button">
+            Close help
+          </button>
+        </span>
+      ) : null}
+    </span>
+  );
+}
+
+function ParticipantOrientationPanel({
+  title,
+  wizard,
+  participantInvite,
+  participantBusy,
+  onComplete,
+}: {
+  title: string;
+  wizard: StudyWizardState;
+  participantInvite: ParticipantInvitationContext | null;
+  participantBusy: boolean;
+  onComplete: () => void;
+}) {
+  const [stepIndex, setStepIndex] = useState(0);
+  const aiText = aiOrientationText({
+    externalAiEnabled: wizard.aiEnabled,
+    noExternalAiMode: !wizard.aiEnabled,
+  });
+  const facts = studyOrientationFacts({ title, wizard, aiText });
+  const activeStep = tutorialSteps[stepIndex];
+  const completed = participantInvite?.orientation_completion;
+
+  return (
+    <section className="orientation-panel" aria-labelledby="participant-orientation-title">
+      <div className="section-heading">
+        <span className="eyebrow">Required orientation</span>
+        <h3 id="participant-orientation-title">Before Round 1, review how this Delphi study works</h3>
+      </div>
+      <WarningBanner title="Orientation supplements consent" risk="info">
+        This short orientation helps explain the study process. It does not replace the consent information or your rights.
+      </WarningBanner>
+
+      <div className="orientation-fact-grid">
+        {facts.map((fact) => (
+          <article className="orientation-fact" key={fact.title}>
+            <h4>{fact.title}</h4>
+            <p>{fact.body}</p>
+          </article>
+        ))}
+      </div>
+
+      <div className="tutorial-card" aria-live="polite">
+        <span className="eyebrow">60-90 second tutorial</span>
+        <h4>{activeStep.title}</h4>
+        <p>{activeStep.body}</p>
+        <div className="tutorial-example">
+          <strong>Fictional example only</strong>
+          <p>Round 1: What matters most for a good policy?</p>
+          <p>Group summary: Participants mentioned clarity, fairness, feasibility, and cost.</p>
+          <p>Round 2: You may keep your view or update it after seeing the summary.</p>
+        </div>
+        <div className="tutorial-progress" aria-label={`Tutorial step ${stepIndex + 1} of ${tutorialSteps.length}`}>
+          {tutorialSteps.map((step, index) => (
+            <span className={index === stepIndex ? "active" : ""} key={step.title} />
+          ))}
+        </div>
+        <div className="action-row">
+          <button
+            className="secondary-button"
+            disabled={stepIndex === 0 || participantBusy}
+            onClick={() => setStepIndex((current) => Math.max(0, current - 1))}
+            type="button"
+          >
+            Previous
+          </button>
+          {stepIndex < tutorialSteps.length - 1 ? (
+            <button
+              className="primary-button"
+              disabled={participantBusy}
+              onClick={() => setStepIndex((current) => Math.min(tutorialSteps.length - 1, current + 1))}
+              type="button"
+            >
+              Next
+            </button>
+          ) : (
+            <button className="primary-button" disabled={participantBusy || Boolean(completed)} onClick={onComplete} type="button">
+              {participantBusy ? "Saving..." : completed ? "Orientation completed" : "I understand and am ready to continue"}
+            </button>
+          )}
+        </div>
+      </div>
+      <small>Orientation content version: {orientationContentVersion}</small>
+    </section>
+  );
+}
+
 function ParticipantScreen({
   workflow,
   wizard,
@@ -4131,6 +4503,7 @@ function ParticipantScreen({
   participantRatingRoundComplete,
   participantWithdrawn,
   participantConsentChecked,
+  participantOrientationComplete,
   participantMessage,
   participantError,
   participantBusy,
@@ -4139,6 +4512,7 @@ function ParticipantScreen({
   roundTwoRatings,
   onParticipantResponseChange,
   onParticipantConsentChange,
+  onCompleteParticipantOrientation,
   onSubmitParticipantRoundOne,
   onEditSubmittedRoundOne,
   onFinishRoundOneTask,
@@ -4161,6 +4535,7 @@ function ParticipantScreen({
   participantRatingRoundComplete: Record<number, boolean>;
   participantWithdrawn: boolean;
   participantConsentChecked: boolean;
+  participantOrientationComplete: boolean;
   participantMessage: string | null;
   participantError: string | null;
   participantBusy: boolean;
@@ -4169,6 +4544,7 @@ function ParticipantScreen({
   roundTwoRatings: RatingDraft;
   onParticipantResponseChange: (value: string) => void;
   onParticipantConsentChange: (value: boolean) => void;
+  onCompleteParticipantOrientation: () => void;
   onSubmitParticipantRoundOne: () => void;
   onEditSubmittedRoundOne: () => void;
   onFinishRoundOneTask: () => void;
@@ -4190,6 +4566,7 @@ function ParticipantScreen({
       }
     : null);
   const roundOneOpen = !participantWithdrawn && effectiveRoundOneConfig?.status === "Open";
+  const studyTitle = participantInvite?.study?.title ?? workflow.study?.title ?? "this Delphi study";
   const openRatingRound = participantWithdrawn
     ? undefined
     : roundConfigs.find((config) => config.round_number > 1 && config.status === "Open");
@@ -4264,6 +4641,12 @@ function ParticipantScreen({
           </WarningBanner>
         ) : hasRatingTask ? (
           <>
+            {currentRatingRoundNumber ? <RoundContextPanel roundNumber={currentRatingRoundNumber} /> : null}
+            {currentRatingRoundNumber ? (
+              <WarningBanner title="Round reminder" risk="info">
+                {roundReminder(currentRatingRoundNumber)}
+              </WarningBanner>
+            ) : null}
             <WarningBanner title="Structured judgment task" risk="info">
               <div className="rating-task-copy">
                 <p>
@@ -4306,11 +4689,7 @@ function ParticipantScreen({
                         <span>Statement to evaluate</span>
                         <p>{item.text}</p>
                       </div>
-                      {item.your_prior_response ? (
-                        <small>
-                          Your prior response: {formatRatingChoice(item.your_prior_response.rating)}. You may retain or revise it.
-                        </small>
-                      ) : null}
+                      <ControlledFeedbackCard item={item} />
                       <fieldset className="rating-scale" aria-label={`Agreement response for ${item.text}`}>
                         <legend>
                           {ratingRoundIsEditing
@@ -4355,8 +4734,22 @@ function ParticipantScreen({
           </>
         ) : roundOneOpen && effectiveRoundOneConfig ? (
           <>
+            {!participantOrientationComplete ? (
+              <ParticipantOrientationPanel
+                title={studyTitle}
+                wizard={wizard}
+                participantInvite={participantInvite}
+                participantBusy={participantBusy}
+                onComplete={onCompleteParticipantOrientation}
+              />
+            ) : null}
+            {participantOrientationComplete ? (
+              <>
             <WarningBanner title="Confidential to research team" risk="info">
-              {wizard.confidentialityStatement}
+              {wizard.confidentialityStatement} <InlineHelp id="confidentiality" label="anonymity and confidentiality" text={inlineHelp.anonymityConfidentiality} />
+            </WarningBanner>
+            <WarningBanner title="Round reminder" risk="info">
+              {roundReminder(1)}
             </WarningBanner>
             {!roundOneConfig ? (
               <WarningBanner title="Round 1 task setup will be finalized on submit" risk="warning">
@@ -4413,6 +4806,8 @@ function ParticipantScreen({
                 </div>
               </>
             ) : null}
+              </>
+            ) : null}
           </>
         ) : (
           <WarningBanner title="Waiting for study team" risk="info">
@@ -4433,7 +4828,9 @@ function ParticipantScreen({
         <h3>Participant Rights</h3>
         <ul className="plain-list">
           <li>Participation is voluntary.</li>
-          <li>You may withdraw from future participation.</li>
+          <li>You may withdraw from future rounds at any time.</li>
+          <li>Depending on the study protocol and consent terms, prior submitted responses may remain in already aggregated or historical study data.</li>
+          <li>You may contact the study team about data deletion where feasible.</li>
           <li>You may skip items where permitted by the study protocol.</li>
           <li>AI assistance, if offered, is optional and non-directive.</li>
         </ul>
@@ -4449,6 +4846,123 @@ function ParticipantScreen({
         ) : null}
       </section>
     </div>
+  );
+}
+
+function RoundContextPanel({ roundNumber }: { roundNumber: number }) {
+  if (roundNumber <= 1) return null;
+  return (
+    <section className="round-context-panel" aria-labelledby={`round-context-${roundNumber}`}>
+      <h4 id={`round-context-${roundNumber}`}>You are now in Round {roundNumber}</h4>
+      <p>
+        {roundNumber === 2
+          ? "This round is based on anonymized responses from Round 1"
+          : "This round is based on anonymized responses and controlled feedback from earlier rounds."}
+      </p>
+      <ul>
+        <li>You may revise or retain your view.</li>
+        <li>You may keep your previous response.</li>
+        <li>You may revise your response.</li>
+        <li>Different views are valuable.</li>
+        <li>Consensus does not mean correctness.</li>
+      </ul>
+      <p className="microcopy">
+        {consensusReminder()} <InlineHelp id={`consensus-${roundNumber}`} label="consensus" text={inlineHelp.consensus} />
+      </p>
+    </section>
+  );
+}
+
+function ControlledFeedbackCard({ item }: { item: RoundItemForParticipant }) {
+  const feedback = item.controlled_feedback;
+  if (!feedback) {
+    return (
+      <div className="controlled-feedback-card">
+        <span className="feedback-source">Item source: {item.provenance_type === "LiteratureDerived" ? "Literature-derived" : "Panel-generated"}</span>
+      </div>
+    );
+  }
+  const distributionEntries = Object.entries(feedback.group_summary.distribution);
+  const maxCount = Math.max(1, ...distributionEntries.map(([, count]) => count));
+  const sourceLabelByType: Record<NonNullable<RoundItemForParticipant["controlled_feedback"]>["item_source"], string> = {
+    "panel-generated": "Panel-generated",
+    "literature-derived": "Literature-derived",
+    "researcher-added": "Researcher-added",
+    "AI-assisted draft, human approved": "AI-assisted draft, human approved",
+  };
+  const sourceLabel = sourceLabelByType[feedback.item_source];
+
+  return (
+    <aside className="controlled-feedback-card" aria-label={`Controlled feedback for ${item.text}`}>
+      <div className="feedback-card-topline">
+        <span className="feedback-source">Item source: {sourceLabel}</span>
+        <span>Source round: {feedback.source_round_number}</span>
+      </div>
+      <div className="feedback-metrics">
+        <div>
+          <strong>
+            Your previous response <InlineHelp id={`prior-${item.item_id}`} label="your previous response" text={inlineHelp.priorResponse} />
+          </strong>
+          <p>
+            {feedback.show_participant_prior_response
+              ? feedback.participant_prior_response
+                ? formatRatingChoice(feedback.participant_prior_response.rating)
+                : "No prior response recorded for this item."
+              : "Prior response not shown for this round."}
+          </p>
+        </div>
+        <div>
+          <strong>
+            Group median <InlineHelp id={`median-${item.item_id}`} label="median" text={inlineHelp.median} />
+          </strong>
+          <p>{feedback.group_summary.median === null ? "Not available yet" : formatRatingChoice(feedback.group_summary.median)}</p>
+        </div>
+        <div>
+          <strong>
+            Middle range of responses <InlineHelp id={`iqr-${item.item_id}`} label="IQR" text={inlineHelp.iqr} />
+          </strong>
+          <p>{feedback.group_summary.iqr === null ? "Not available yet" : `IQR ${feedback.group_summary.iqr}`}</p>
+        </div>
+      </div>
+      <details className="feedback-detail">
+        <summary>Show more detail</summary>
+        <p>Response spread is shown as anonymized aggregate counts. Consensus does not mean correctness.</p>
+        <div className="compact-distribution" role="img" aria-label={`Distribution across ${feedback.group_summary.response_count} anonymized prior responses`}>
+          {Array.from({ length: 9 }, (_, index) => {
+            const value = String(index + 1);
+            const count = feedback.group_summary.distribution[value] ?? 0;
+            return (
+              <span key={value}>
+                <i style={{ height: `${Math.max(8, (count / maxCount) * 40)}px` }} />
+                <small>{value}: {count}</small>
+              </span>
+            );
+          })}
+        </div>
+      </details>
+      {feedback.neutral_summary ? (
+        <div className="neutral-summary">
+          <strong>
+            Neutral summary <InlineHelp id={`summary-${item.item_id}`} label="group summary" text={inlineHelp.groupSummary} />
+          </strong>
+          <p>{feedback.neutral_summary.text}</p>
+        </div>
+      ) : null}
+      {feedback.rationale_excerpts ? (
+        <details className="feedback-detail">
+          <summary>Show rationale excerpts</summary>
+          {feedback.rationale_excerpts.excerpts.length > 0 ? (
+            <ul>
+              {feedback.rationale_excerpts.excerpts.map((excerpt, index) => (
+                <li key={`${item.item_id}-excerpt-${index}`}>{excerpt}</li>
+              ))}
+            </ul>
+          ) : (
+            <p>No approved anonymized rationale excerpts are available for this item.</p>
+          )}
+        </details>
+      ) : null}
+    </aside>
   );
 }
 
@@ -4479,9 +4993,7 @@ function ReportingScreen({
   const reportSafe = reportIncludesNonConsensus(study.report);
   const threshold = realItems.find((item) => item.consensus.threshold_percent !== null)?.consensus.threshold_percent
     ?? study.report.thresholdUsed;
-  const attrition = realReport
-    ? 0
-    : study.report.attritionRate;
+  const attrition = realReport?.summary.attrition?.attrition_rate ?? study.report.attritionRate;
   const hasRealStudy = Boolean(workflow.study && workflow.version);
   const selectedPackage =
     runtimeData.exportPackages.find((pkg) => pkg.export_package_id === runtimeData.selectedExportPackageId) ??
@@ -4515,6 +5027,11 @@ function ReportingScreen({
           label={realReport ? "Real round data loaded" : reportSafe ? "Non-consensus included" : "Blocked"}
         />
         <DataBar value={attrition} label="Attrition" />
+        {realReport?.summary.attrition?.warnings.length ? (
+          <WarningBanner title="Attrition interpretation" risk="warning">
+            {realReport.summary.attrition.warnings.join(" ")}
+          </WarningBanner>
+        ) : null}
         <LockedRule title="Threshold used" value={`${threshold}%`} locked />
         {hasRealStudy && !realReport ? (
           <WarningBanner title="No reportable rating data yet" risk="info">
@@ -4790,6 +5307,29 @@ function AuditScreen({ study }: { study: StudyRecord }) {
   );
 }
 
+const aiFeatureLabels: Array<[keyof StudyAIConfig["featurePermissions"], string]> = [
+  ["clustering", "Clustering"],
+  ["item_drafting", "Item drafting"],
+  ["neutrality_method_linting", "Neutrality / method linting"],
+  ["reminders", "Reminders"],
+  ["irb_export_drafting", "IRB export drafting"],
+  ["report_drafting", "Report drafting"],
+];
+
+function aiConfigStatusRisk(validation: AIConfigValidation | null): "success" | "warning" | "info" {
+  if (!validation) return "info";
+  if (validation.status === "ready" && validation.errors.length === 0) return "success";
+  if (validation.status === "no_external_ai_mode") return "info";
+  return "warning";
+}
+
+function aiConfigStatusLabel(validation: AIConfigValidation | null): string {
+  if (!validation) return "Not loaded";
+  if (validation.status === "no_external_ai_mode") return "No External AI mode";
+  if (validation.status === "ready" && validation.errors.length === 0) return "Ready";
+  return "Incomplete";
+}
+
 function AdminSecurityScreen({ role, workflow }: { role: UserRole; workflow: ConductorWorkflow }) {
   const identityDecision = identityAccessDecision(role, "Review data subject withdrawal request");
   const [users, setUsers] = useState<BackendUser[]>([]);
@@ -4799,8 +5339,27 @@ function AdminSecurityScreen({ role, workflow }: { role: UserRole; workflow: Con
   const [accessMessage, setAccessMessage] = useState<string | null>(null);
   const [accessError, setAccessError] = useState<string | null>(null);
   const [accessBusy, setAccessBusy] = useState(false);
+  const [aiConfig, setAiConfig] = useState<StudyAIConfig | null>(null);
+  const [aiValidation, setAiValidation] = useState<AIConfigValidation | null>(null);
+  const [apiKeyDraft, setApiKeyDraft] = useState("");
+  const [aiMessage, setAiMessage] = useState<string | null>(null);
+  const [aiError, setAiError] = useState<string | null>(null);
+  const [aiBusy, setAiBusy] = useState(false);
+  const [attritionSummary, setAttritionSummary] = useState<AttritionSummary | null>(null);
+  const [participantStatuses, setParticipantStatuses] = useState<ParticipantEnrollment[]>([]);
+  const [nonResponseEscalations, setNonResponseEscalations] = useState<NonResponseEscalation[]>([]);
+  const [nonResponsePolicy, setNonResponsePolicy] = useState<NonResponsePolicy | null>(null);
+  const [nonResponseRound, setNonResponseRound] = useState(2);
+  const [selectedAttritionParticipant, setSelectedAttritionParticipant] = useState("");
+  const [attritionMessage, setAttritionMessage] = useState<string | null>(null);
+  const [attritionError, setAttritionError] = useState<string | null>(null);
+  const [attritionBusy, setAttritionBusy] = useState(false);
   const activeStudyId = workflow.study?.id ?? null;
+  const activeVersionId = workflow.version?.id ?? null;
   const canManageAccess = role === "study_owner" || role === "open_source_admin";
+  const canManageAI = role === "study_owner" || role === "open_source_admin";
+  const canViewAI = canManageAI || role === "ethics_methods_steward" || role === "security_privacy_lead";
+  const canManageAttrition = canManageAccess || role === "ethics_methods_steward";
 
   async function loadAccessReview() {
     if (!canManageAccess) return;
@@ -4827,6 +5386,142 @@ function AdminSecurityScreen({ role, workflow }: { role: UserRole; workflow: Con
     void loadAccessReview();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [role, activeStudyId]);
+
+  async function loadAIConfig() {
+    if (!activeStudyId || !canViewAI) return;
+    setAiBusy(true);
+    setAiError(null);
+    try {
+      const result = await conductorApi.getAIConfig(activeStudyId, role);
+      setAiConfig(result.ai_config);
+      setAiValidation(result.validation);
+    } catch (error) {
+      setAiError(error instanceof Error ? error.message : "Unable to load AI connector configuration.");
+    } finally {
+      setAiBusy(false);
+    }
+  }
+
+  useEffect(() => {
+    void loadAIConfig();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [role, activeStudyId]);
+
+  async function loadAttritionReview() {
+    if (!activeStudyId || !activeVersionId || !canManageAttrition) return;
+    setAttritionBusy(true);
+    setAttritionError(null);
+    try {
+      const result = await conductorApi.getAttritionSummary(activeStudyId, activeVersionId, role);
+      setAttritionSummary(result.attrition_summary);
+      setParticipantStatuses(result.participant_statuses);
+      setNonResponseEscalations(result.escalations);
+      setNonResponsePolicy(result.policy);
+      setSelectedAttritionParticipant((current) => current || result.participant_statuses[0]?.participant_id || "");
+    } catch (error) {
+      setAttritionError(error instanceof Error ? error.message : "Unable to load attrition review.");
+    } finally {
+      setAttritionBusy(false);
+    }
+  }
+
+  useEffect(() => {
+    void loadAttritionReview();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [role, activeStudyId, activeVersionId]);
+
+  async function runAttritionAction(action: "detect" | "reminder" | "final" | "expire" | "inactive" | "save-policy") {
+    if (!activeStudyId || !activeVersionId) return;
+    setAttritionBusy(true);
+    setAttritionError(null);
+    setAttritionMessage(null);
+    try {
+      if (action === "detect") {
+        const result = await conductorApi.detectNonResponse(activeStudyId, activeVersionId, nonResponseRound, role);
+        setAttritionMessage(`${result.flagged.length} participant status record${result.flagged.length === 1 ? "" : "s"} flagged for configured non-response review.`);
+      } else if (action === "reminder" && selectedAttritionParticipant) {
+        await conductorApi.queueParticipantReminder(activeStudyId, activeVersionId, nonResponseRound, selectedAttritionParticipant, role);
+        setAttritionMessage("Neutral reminder queued and follow-up window started.");
+      } else if (action === "final" && selectedAttritionParticipant) {
+        await conductorApi.queueParticipantFinalNotice(activeStudyId, activeVersionId, nonResponseRound, selectedAttritionParticipant, role);
+        setAttritionMessage("Final notice queued from the approved fixed template.");
+      } else if (action === "expire" && selectedAttritionParticipant) {
+        await conductorApi.expireParticipantFollowup(activeStudyId, activeVersionId, nonResponseRound, selectedAttritionParticipant, role);
+        setAttritionMessage("Follow-up window marked expired for review.");
+      } else if (action === "inactive" && selectedAttritionParticipant) {
+        await conductorApi.markParticipantInactive(activeStudyId, activeVersionId, selectedAttritionParticipant, role, nonResponseRound + 1);
+        setAttritionMessage("Participant marked inactive for future rounds only. Prior data remains preserved.");
+      } else if (action === "save-policy" && nonResponsePolicy) {
+        const result = await conductorApi.updateNonResponsePolicy(activeStudyId, activeVersionId, role, nonResponsePolicy);
+        setNonResponsePolicy(result.policy);
+        setAttritionMessage("Non-response policy saved. Launched studies lock this policy.");
+      }
+      await loadAttritionReview();
+    } catch (error) {
+      setAttritionError(error instanceof Error ? error.message : "Unable to complete attrition action.");
+    } finally {
+      setAttritionBusy(false);
+    }
+  }
+
+  async function saveAIConfig(nextConfig = aiConfig) {
+    if (!activeStudyId || !nextConfig || !canManageAI) return;
+    setAiBusy(true);
+    setAiError(null);
+    setAiMessage(null);
+    try {
+      const result = await conductorApi.updateAIConfig(activeStudyId, role, {
+        externalAiEnabled: nextConfig.externalAiEnabled,
+        noExternalAiMode: nextConfig.noExternalAiMode,
+        providerName: nextConfig.providerName,
+        modelName: nextConfig.modelName,
+        featurePermissions: nextConfig.featurePermissions,
+        disclosure: nextConfig.disclosure,
+      });
+      setAiConfig(result.ai_config);
+      setAiValidation(result.validation);
+      setAiMessage("AI connector configuration saved and audit logged.");
+    } catch (error) {
+      setAiError(error instanceof Error ? error.message : "Unable to save AI connector configuration.");
+    } finally {
+      setAiBusy(false);
+    }
+  }
+
+  async function saveApiKey() {
+    if (!activeStudyId || !apiKeyDraft.trim() || !canManageAI) return;
+    setAiBusy(true);
+    setAiError(null);
+    setAiMessage(null);
+    try {
+      const result = await conductorApi.setAIConfigApiKey(activeStudyId, role, apiKeyDraft);
+      setAiConfig(result.ai_config);
+      setAiValidation(result.validation);
+      setApiKeyDraft("");
+      setAiMessage("API key saved as encrypted server-side material. The plaintext key cannot be retrieved.");
+    } catch (error) {
+      setAiError(error instanceof Error ? error.message : "Unable to save API key.");
+    } finally {
+      setAiBusy(false);
+    }
+  }
+
+  async function deleteApiKey() {
+    if (!activeStudyId || !canManageAI) return;
+    setAiBusy(true);
+    setAiError(null);
+    setAiMessage(null);
+    try {
+      const result = await conductorApi.deleteAIConfigApiKey(activeStudyId, role);
+      setAiConfig(result.ai_config);
+      setAiValidation(result.validation);
+      setAiMessage("API key material deleted from the study AI configuration.");
+    } catch (error) {
+      setAiError(error instanceof Error ? error.message : "Unable to delete API key.");
+    } finally {
+      setAiBusy(false);
+    }
+  }
 
   async function assignRole() {
     if (!activeStudyId || !selectedUserId) return;
@@ -4893,6 +5588,343 @@ function AdminSecurityScreen({ role, workflow }: { role: UserRole; workflow: Con
         <WarningBanner title="Zero-trust UI posture" risk="info">
           The interface hides unavailable actions, but backend authorization remains the enforcement point.
         </WarningBanner>
+      </section>
+
+      <section className="panel wide">
+        <div className="section-heading">
+          <span className="eyebrow">AI Connector & Compliance</span>
+          <h2>Study-level AI assistance is permissioned, disclosed, and human-reviewed</h2>
+        </div>
+        {!canViewAI ? (
+          <WarningBanner title="AI connector restricted" risk="locked">
+            Panelists and ordinary participants cannot access AI provider settings or secret state.
+          </WarningBanner>
+        ) : !activeStudyId ? (
+          <WarningBanner title="Open a backend study" risk="info">
+            Open or create a saved study to configure study-level AI assistance.
+          </WarningBanner>
+        ) : !aiConfig ? (
+          <WarningBanner title="AI connector loading" risk="info">
+            {aiBusy ? "Loading AI connector configuration..." : "AI connector configuration is not loaded yet."}
+          </WarningBanner>
+        ) : (
+          <>
+            {aiMessage ? <WarningBanner title="AI connector update" risk="success">{aiMessage}</WarningBanner> : null}
+            {aiError ? <WarningBanner title="AI connector blocked" risk="danger">{humanizeBackendMessage(aiError)}</WarningBanner> : null}
+            <div className="summary-grid">
+              <article className="summary-item">
+                <strong>Status</strong>
+                <div className="badge-line">
+                  <StatusBadge risk={aiConfigStatusRisk(aiValidation)} label={aiConfigStatusLabel(aiValidation)} />
+                  <StatusBadge risk={aiConfig.keyExists ? "success" : "locked"} label={aiConfig.maskedApiKey ?? "No API key stored"} />
+                </div>
+                <p>AI Suggestion (Not Final) outputs require human Accept/Edit/Reject action before study content changes.</p>
+              </article>
+              <article className="summary-item">
+                <strong>Secret handling</strong>
+                <p>Stored API keys are encrypted server-side. The plaintext key is never shown again, included in exports, or written to audit details.</p>
+              </article>
+            </div>
+
+            <div className="form-grid">
+              <div className="ai-mode-stack wide-field">
+                <label className="check-field">
+                  <input
+                    checked={aiConfig.noExternalAiMode}
+                    disabled={!canManageAI || aiBusy}
+                    onChange={(event) => {
+                      const checked = event.target.checked;
+                      setAiConfig({
+                        ...aiConfig,
+                        noExternalAiMode: checked,
+                        externalAiEnabled: checked ? false : aiConfig.externalAiEnabled,
+                      });
+                    }}
+                    type="checkbox"
+                  />
+                  <span>No External AI mode</span>
+                </label>
+                <label className="check-field">
+                  <input
+                    checked={aiConfig.externalAiEnabled}
+                    disabled={!canManageAI || aiBusy || aiConfig.noExternalAiMode}
+                    onChange={(event) => setAiConfig({ ...aiConfig, externalAiEnabled: event.target.checked })}
+                    type="checkbox"
+                  />
+                  <span>External AI enabled</span>
+                </label>
+                <p>
+                  Turn off No External AI mode, then enable External AI to fill the provider, model, and API key fields.
+                </p>
+              </div>
+              {aiConfig.noExternalAiMode ? (
+                <div className="method-helper wide-field">
+                  <p>When No External AI mode is active, study data will not be sent to external AI services.</p>
+                </div>
+              ) : null}
+              <label className="field">
+                <span>Provider name</span>
+                <input
+                  disabled={!canManageAI || aiBusy || aiConfig.noExternalAiMode || !aiConfig.externalAiEnabled}
+                  onChange={(event) => setAiConfig({ ...aiConfig, providerName: event.target.value })}
+                  placeholder="Example: OpenAI, Azure OpenAI, local"
+                  value={aiConfig.providerName ?? ""}
+                />
+              </label>
+              <label className="field">
+                <span>Model name / version</span>
+                <input
+                  disabled={!canManageAI || aiBusy || aiConfig.noExternalAiMode || !aiConfig.externalAiEnabled}
+                  onChange={(event) => setAiConfig({ ...aiConfig, modelName: event.target.value })}
+                  placeholder="Configured model or deployment name"
+                  value={aiConfig.modelName ?? ""}
+                />
+              </label>
+              <label className="field">
+                <span>API key</span>
+                <input
+                  autoComplete="off"
+                  disabled={!canManageAI || aiBusy || aiConfig.noExternalAiMode || !aiConfig.externalAiEnabled}
+                  onChange={(event) => setApiKeyDraft(event.target.value)}
+                  placeholder={aiConfig.maskedApiKey ?? "Paste key to set or rotate"}
+                  type="password"
+                  value={apiKeyDraft}
+                />
+              </label>
+              <div className="field">
+                <span>Key lifecycle</span>
+                <div className="action-row compact-actions">
+                  <button className="secondary-button" disabled={!canManageAI || aiBusy || !apiKeyDraft.trim()} onClick={saveApiKey} type="button">
+                    Save / rotate key
+                  </button>
+                  <button className="secondary-button danger-button" disabled={!canManageAI || aiBusy || !aiConfig.keyExists} onClick={deleteApiKey} type="button">
+                    Delete key
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <div className="check-stack ai-feature-grid" aria-label="AI feature permissions">
+              {aiFeatureLabels.map(([feature, label]) => (
+                <label className="check-field" key={feature}>
+                  <input
+                    checked={aiConfig.featurePermissions[feature]}
+                    disabled={!canManageAI || aiBusy}
+                    onChange={(event) => setAiConfig({
+                      ...aiConfig,
+                      featurePermissions: { ...aiConfig.featurePermissions, [feature]: event.target.checked },
+                    })}
+                    type="checkbox"
+                  />
+                  <span>{label}</span>
+                </label>
+              ))}
+            </div>
+
+            <div className="form-grid">
+              {[
+                ["dataMayBeSentDescription", "What data may be sent"],
+                ["identifiersExcludedDescription", "Identifier and mapping exclusion"],
+                ["optOutDescription", "Opt-out / No External AI language"],
+                ["humanInTheLoopDescription", "Human-in-the-loop controls"],
+              ].map(([key, label]) => (
+                <label className="field wide-field" key={key}>
+                  <span>{label}</span>
+                  <textarea
+                    disabled={!canManageAI || aiBusy}
+                    onChange={(event) => setAiConfig({
+                      ...aiConfig,
+                      disclosure: { ...aiConfig.disclosure, [key]: event.target.value },
+                    })}
+                    value={aiConfig.disclosure[key as keyof StudyAIConfig["disclosure"]]}
+                  />
+                </label>
+              ))}
+            </div>
+
+            {aiValidation && (aiValidation.errors.length > 0 || aiValidation.warnings.length > 0) ? (
+              <WarningBanner title="Compliance review" risk={aiValidation.errors.length > 0 ? "warning" : "info"}>
+                {[...aiValidation.errors, ...aiValidation.warnings].map(humanizeBackendMessage).join(" | ")}
+              </WarningBanner>
+            ) : null}
+
+            <div className="action-row">
+              <button className="primary-button" disabled={!canManageAI || aiBusy} onClick={() => saveAIConfig()} type="button">
+                {aiBusy ? "Saving..." : "Save AI connector"}
+              </button>
+              <button className="secondary-button" disabled={aiBusy} onClick={loadAIConfig} type="button">
+                Refresh status
+              </button>
+            </div>
+          </>
+        )}
+      </section>
+
+      <section className="panel wide">
+        <div className="section-heading">
+          <span className="eyebrow">Governed Non-response</span>
+          <h2>Attrition is visible, auditable, and preserved in reporting</h2>
+        </div>
+        {!canManageAttrition ? (
+          <WarningBanner title="Attrition management restricted" risk="locked">
+            Participant status review is available only to authorized study roles. It is not a participant-removal tool.
+          </WarningBanner>
+        ) : !activeStudyId || !activeVersionId ? (
+          <WarningBanner title="Open a study" risk="warning">
+            Open a backend study before reviewing non-response and withdrawal status.
+          </WarningBanner>
+        ) : (
+          <>
+            {attritionSummary ? (
+              <div className="summary-grid compact-summary">
+                <article className="summary-item">
+                  <strong>Current active</strong>
+                  <span>{attritionSummary.current_active_count}</span>
+                </article>
+                <article className="summary-item">
+                  <strong>Non-responsive flagged</strong>
+                  <span>{attritionSummary.non_responsive_flagged_count}</span>
+                </article>
+                <article className="summary-item">
+                  <strong>Withdrawn / inactive</strong>
+                  <span>{attritionSummary.participant_withdrawal_count + attritionSummary.pi_inactive_count}</span>
+                </article>
+                <article className="summary-item">
+                  <strong>Attrition</strong>
+                  <span>{attritionSummary.attrition_rate}%</span>
+                </article>
+              </div>
+            ) : null}
+
+            {attritionSummary?.warnings.length ? (
+              <WarningBanner title="Method integrity prompt" risk="warning">
+                {attritionSummary.warnings.join(" ")}
+              </WarningBanner>
+            ) : null}
+
+            {nonResponsePolicy ? (
+              <div className="form-grid">
+                <label className="check-field">
+                  <input
+                    checked={nonResponsePolicy.missed_current_round_deadline}
+                    disabled={attritionBusy}
+                    onChange={(event) => setNonResponsePolicy({ ...nonResponsePolicy, missed_current_round_deadline: event.target.checked })}
+                    type="checkbox"
+                  />
+                  <span>Flag missed current round deadline</span>
+                </label>
+                <label className="check-field">
+                  <input
+                    checked={nonResponsePolicy.incomplete_submission_counts_as_non_response}
+                    disabled={attritionBusy}
+                    onChange={(event) => setNonResponsePolicy({ ...nonResponsePolicy, incomplete_submission_counts_as_non_response: event.target.checked })}
+                    type="checkbox"
+                  />
+                  <span>Incomplete submission counts as non-response after deadline</span>
+                </label>
+                <label className="field">
+                  <span>Follow-up window days</span>
+                  <input
+                    disabled={attritionBusy}
+                    min={1}
+                    max={30}
+                    onChange={(event) => setNonResponsePolicy({ ...nonResponsePolicy, follow_up_window_days: Number(event.target.value) })}
+                    type="number"
+                    value={nonResponsePolicy.follow_up_window_days}
+                  />
+                </label>
+                <label className="check-field">
+                  <input
+                    checked={nonResponsePolicy.final_notice_enabled}
+                    disabled={attritionBusy}
+                    onChange={(event) => setNonResponsePolicy({ ...nonResponsePolicy, final_notice_enabled: event.target.checked })}
+                    type="checkbox"
+                  />
+                  <span>Final notice enabled</span>
+                </label>
+                <label className="check-field">
+                  <input
+                    checked={nonResponsePolicy.auto_progression_enabled}
+                    disabled={attritionBusy}
+                    onChange={(event) => setNonResponsePolicy({ ...nonResponsePolicy, auto_progression_enabled: event.target.checked })}
+                    type="checkbox"
+                  />
+                  <span>Auto-progression setting recorded; scheduler remains governed separately</span>
+                </label>
+              </div>
+            ) : null}
+
+            <div className="method-helper">
+              <p>
+                Marking a participant inactive affects future study progression only. Prior submitted responses remain in
+                historical round data, audit logs, exports, and attrition reporting.
+              </p>
+            </div>
+
+            <div className="form-grid">
+              <label className="field">
+                <span>Round for review</span>
+                <input
+                  min={1}
+                  max={4}
+                  onChange={(event) => setNonResponseRound(Number(event.target.value))}
+                  type="number"
+                  value={nonResponseRound}
+                />
+              </label>
+              <label className="field">
+                <span>Participant status record</span>
+                <select value={selectedAttritionParticipant} onChange={(event) => setSelectedAttritionParticipant(event.target.value)}>
+                  {participantStatuses.map((entry) => (
+                    <option key={entry.participant_id} value={entry.participant_id}>
+                      {entry.participant_id.slice(0, 8)} - {entry.status.replaceAll("_", " ").toLowerCase()}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            </div>
+
+            <div className="action-row compact-actions">
+              <button className="secondary-button" disabled={attritionBusy} onClick={() => runAttritionAction("save-policy")} type="button">
+                Save policy
+              </button>
+              <button className="secondary-button" disabled={attritionBusy} onClick={() => runAttritionAction("detect")} type="button">
+                Detect non-response
+              </button>
+              <button className="secondary-button" disabled={attritionBusy || !selectedAttritionParticipant} onClick={() => runAttritionAction("reminder")} type="button">
+                Queue reminder
+              </button>
+              <button className="secondary-button" disabled={attritionBusy || !selectedAttritionParticipant} onClick={() => runAttritionAction("final")} type="button">
+                Queue final notice
+              </button>
+              <button className="secondary-button" disabled={attritionBusy || !selectedAttritionParticipant} onClick={() => runAttritionAction("expire")} type="button">
+                Expire follow-up
+              </button>
+              <button className="secondary-button danger-button" disabled={attritionBusy || !selectedAttritionParticipant} onClick={() => runAttritionAction("inactive")} type="button">
+                Mark inactive for future rounds
+              </button>
+            </div>
+
+            {attritionMessage ? <WarningBanner title="Attrition action recorded" risk="success">{attritionMessage}</WarningBanner> : null}
+            {attritionError ? <WarningBanner title="Attrition action blocked" risk="warning">{humanizeBackendMessage(attritionError)}</WarningBanner> : null}
+
+            <div className="review-stack">
+              {participantStatuses.slice(0, 6).map((entry) => {
+                const escalation = nonResponseEscalations.find((record) => record.participant_id === entry.participant_id);
+                return (
+                  <article className="review-row" key={entry.participant_id}>
+                    <div>
+                      <strong>{entry.participant_id.slice(0, 8)}</strong>
+                      <p>Status timeline: {entry.timeline.map((step) => step.status.replaceAll("_", " ").toLowerCase()).join(" -> ")}</p>
+                      {escalation ? <small>Follow-up state: {escalation.state.replaceAll("_", " ").toLowerCase()} {escalation.followup_window_ends_at ? `until ${new Date(escalation.followup_window_ends_at).toLocaleDateString()}` : ""}</small> : null}
+                    </div>
+                    <StatusBadge risk={entry.status === "ACTIVE" ? "success" : entry.status === "NON_RESPONSIVE_FLAGGED" ? "warning" : "locked"} label={entry.status.replaceAll("_", " ").toLowerCase()} />
+                  </article>
+                );
+              })}
+            </div>
+          </>
+        )}
       </section>
 
       <section className="panel wide">

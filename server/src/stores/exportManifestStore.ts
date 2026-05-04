@@ -1,6 +1,7 @@
 import crypto from "node:crypto";
 import { getDatabase } from "../core/database.js";
 import type { Actor } from "../middleware/auth.js";
+import { buildCitationMarkdown } from "../core/citation.js";
 import { sha256Json } from "../studies/hash.js";
 
 export type ExportPackageType =
@@ -285,8 +286,24 @@ export function createExportPackage(input: {
 }): ExportPackage {
   const exportPackageId = crypto.randomUUID();
   const createdAt = new Date().toISOString();
+  const inputFiles = input.files.some((file) => file.path === "CITATION.md")
+    ? input.files
+    : [
+        ...input.files,
+        {
+          path: "CITATION.md",
+          content: buildCitationMarkdown({ generatedAt: createdAt }),
+          format: ".md" as const,
+          record_count: null,
+          contains_identifiable_data: false,
+          redaction_profile: {
+            direct_identifiers: "not_applicable",
+            endorsement: "citation guidance only; does not validate study findings",
+          },
+        },
+      ];
 
-  const files: ExportPackageFile[] = input.files.map((file) => {
+  const files: ExportPackageFile[] = inputFiles.map((file) => {
     const format = file.format ?? fileFormatFromPath(file.path);
     const contentBytes = Buffer.isBuffer(file.content) ? file.content : Buffer.from(file.content, "utf8");
     const contentEncoding: ExportContentEncoding = Buffer.isBuffer(file.content) ? "base64" : "utf8";
