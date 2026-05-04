@@ -44,6 +44,11 @@ import {
   FINAL_RESULT_REQUIRED_STATEMENT,
   getFinalResultSnapshot,
 } from "../stores/finalResultStore.js";
+import {
+  generateParticipantDisclosure,
+  getStudyContextDisclosure,
+  validateStudyContextDisclosure,
+} from "../stores/studyContextStore.js";
 
 type RatingRoundPayload = {
   round_number: number;
@@ -1508,6 +1513,17 @@ export async function reportsRoutes(app: FastifyInstance) {
       const nonConsensusCount = itemReports.filter((item) => item.consensus.status === "non_consensus").length;
       const limitationsMarkdown = requiredLimitationsMarkdown();
       const aiConnectorDisclosure = aiConfigDisclosureForExport(studyId);
+      const studyContext = generateParticipantDisclosure(
+        getStudyContextDisclosure({
+          study_id: studyId,
+          version_id: versionId,
+          actor_user_id: actor.userId,
+          study_title: study.title,
+        }),
+      );
+      const studyContextValidation = validateStudyContextDisclosure(studyContext);
+      const participantContextDisclosure =
+        studyContext.participant_disclosure.edited_text || studyContext.participant_disclosure.generated_text;
       const datasetHash = sha256Json({ study, studyVersion, signoffs, rounds, items, responses });
       const dataCutoffAt = [
         ...responses.map((response) => response.created_at),
@@ -1700,6 +1716,14 @@ export async function reportsRoutes(app: FastifyInstance) {
               },
               required_statement: "Consensus indicates agreement among this panel; it does not establish correctness.",
               ai_connector_disclosure: aiConnectorDisclosure,
+              study_context_disclosure: {
+                participant_facing_disclosure: participantContextDisclosure,
+                funding_status: studyContext.funding.funding_status,
+                funder_name: studyContext.funding.funder_name,
+                sponsor_name: studyContext.funding.sponsor_name,
+                coi_statement: studyContext.coi.coi_statement,
+                material_conditions: studyContextValidation.material_conditions,
+              },
               appendices: {
                 software_citation: softwareCitation,
               },
@@ -1757,6 +1781,20 @@ export async function reportsRoutes(app: FastifyInstance) {
               "",
               "AI Suggestion (Not Final) outputs require explicit human Accept/Edit/Reject action before use.",
               "",
+              "## Study Context, Funding, Sponsorship, and COI",
+              participantContextDisclosure || "No optional study context disclosure has been supplied.",
+              "",
+              "### Research/Admin Context Record",
+              JSON.stringify({
+                status: studyContext.status,
+                basic_context: studyContext.basic_context,
+                funding: studyContext.funding,
+                data_access: studyContext.data_access,
+                coi: studyContext.coi,
+                participant_disclosure: studyContext.participant_disclosure,
+                validation: studyContextValidation,
+              }, null, 2),
+              "",
               "## Signoff History",
               ...signoffs.map((signoff) => `- ${signoff.required_role}: ${signoff.signed_at}`),
             ].join("\n"),
@@ -1805,6 +1843,7 @@ export async function reportsRoutes(app: FastifyInstance) {
         "complete-archive": [
           ...baseFiles,
           { path: "complete-archive/study_version.json", content: JSON.stringify({ study, studyVersion, rounds, signoffs, consentVersions, ai_connector_disclosure: aiConnectorDisclosure, attrition: attritionSummary }, null, 2), format: ".json", record_count: 1, contains_identifiable_data: false, redaction_profile: { participant_identity: "excluded", api_keys: "excluded" } },
+          { path: "complete-archive/study_context_disclosure.json", content: JSON.stringify(studyContext, null, 2), format: ".json", record_count: 1, contains_identifiable_data: false, redaction_profile: { proposal_documents: "admin_only_excerpt_and_hash", participant_identity: "excluded" } },
           { path: "complete-archive/anonymized_dataset.json", content: JSON.stringify(dataset, null, 2), format: ".json", record_count: responses.length, contains_identifiable_data: false, redaction_profile: { participant_identity: "excluded" } },
           { path: "complete-archive/items_and_provenance.json", content: JSON.stringify({ items, edges: edgeRows, transformations: transformRows, ai_operations: aiRows }, null, 2), format: ".json", record_count: items.length, contains_identifiable_data: false, redaction_profile: { participant_identity: "excluded" } },
           { path: "complete-archive/audit_summary.json", content: JSON.stringify({ auditRows, audit_integrity: verifyAuditIntegrity() }, null, 2), format: ".json", record_count: auditRows.length, contains_identifiable_data: false, redaction_profile: { participant_identity: "excluded" } },
@@ -1822,6 +1861,8 @@ export async function reportsRoutes(app: FastifyInstance) {
           export_type: exportType,
           data_cutoff_at: dataCutoffAt,
           dataset_hash: datasetHash,
+          study_context_included: studyContext.status !== "optional",
+          study_context_material_conditions: studyContextValidation.material_conditions,
         },
       });
 
@@ -1839,6 +1880,8 @@ export async function reportsRoutes(app: FastifyInstance) {
           direct_identifiers: "excluded",
           identity_response_mapping: "excluded",
           redaction_status: "package_files_review_required",
+          participant_facing_context: "concise_disclosure_only",
+          admin_context_record: exportType === "irb-pack" || exportType === "complete-archive" ? "included" : "limited_summary",
         },
       });
 

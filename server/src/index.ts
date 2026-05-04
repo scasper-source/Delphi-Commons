@@ -14,6 +14,7 @@ import { itemsRoutes } from "./routes/items.js";
 import { reportsRoutes } from "./routes/reports.js";
 import { finalResultsRoutes } from "./routes/finalResults.js";
 import { smsRoutes } from "./routes/sms.js";
+import { studyContextRoutes } from "./routes/studyContext.js";
 import { aiRoutes } from "./routes/ai.js";
 import { aiConfigRoutes } from "./routes/aiConfig.js";
 import { getServerConfig } from "./core/config.js";
@@ -49,6 +50,7 @@ await app.register(itemsRoutes);
 await app.register(reportsRoutes);
 await app.register(finalResultsRoutes);
 await app.register(smsRoutes);
+await app.register(studyContextRoutes);
 await app.register(aiConfigRoutes);
 await app.register(aiRoutes);
 

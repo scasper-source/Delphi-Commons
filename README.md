@@ -21,8 +21,12 @@ This project is licensed under the Apache License, Version 2.0. See [LICENSE](./
 
 SPDX-License-Identifier: Apache-2.0
 
+Open-source code does not imply open study data. Deployments of this platform must preserve participant privacy, consent boundaries, study-level data governance, and human-subjects protections.
+
 ## Copyright and Ownership
 
 Copyright 2026 Stephen T. Casper.
 
-Unless otherwise noted, Stephen T. Casper is the copyright owner of the original source code in this repository. Contributions are accepted only under the project's contribution terms and the Apache License 2.0.
+Unless otherwise noted, Stephen T. Casper is the copyright owner of the original source code in this repository.
+
+Contributions are accepted only under the project's contribution terms and the Apache License 2.0. Contributors must not submit code, documentation, data, model output, or other material that they do not have the right to contribute.

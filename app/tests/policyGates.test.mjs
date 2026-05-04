@@ -484,3 +484,26 @@ test("SMS magic-link UI is opt-in, neutral, mobile-first, and avoids browser sto
     assert.equal(magicSource.toLowerCase().includes(phrase), false, `magic entry UI includes coercive phrase: ${phrase}`);
   }
 });
+
+test("Study Context & Disclosures sidecar is optional, progressive, and human-reviewed", () => {
+  const source = appSource();
+  const apiSource = fs.readFileSync(path.join(appRoot, "src", "core", "api.ts"), "utf8");
+  const css = fs.readFileSync(path.join(appRoot, "src", "App.css"), "utf8");
+  const sidecarSource = sourceSlice(source, "function StudyContextSidecar", "function TernarySelect");
+
+  assert.match(source, /Study Context & Disclosures/);
+  assert.match(sidecarSource, /Optional sidecar/);
+  assert.match(sidecarSource, /Blank fields do not block launch/);
+  assert.match(sidecarSource, /Draft preview mode/);
+  assert.match(sidecarSource, /Keep draft/);
+  assert.match(sidecarSource, /Sponsor details stay hidden unless external funding or sponsor involvement is selected/);
+  assert.match(apiSource, /AI Suggestion — Not Final/);
+  assert.match(sidecarSource, /suggestion\.label/);
+  assert.match(source, /Nothing is final until accepted or edited/);
+  assert.match(sidecarSource, /Participants receive only the concise disclosure snippet/);
+  assert.match(apiSource, /context-disclosure/);
+  assert.match(apiSource, /generate-participant-disclosure/);
+  assert.match(apiSource, /proposal-import/);
+  assert.match(css, /\.sidecar-panel/);
+  assert.match(css, /\.disclosure-preview/);
+});

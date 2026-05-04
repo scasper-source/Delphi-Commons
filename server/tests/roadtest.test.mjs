@@ -37,6 +37,7 @@ const { itemsRoutes } = await import("../dist/routes/items.js");
 const { reportsRoutes } = await import("../dist/routes/reports.js");
 const { finalResultsRoutes } = await import("../dist/routes/finalResults.js");
 const { smsRoutes } = await import("../dist/routes/sms.js");
+const { studyContextRoutes } = await import("../dist/routes/studyContext.js");
 const { aiConfigRoutes } = await import("../dist/routes/aiConfig.js");
 const { aiRoutes } = await import("../dist/routes/ai.js");
 const { verifyAuditIntegrity } = await import("../dist/core/audit.js");
@@ -90,6 +91,7 @@ async function buildApp() {
   await app.register(reportsRoutes);
   await app.register(finalResultsRoutes);
   await app.register(smsRoutes);
+  await app.register(studyContextRoutes);
   await app.register(aiConfigRoutes);
   await app.register(aiRoutes);
 

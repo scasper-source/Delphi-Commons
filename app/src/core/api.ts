@@ -491,6 +491,79 @@ export type MagicRoundEntryContext = {
   controlled_feedback_explanation: string | null;
 };
 
+export type StudyContextDisclosure = {
+  study_id: string;
+  version_id: string;
+  status: "optional" | "draft" | "supplied";
+  basic_context: {
+    study_title: string;
+    study_short_name: string;
+    pi_or_study_owner: string;
+    institution_or_organization: string;
+  };
+  funding: {
+    funding_status:
+      | "not_specified"
+      | "no_external_funding_or_sponsor"
+      | "internally_supported"
+      | "externally_funded"
+      | "sponsor_corporate_partner_involved"
+      | "other_needs_explanation";
+    funder_name: string;
+    sponsor_name: string;
+    grant_or_contract_number: string;
+    sponsor_roles: string[];
+    role_details: string;
+  };
+  data_access: {
+    sponsor_can_access_raw_responses: "not_specified" | "no" | "yes" | "not_applicable" | "unknown_needs_review";
+    sponsor_can_access_identifiable_data: "not_specified" | "no" | "yes" | "not_applicable" | "unknown_needs_review";
+    sponsor_can_access_aggregate_results: "not_specified" | "no" | "yes" | "not_applicable" | "unknown_needs_review";
+    sponsor_has_report_review_rights: "not_specified" | "no" | "yes" | "not_applicable" | "unknown_needs_review";
+    sponsor_has_report_approval_rights: "not_specified" | "no" | "yes" | "not_applicable" | "unknown_needs_review";
+    sponsor_has_publication_approval_rights: "not_specified" | "no" | "yes" | "not_applicable" | "unknown_needs_review";
+    dissemination_constraints: string;
+    data_ownership_statement: string;
+  };
+  coi: {
+    no_known_coi: boolean;
+    coi_statement: string;
+    required_disclosure_language: string;
+    reviewer_notes: string;
+  };
+  participant_disclosure: {
+    generated_text: string;
+    last_generated_at: string | null;
+    edited_text: string;
+    requires_review: boolean;
+    review_reasons: string[];
+  };
+  proposal_import: {
+    source_document_name: string;
+    source_text_hash: string;
+    source_text_excerpt: string;
+    extraction_mode: "none" | "local_stub" | "external_ai";
+    extraction_invoked_at: string | null;
+    suggestions: Array<{
+      suggestion_id: string;
+      field_path: string;
+      label: "AI Suggestion — Not Final";
+      proposed_value: string | boolean | null;
+      confidence: "high" | "medium" | "low";
+      evidence_snippet: string;
+      source_location: string;
+      rationale: string;
+      status: "pending" | "accepted" | "edited" | "rejected";
+    }>;
+  };
+};
+
+export type StudyContextValidation = {
+  status: "optional" | "ready" | "review_recommended";
+  warnings: string[];
+  material_conditions: string[];
+};
+
 export type ExportFormat = ".docx" | ".xlsx" | ".csv" | ".json" | ".md" | ".txt";
 export type ExportContentEncoding = "utf8" | "base64";
 
@@ -972,6 +1045,63 @@ export const conductorApi = {
         method: "POST",
         body: {},
       },
+    );
+  },
+
+  async getStudyContextDisclosure(studyId: string, versionId: string, role: UserRole) {
+    return requestJson<{ context: StudyContextDisclosure; validation: StudyContextValidation }>(
+      `/studies/${studyId}/versions/${versionId}/context-disclosure`,
+      role,
+    );
+  },
+
+  async updateStudyContextDisclosure(
+    studyId: string,
+    versionId: string,
+    role: UserRole,
+    body: Partial<StudyContextDisclosure>,
+  ) {
+    return requestJson<{ context: StudyContextDisclosure; validation: StudyContextValidation }>(
+      `/studies/${studyId}/versions/${versionId}/context-disclosure`,
+      role,
+      { method: "PUT", body },
+    );
+  },
+
+  async generateStudyContextParticipantDisclosure(studyId: string, versionId: string, role: UserRole) {
+    return requestJson<{ context: StudyContextDisclosure; validation: StudyContextValidation }>(
+      `/studies/${studyId}/versions/${versionId}/context-disclosure/generate-participant-disclosure`,
+      role,
+      { method: "POST", body: {} },
+    );
+  },
+
+  async importStudyContextProposal(
+    studyId: string,
+    versionId: string,
+    role: UserRole,
+    sourceName: string,
+    sourceText: string,
+  ) {
+    return requestJson<{ context: StudyContextDisclosure; validation: StudyContextValidation }>(
+      `/studies/${studyId}/versions/${versionId}/context-disclosure/proposal-import`,
+      role,
+      { method: "POST", body: { source_document_name: sourceName, source_text: sourceText } },
+    );
+  },
+
+  async decideStudyContextSuggestion(
+    studyId: string,
+    versionId: string,
+    role: UserRole,
+    suggestionId: string,
+    action: "accept" | "edit" | "reject",
+    editedValue?: string | boolean | null,
+  ) {
+    return requestJson<{ context: StudyContextDisclosure; validation: StudyContextValidation }>(
+      `/studies/${studyId}/versions/${versionId}/context-disclosure/proposal-suggestions/${suggestionId}/decision`,
+      role,
+      { method: "POST", body: { action, edited_value: editedValue } },
     );
   },
 
