@@ -2,8 +2,8 @@ AI Assistance Thin Spec
 Document name: AI Governance & Human in the Loop Contract (Thin Spec)
 Version: 0.1
 Status: Normative requirements (“MUST/SHALL”) + implementation guidance (“SHOULD/MAY”)
-Applies to: All AI-assisted features in the eDelphi platform (study design, round operations, analysis, reporting, participant experience).
-Authority: This spec is subordinate to (and must be interpreted through) the Ethical Governance Charter for an Open Source eDelphi Platform; where this spec is silent, the Charter governs. 
+Applies to: All AI-assisted features in the Delphi Commons platform (study design, round operations, analysis, reporting, participant experience).
+Authority: This spec is subordinate to (and must be interpreted through) the Ethical Governance Charter for Delphi Commons; where this spec is silent, the Charter governs.
 Ethical Governance Charter for …
 ________________________________________
 1. Purpose
@@ -167,4 +167,3 @@ AI Assistance exists to speed work, not steer outcomes.
 •	Study Designers remain accountable for the study instrument and reporting.
 •	Panelists remain sovereign over their responses and may use AI help only if it is optional and non-directive.
 •	The system must preserve neutrality, dissent, truthfulness, auditability, and consent as inviolable constraints.
-

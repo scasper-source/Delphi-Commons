@@ -8,7 +8,7 @@ This folder records a light baseline QC audit before repair work. It is not appr
 
 Controlling requirements:
 
-- Ethical Governance Charter for an Open-Source eDelphi Platform.
+- Ethical Governance Charter for Delphi Commons.
 - AI Governance & Human-in-the-Loop Thin Spec.
 
 Files:
@@ -22,4 +22,3 @@ Method:
 - Existing install, build, lint, test, security-audit, health, migration, integrity, and static privacy checks were run from the local repository.
 - The happy-path Delphi flow was assessed through the backend road-test suite, which creates a synthetic study, configures governance/consent/consensus/rounds, submits synthetic participant responses, curates items, opens later rounds, generates reports, exports packages, and verifies audit/export safeguards.
 - A full manual browser click-through with 8 synthetic participants was not performed in this light baseline pass.
-

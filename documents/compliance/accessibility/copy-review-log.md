@@ -1,7 +1,7 @@
 # Accessibility Copy Review Log
 
-**Project:** eDelphi  
-**Target:** WCAG 2.2 AA understandable content plus eDelphi charter language  
+**Project:** Delphi Commons
+**Target:** WCAG 2.2 AA understandable content plus Delphi Commons charter language
 **Date:** 2026-05-02
 
 ## Review Rules

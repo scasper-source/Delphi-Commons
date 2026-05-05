@@ -1,7 +1,7 @@
 # Mobile Screenshot Evidence
 
-**Project:** eDelphi  
-**Target:** WCAG 2.2 AA reflow, target size, and no text overlap  
+**Project:** Delphi Commons
+**Target:** WCAG 2.2 AA reflow, target size, and no text overlap
 **Date:** 2026-05-02
 
 Screenshots were captured at 390 x 844 using local Chrome against `http://127.0.0.1:5173/`.

@@ -1,8 +1,8 @@
 # Phase 9 Accessibility Checklist
 
-**Project:** eDelphi  
-**Target:** WCAG 2.2 AA  
-**Date:** 2026-05-02  
+**Project:** Delphi Commons
+**Target:** WCAG 2.2 AA
+**Date:** 2026-05-02
 **Status:** Partial pass for current MVP screens; full release still requires human assistive-technology review.
 
 ## Reference Standard

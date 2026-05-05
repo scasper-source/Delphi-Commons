@@ -1,7 +1,7 @@
 # Human Subjects Readiness Control Matrix
 
-**Project:** eDelphi  
-**Last updated:** 2026-05-02  
+**Project:** Delphi Commons
+**Last updated:** 2026-05-02
 **Status key:** Implemented, Partial, Not Started, Blocked, Needs External Review
 
 This matrix maps human-subjects readiness requirements to current implementation, tests, evidence, and launch gaps. It should be updated whenever a readiness-related feature changes.

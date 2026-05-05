@@ -2,7 +2,7 @@
 
 This project is governed by:
 
-1. Ethical Governance Charter for an Open-Source eDelphi Platform
+1. Ethical Governance Charter for Delphi Commons
 2. AI Governance & Human-in-the-Loop Contract
 3. Apache License 2.0
 4. Project maintainer and contribution policies

@@ -205,7 +205,7 @@ test("AI connector UI masks keys and documents No External AI mode", () => {
 test("repository citation metadata is present without a fake DOI", () => {
   const cff = fs.readFileSync(path.resolve(appRoot, "..", "CITATION.cff"), "utf8");
   assert.match(cff, /cff-version: 1\.2\.0/);
-  assert.match(cff, /title: "eDelphi Open Source Platform"/);
+  assert.match(cff, /title: "Delphi Commons Open Source Platform"/);
   assert.match(cff, /family-names: "Casper"/);
   assert.match(cff, /license: "Apache-2\.0"/);
   assert.match(cff, /repository-code:/);

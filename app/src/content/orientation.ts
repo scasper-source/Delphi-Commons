@@ -22,9 +22,9 @@ export type AboutSection = {
 
 export const glossaryTerms: GlossaryTerm[] = [
   {
-    id: "edelphi",
-    term: "eDelphi",
-    plain: "eDelphi is software for running Delphi studies online.",
+    id: "delphi-commons",
+    term: "Delphi Commons",
+    plain: "Delphi Commons is software for running Delphi studies online.",
     technical:
       "The platform supports study design, consent, rounds, controlled feedback, curation, reporting, audit logs, exports, and governance checks.",
   },
@@ -266,12 +266,12 @@ export const inlineHelp = {
 
 export const platformAboutSections: AboutSection[] = [
   {
-    title: "What eDelphi is",
+    title: "What Delphi Commons is",
     body:
-      "eDelphi is an open-source platform for designing, conducting, analyzing, and reporting Delphi studies with clear consent, neutral feedback, audit trails, and transparent limits.",
+      "Delphi Commons is an open-source platform for designing, conducting, analyzing, and reporting Delphi studies with clear consent, neutral feedback, audit trails, and transparent limits.",
   },
   {
-    title: "What eDelphi is not",
+    title: "What Delphi Commons is not",
     body:
       "It is not a voting machine, a proof engine, or a tool for pushing participants to conform. Delphi consensus is structured agreement among a panel, not proof of truth.",
   },

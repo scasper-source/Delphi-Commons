@@ -1,11 +1,11 @@
 # Human Subjects Readiness Plan
 
-**Project:** eDelphi  
-**Status:** Phase 1 readiness requirements baseline  
-**Last updated:** 2026-05-02  
+**Project:** Delphi Commons
+**Status:** Phase 1 readiness requirements baseline
+**Last updated:** 2026-05-02
 **Release target:** Human-subjects-ready release candidate, not merely demo-ready software
 
-This document defines what must be true before eDelphi is used for a real study involving human participants. It is a product, engineering, governance, security, and methods readiness plan. It is not legal advice, IRB approval, or institutional compliance certification.
+This document defines what must be true before Delphi Commons is used for a real study involving human participants. It is a product, engineering, governance, security, and methods readiness plan. It is not legal advice, IRB approval, or institutional compliance certification.
 
 ## Readiness Standard
 

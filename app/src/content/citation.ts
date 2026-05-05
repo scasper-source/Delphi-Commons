@@ -7,7 +7,7 @@ export const citationFraming =
   "If this tool contributed to study design, data collection, analysis, reporting, or reproducible documentation, please cite it to support transparency and reproducibility.";
 
 export const citationMetadata = {
-  title: "eDelphi Platform",
+  title: "Delphi Commons",
   version: import.meta.env.VITE_APP_VERSION ?? "1.0.0",
   year: new Date().getFullYear(),
   creator: "Casper, Stephen T.",
@@ -22,7 +22,7 @@ export function buildPreferredCitation() {
 }
 
 export function buildBibtexCitation() {
-  return `@software{casper_edelphi_${citationMetadata.year},
+  return `@software{casper_delphi_commons_${citationMetadata.year},
   author = {Casper, Stephen T.},
   title = {${citationMetadata.title}},
   year = {${citationMetadata.year}},

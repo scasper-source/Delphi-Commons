@@ -44,7 +44,7 @@ export function resolveSoftwareVersion(): string {
 export function citationMetadata(input: Partial<CitationMetadata> = {}): CitationMetadata {
   const now = new Date();
   return {
-    title: "eDelphi Platform",
+    title: "Delphi Commons",
     version: resolveSoftwareVersion(),
     type: "Software",
     year: now.getFullYear(),
@@ -99,7 +99,7 @@ export function buildMlaCitation(metadata: CitationMetadata = citationMetadata()
 
 export function buildBibtexCitation(metadata: CitationMetadata = citationMetadata()): string {
   const doiLine = metadata.doi ? `\n  doi = {${metadata.doi}},` : "";
-  return `@software{casper_edelphi_${metadata.year},
+  return `@software{casper_delphi_commons_${metadata.year},
   author = {Casper, Stephen T.},
   title = {${metadata.title}},
   year = {${metadata.year}},

@@ -1,8 +1,8 @@
 # Screen Reader Notes
 
-**Project:** eDelphi  
-**Target:** WCAG 2.2 AA screen reader readiness  
-**Date:** 2026-05-02  
+**Project:** Delphi Commons
+**Target:** WCAG 2.2 AA screen reader readiness
+**Date:** 2026-05-02
 **Status:** Source and structural review complete; human assistive-technology review still required.
 
 ## Positive Findings

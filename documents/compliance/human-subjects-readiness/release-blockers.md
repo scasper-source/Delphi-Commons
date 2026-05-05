@@ -1,9 +1,9 @@
 # Human Subjects Release Blockers
 
-**Project:** eDelphi  
+**Project:** Delphi Commons
 **Last updated:** 2026-05-02
 
-This file tracks blockers that must be resolved before using eDelphi for a real human-subjects study. Blockers are intentionally strict. A blocker can be downgraded only with documented rationale and appropriate human review.
+This file tracks blockers that must be resolved before using Delphi Commons for a real human-subjects study. Blockers are intentionally strict. A blocker can be downgraded only with documented rationale and appropriate human review.
 
 ## Priority Definitions
 

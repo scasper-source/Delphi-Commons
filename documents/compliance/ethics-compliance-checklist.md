@@ -1,10 +1,10 @@
 # Ethics Compliance Checklist — July Pilot (ADK Fire Conference)
-**Project:** eDelphi  
-**Target:** MVP compliance for a real Delphi study run before the July conference.  
-**Authority:** Charter governs; AI Thin Spec is subordinate.   
-**Legend:**  
-- **Priority:** P0 (must ship for July) | P1 (ship if time)  
-- **Status:** Not Started | Partial | Done  
+**Project:** Delphi Commons
+**Target:** MVP compliance for a real Delphi study run before the July conference.
+**Authority:** Charter governs; AI Thin Spec is subordinate.
+**Legend:**
+- **Priority:** P0 (must ship for July) | P1 (ship if time)
+- **Status:** Not Started | Partial | Done
 - **Evidence:** link to tests, screenshots, or PRs
 
 ---
@@ -59,7 +59,7 @@
 | JUL-CARE-01 | P0 | MUST provide upfront statement of rounds/time; configurable deadlines (~2 weeks typical); reminder tooling; transparent response rates.  | Round dashboard shows response rate; reminders tool; “time commitment” preview | Server computes response rates; reminders logged; no identity leak to panelists | Integration: correct response rate; reminders audited |  |  |
 
 ### 9) AI assistance (only if you include AI in the July pilot)
-> If you decide to run July with **no AI**, these can be P1.  
+> If you decide to run July with **no AI**, these can be P1.
 > If you want AI to speed July, these are **P0** because they’re the safety rails.
 
 | ID | Priority | Requirement | UI/UX control | Backend enforcement | Proof test | Status | Evidence |

@@ -2392,7 +2392,7 @@ test("backend road test covers study, consent, AI, reporting, and audit flows", 
   assert.ok(xlsxFile);
   assert.ok(citationFile);
   assert.match(citationFile.content_text, /How to Cite This Tool/);
-  assert.match(citationFile.content_text, /@software\{casper_edelphi_/);
+  assert.match(citationFile.content_text, /@software\{casper_delphi_commons_/);
   assert.match(citationFile.content_text, /Software version:/);
   assert.match(citationFile.content_text, /DOI: Not assigned for this release\./);
   assert.equal(docxFile.content_encoding, "base64");

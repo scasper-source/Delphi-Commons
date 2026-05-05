@@ -1,6 +1,6 @@
 \# Definition of Done (DoD)
 
-\*\*Project:\*\* eDelphi  
+\*\*Project:\*\* Delphi Commons
 
 \*\*Scope:\*\* This DoD is mandatory for any work that touches: study design, rounds, participant experience, consent, identity/confidentiality, AI assistance, analysis/feedback, exports/reports, audit logging, permissions, or deployment.
 
@@ -323,4 +323,3 @@ A change is release-ready only when:
 \- \[ ] Export reproducibility verified (if applicable)
 
 \- \[ ] Docs updated (user-facing + developer-facing)
-

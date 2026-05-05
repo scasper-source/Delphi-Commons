@@ -1,5 +1,5 @@
 cff-version: 1.2.0
-title: "eDelphi Open Source Platform"
+title: "Delphi Commons Open Source Platform"
 message: "If you use this software, please cite it as below."
 type: software
 authors:
@@ -9,10 +9,10 @@ version: "0.1.0"
 date-released: "2026-05-04"
 url: "https://github.com/YOUR_ORG/YOUR_REPO"
 repository-code: "https://github.com/YOUR_ORG/YOUR_REPO"
-abstract: "An open-source platform for ethically governed, methodologically transparent Delphi and eDelphi studies, with human-in-the-loop safeguards for AI-assisted workflows."
+abstract: "An open-source platform for ethically governed, methodologically transparent Delphi and online Delphi studies, with human-in-the-loop safeguards for AI-assisted workflows."
 keywords:
   - Delphi method
-  - eDelphi
+  - online Delphi
   - research ethics
   - consensus methods
   - human-in-the-loop AI

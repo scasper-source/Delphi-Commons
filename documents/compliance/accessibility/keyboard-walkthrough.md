@@ -1,7 +1,7 @@
 # Keyboard Walkthrough
 
-**Project:** eDelphi  
-**Target:** WCAG 2.2 AA keyboard and focus behavior  
+**Project:** Delphi Commons
+**Target:** WCAG 2.2 AA keyboard and focus behavior
 **Date:** 2026-05-02
 
 ## Method

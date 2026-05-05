@@ -1,9 +1,9 @@
 # Human Subjects Readiness Test Evidence Checklist
 
-**Project:** eDelphi  
+**Project:** Delphi Commons
 **Last updated:** 2026-05-02
 
-This checklist defines the evidence required before calling eDelphi human-subjects ready. It should be completed for each release candidate.
+This checklist defines the evidence required before calling Delphi Commons human-subjects ready. It should be completed for each release candidate.
 
 ## Evidence Rules
 

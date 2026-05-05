@@ -1,10 +1,10 @@
-Ethical Governance Charter for an Open-Source e Delphi Platform
+Ethical Governance Charter for Delphi Commons
 Version 1.0 (development-governing document)
 Status: Normative requirements (“MUST/SHALL”) + implementation guidance (“SHOULD/MAY”)
 Evidence base: This charter operationalizes Delphi standards and ethical considerations drawn from your notes on the Delphi technique. 
 ________________________________________
 1. Purpose and Scope
-This document governs the design, development, deployment, and maintenance of a software platform that implements Delphi studies (“e Delphi”). It is intended to ensure:
+This document governs the design, development, deployment, and maintenance of Delphi Commons, an open-source software platform that implements Delphi studies online. It is intended to ensure:
 1.	Maximal protection of human participants (including experts and stakeholders),
 2.	Highest methodological integrity for Delphi practice, and
 3.	Ethical sustainability and public accountability, including an open-source architecture.

@@ -1,17 +1,144 @@
-# eDelphi (July MVP)
+# Delphi Commons
 
-Governance docs live in `documents/`.
+Delphi Commons is an open-source platform for ethically governed Delphi and eDelphi studies. It helps study teams design studies, manage consent, run multi-round Delphi workflows, curate items, provide neutral controlled feedback, preserve dissent and non-consensus, audit decisions, and export reproducible study materials.
 
-## Repo layout
+An eDelphi study is a Delphi study conducted online. Delphi Commons is not just a survey app: it is built around Delphi-method fidelity, participant protection, predefined consensus rules, transparent reporting limits, and human-in-the-loop governance for any AI-assisted workflows.
 
-- `server/` API + database + audit log + AI services
-- `app/` Web UI (mobile-first)
-- `tests/` Automated tests
-- `scripts/` Dev scripts
+## Who It Is For
 
-## July MVP goal
+Delphi Commons is for researchers, study owners, methods stewards, open-source maintainers, and teams preparing controlled Delphi studies. It is currently most appropriate for local development, synthetic mock trials, methods rehearsal, and governance review.
 
-Run a Delphi end-to-end with AI assistance (proposal-only) under the Ethical Governance Charter and AI HITL Thin Spec.
+## Current Status
+
+Current readiness: controlled mock-participant MVP testing with synthetic or low-risk data only.
+
+This repository is not yet approved for real human-subjects studies, production deployments, regulated data, institutional data, or sensitive participant data. Before real use, the project still needs production security review, backup/restore verification, retention automation, accessibility review, incident response, deployment hardening, and IRB/institutional approval where applicable.
+
+## What It Is Not Ready For
+
+Do not use this repository yet for:
+
+- real human-subjects data;
+- real consent records;
+- identifiable participant contact lists;
+- protected health information or regulated data;
+- production SMS/email notification delivery;
+- unattended external AI processing;
+- claims that Delphi consensus establishes truth or correctness.
+
+Open-source code does not imply open study data. Study data, participant identities, consent records, response data, audit logs, and exports remain private unless explicitly released under a separate approved governance process.
+
+## Prerequisites
+
+- Node.js 20 or later is recommended.
+- npm is required.
+- Git is recommended for local development.
+- A modern browser is required for the web app.
+- Windows, macOS, and Linux setup notes are in [docs/install](./docs/install/).
+
+## Local Install
+
+Install frontend dependencies:
+
+```powershell
+cd app
+npm install
+```
+
+Install backend dependencies:
+
+```powershell
+cd ../server
+npm install
+```
+
+The backend uses local runtime data under `server/data/` by default. That directory is local-only and should not be committed or shared.
+
+## Run Backend
+
+```powershell
+cd server
+npm run dev
+```
+
+The backend builds TypeScript and starts the Fastify server. The health endpoint is typically:
+
+```text
+http://127.0.0.1:3001/health
+```
+
+## Run Frontend
+
+In a second terminal:
+
+```powershell
+cd app
+npm run dev -- --host 127.0.0.1 --port 5173
+```
+
+Then open:
+
+```text
+http://127.0.0.1:5173/
+```
+
+## Run Tests
+
+Frontend tests:
+
+```powershell
+cd app
+npm test
+```
+
+Backend tests, including build and road-test coverage:
+
+```powershell
+cd server
+npm test
+```
+
+## Run Builds
+
+Frontend build:
+
+```powershell
+cd app
+npm run build
+```
+
+Backend build:
+
+```powershell
+cd server
+npm run build
+```
+
+## Run Security Audit
+
+```powershell
+cd app
+npm run security:audit
+```
+
+```powershell
+cd server
+npm run security:audit
+```
+
+## Documentation
+
+- [Documentation index](./docs/index.md)
+- [Getting started](./docs/getting-started.md)
+- [Classical Delphi tutorial](./docs/tutorials/classical-delphi.md)
+- [Modified Delphi tutorial](./docs/tutorials/modified-delphi.md)
+- [Synthetic mock-trial tutorial](./docs/tutorials/mock-trial.md)
+- [Architecture overview](./docs/architecture/overview.md)
+- [Testing guide](./docs/development/testing.md)
+- [AI-assisted development policy](./docs/development/ai-assisted-development.md)
+- [Ethical Governance Charter](./documents/governance/ethical-governance-charter.md)
+- [AI Governance & Human-in-the-Loop Thin Spec](./documents/governance/ai-assistance-thin-spec.md)
+- [Human-subjects readiness plan](./documents/compliance/human-subjects-readiness/HUMAN_SUBJECTS_READINESS.md)
 
 ## License
 

@@ -41,8 +41,8 @@ dist-ssr
 *.sln
 *.sw?
 
-# eDelphi runtime persistence (local-only)
+# Delphi Commons runtime persistence (local-only)
 server/data/
 
-# eDelphi audit log (append-only local file)
+# Delphi Commons audit log (append-only local file)
 server/audit/audit.log

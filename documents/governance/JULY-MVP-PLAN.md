@@ -1448,7 +1448,7 @@ Charter Compliance Addendum
 
 
 
-This MVP roadmap is governed by the Ethical Governance Charter for an Open-Source e Delphi Platform and the AI Governance \& Human in the Loop Contract (Thin Spec). The tickets above define the core build order, but the following compliance obligations also apply.
+This MVP roadmap is governed by the Ethical Governance Charter for Delphi Commons and the AI Governance \& Human in the Loop Contract (Thin Spec). The tickets above define the core build order, but the following compliance obligations also apply.
 
 
 

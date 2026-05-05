@@ -1,14 +1,14 @@
-# eDelphi Project History
+# Delphi Commons Project History
 
-**Project:** eDelphi  
-**History through:** 2026-05-02  
+**Project:** Delphi Commons
+**History through:** 2026-05-02
 **Status:** Local MVP is close to mock-trial readiness; Phase 10 deployment/mock-trial readiness remains next.
 
 This document summarizes the work completed in Codex from the original governance and MVP tickets through the current frontend/backend human-subjects readiness build. It is a project history, not a regulatory certification or IRB approval.
 
 ## 1. Foundational Governance And Planning
 
-The project began by establishing the ethical and methodological commitments for an open-source eDelphi platform.
+The project began by establishing the ethical and methodological commitments for an open-source Delphi Commons platform.
 
 Completed foundations:
 
