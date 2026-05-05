@@ -55,6 +55,26 @@ Expected local health shape:
 4. Confirm backend health reports `development` or an explicitly controlled staging setting.
 5. Confirm the frontend visibly communicates mock-trial/non-production use before broader staging road tests. If no visible staging/mock banner is present in the target environment, record that as a defect or condition.
 
+## Disposable Local Rehearsal Variant
+
+For operational rehearsals, prefer disposable runtime directories so existing developer data is not disturbed. The documented server start command still applies, but set the runtime environment first and use a non-conflicting port if another local server is already running.
+
+Example PowerShell shape:
+
+```powershell
+$env:EDELPHI_DATA_DIR="server\data\phase10-rehearsal\data"
+$env:EDELPHI_AUDIT_DIR="server\data\phase10-rehearsal\audit"
+$env:EDELPHI_BACKUP_DIR="server\data\phase10-rehearsal\backups"
+$env:EDELPHI_DATABASE_PATH="server\data\phase10-rehearsal\data\edelphi.sqlite"
+$env:PORT="3310"
+$env:HOST="127.0.0.1"
+$env:EDELPHI_ALLOWED_ORIGINS="http://127.0.0.1:5173,http://localhost:5173"
+cd server
+npm.cmd start
+```
+
+Record the exact directories, port, and health response in the rehearsal results.
+
 ## Staging Banner / Mock-Trial Warning Requirement
 
 Any controlled staging environment must display or otherwise make obvious that it is not production and must not use real participant data unless separate approvals exist. Absence of a visible warning is NOT RUN for this Phase 10 package and should be verified during a future staging road test.
@@ -71,4 +91,3 @@ AI suggestions are non-binding, must be labeled as suggestions, require human ac
 - Production monitoring/alerting: NOT FOUND.
 - Production backup target: NOT FOUND.
 - Production retention automation: NOT READY.
-
