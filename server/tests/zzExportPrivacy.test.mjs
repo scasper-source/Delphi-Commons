@@ -33,6 +33,82 @@ const participantIds = [
 
 const syntheticLabels = participantIds.map((_, index) => `SYN-P${String(index + 1).padStart(3, "0")}`);
 const syntheticEmails = participantIds.map((_, index) => `syn-p${String(index + 1).padStart(3, "0")}@example.test`);
+const researchQuestions = [
+  {
+    id: "rq-fixtures-access",
+    displayOrder: 1,
+    text: "Which fictional community garden scheduling features improve access?",
+    shortLabel: "Access",
+    description: "Neutral access-oriented prompt for synthetic export testing.",
+    requiredForRound1Response: true,
+    active: true,
+    createdAt: "2026-01-01T00:00:00.000Z",
+    updatedAt: "2026-01-01T00:00:00.000Z",
+  },
+  {
+    id: "rq-fixtures-reminders",
+    displayOrder: 2,
+    text: "Which fictional reminder features should be considered?",
+    shortLabel: "Reminders",
+    description: "",
+    requiredForRound1Response: true,
+    active: true,
+    createdAt: "2026-01-01T00:00:00.000Z",
+    updatedAt: "2026-01-01T00:00:00.000Z",
+  },
+];
+
+function parseCsvRows(text) {
+  const rows = [];
+  let row = [];
+  let cell = "";
+  let inQuotes = false;
+  for (let index = 0; index < text.length; index += 1) {
+    const char = text[index];
+    const next = text[index + 1];
+    if (inQuotes) {
+      if (char === '"' && next === '"') {
+        cell += '"';
+        index += 1;
+      } else if (char === '"') {
+        inQuotes = false;
+      } else {
+        cell += char;
+      }
+      continue;
+    }
+    if (char === '"') {
+      inQuotes = true;
+    } else if (char === ",") {
+      row.push(cell);
+      cell = "";
+    } else if (char === "\n") {
+      row.push(cell.replace(/\r$/, ""));
+      rows.push(row);
+      row = [];
+      cell = "";
+    } else {
+      cell += char;
+    }
+  }
+  row.push(cell.replace(/\r$/, ""));
+  rows.push(row);
+  return rows;
+}
+
+function assertCsvFormulaSafe(file) {
+  if (file.format !== ".csv") return;
+  const rows = parseCsvRows(file.content_text);
+  for (const [rowIndex, row] of rows.entries()) {
+    for (const [columnIndex, cell] of row.entries()) {
+      assert.equal(
+        /^[\t ]*[=+\-@]/.test(cell),
+        false,
+        `${file.path} row ${rowIndex + 1} column ${columnIndex + 1} contains formula-like CSV cell`,
+      );
+    }
+  }
+}
 
 async function loadModules() {
   if (!process.env.EDELPHI_DATA_DIR) {
@@ -123,7 +199,10 @@ async function seedSyntheticStudy() {
     },
     feedback_config_json: null,
     retention_policy_json: null,
-    study_design_packet_json: null,
+    study_design_packet_json: {
+      researchQuestion: researchQuestions[0].text,
+      researchQuestions,
+    },
     config_hash: "export-privacy-config-hash",
     opened_round1_at: now,
     created_by: owner["x-user-id"],
@@ -143,8 +222,21 @@ async function seedSyntheticStudy() {
       version_id: versionId,
       participant_id: participantId,
       response_json: {
-        text:
-          `${syntheticLabels[index]} says use a shared calendar. Contact ${syntheticEmails[index]} or 555-010-${String(index + 1).padStart(4, "0")}. Internal ID ${participantId}.`,
+        round_number: 1,
+        responses: [
+          {
+            researchQuestionId: researchQuestions[0].id,
+            text: index === 0
+              ? `=HYPERLINK("https://example.test/adverse","synthetic") ${syntheticLabels[index]} contact ${syntheticEmails[index]} ${participantId}.`
+              : index === 1
+                ? `\t+SUM(1,1) ${syntheticLabels[index]} contact ${syntheticEmails[index]} ${participantId}.`
+                : `${syntheticLabels[index]} says use a shared calendar. Contact ${syntheticEmails[index]} or 555-010-${String(index + 1).padStart(4, "0")}. Internal ID ${participantId}.`,
+          },
+          {
+            researchQuestionId: researchQuestions[1].id,
+            text: `${syntheticLabels[index]} says reminders should use example-only contact ${syntheticEmails[index]} and never expose ${participantId}.`,
+          },
+        ],
       },
     }));
   }
@@ -153,7 +245,7 @@ async function seedSyntheticStudy() {
     study_id: studyId,
     version_id: versionId,
     round_number: 4,
-    text: "The app should provide a shared calendar and configurable reminders.",
+    text: "=HYPERLINK(\"https://example.test/item\",\"item\") The app should provide a shared calendar and configurable reminders.",
     provenance_type: "PanelDerived",
     created_from: "ai",
     created_by_user_id: owner["x-user-id"],
@@ -165,7 +257,7 @@ async function seedSyntheticStudy() {
         excerpt: `${syntheticLabels[0]} source excerpt with ${syntheticEmails[0]} and ${participantIds[0]}.`,
       },
     ],
-    ai_provenance_rationale: `Synthetic provenance rationale mentions ${syntheticLabels[1]} and ${participantIds[1]}.`,
+    ai_provenance_rationale: `+SUM(1,1) Synthetic provenance rationale mentions ${syntheticLabels[1]} and ${participantIds[1]}.`,
   });
   updateItem(item.item_id, { status: "Published" });
 
@@ -179,8 +271,11 @@ async function seedSyntheticStudy() {
         item_id: item.item_id,
         rating: index < 7 ? 8 : 5,
         action: "keep",
-        rationale_text:
-          `${syntheticLabels[index]} final rationale includes ${syntheticEmails[index]}, 555-010-${String(index + 1).padStart(4, "0")}, and ${participantId}.`,
+        rationale_text: index === 0
+          ? `=HYPERLINK("https://example.test/rationale","synthetic") ${syntheticLabels[index]} ${syntheticEmails[index]} ${participantId}.`
+          : index === 1
+            ? `   @SUM(1,1) ${syntheticLabels[index]} ${syntheticEmails[index]} ${participantId}.`
+            : `${syntheticLabels[index]} final rationale includes ${syntheticEmails[index]}, 555-010-${String(index + 1).padStart(4, "0")}, and ${participantId}.`,
       },
     });
   }
@@ -238,6 +333,9 @@ test("standard export packages redact participant-linkable identifiers and class
     }, 200);
 
     createdPackages.push({ exportType, created, files });
+    for (const file of files.files) {
+      assertCsvFormulaSafe(file);
+    }
 
     const scan = scanExportPrivacy({
       exportPackage: files.export_package,
@@ -256,6 +354,17 @@ test("standard export packages redact participant-linkable identifiers and class
     assert.ok(created.export_package.privacy_metadata, `${exportType} missing privacy metadata`);
     assert.equal(files.export_package.privacy_metadata.export_name, created.export_package.privacy_metadata.export_name);
   }
+
+  const anonymizedDataset = createdPackages.find((entry) => entry.exportType === "anonymized-response-dataset");
+  assert.ok(anonymizedDataset, "anonymized response dataset export should be generated");
+  const researchQuestionFile = anonymizedDataset.files.files.find((file) => file.path.endsWith("research_questions.csv"));
+  const responseCountFile = anonymizedDataset.files.files.find((file) => file.path.endsWith("round1_response_counts_by_question.csv"));
+  const responsesFile = anonymizedDataset.files.files.find((file) => file.path.endsWith("responses.csv"));
+  assert.ok(researchQuestionFile, "anonymized dataset should include ordered research questions");
+  assert.ok(responseCountFile, "anonymized dataset should include Round 1 response counts by question");
+  assert.ok(responsesFile.content_text.includes("research_question_id"), "responses.csv should preserve researchQuestionId grouping");
+  assert.ok(responseCountFile.content_text.includes("rq-fixtures-access"), "response counts should include the first research question");
+  assert.ok(responseCountFile.content_text.includes("rq-fixtures-reminders"), "response counts should include the second research question");
 
   const finalScan = scanResults.find((scan) => scan.package_type === "final-delphi-report");
   assert.equal(finalScan.data_classification, "deidentified_research_report");

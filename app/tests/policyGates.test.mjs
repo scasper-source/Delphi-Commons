@@ -400,12 +400,41 @@ test("participant mobile workflow exposes save state, item progress, rationale, 
   assert.match(css, /\.compact-distribution[\s\S]*grid-template-columns:\s*repeat\(3/);
 });
 
+test("Phase 1A multi-research-question setup and Round 1 capture stay lean and governed", () => {
+  const source = appSource();
+  const wizardSource = fs.readFileSync(path.join(appRoot, "src", "core", "studyWizard.ts"), "utf8");
+  const apiSource = fs.readFileSync(path.join(appRoot, "src", "core", "api.ts"), "utf8");
+  const css = fs.readFileSync(path.join(appRoot, "src", "App.css"), "utf8");
+  const purposeSource = sourceSlice(source, "function WizardStepFields", "if (step === \"method\")");
+  const participantSource = sourceSlice(source, "function ParticipantScreen", "function RoundContextPanel");
+
+  assert.match(wizardSource, /researchQuestions: ResearchQuestion\[\]/);
+  assert.match(wizardSource, /normalizeWizardResearchQuestions/);
+  assert.match(wizardSource, /At least one active research question is required/);
+  assert.match(purposeSource, /Research questions/);
+  assert.match(purposeSource, /Add research question/);
+  assert.match(purposeSource, /Move question down/);
+  assert.match(purposeSource, /isDefaultQuestionLabel/);
+  assert.match(purposeSource, /Many research questions can increase participant burden/);
+  assert.match(purposeSource, /activeQuestions\.length <= 1/);
+  assert.match(purposeSource, /instrumentLocked/);
+  assert.match(participantSource, /roundOneResearchQuestions\.map/);
+  assert.match(participantSource, /Round 1 response for/);
+  assert.match(participantSource, /question\.requiredForRound1Response/);
+  assert.match(apiSource, /responses: string \| RoundOneAnswerInput\[\]/);
+  assert.match(apiSource, /response_json:[\s\S]*responses/);
+  assert.match(css, /\.research-question-manager/);
+  assert.match(css, /\.round-one-question-response/);
+});
+
 test("rating rationale is submitted through API and exported as redacted rationale text", () => {
   const apiSource = fs.readFileSync(path.join(appRoot, "src", "core", "api.ts"), "utf8");
   const reportsSource = fs.readFileSync(path.resolve(appRoot, "..", "server", "src", "routes", "reports.ts"), "utf8");
 
   assert.match(apiSource, /rationale_text: rationaleText/);
-  assert.match(reportsSource, /rationale_text_redacted: typeof ratingPayload\.rationale_text === "string"/);
+  assert.match(reportsSource, /const rationaleText = typeof ratingPayload\.rationale_text === "string"/);
+  assert.match(reportsSource, /const redactedRationaleText = redactExportText\(rationaleText\)/);
+  assert.match(reportsSource, /rationale_text_redacted: redactedRationaleText/);
 });
 
 test("study-designer mobile basics keep governance and AI controls touch-friendly", () => {

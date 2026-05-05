@@ -1,0 +1,880 @@
+{
+  "run_started_at": "2026-05-05T17:40:13.932Z",
+  "run_completed_at": "2026-05-05T17:40:36.836Z",
+  "marker": "ADVERSE-moswyvho",
+  "mode": "local_api_driven_adverse_rehearsal_with_headless_browser_smoke",
+  "scope": {
+    "synthetic_data_only": true,
+    "local_or_controlled_dev_only": true,
+    "production_deployment": false,
+    "real_human_subjects_research": false,
+    "irb_launch": false,
+    "sensitive_participant_data": false,
+    "external_ai_calls": false,
+    "third_party_attack_testing": false
+  },
+  "environment": {
+    "commit_hash": "c7364c5005419be1dd48cd76de51000eacbebbd7",
+    "branch": "master",
+    "backend_url": "http://127.0.0.1:3001",
+    "frontend_url": "http://127.0.0.1:5173",
+    "backend_health": {
+      "status": "ok",
+      "service": "edelphi-server",
+      "environment": "development"
+    },
+    "browser": "Microsoft Edge headless when available",
+    "mobile_widths": [
+      320,
+      390,
+      414
+    ],
+    "auth_note": "Local development mode accepts legacy dev role headers unless EDELPHI_AUTH_REQUIRE_SESSION=true; this is not a production access-control model."
+  },
+  "commands": [
+    {
+      "command": "git rev-parse HEAD",
+      "cwd": "."
+    },
+    {
+      "command": "git branch --show-current",
+      "cwd": "."
+    }
+  ],
+  "study": {
+    "study_id": "686e3db6-0631-4bc8-9b29-5f537eebe6be",
+    "version_id": "6fe412c4-f2a9-4255-9f85-3dc5e447b042",
+    "title": "Adverse User Classical Delphi ADVERSE-moswyvho",
+    "method": "ClassicDelphi"
+  },
+  "participants": [
+    {
+      "label": "SYN-P001",
+      "participant_id": "f6420734-1463-4d3e-b199-19c3b1617586",
+      "invitation_id": "6cee1fbc-7d4f-45a7-aa9d-907223553882"
+    },
+    {
+      "label": "SYN-P002",
+      "participant_id": "80c0aadb-cfac-4acb-a973-0b7a99b67a3e",
+      "invitation_id": "2bfac270-0da9-4d45-a78f-02b517c1d6b8"
+    },
+    {
+      "label": "SYN-P003",
+      "participant_id": "0380fac5-b89d-4b8b-919d-7561a9fe83f6",
+      "invitation_id": "d0547012-5833-4550-9599-bac39579c13a"
+    },
+    {
+      "label": "SYN-P004",
+      "participant_id": "dc331546-4249-4d48-867f-e596df7d1afc",
+      "invitation_id": "597212f6-6d5c-407d-8a67-fd3c0e74713b"
+    },
+    {
+      "label": "SYN-P005",
+      "participant_id": "b6315353-330f-4dab-a815-4cd8e2c956a6",
+      "invitation_id": "873440ab-b22b-4be2-9d87-6b6dd6d1ae11"
+    },
+    {
+      "label": "SYN-P006",
+      "participant_id": "2af71152-795c-410b-b985-3acb05252ecf",
+      "invitation_id": "8496a0d1-4bb2-4eed-b404-8dcc15ccdcee"
+    },
+    {
+      "label": "SYN-P007",
+      "participant_id": "bab2adba-22e1-46d1-95f8-e0dc8f249a07",
+      "invitation_id": "1b3af7a6-0271-473b-b4c2-13160d4ea934"
+    },
+    {
+      "label": "SYN-P008",
+      "participant_id": "7ac008e4-87e1-4b78-ad83-81336a3c711a",
+      "invitation_id": "fefae7d8-ec9c-4a2f-b9b9-152402282508"
+    }
+  ],
+  "checks": [
+    {
+      "name": "backend environment visibly development",
+      "status": "PASS",
+      "environment": "development"
+    },
+    {
+      "name": "study setup and synthetic invitations",
+      "status": "PASS",
+      "participant_count": 8
+    },
+    {
+      "name": "malicious synthetic Round 1 inputs submitted",
+      "status": "PASS",
+      "fixture_categories": [
+        "html/script-like text",
+        "prompt injection",
+        "coercive synthetic placeholder text",
+        "direct identifiers",
+        "formula-like strings",
+        "unicode/newline stress"
+      ]
+    },
+    {
+      "name": "AI suggestion human edit before publication",
+      "status": "PASS",
+      "participant_facing_items_checked": 4
+    },
+    {
+      "name": "four adverse synthetic rounds completed",
+      "status": "PASS"
+    }
+  ],
+  "idor_and_access_control": [
+    {
+      "kind": "consensus_rule_lock",
+      "pathname": "consensus-rule",
+      "expected_statuses": [
+        409
+      ],
+      "actual_status": 409,
+      "pass": true,
+      "error": "consensus_rule_locked"
+    },
+    {
+      "kind": "participant_role_admin_view",
+      "pathname": "/studies/686e3db6-0631-4bc8-9b29-5f537eebe6be/versions/6fe412c4-f2a9-4255-9f85-3dc5e447b042/responses",
+      "expected_statuses": [
+        403
+      ],
+      "actual_status": 403,
+      "error": "forbidden",
+      "pass": true
+    },
+    {
+      "kind": "invitation_header_admin_view",
+      "pathname": "/studies/686e3db6-0631-4bc8-9b29-5f537eebe6be/versions/6fe412c4-f2a9-4255-9f85-3dc5e447b042/responses",
+      "expected_statuses": [
+        403
+      ],
+      "actual_status": 403,
+      "error": "forbidden",
+      "pass": true
+    },
+    {
+      "kind": "participant_attempts_other_participant_issue_create",
+      "pathname": "/studies/686e3db6-0631-4bc8-9b29-5f537eebe6be/versions/6fe412c4-f2a9-4255-9f85-3dc5e447b042/participants/80c0aadb-cfac-4acb-a973-0b7a99b67a3e/issues",
+      "expected_statuses": [
+        403
+      ],
+      "actual_status": 403,
+      "error": "forbidden",
+      "pass": true
+    },
+    {
+      "kind": "participant_guess_export_package",
+      "pathname": "/studies/686e3db6-0631-4bc8-9b29-5f537eebe6be/versions/6fe412c4-f2a9-4255-9f85-3dc5e447b042/export-packages/01dfeb73-1292-4d8a-8b5a-7e5092208520/files",
+      "expected_statuses": [
+        403
+      ],
+      "actual_status": 403,
+      "error": "forbidden",
+      "pass": true
+    },
+    {
+      "kind": "consensus_rule_lock_after_results",
+      "expected_statuses": [
+        409
+      ],
+      "actual_status": 409,
+      "error": "consensus_rule_locked",
+      "pass": true
+    }
+  ],
+  "malicious_input": [
+    {
+      "category": "participant_workflow_abuse",
+      "action": "submit_without_consent",
+      "expected": "403 active_consent_required",
+      "actual_status": 403,
+      "error": "active_consent_required",
+      "pass": true
+    },
+    {
+      "category": "participant_workflow_abuse",
+      "action": "duplicate_round1_submission",
+      "expected": "blocked or idempotent if single-submission policy applies",
+      "actual_status": 201,
+      "error": null,
+      "pass": true,
+      "note": "API accepts another response record; report logic sorts/aggregates responses. Single-submission policy is not clearly asserted by API."
+    },
+    {
+      "category": "participant_workflow_abuse",
+      "action": "submit_after_round_closed",
+      "expected": "409 round1_not_open",
+      "actual_status": 409,
+      "error": "round1_not_open",
+      "pass": true
+    }
+  ],
+  "support_loop_abuse": [
+    {
+      "issue_id": "VrxoJVMYpbD09p_T9ucKE",
+      "stored_note_length": 1200,
+      "note_was_truncated_to_limit": true,
+      "owner_can_see_issue": true,
+      "participant_can_see_own_response": true,
+      "other_participant_issue_count": 0,
+      "pass": true
+    }
+  ],
+  "ai_prompt_injection": [
+    {
+      "target_round_number": 2,
+      "suggestion_id": "aacb5a03-9b09-4783-8f45-fce9b1a049c4",
+      "label": "AI Suggestion (Not Final)",
+      "decision_before_human": "None",
+      "injection_text_present_in_non_final_suggestion": true,
+      "participant_facing_before_human_review": false
+    },
+    {
+      "target_round_number": 3,
+      "suggestion_id": "a7930112-164b-4a64-9fb6-4980a0fb1821",
+      "label": "AI Suggestion (Not Final)",
+      "decision_before_human": "None",
+      "injection_text_present_in_non_final_suggestion": false,
+      "participant_facing_before_human_review": false
+    },
+    {
+      "target_round_number": 4,
+      "suggestion_id": "1b629b8e-32ad-4643-b94d-d6cabb2da65a",
+      "label": "AI Suggestion (Not Final)",
+      "decision_before_human": "None",
+      "injection_text_present_in_non_final_suggestion": false,
+      "participant_facing_before_human_review": false
+    }
+  ],
+  "export_packages": [
+    {
+      "export_type": "final-delphi-report",
+      "export_package_id": "b048b1d7-9880-46cd-94cf-bd616631113e",
+      "classification": "deidentified_research_report",
+      "safe_for_deidentified_sharing": true,
+      "file_count": 9,
+      "privacy_failure_count": 0,
+      "privacy_warning_count": 0,
+      "formula_failure_count": 0,
+      "rendering_warning_count": 0,
+      "required_limitation_present": true
+    },
+    {
+      "export_type": "anonymized-response-dataset",
+      "export_package_id": "21415e27-236b-4713-bd93-2a4164661b6c",
+      "classification": "deidentified_research_report",
+      "safe_for_deidentified_sharing": true,
+      "file_count": 12,
+      "privacy_failure_count": 0,
+      "privacy_warning_count": 0,
+      "formula_failure_count": 0,
+      "rendering_warning_count": 5,
+      "required_limitation_present": true
+    },
+    {
+      "export_type": "audit-package",
+      "export_package_id": "a3faeeb6-3149-4154-a3e8-b7543c76ca1b",
+      "classification": "restricted_internal_admin_audit",
+      "safe_for_deidentified_sharing": false,
+      "file_count": 10,
+      "privacy_failure_count": 0,
+      "privacy_warning_count": 16,
+      "formula_failure_count": 0,
+      "rendering_warning_count": 0,
+      "required_limitation_present": true
+    },
+    {
+      "export_type": "provenance-bundle",
+      "export_package_id": "596d9333-f5ac-4278-bccf-f8e1e13784a4",
+      "classification": "deidentified_research_report",
+      "safe_for_deidentified_sharing": true,
+      "file_count": 10,
+      "privacy_failure_count": 0,
+      "privacy_warning_count": 0,
+      "formula_failure_count": 0,
+      "rendering_warning_count": 2,
+      "required_limitation_present": true
+    },
+    {
+      "export_type": "complete-archive",
+      "export_package_id": "22439adf-dbab-4175-93e2-712d20726fe6",
+      "classification": "complete_restricted_archive",
+      "safe_for_deidentified_sharing": false,
+      "file_count": 12,
+      "privacy_failure_count": 0,
+      "privacy_warning_count": 17,
+      "formula_failure_count": 0,
+      "rendering_warning_count": 5,
+      "required_limitation_present": true
+    }
+  ],
+  "export_scan": {
+    "privacy_failures": [],
+    "privacy_warnings": [
+      {
+        "export_type": "audit-package",
+        "severity": "warning",
+        "package_type": "audit-package",
+        "file_path": "audit-package/audit_events.csv",
+        "pattern_class": "raw_participant_id",
+        "context": "[known participant id]"
+      },
+      {
+        "export_type": "audit-package",
+        "severity": "warning",
+        "package_type": "audit-package",
+        "file_path": "audit-package/audit_events.csv",
+        "pattern_class": "raw_participant_id",
+        "context": "[known participant id]"
+      },
+      {
+        "export_type": "audit-package",
+        "severity": "warning",
+        "package_type": "audit-package",
+        "file_path": "audit-package/audit_events.csv",
+        "pattern_class": "raw_participant_id",
+        "context": "[known participant id]"
+      },
+      {
+        "export_type": "audit-package",
+        "severity": "warning",
+        "package_type": "audit-package",
+        "file_path": "audit-package/audit_events.csv",
+        "pattern_class": "raw_participant_id",
+        "context": "[known participant id]"
+      },
+      {
+        "export_type": "audit-package",
+        "severity": "warning",
+        "package_type": "audit-package",
+        "file_path": "audit-package/audit_events.csv",
+        "pattern_class": "raw_participant_id",
+        "context": "[known participant id]"
+      },
+      {
+        "export_type": "audit-package",
+        "severity": "warning",
+        "package_type": "audit-package",
+        "file_path": "audit-package/audit_events.csv",
+        "pattern_class": "raw_participant_id",
+        "context": "[known participant id]"
+      },
+      {
+        "export_type": "audit-package",
+        "severity": "warning",
+        "package_type": "audit-package",
+        "file_path": "audit-package/audit_events.csv",
+        "pattern_class": "raw_participant_id",
+        "context": "[known participant id]"
+      },
+      {
+        "export_type": "audit-package",
+        "severity": "warning",
+        "package_type": "audit-package",
+        "file_path": "audit-package/audit_events.csv",
+        "pattern_class": "raw_participant_id",
+        "context": "[known participant id]"
+      },
+      {
+        "export_type": "audit-package",
+        "severity": "warning",
+        "package_type": "audit-package",
+        "file_path": "audit-package/audit_events.json",
+        "pattern_class": "raw_participant_id",
+        "context": "[known participant id]"
+      },
+      {
+        "export_type": "audit-package",
+        "severity": "warning",
+        "package_type": "audit-package",
+        "file_path": "audit-package/audit_events.json",
+        "pattern_class": "raw_participant_id",
+        "context": "[known participant id]"
+      },
+      {
+        "export_type": "audit-package",
+        "severity": "warning",
+        "package_type": "audit-package",
+        "file_path": "audit-package/audit_events.json",
+        "pattern_class": "raw_participant_id",
+        "context": "[known participant id]"
+      },
+      {
+        "export_type": "audit-package",
+        "severity": "warning",
+        "package_type": "audit-package",
+        "file_path": "audit-package/audit_events.json",
+        "pattern_class": "raw_participant_id",
+        "context": "[known participant id]"
+      },
+      {
+        "export_type": "audit-package",
+        "severity": "warning",
+        "package_type": "audit-package",
+        "file_path": "audit-package/audit_events.json",
+        "pattern_class": "raw_participant_id",
+        "context": "[known participant id]"
+      },
+      {
+        "export_type": "audit-package",
+        "severity": "warning",
+        "package_type": "audit-package",
+        "file_path": "audit-package/audit_events.json",
+        "pattern_class": "raw_participant_id",
+        "context": "[known participant id]"
+      },
+      {
+        "export_type": "audit-package",
+        "severity": "warning",
+        "package_type": "audit-package",
+        "file_path": "audit-package/audit_events.json",
+        "pattern_class": "raw_participant_id",
+        "context": "[known participant id]"
+      },
+      {
+        "export_type": "audit-package",
+        "severity": "warning",
+        "package_type": "audit-package",
+        "file_path": "audit-package/audit_events.json",
+        "pattern_class": "raw_participant_id",
+        "context": "[known participant id]"
+      },
+      {
+        "export_type": "complete-archive",
+        "severity": "warning",
+        "package_type": "complete-archive",
+        "file_path": "complete-archive/audit_summary.json",
+        "pattern_class": "raw_participant_id",
+        "context": "[known participant id]"
+      },
+      {
+        "export_type": "complete-archive",
+        "severity": "warning",
+        "package_type": "complete-archive",
+        "file_path": "complete-archive/audit_summary.json",
+        "pattern_class": "raw_participant_id",
+        "context": "[known participant id]"
+      },
+      {
+        "export_type": "complete-archive",
+        "severity": "warning",
+        "package_type": "complete-archive",
+        "file_path": "complete-archive/audit_summary.json",
+        "pattern_class": "raw_participant_id",
+        "context": "[known participant id]"
+      },
+      {
+        "export_type": "complete-archive",
+        "severity": "warning",
+        "package_type": "complete-archive",
+        "file_path": "complete-archive/audit_summary.json",
+        "pattern_class": "raw_participant_id",
+        "context": "[known participant id]"
+      },
+      {
+        "export_type": "complete-archive",
+        "severity": "warning",
+        "package_type": "complete-archive",
+        "file_path": "complete-archive/audit_summary.json",
+        "pattern_class": "raw_participant_id",
+        "context": "[known participant id]"
+      },
+      {
+        "export_type": "complete-archive",
+        "severity": "warning",
+        "package_type": "complete-archive",
+        "file_path": "complete-archive/audit_summary.json",
+        "pattern_class": "raw_participant_id",
+        "context": "[known participant id]"
+      },
+      {
+        "export_type": "complete-archive",
+        "severity": "warning",
+        "package_type": "complete-archive",
+        "file_path": "complete-archive/audit_summary.json",
+        "pattern_class": "raw_participant_id",
+        "context": "[known participant id]"
+      },
+      {
+        "export_type": "complete-archive",
+        "severity": "warning",
+        "package_type": "complete-archive",
+        "file_path": "complete-archive/audit_summary.json",
+        "pattern_class": "raw_participant_id",
+        "context": "[known participant id]"
+      },
+      {
+        "export_type": "complete-archive",
+        "severity": "warning",
+        "package_type": "complete-archive",
+        "file_path": "complete-archive/items_and_provenance.json",
+        "pattern_class": "synthetic_participant_label",
+        "context": "SYN-P001"
+      },
+      {
+        "export_type": "complete-archive",
+        "severity": "warning",
+        "package_type": "complete-archive",
+        "file_path": "complete-archive/items_and_provenance.json",
+        "pattern_class": "synthetic_participant_label",
+        "context": "SYN-P003"
+      },
+      {
+        "export_type": "complete-archive",
+        "severity": "warning",
+        "package_type": "complete-archive",
+        "file_path": "complete-archive/items_and_provenance.json",
+        "pattern_class": "synthetic_participant_label",
+        "context": "SYN-P004"
+      },
+      {
+        "export_type": "complete-archive",
+        "severity": "warning",
+        "package_type": "complete-archive",
+        "file_path": "complete-archive/items_and_provenance.json",
+        "pattern_class": "synthetic_participant_label",
+        "context": "SYN-P00X"
+      },
+      {
+        "export_type": "complete-archive",
+        "severity": "warning",
+        "package_type": "complete-archive",
+        "file_path": "complete-archive/items_and_provenance.json",
+        "pattern_class": "email_identifier",
+        "context": "[known email]"
+      },
+      {
+        "export_type": "complete-archive",
+        "severity": "warning",
+        "package_type": "complete-archive",
+        "file_path": "complete-archive/items_and_provenance.json",
+        "pattern_class": "email_identifier",
+        "context": "[known email]"
+      },
+      {
+        "export_type": "complete-archive",
+        "severity": "warning",
+        "package_type": "complete-archive",
+        "file_path": "complete-archive/items_and_provenance.json",
+        "pattern_class": "email_identifier",
+        "context": "[known email]"
+      },
+      {
+        "export_type": "complete-archive",
+        "severity": "warning",
+        "package_type": "complete-archive",
+        "file_path": "complete-archive/items_and_provenance.json",
+        "pattern_class": "email_like_string",
+        "context": "[email-like string]"
+      },
+      {
+        "export_type": "complete-archive",
+        "severity": "warning",
+        "package_type": "complete-archive",
+        "file_path": "complete-archive/items_and_provenance.json",
+        "pattern_class": "phone_like_string",
+        "context": "[phone-like string]"
+      }
+    ],
+    "formula_failures": [],
+    "rendering_warnings": [
+      {
+        "export_type": "anonymized-response-dataset",
+        "classification": "deidentified_research_report",
+        "file_path": "anonymized-response-dataset/ratings.csv",
+        "pattern_class": "script_tag_text",
+        "context": "[pattern present as text]"
+      },
+      {
+        "export_type": "anonymized-response-dataset",
+        "classification": "deidentified_research_report",
+        "file_path": "anonymized-response-dataset/ratings.csv",
+        "pattern_class": "event_handler_text",
+        "context": "[pattern present as text]"
+      },
+      {
+        "export_type": "anonymized-response-dataset",
+        "classification": "deidentified_research_report",
+        "file_path": "anonymized-response-dataset/responses.csv",
+        "pattern_class": "script_tag_text",
+        "context": "[pattern present as text]"
+      },
+      {
+        "export_type": "anonymized-response-dataset",
+        "classification": "deidentified_research_report",
+        "file_path": "anonymized-response-dataset/responses.csv",
+        "pattern_class": "event_handler_text",
+        "context": "[pattern present as text]"
+      },
+      {
+        "export_type": "anonymized-response-dataset",
+        "classification": "deidentified_research_report",
+        "file_path": "anonymized-response-dataset/responses.csv",
+        "pattern_class": "iframe_object_embed_text",
+        "context": "[pattern present as text]"
+      },
+      {
+        "export_type": "provenance-bundle",
+        "classification": "deidentified_research_report",
+        "file_path": "provenance-bundle/item_transformation_history.csv",
+        "pattern_class": "script_tag_text",
+        "context": "[pattern present as text]"
+      },
+      {
+        "export_type": "provenance-bundle",
+        "classification": "deidentified_research_report",
+        "file_path": "provenance-bundle/item_transformation_history.csv",
+        "pattern_class": "event_handler_text",
+        "context": "[pattern present as text]"
+      },
+      {
+        "export_type": "complete-archive",
+        "classification": "complete_restricted_archive",
+        "file_path": "complete-archive/anonymized_dataset.json",
+        "pattern_class": "script_tag_text",
+        "context": "[pattern present as text]"
+      },
+      {
+        "export_type": "complete-archive",
+        "classification": "complete_restricted_archive",
+        "file_path": "complete-archive/anonymized_dataset.json",
+        "pattern_class": "event_handler_text",
+        "context": "[pattern present as text]"
+      },
+      {
+        "export_type": "complete-archive",
+        "classification": "complete_restricted_archive",
+        "file_path": "complete-archive/anonymized_dataset.json",
+        "pattern_class": "iframe_object_embed_text",
+        "context": "[pattern present as text]"
+      },
+      {
+        "export_type": "complete-archive",
+        "classification": "complete_restricted_archive",
+        "file_path": "complete-archive/items_and_provenance.json",
+        "pattern_class": "script_tag_text",
+        "context": "[pattern present as text]"
+      },
+      {
+        "export_type": "complete-archive",
+        "classification": "complete_restricted_archive",
+        "file_path": "complete-archive/items_and_provenance.json",
+        "pattern_class": "event_handler_text",
+        "context": "[pattern present as text]"
+      }
+    ]
+  },
+  "browser_smoke": [
+    {
+      "label": "adverse-participant-320",
+      "width": 320,
+      "url": "http://127.0.0.1:5173/#invite=CfG6czLjPmv_YlzWJ2oMBAJxq342nnY6oiJ-H9YwTxs",
+      "second_url": null,
+      "executable": "C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe",
+      "screenshot_path": "docs/qc/adverse-user-rehearsal/artifacts/adverse-participant-320-320.png",
+      "metrics": {
+        "url": "http://127.0.0.1:5173/#invite=CfG6czLjPmv_YlzWJ2oMBAJxq342nnY6oiJ-H9YwTxs",
+        "title": "app",
+        "innerWidth": 320,
+        "clientWidth": 320,
+        "scrollWidth": 320,
+        "horizontalOverflow": false,
+        "bodyTextSample": "About\nGlossary\nACTIVE STUDY\nAdverse User Classical Delphi ADVERSE-moswyvho\nPARTICIPANT PORTAL\nConsent, confidentiality, rights, and current task\nConfidentiality\nResponses are confidential to research team members with approved access and are linked across rounds through participant IDs.\nInvitation link active\nYou do not need an account, password, API key, or access code. This private invitation link identifies your study task.\nSave and resume\nDraft responses are not stored in browser local storage. Use Save progress if you need to pause, and submit when you are ready for the study team to receive your response.\nYour Current Round\n\nNo round task is currently open\n\nWhat to do next\n\nWait for the study team to open the next task.\n\nSave and resume\n\nSaving progress is separate from final submission. Submitted responses can be reviewed before you finish the task.\n\nConsent information\nWaiting for study team\nThe next task will appear here when the research team opens the round and configures the participant task.\nHaving trouble?\n\nTell the study team what is not working. Do not include medical details, passwords, API keys, or anything you would not want in a support note.\n\nHaving trouble?\nStudy Time Commitment\n\nThis study is planned for up to 3 rounds. You will only see rounds that are open for your participation.\n\nModified Delphi\nParticipant Rights\nParticipation is voluntary.\nYou may withdraw from future rounds at any time.\nDepending on the study protocol and consent terms, prior submitted responses may remain in already aggregated or historical study data.\nYou may contact the study team about data deletion where feasible.\nYou may skip items where permitted by the study protocol.\nAI assistance, if offered, is optional and non-directive.\nWithdraw from future participation\nRequest",
+        "xssExecuted": false,
+        "hasScriptTagText": false,
+        "hasAbusivePlaceholder": false,
+        "hasForbiddenSyntheticLabel": false,
+        "hasForbiddenEmail": false,
+        "hasRequiredLimitation": false
+      },
+      "status": "PASS"
+    },
+    {
+      "label": "adverse-participant-390",
+      "width": 390,
+      "url": "http://127.0.0.1:5173/#invite=CfG6czLjPmv_YlzWJ2oMBAJxq342nnY6oiJ-H9YwTxs",
+      "second_url": null,
+      "executable": "C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe",
+      "screenshot_path": "docs/qc/adverse-user-rehearsal/artifacts/adverse-participant-390-390.png",
+      "metrics": {
+        "url": "http://127.0.0.1:5173/#invite=CfG6czLjPmv_YlzWJ2oMBAJxq342nnY6oiJ-H9YwTxs",
+        "title": "app",
+        "innerWidth": 390,
+        "clientWidth": 390,
+        "scrollWidth": 390,
+        "horizontalOverflow": false,
+        "bodyTextSample": "About\nGlossary\nACTIVE STUDY\nAdverse User Classical Delphi ADVERSE-moswyvho\nPARTICIPANT PORTAL\nConsent, confidentiality, rights, and current task\nConfidentiality\nResponses are confidential to research team members with approved access and are linked across rounds through participant IDs.\nInvitation link active\nYou do not need an account, password, API key, or access code. This private invitation link identifies your study task.\nSave and resume\nDraft responses are not stored in browser local storage. Use Save progress if you need to pause, and submit when you are ready for the study team to receive your response.\nYour Current Round\n\nNo round task is currently open\n\nWhat to do next\n\nWait for the study team to open the next task.\n\nSave and resume\n\nSaving progress is separate from final submission. Submitted responses can be reviewed before you finish the task.\n\nConsent information\nWaiting for study team\nThe next task will appear here when the research team opens the round and configures the participant task.\nHaving trouble?\n\nTell the study team what is not working. Do not include medical details, passwords, API keys, or anything you would not want in a support note.\n\nHaving trouble?\nStudy Time Commitment\n\nThis study is planned for up to 3 rounds. You will only see rounds that are open for your participation.\n\nModified Delphi\nParticipant Rights\nParticipation is voluntary.\nYou may withdraw from future rounds at any time.\nDepending on the study protocol and consent terms, prior submitted responses may remain in already aggregated or historical study data.\nYou may contact the study team about data deletion where feasible.\nYou may skip items where permitted by the study protocol.\nAI assistance, if offered, is optional and non-directive.\nWithdraw from future participation\nRequest",
+        "xssExecuted": false,
+        "hasScriptTagText": false,
+        "hasAbusivePlaceholder": false,
+        "hasForbiddenSyntheticLabel": false,
+        "hasForbiddenEmail": false,
+        "hasRequiredLimitation": false
+      },
+      "status": "PASS"
+    },
+    {
+      "label": "adverse-participant-414",
+      "width": 414,
+      "url": "http://127.0.0.1:5173/#invite=CfG6czLjPmv_YlzWJ2oMBAJxq342nnY6oiJ-H9YwTxs",
+      "second_url": null,
+      "executable": "C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe",
+      "screenshot_path": "docs/qc/adverse-user-rehearsal/artifacts/adverse-participant-414-414.png",
+      "metrics": {
+        "url": "http://127.0.0.1:5173/#invite=CfG6czLjPmv_YlzWJ2oMBAJxq342nnY6oiJ-H9YwTxs",
+        "title": "app",
+        "innerWidth": 414,
+        "clientWidth": 414,
+        "scrollWidth": 414,
+        "horizontalOverflow": false,
+        "bodyTextSample": "About\nGlossary\nACTIVE STUDY\nAdverse User Classical Delphi ADVERSE-moswyvho\nPARTICIPANT PORTAL\nConsent, confidentiality, rights, and current task\nConfidentiality\nResponses are confidential to research team members with approved access and are linked across rounds through participant IDs.\nInvitation link active\nYou do not need an account, password, API key, or access code. This private invitation link identifies your study task.\nSave and resume\nDraft responses are not stored in browser local storage. Use Save progress if you need to pause, and submit when you are ready for the study team to receive your response.\nYour Current Round\n\nNo round task is currently open\n\nWhat to do next\n\nWait for the study team to open the next task.\n\nSave and resume\n\nSaving progress is separate from final submission. Submitted responses can be reviewed before you finish the task.\n\nConsent information\nWaiting for study team\nThe next task will appear here when the research team opens the round and configures the participant task.\nHaving trouble?\n\nTell the study team what is not working. Do not include medical details, passwords, API keys, or anything you would not want in a support note.\n\nHaving trouble?\nStudy Time Commitment\n\nThis study is planned for up to 3 rounds. You will only see rounds that are open for your participation.\n\nModified Delphi\nParticipant Rights\nParticipation is voluntary.\nYou may withdraw from future rounds at any time.\nDepending on the study protocol and consent terms, prior submitted responses may remain in already aggregated or historical study data.\nYou may contact the study team about data deletion where feasible.\nYou may skip items where permitted by the study protocol.\nAI assistance, if offered, is optional and non-directive.\nWithdraw from future participation\nRequest",
+        "xssExecuted": false,
+        "hasScriptTagText": false,
+        "hasAbusivePlaceholder": false,
+        "hasForbiddenSyntheticLabel": false,
+        "hasForbiddenEmail": false,
+        "hasRequiredLimitation": false
+      },
+      "status": "PASS"
+    },
+    {
+      "label": "same-tab-invite-switch",
+      "width": 390,
+      "url": "http://127.0.0.1:5173/#invite=CfG6czLjPmv_YlzWJ2oMBAJxq342nnY6oiJ-H9YwTxs",
+      "second_url": "http://127.0.0.1:5173/#invite=0t7B18RAmHmshcY3OC-6NPLVI_6T7V5GsJncH_Z8J4M",
+      "executable": "C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe",
+      "screenshot_path": "docs/qc/adverse-user-rehearsal/artifacts/same-tab-invite-switch-390.png",
+      "metrics": {
+        "url": "http://127.0.0.1:5173/#invite=0t7B18RAmHmshcY3OC-6NPLVI_6T7V5GsJncH_Z8J4M",
+        "title": "app",
+        "innerWidth": 390,
+        "clientWidth": 390,
+        "scrollWidth": 390,
+        "horizontalOverflow": false,
+        "bodyTextSample": "About\nGlossary\nACTIVE STUDY\nAdverse User Classical Delphi ADVERSE-moswyvho\nPARTICIPANT PORTAL\nConsent, confidentiality, rights, and current task\nConfidentiality\nResponses are confidential to research team members with approved access and are linked across rounds through participant IDs.\nInvitation link active\nYou do not need an account, password, API key, or access code. This private invitation link identifies your study task.\nSave and resume\nDraft responses are not stored in browser local storage. Use Save progress if you need to pause, and submit when you are ready for the study team to receive your response.\nYour Current Round\n\nNo round task is currently open\n\nWhat to do next\n\nWait for the study team to open the next task.\n\nSave and resume\n\nSaving progress is separate from final submission. Submitted responses can be reviewed before you finish the task.\n\nConsent information\nWaiting for study team\nThe next task will appear here when the research team opens the round and configures the participant task.\nHaving trouble?\n\nTell the study team what is not working. Do not include medical details, passwords, API keys, or anything you would not want in a support note.\n\nHaving trouble?\nIssue note updates\nOther\n\nSent May 5, 1:40 PM - Round 1\n\nreviewed\nStudy-team response\nSynthetic staff response: unsafe content is not repeated to the panel; participation remains voluntary.\nStudy Time Commitment\n\nThis study is planned for up to 3 rounds. You will only see rounds that are open for your participation.\n\nModified Delphi\nParticipant Rights\nParticipation is voluntary.\nYou may withdraw from future rounds at any time.\nDepending on the study protocol and consent terms, prior submitted responses may remain in already aggregated or historical study data.\nYou may contact the study team abou",
+        "xssExecuted": false,
+        "hasScriptTagText": false,
+        "hasAbusivePlaceholder": false,
+        "hasForbiddenSyntheticLabel": false,
+        "hasForbiddenEmail": false,
+        "hasRequiredLimitation": false
+      },
+      "status": "PASS"
+    }
+  ],
+  "same_tab_switching": {
+    "status": "PASS",
+    "final_url": "http://127.0.0.1:5173/#invite=0t7B18RAmHmshcY3OC-6NPLVI_6T7V5GsJncH_Z8J4M",
+    "xss_executed": false,
+    "forbidden_label_observed": false,
+    "forbidden_email_observed": false,
+    "note": "Headless smoke navigated from participant A invitation to participant B invitation in the same tab. This does not replace a manual all-8 UI pass."
+  },
+  "payload_size": {
+    "round1_too_long_without_consent_status": 403,
+    "round1_too_long_after_consent_status": 400,
+    "round1_too_long_pass": true
+  },
+  "participant_withdrawal_or_removal": {
+    "study_owner_can_revoke_invitation": true,
+    "revoked_token_status": 404,
+    "participant_self_withdraw_status": 200,
+    "governance_result": "PASS",
+    "note": "No general automatic moderation is expected. Controlled synthetic governance path is invitation revocation, participant withdrawal, and PI status review under protocol."
+  },
+  "defects": {
+    "P0": [],
+    "P1": [],
+    "P2": [
+      {
+        "id": "ADVERSE-P2-DUPLICATE-ROUND1",
+        "summary": "Round 1 duplicate submission is accepted; not proven unsafe, but single-submit expectations should be clarified.",
+        "evidence": {
+          "status": 201
+        }
+      },
+      {
+        "id": "ADVERSE-P2-RAW-MARKUP-IN-TEXT-EXPORTS",
+        "summary": "Script-like or markup-like text was present as inert text in one or more text-bearing exports.",
+        "evidence": {
+          "finding_count": 12,
+          "sample": [
+            {
+              "export_type": "anonymized-response-dataset",
+              "classification": "deidentified_research_report",
+              "file_path": "anonymized-response-dataset/ratings.csv",
+              "pattern_class": "script_tag_text",
+              "context": "[pattern present as text]"
+            },
+            {
+              "export_type": "anonymized-response-dataset",
+              "classification": "deidentified_research_report",
+              "file_path": "anonymized-response-dataset/ratings.csv",
+              "pattern_class": "event_handler_text",
+              "context": "[pattern present as text]"
+            },
+            {
+              "export_type": "anonymized-response-dataset",
+              "classification": "deidentified_research_report",
+              "file_path": "anonymized-response-dataset/responses.csv",
+              "pattern_class": "script_tag_text",
+              "context": "[pattern present as text]"
+            },
+            {
+              "export_type": "anonymized-response-dataset",
+              "classification": "deidentified_research_report",
+              "file_path": "anonymized-response-dataset/responses.csv",
+              "pattern_class": "event_handler_text",
+              "context": "[pattern present as text]"
+            },
+            {
+              "export_type": "anonymized-response-dataset",
+              "classification": "deidentified_research_report",
+              "file_path": "anonymized-response-dataset/responses.csv",
+              "pattern_class": "iframe_object_embed_text",
+              "context": "[pattern present as text]"
+            },
+            {
+              "export_type": "provenance-bundle",
+              "classification": "deidentified_research_report",
+              "file_path": "provenance-bundle/item_transformation_history.csv",
+              "pattern_class": "script_tag_text",
+              "context": "[pattern present as text]"
+            },
+            {
+              "export_type": "provenance-bundle",
+              "classification": "deidentified_research_report",
+              "file_path": "provenance-bundle/item_transformation_history.csv",
+              "pattern_class": "event_handler_text",
+              "context": "[pattern present as text]"
+            },
+            {
+              "export_type": "complete-archive",
+              "classification": "complete_restricted_archive",
+              "file_path": "complete-archive/anonymized_dataset.json",
+              "pattern_class": "script_tag_text",
+              "context": "[pattern present as text]"
+            },
+            {
+              "export_type": "complete-archive",
+              "classification": "complete_restricted_archive",
+              "file_path": "complete-archive/anonymized_dataset.json",
+              "pattern_class": "event_handler_text",
+              "context": "[pattern present as text]"
+            },
+            {
+              "export_type": "complete-archive",
+              "classification": "complete_restricted_archive",
+              "file_path": "complete-archive/anonymized_dataset.json",
+              "pattern_class": "iframe_object_embed_text",
+              "context": "[pattern present as text]"
+            }
+          ]
+        }
+      }
+    ],
+    "P3": []
+  },
+  "status": "GO_WITH_CONDITIONS_FOR_CONTINUED_CONTROLLED_SYNTHETIC_MOCK_TESTING_ONLY"
+}

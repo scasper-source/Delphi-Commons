@@ -73,6 +73,7 @@ import {
   listParticipantIssuesForParticipant,
   updateParticipantIssue,
 } from "../stores/participantIssueStore.js";
+import { normalizeRoundOneResponsePayload } from "../studies/researchQuestions.js";
 
 function isDeletionRequestStatus(value: unknown): value is DeletionRequestStatus {
   return (
@@ -1208,6 +1209,10 @@ export async function participantsRoutes(app: FastifyInstance) {
     const resolved = invitationFromRequest(req);
     if (!resolved.ok) return reply.code(resolved.statusCode).send({ error: resolved.error });
     const { invitation } = resolved;
+    const studyVersion = await getStudyVersion(invitation.version_id);
+    if (!studyVersion || studyVersion.study_id !== invitation.study_id) {
+      return reply.code(404).send({ error: "study_version_not_found" });
+    }
 
     const roundOneConfig = getRoundConfig({ study_id: invitation.study_id, version_id: invitation.version_id, round_number: 1 });
     if (!roundOneConfig || roundOneConfig.status !== "Open") return reply.code(409).send({ error: "round1_not_open" });
@@ -1221,15 +1226,14 @@ export async function participantsRoutes(app: FastifyInstance) {
       return reply.code(403).send({ error: "participant_inactive_or_withdrawn_for_round" });
     }
 
-    const text = typeof body.text === "string" ? body.text.trim() : "";
-    if (!text) return reply.code(400).send({ error: "response_text_required" });
-    if (text.length > 10000) return reply.code(400).send({ error: "response_text_too_long" });
+    const normalizedRoundOne = normalizeRoundOneResponsePayload(body, studyVersion.study_design_packet_json);
+    if (!normalizedRoundOne.ok) return reply.code(400).send({ error: normalizedRoundOne.error });
 
     const rec = createResponse({
       study_id: invitation.study_id,
       version_id: invitation.version_id,
       participant_id: invitation.participant_id,
-      response_json: { round_number: 1, text },
+      response_json: normalizedRoundOne.payload,
     });
     deleteParticipantDraft({
       study_id: invitation.study_id,

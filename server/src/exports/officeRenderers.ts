@@ -4,6 +4,7 @@
  */
 
 import { createZip } from "../core/officeZip.js";
+import { neutralizeSpreadsheetFormulaText } from "./exportPrivacy.js";
 
 type FinalReportDocxInput = {
   title: string;
@@ -30,6 +31,10 @@ function escapeXml(value: unknown): string {
     .replaceAll(">", "&gt;")
     .replaceAll('"', "&quot;")
     .replaceAll("'", "&apos;");
+}
+
+function spreadsheetText(value: unknown): string {
+  return neutralizeSpreadsheetFormulaText(String(value ?? ""));
 }
 
 function paragraph(text: unknown, style?: string): string {
@@ -146,7 +151,7 @@ function sheetXml(sheet: WorkbookSheet): string {
       if (typeof cell === "number" && Number.isFinite(cell)) {
         return `<c r="${ref}"><v>${cell}</v></c>`;
       }
-      return `<c r="${ref}" t="inlineStr"><is><t xml:space="preserve">${escapeXml(cell)}</t></is></c>`;
+      return `<c r="${ref}" t="inlineStr"><is><t xml:space="preserve">${escapeXml(spreadsheetText(cell))}</t></is></c>`;
     }).join("");
     return `<row r="${rowIndex + 1}">${cells}</row>`;
   }).join("");

@@ -4,6 +4,7 @@
  */
 
 import { createZip } from "../core/zip.js";
+import { neutralizeSpreadsheetFormulaText } from "./exportPrivacy.js";
 
 export type FinalItemResultRow = Record<string, unknown>;
 
@@ -26,6 +27,10 @@ function asText(value: unknown, fallback = ""): string {
   if (typeof value === "string") return value;
   if (typeof value === "number" || typeof value === "boolean") return String(value);
   return fallback;
+}
+
+function spreadsheetText(value: unknown): string {
+  return neutralizeSpreadsheetFormulaText(asText(value));
 }
 
 function xml(value: unknown): string {
@@ -201,7 +206,7 @@ function worksheet(rows: unknown[][]): string {
       if (typeof value === "boolean") {
         return `<c r="${ref}" t="b"><v>${value ? 1 : 0}</v></c>`;
       }
-      return `<c r="${ref}" t="inlineStr"><is><t xml:space="preserve">${xml(value)}</t></is></c>`;
+      return `<c r="${ref}" t="inlineStr"><is><t xml:space="preserve">${xml(spreadsheetText(value))}</t></is></c>`;
     }).join("");
     return `<row r="${rowIndex + 1}">${cells}</row>`;
   }).join("");

@@ -35,6 +35,7 @@ import { participantCanSubmit } from "../stores/participantStatusStore.js";
 import { getStudyVersion } from "../studies/store.js";
 import { createDeletionRequest } from "../stores/deletionRequestStore.js";
 import { createParticipantIssue, listParticipantIssuesForParticipant } from "../stores/participantIssueStore.js";
+import { normalizeRoundOneResponsePayload } from "../studies/researchQuestions.js";
 
 function frontendOrigin(req: any): string {
   const origin = typeof req.headers.origin === "string" ? req.headers.origin : "http://127.0.0.1:5173";
@@ -272,13 +273,17 @@ export async function smsRoutes(app: FastifyInstance) {
       return reply.code(403).send({ error: "active_consent_required" });
     }
     if (!participantCanSubmit({ ...session, round_number: 1 })) return reply.code(403).send({ error: "participant_inactive_or_withdrawn_for_round" });
-    const text = typeof body.text === "string" ? body.text.trim() : "";
-    if (!text) return reply.code(400).send({ error: "response_text_required" });
+    const studyVersion = await getStudyVersion(session.version_id);
+    if (!studyVersion || studyVersion.study_id !== session.study_id) {
+      return reply.code(404).send({ error: "study_version_not_found" });
+    }
+    const normalizedRoundOne = normalizeRoundOneResponsePayload(body, studyVersion.study_design_packet_json);
+    if (!normalizedRoundOne.ok) return reply.code(400).send({ error: normalizedRoundOne.error });
     const rec = createResponse({
       study_id: session.study_id,
       version_id: session.version_id,
       participant_id: session.participant_id,
-      response_json: { round_number: 1, text: text.slice(0, 10000) },
+      response_json: normalizedRoundOne.payload,
     });
     await writeAuditEvent({
       actor: participantActor(session.participant_id),

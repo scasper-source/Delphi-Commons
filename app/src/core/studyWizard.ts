@@ -30,10 +30,23 @@ export type StudyWizardStepId =
   | "retention"
   | "review";
 
+export type ResearchQuestion = {
+  id: string;
+  displayOrder: number;
+  text: string;
+  shortLabel?: string;
+  description?: string;
+  requiredForRound1Response: boolean;
+  active: boolean;
+  createdAt: string;
+  updatedAt: string;
+};
+
 export type StudyWizardState = {
   title: string;
   description: string;
   researchQuestion: string;
+  researchQuestions: ResearchQuestion[];
   objective: string;
   delphiSuitability: string;
   studyFormat: StudyFormat;
@@ -128,6 +141,19 @@ export const defaultWizardState: StudyWizardState = {
   title: "Care Transitions Expert Delphi",
   description: "A Delphi study of expert views on safe care transitions.",
   researchQuestion: "Which care transition practices should be prioritized by this expert panel?",
+  researchQuestions: [
+    {
+      id: "rq-1",
+      displayOrder: 1,
+      text: "Which care transition practices should be prioritized by this expert panel?",
+      shortLabel: "Research question 1",
+      description: "",
+      requiredForRound1Response: true,
+      active: true,
+      createdAt: "2026-01-01T00:00:00.000Z",
+      updatedAt: "2026-01-01T00:00:00.000Z",
+    },
+  ],
   objective: "Identify areas of panel agreement, near agreement, and non-consensus while preserving uncertainty and dissent.",
   delphiSuitability:
     "The question requires structured expert judgment where evidence is incomplete and uncertainty should be made visible.",
@@ -242,12 +268,114 @@ export function containsForbiddenWizardLanguage(text: string): boolean {
   return forbiddenParticipantTerms.some((term) => normalized.includes(term));
 }
 
+function recordValue(value: unknown): Record<string, unknown> | null {
+  return Boolean(value) && typeof value === "object" && !Array.isArray(value)
+    ? value as Record<string, unknown>
+    : null;
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(recordValue(value));
+}
+
+function normalizeResearchQuestionEntry(
+  value: unknown,
+  index: number,
+  fallbackText = "",
+): ResearchQuestion | null {
+  const rec = recordValue(value);
+  const now = new Date().toISOString();
+  const text = typeof rec?.text === "string" ? rec.text : fallbackText;
+  if (!text.trim() && rec?.active === false) return null;
+
+  return {
+    id: typeof rec?.id === "string" && rec.id.trim() ? rec.id : `rq-${index + 1}`,
+    displayOrder:
+      typeof rec?.displayOrder === "number" && Number.isFinite(rec.displayOrder)
+        ? rec.displayOrder
+        : index + 1,
+    text,
+    ...(typeof rec?.shortLabel === "string" ? { shortLabel: rec.shortLabel } : {}),
+    ...(typeof rec?.description === "string" ? { description: rec.description } : {}),
+    requiredForRound1Response:
+      typeof rec?.requiredForRound1Response === "boolean"
+        ? rec.requiredForRound1Response
+        : true,
+    active: typeof rec?.active === "boolean" ? rec.active : true,
+    createdAt: typeof rec?.createdAt === "string" && rec.createdAt.trim() ? rec.createdAt : now,
+    updatedAt: typeof rec?.updatedAt === "string" && rec.updatedAt.trim() ? rec.updatedAt : now,
+  };
+}
+
+export function createResearchQuestionDraft(displayOrder: number, text = ""): ResearchQuestion {
+  const now = new Date().toISOString();
+  const cryptoApi = typeof globalThis.crypto !== "undefined" ? globalThis.crypto : null;
+  const id = cryptoApi && "randomUUID" in cryptoApi
+    ? `rq-${cryptoApi.randomUUID()}`
+    : `rq-${Date.now()}-${displayOrder}`;
+  return {
+    id,
+    displayOrder,
+    text,
+    shortLabel: `Research question ${displayOrder}`,
+    description: "",
+    requiredForRound1Response: true,
+    active: true,
+    createdAt: now,
+    updatedAt: now,
+  };
+}
+
+export function normalizeResearchQuestionsFromPacket(packet: unknown): ResearchQuestion[] {
+  const rec = recordValue(packet);
+  const legacyText = typeof rec?.researchQuestion === "string" ? rec.researchQuestion : "";
+  const rawQuestions = Array.isArray(rec?.researchQuestions) ? rec.researchQuestions : [];
+  const normalized = rawQuestions
+    .map((entry, index) => normalizeResearchQuestionEntry(entry, index))
+    .filter((entry): entry is ResearchQuestion => Boolean(entry))
+    .sort((a, b) => a.displayOrder - b.displayOrder);
+
+  if (normalized.length > 0) {
+    return normalized.map((question, index) => ({
+      ...question,
+      displayOrder: index + 1,
+      shortLabel: question.shortLabel?.trim() || `Research question ${index + 1}`,
+    }));
+  }
+
+  return [createResearchQuestionDraft(1, legacyText || defaultWizardState.researchQuestion)];
+}
+
+export function activeResearchQuestions(state: Pick<StudyWizardState, "researchQuestions" | "researchQuestion">): ResearchQuestion[] {
+  return normalizeResearchQuestionsFromPacket(state)
+    .filter((question) => question.active)
+    .sort((a, b) => a.displayOrder - b.displayOrder);
+}
+
+export function normalizeWizardResearchQuestions(state: StudyWizardState): StudyWizardState {
+  const questions = normalizeResearchQuestionsFromPacket(state);
+  const active = questions.filter((question) => question.active);
+  const firstActive = active[0] ?? questions[0] ?? createResearchQuestionDraft(1, state.researchQuestion);
+  return {
+    ...state,
+    researchQuestion: firstActive.text,
+    researchQuestions: questions,
+  };
+}
+
 export function validateWizardStep(step: StudyWizardStepId, state: StudyWizardState): string[] {
   const blockers: string[] = [];
 
   if (step === "purpose") {
+    const activeQuestions = activeResearchQuestions(state);
     if (!state.title.trim()) blockers.push("Study title is required.");
-    if (!state.researchQuestion.trim()) blockers.push("Research question is required.");
+    if (activeQuestions.length === 0) blockers.push("At least one active research question is required.");
+    activeQuestions.forEach((question, index) => {
+      if (!question.text.trim()) blockers.push(`Research question ${index + 1} is required.`);
+      if (containsForbiddenWizardLanguage(question.description ?? "")) {
+        blockers.push(`Research question ${index + 1} description must remain neutral.`);
+      }
+    });
     if (!state.objective.trim()) blockers.push("Study objective is required.");
     if (!state.delphiSuitability.trim()) blockers.push("Document why Delphi is suitable for this question.");
   }
@@ -340,10 +468,6 @@ export function completedWizardStepCount(state: StudyWizardState): number {
   return wizardSteps.filter((step) => validateWizardStep(step.id, state).length === 0).length;
 }
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return Boolean(value) && typeof value === "object" && !Array.isArray(value);
-}
-
 export function wizardFromBackendPacket(
   packet: unknown,
   fallbackStudy?: { title?: string; description?: string },
@@ -353,19 +477,23 @@ export function wizardFromBackendPacket(
     ...(isRecord(packet) ? packet : {}),
   } as StudyWizardState;
 
-  return normalizeWizardForMethod({
+  return normalizeWizardResearchQuestions(normalizeWizardForMethod({
     ...merged,
     title: typeof merged.title === "string" && merged.title.trim() ? merged.title : fallbackStudy?.title ?? defaultWizardState.title,
     description:
       typeof merged.description === "string" && merged.description.trim()
         ? merged.description
         : fallbackStudy?.description ?? defaultWizardState.description,
-  });
+  }));
 }
 
 export function buildGovernanceSummary(state: StudyWizardState): Array<{ label: string; value: string }> {
+  const questions = activeResearchQuestions(state);
   return [
-    { label: "Research question", value: state.researchQuestion },
+    {
+      label: questions.length === 1 ? "Research question" : "Research questions",
+      value: questions.map((question, index) => `${index + 1}. ${question.text}`).join("\n"),
+    },
     { label: "Method", value: state.studyFormat === "ModifiedDelphi" ? "Modified Delphi" : "Classic Delphi" },
     { label: "Round 1 mode", value: state.roundOneMode === "open-ended" ? "Open-ended elicitation" : "Structured elicitation" },
     { label: "Panel criteria", value: state.panelCriteria },

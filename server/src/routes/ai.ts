@@ -28,6 +28,7 @@ import {
   type StudyDesignSnapshot,
 } from "../stores/aiSuggestionStore.js";
 import { getStudy, getStudyVersion } from "../studies/store.js";
+import { roundOneResponseEntries } from "../studies/researchQuestions.js";
 import { requireRole, getActor } from "../middleware/auth.js";
 import { writeAuditEvent } from "../core/audit.js";
 import type { Study, StudyVersion } from "../studies/types.js";
@@ -190,26 +191,8 @@ function excerptText(value: string): string {
 }
 
 function extractOpenResponseText(responseJson: unknown): string | null {
-  if (hasNonEmptyText(responseJson)) return responseJson.trim();
-  if (!responseJson || typeof responseJson !== "object") return null;
-
-  const rec = responseJson as Record<string, unknown>;
-  const keys = [
-    "text",
-    "response_text",
-    "open_text",
-    "answer",
-    "statement",
-    "comment",
-    "comments",
-    "rationale",
-  ];
-
-  for (const key of keys) {
-    const value = rec[key];
-    if (hasNonEmptyText(value)) return value.trim();
-  }
-
+  const entries = roundOneResponseEntries(responseJson);
+  if (entries.length > 0) return entries.map((entry) => entry.text).join("\n\n");
   return null;
 }
 
@@ -279,13 +262,8 @@ function buildRound1SynthesisOutput(input: {
   const openResponses = sortResponses(input.responses)
     .filter((response) => !isRatingRoundPayload(response.response_json))
     .flatMap((response) => {
-      const text = extractOpenResponseText(response.response_json);
-      if (!text) return [];
-
-      return [{
-        response,
-        text,
-      }];
+      const entries = roundOneResponseEntries(response.response_json);
+      return entries.flatMap((entry) => entry.text ? [{ response, text: entry.text }] : []);
     });
 
   const groups = new Map<string, { text: string; responses: ResponseRecord[] }>();

@@ -583,6 +583,18 @@ async function main() {
       study_design_packet_json: {
         title: studyCreated.study.title,
         description: studyCreated.study.description,
+        researchQuestion: studyCreated.study.description,
+        researchQuestions: [{
+          id: "rq-full-mock-garden-features",
+          displayOrder: 1,
+          text: studyCreated.study.description,
+          shortLabel: "Garden scheduling features",
+          description: "",
+          requiredForRound1Response: true,
+          active: true,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        }],
         roundOneMode: "open-ended",
         modifiedDesignAcknowledged: false,
         modifiedDesignRationale: "",

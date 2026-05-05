@@ -54,7 +54,13 @@ import {
   redactExportFileContent,
   redactExportText,
   redactExportValue,
+  neutralizeSpreadsheetFormulaText,
 } from "../exports/exportPrivacy.js";
+import {
+  activeResearchQuestionsFromPacket,
+  roundOneResponseEntries,
+  type ResearchQuestionConfig,
+} from "../studies/researchQuestions.js";
 
 type RatingRoundPayload = {
   round_number: number;
@@ -372,7 +378,7 @@ function buildRoundItemReports(
 
 function csvCell(value: unknown): string {
   if (value === null || value === undefined) return "";
-  const text = typeof value === "string" ? value : String(value);
+  const text = typeof value === "string" ? neutralizeSpreadsheetFormulaText(value) : String(value);
   return /[",\r\n]/.test(text) ? `"${text.replaceAll('"', '""')}"` : text;
 }
 
@@ -511,14 +517,11 @@ function exportManifestFile(input: {
   }, null, 2);
 }
 
-function extractOpenResponseText(responseJson: unknown): string {
+function extractOpenResponseText(responseJson: unknown, researchQuestions: ResearchQuestionConfig[] = []): string {
+  const entries = roundOneResponseEntries(responseJson, researchQuestions);
+  if (entries.length > 0) return entries.map((entry) => entry.text).join("\n\n");
   if (typeof responseJson === "string") return responseJson;
   if (!responseJson || typeof responseJson !== "object") return JSON.stringify(responseJson ?? {});
-  const rec = responseJson as Record<string, unknown>;
-  for (const key of ["text", "response_text", "open_text", "answer", "comment", "comments", "rationale"]) {
-    const value = rec[key];
-    if (typeof value === "string" && value.trim()) return value.trim();
-  }
   return JSON.stringify(responseJson);
 }
 
@@ -534,7 +537,9 @@ function buildExportDataset(input: {
   responses: ResponseRecord[];
   finalRoundNumber: number | null;
   participantStatuses?: ReturnType<typeof listParticipantEnrollments>;
+  researchQuestions?: ResearchQuestionConfig[];
 }) {
+  const researchQuestions = input.researchQuestions ?? [];
   const participantIds = [
     ...input.responses.map((response) => response.participant_id),
     ...(input.participantStatuses ?? []).map((status) => status.participant_id),
@@ -543,23 +548,45 @@ function buildExportDataset(input: {
   const ratingRounds = [2, 3, 4];
   const responseRows = input.responses.flatMap((response) => {
     if (ratingRounds.some((round) => isRatingRoundPayload(response.response_json, round))) return [];
-    const responseText = extractOpenResponseText(response.response_json);
-    const redactedResponseText = redactExportText(responseText);
-    return [{
+    const entries = roundOneResponseEntries(response.response_json, researchQuestions);
+    return entries.map((entry) => {
+      const redactedResponseText = redactExportText(entry.text);
+      return {
       response_id: response.response_id,
       study_id: response.study_id,
       round_number: 1,
+      research_question_id: entry.researchQuestionId,
+      research_question_label: redactExportText(entry.researchQuestionLabel),
+      research_question_text: redactExportText(entry.researchQuestionText),
       participant_pseudonym: participantCodes.get(response.participant_id) ?? "P000",
       item_id: "",
       response_text_redacted: redactedResponseText,
       submitted_at_shifted: "",
-      word_count: responseText.split(/\s+/).filter(Boolean).length,
-      redaction_applied: redactedResponseText !== responseText,
-      redaction_level: redactedResponseText !== responseText ? "obvious_direct_identifier_tokens" : "none",
+      word_count: entry.text.split(/\s+/).filter(Boolean).length,
+      redaction_applied: redactedResponseText !== entry.text,
+      redaction_level: redactedResponseText !== entry.text ? "obvious_direct_identifier_tokens" : "none",
       withdrawal_status: input.participantStatuses?.find((status) => status.participant_id === response.participant_id)?.status.toLowerCase() ?? "active",
       included_in_analysis: true,
-    }];
+    };
+    });
   });
+
+  const researchQuestionRows = researchQuestions.map((question) => ({
+    research_question_id: question.id,
+    display_order: question.displayOrder,
+    short_label: redactExportText(question.shortLabel ?? `Research question ${question.displayOrder}`),
+    question_text: redactExportText(question.text),
+    description: redactExportText(question.description ?? ""),
+    required_for_round1_response: question.requiredForRound1Response,
+    active: question.active,
+  }));
+
+  const round1ResponseCountRows = researchQuestionRows.map((question) => ({
+    research_question_id: question.research_question_id,
+    short_label: question.short_label,
+    round_number: 1,
+    response_count: responseRows.filter((row) => row.research_question_id === question.research_question_id && String(row.response_text_redacted).trim()).length,
+  }));
 
   const ratingRows = input.responses.flatMap((response) => {
     const ratingPayload = ratingRounds.flatMap((round) =>
@@ -638,7 +665,7 @@ function buildExportDataset(input: {
     };
   });
 
-  return { responseRows, ratingRows, itemRows, redactionRows, participantRows };
+  return { responseRows, ratingRows, itemRows, redactionRows, participantRows, researchQuestionRows, round1ResponseCountRows };
 }
 
 function ratingLabel(value: number): string {
@@ -1136,6 +1163,14 @@ export async function reportsRoutes(app: FastifyInstance) {
           isRatingRoundPayload(response.response_json, round)
         )
       );
+      const researchQuestions = activeResearchQuestionsFromPacket(studyVersion.study_design_packet_json);
+      const round1ResponseCountsByQuestion = researchQuestions.map((question) => ({
+        research_question_id: question.id,
+        short_label: question.shortLabel ?? `Research question ${question.displayOrder}`,
+        response_count: round1Responses
+          .flatMap((response) => roundOneResponseEntries(response.response_json, researchQuestions))
+          .filter((entry) => entry.researchQuestionId === question.id && entry.text.trim()).length,
+      }));
 
       const finalRoundResponses = allResponses.filter((response) =>
         isRatingRoundPayload(response.response_json, finalRoundNumber)
@@ -1267,6 +1302,15 @@ export async function reportsRoutes(app: FastifyInstance) {
           ).size,
           attrition: finalAttritionSummary,
         },
+        research_questions: researchQuestions.map((question) => ({
+          id: question.id,
+          display_order: question.displayOrder,
+          short_label: question.shortLabel,
+          text: question.text,
+          description: question.description ?? "",
+          required_for_round1_response: question.requiredForRound1Response,
+        })),
+        round1_response_counts_by_question: round1ResponseCountsByQuestion,
         non_consensus_items: nonConsensusItems,
         items: itemReports,
         appendices: {
@@ -1531,6 +1575,7 @@ export async function reportsRoutes(app: FastifyInstance) {
       const consentVersions = listConsentVersions({ study_id: studyId, version_id: versionId });
       const exportManifests = listExportManifests({ study_id: studyId, version_id: versionId });
       const finalRoundNumber = studyVersion.terminal_round_number;
+      const researchQuestions = activeResearchQuestionsFromPacket(studyVersion.study_design_packet_json);
       const finalRoundItems = finalRoundNumber === null
         ? []
         : items.filter((item) => item.round_number === finalRoundNumber && item.status === "Published");
@@ -1561,7 +1606,7 @@ export async function reportsRoutes(app: FastifyInstance) {
         ...rounds.map((round) => round.updated_at),
         ...suggestions.map((suggestion) => suggestion.created_at),
       ].sort().at(-1) ?? new Date().toISOString();
-      const dataset = buildExportDataset({ studyId, versionId, items, responses, finalRoundNumber, participantStatuses });
+      const dataset = buildExportDataset({ studyId, versionId, items, responses, finalRoundNumber, participantStatuses, researchQuestions });
       const edgeRows = provenanceEdges({ studyId, items });
       const transformRows = transformationRows({ items, merges, splits });
       const aiRows = suggestions.map((suggestion) => ({
@@ -1627,6 +1672,8 @@ export async function reportsRoutes(app: FastifyInstance) {
       const recordCounts = {
         items: items.length,
         responses: responses.length,
+        research_questions: dataset.researchQuestionRows.length,
+        round1_response_question_answers: dataset.responseRows.length,
         participants: participantStatuses.length,
         ratings: dataset.ratingRows.length,
         audit_events: auditRows.length,
@@ -1761,6 +1808,8 @@ export async function reportsRoutes(app: FastifyInstance) {
                 non_consensus_item_count: nonConsensusCount,
                 attrition: attritionSummary,
               },
+              research_questions: dataset.researchQuestionRows,
+              round1_response_counts_by_question: dataset.round1ResponseCountRows,
               required_statement: "Consensus indicates agreement among this panel; it does not establish correctness.",
               ai_connector_disclosure: aiConnectorDisclosure,
               study_context_disclosure: {
@@ -1866,12 +1915,14 @@ export async function reportsRoutes(app: FastifyInstance) {
         ],
         "anonymized-response-dataset": [
           ...baseFiles,
+          { path: "anonymized-response-dataset/research_questions.csv", content: toCsv(dataset.researchQuestionRows), format: ".csv", record_count: dataset.researchQuestionRows.length, contains_identifiable_data: false, redaction_profile: { direct_identifiers: "excluded" } },
+          { path: "anonymized-response-dataset/round1_response_counts_by_question.csv", content: toCsv(dataset.round1ResponseCountRows), format: ".csv", record_count: dataset.round1ResponseCountRows.length, contains_identifiable_data: false, redaction_profile: { direct_identifiers: "excluded", aggregate_counts_only: true } },
           { path: "anonymized-response-dataset/responses.csv", content: toCsv(dataset.responseRows), format: ".csv", record_count: dataset.responseRows.length, contains_identifiable_data: false, redaction_profile: { participant_ids: "pseudonymized", names_emails: "excluded" } },
           { path: "anonymized-response-dataset/ratings.csv", content: toCsv(dataset.ratingRows), format: ".csv", record_count: dataset.ratingRows.length, contains_identifiable_data: false, redaction_profile: { participant_ids: "pseudonymized", names_emails: "excluded" } },
           { path: "anonymized-response-dataset/participants_anonymized.csv", content: toCsv(dataset.participantRows), format: ".csv", record_count: dataset.participantRows.length, contains_identifiable_data: false, redaction_profile: { participant_ids: "pseudonymized", names_emails: "excluded", identity_response_mapping: "excluded" } },
           { path: "anonymized-response-dataset/items.csv", content: toCsv(dataset.itemRows), format: ".csv", record_count: dataset.itemRows.length, contains_identifiable_data: false, redaction_profile: { direct_identifiers: "excluded" } },
           { path: "anonymized-response-dataset/redaction_manifest.csv", content: toCsv(dataset.redactionRows), format: ".csv", record_count: dataset.redactionRows.length, contains_identifiable_data: false, redaction_profile: { identity_response_mapping: "excluded" } },
-          { path: "anonymized-response-dataset/data_dictionary.txt", content: "responses.csv, ratings.csv, and items.csv use participant_pseudonym values only. No name, email, or identity-response mapping is included.", format: ".txt", record_count: null, contains_identifiable_data: false, redaction_profile: { direct_identifiers: "excluded" } },
+          { path: "anonymized-response-dataset/data_dictionary.txt", content: "research_questions.csv lists the ordered study instrument questions. round1_response_counts_by_question.csv groups Round 1 completion counts by question. responses.csv, ratings.csv, and items.csv use participant_pseudonym values only. No name, email, or identity-response mapping is included.", format: ".txt", record_count: null, contains_identifiable_data: false, redaction_profile: { direct_identifiers: "excluded" } },
         ],
         "audit-package": [
           ...baseFiles,

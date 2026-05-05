@@ -47,6 +47,7 @@ const DIRECT_ID_FIELD_RE =
   /(^|[\s,{"])("?)(participant_id|user_id|account_id|invitation_id|identity_table_id|identity_response_mapping|participant_name|email|phone)\2\s*:/im;
 const DIRECT_ID_CSV_HEADER_RE =
   /(^|,)(participant_id|user_id|account_id|invitation_id|identity_table_id|identity_response_mapping|participant_name|email|phone)(,|$)/im;
+const SPREADSHEET_FORMULA_TEXT_RE = /^[\t\r\n ]*[=+\-@]/;
 
 export function privacyMetadataForExportType(
   exportType: ExportPackageType,
@@ -141,6 +142,10 @@ export function redactExportText(input: string): string {
     .replace(EMAIL_RE, "[REDACTED_EMAIL]")
     .replace(PHONE_RE, "[REDACTED_PHONE]")
     .replace(UUID_RE, "[REDACTED_ID]");
+}
+
+export function neutralizeSpreadsheetFormulaText(input: string): string {
+  return SPREADSHEET_FORMULA_TEXT_RE.test(input) ? `'${input}` : input;
 }
 
 export function redactExportValue<T>(value: T): T {

@@ -903,6 +903,69 @@
   grid-column: 1 / -1;
 }
 
+.research-question-manager {
+  border: 1px solid #d4e0dc;
+  border-radius: 8px;
+  padding: 14px;
+}
+
+.research-question-manager legend {
+  padding: 0 4px;
+}
+
+.research-question-list,
+.question-response-list,
+.submitted-response-list {
+  display: grid;
+  gap: 12px;
+}
+
+.research-question-card,
+.round-one-question-response {
+  border: 1px solid #d8e4df;
+  border-radius: 8px;
+  background: #fbfdfc;
+  padding: 12px;
+}
+
+.question-card-header,
+.icon-button-row,
+.two-column-fields {
+  display: flex;
+  gap: 10px;
+}
+
+.question-card-header {
+  align-items: flex-start;
+  justify-content: space-between;
+}
+
+.icon-button-row {
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.two-column-fields {
+  align-items: start;
+}
+
+.two-column-fields > * {
+  flex: 1 1 220px;
+}
+
+.question-required-row {
+  align-self: end;
+  min-height: 44px;
+}
+
+.round-one-question-response strong {
+  line-height: 1.35;
+}
+
+.round-one-question-response small {
+  color: #506267;
+}
+
 .method-helper {
   display: grid;
   gap: 4px;
@@ -1799,8 +1862,19 @@ summary:focus-visible,
 
   .mobile-task-summary,
   .rating-options,
-  .submitted-rating-list {
+  .submitted-rating-list,
+  .question-card-header,
+  .two-column-fields {
     grid-template-columns: 1fr;
+    display: grid;
+  }
+
+  .icon-button-row {
+    justify-content: stretch;
+  }
+
+  .icon-button-row > button {
+    width: 100%;
   }
 
   .round-context-panel ul {

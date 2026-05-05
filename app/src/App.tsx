@@ -42,6 +42,7 @@ import {
   type ParticipantIssueInput,
   type ParticipantIssue,
   type ParticipantIssueType,
+  type RoundOneAnswerInput,
 } from "./core/api";
 import { mockStudies, mockStudy } from "./core/mockData";
 import { canAccessIdentityMap, canAccessModule, canExportOutput, roleLabels } from "./core/permissions";
@@ -57,15 +58,19 @@ import {
   reportIncludesNonConsensus,
 } from "./policies/governance";
 import {
+  activeResearchQuestions,
   buildGovernanceSummary,
   consensusRuleSourceLabels,
   consensusSourceRequiresPreRoundInput,
+  createResearchQuestionDraft,
   defaultWizardState,
+  normalizeWizardResearchQuestions,
   normalizeWizardForMethod,
   preRoundConsensusStatusLabels,
   validateWizardStep,
   wizardFromBackendPacket,
   wizardSteps,
+  type ResearchQuestion,
   type StudyWizardState,
   type StudyWizardStepId,
 } from "./core/studyWizard";
@@ -177,17 +182,104 @@ function packetText(packet: unknown, key: "title" | "description"): string | nul
   return typeof value === "string" && value.trim() ? value : null;
 }
 
-function responseOpenText(responseJson: unknown): string | null {
-  if (typeof responseJson === "string" && responseJson.trim()) return responseJson.trim();
-  if (!responseJson || typeof responseJson !== "object" || Array.isArray(responseJson)) return null;
+type RoundOneResponseEntry = {
+  researchQuestionId: string;
+  researchQuestionLabel: string;
+  researchQuestionText: string;
+  text: string;
+};
+
+function fallbackResearchQuestion(): ResearchQuestion {
+  return {
+    id: "rq-1",
+    displayOrder: 1,
+    text: defaultWizardState.researchQuestion,
+    shortLabel: "Research question 1",
+    description: "",
+    requiredForRound1Response: true,
+    active: true,
+    createdAt: "2026-01-01T00:00:00.000Z",
+    updatedAt: "2026-01-01T00:00:00.000Z",
+  };
+}
+
+function questionLabel(question: ResearchQuestion, index: number): string {
+  return question.shortLabel?.trim() || `Research question ${index + 1}`;
+}
+
+function roundOneQuestions(wizard: StudyWizardState): ResearchQuestion[] {
+  const questions = activeResearchQuestions(wizard);
+  return questions.length > 0 ? questions : [fallbackResearchQuestion()];
+}
+
+function roundOneResponseEntries(responseJson: unknown, questions: ResearchQuestion[] = [fallbackResearchQuestion()]): RoundOneResponseEntry[] {
+  const activeQuestions = questions.filter((question) => question.active);
+  const fallbackQuestion = activeQuestions[0] ?? questions[0] ?? fallbackResearchQuestion();
+  if (typeof responseJson === "string" && responseJson.trim()) {
+    return [{
+      researchQuestionId: fallbackQuestion.id,
+      researchQuestionLabel: questionLabel(fallbackQuestion, 0),
+      researchQuestionText: fallbackQuestion.text,
+      text: responseJson.trim(),
+    }];
+  }
+  if (!responseJson || typeof responseJson !== "object" || Array.isArray(responseJson)) return [];
   const record = responseJson as Record<string, unknown>;
+  if (Array.isArray(record.responses)) {
+    const questionById = new Map(activeQuestions.map((question, index) => [question.id, { question, index }]));
+    const entries = record.responses.flatMap((entry): RoundOneResponseEntry[] => {
+      if (!entry || typeof entry !== "object" || Array.isArray(entry)) return [];
+      const entryRecord = entry as Record<string, unknown>;
+      const researchQuestionId = typeof entryRecord.researchQuestionId === "string" ? entryRecord.researchQuestionId : "";
+      const text = typeof entryRecord.text === "string" ? entryRecord.text.trim() : "";
+      if (!researchQuestionId || !text) return [];
+      const match = questionById.get(researchQuestionId);
+      return [{
+        researchQuestionId,
+        researchQuestionLabel: match ? questionLabel(match.question, match.index) : researchQuestionId,
+        researchQuestionText: match?.question.text ?? "",
+        text,
+      }];
+    });
+    if (entries.length > 0) return entries;
+  }
 
   for (const key of ["text", "response_text", "open_text", "answer", "statement", "comment", "comments"]) {
     const value = record[key];
-    if (typeof value === "string" && value.trim()) return value.trim();
+    if (typeof value === "string" && value.trim()) {
+      return [{
+        researchQuestionId: fallbackQuestion.id,
+        researchQuestionLabel: questionLabel(fallbackQuestion, 0),
+        researchQuestionText: fallbackQuestion.text,
+        text: value.trim(),
+      }];
+    }
   }
 
-  return null;
+  return [];
+}
+
+function responseOpenText(responseJson: unknown): string | null {
+  return roundOneResponseEntries(responseJson).at(0)?.text ?? null;
+}
+
+function firstRoundOneAnswerText(answers: Record<string, string>, questions: ResearchQuestion[]): string {
+  return questions.map((question) => answers[question.id]?.trim() ?? "").find(Boolean) ?? "";
+}
+
+function roundOneAnswerInputs(answers: Record<string, string>, questions: ResearchQuestion[]): RoundOneAnswerInput[] {
+  return questions.map((question) => ({
+    researchQuestionId: question.id,
+    text: answers[question.id]?.trim() ?? "",
+  }));
+}
+
+function roundOneAnswersFromPayload(payload: unknown, questions: ResearchQuestion[]): Record<string, string> {
+  const out: Record<string, string> = {};
+  for (const entry of roundOneResponseEntries(payload, questions)) {
+    out[entry.researchQuestionId] = entry.text;
+  }
+  return out;
 }
 
 function excerpt(value: string, max = 240): string {
@@ -206,6 +298,7 @@ function humanizeBackendMessage(message: string | null): string | null {
 
   const labels: Record<string, string> = {
     active_consent_required: "Consent must be acknowledged before this participant response can be submitted.",
+    active_research_question_required: "At least one active research question is required before launch or Round 1 response collection.",
     ai_suggestion_decision_required: "Accept, edit, or reject the AI suggestion before using it.",
     ai_suggestion_release_signoff_required:
       "Participant-facing AI-assisted material needs both Study Owner and Ethics & Methods Steward release signoff.",
@@ -226,6 +319,8 @@ function humanizeBackendMessage(message: string | null): string | null {
     round_not_open: "This task is not available until the study team opens the round.",
     round1_config_required: "Configure Round 1 before collecting participant responses.",
     round1_not_open: "Round 1 is not open for participant responses.",
+    required_research_question_response_missing: "A required research question response is missing.",
+    research_question_text_required: "Each active research question needs text before governance review.",
     source_material_required_for_synthesis: "Round 1 responses are required before drafting Round 2 candidates.",
     study_design_packet_missing: "Save the Study Builder packet before submitting for governance signoff.",
     study_version_not_active: "Activate the study version before opening rounds or collecting responses.",
@@ -411,7 +506,9 @@ function App() {
   const [roundActionError, setRoundActionError] = useState<string | null>(null);
   const [roundActionBusy, setRoundActionBusy] = useState<string | null>(null);
   const [participantResponseText, setParticipantResponseText] = useState("");
+  const [participantRoundOneAnswers, setParticipantRoundOneAnswers] = useState<Record<string, string>>({});
   const [participantSubmittedRoundOneText, setParticipantSubmittedRoundOneText] = useState<string | null>(null);
+  const [participantSubmittedRoundOneAnswers, setParticipantSubmittedRoundOneAnswers] = useState<Record<string, string> | null>(null);
   const [participantRoundOneEditing, setParticipantRoundOneEditing] = useState(false);
   const [participantRoundOneComplete, setParticipantRoundOneComplete] = useState(false);
   const [participantSubmittedRatings, setParticipantSubmittedRatings] = useState<Record<number, RatingDraft>>({});
@@ -431,6 +528,7 @@ function App() {
   const [magicContext, setMagicContext] = useState<MagicRoundEntryContext | null>(null);
   const [magicItems, setMagicItems] = useState<RoundItemForParticipant[]>([]);
   const [magicResponseText, setMagicResponseText] = useState("");
+  const [magicRoundOneAnswers, setMagicRoundOneAnswers] = useState<Record<string, string>>({});
   const [magicRatings, setMagicRatings] = useState<RatingDraft>({});
   const [magicRationales, setMagicRationales] = useState<RationaleDraft>({});
   const [magicMessage, setMagicMessage] = useState<string | null>(null);
@@ -545,13 +643,19 @@ function App() {
         setParticipantWithdrawn(Boolean(context.consent_record?.withdrew_at));
         setParticipantOrientationComplete(Boolean(context.orientation_completion));
         setRoundConfigs(context.round_configs);
+        const inviteWizard = context.study_version
+          ? wizardFromBackendPacket(context.study_version.study_design_packet_json, context.study ?? undefined)
+          : defaultWizardState;
+        setWizard(inviteWizard);
+        const inviteQuestions = roundOneQuestions(inviteWizard);
         const issueResult = await conductorApi.listInvitationParticipantIssues(inviteToken).catch(() => ({ issues: [] }));
         setRuntimeData((current) => ({ ...current, participantIssues: issueResult.issues }));
         const roundOneDraft = context.drafts.find((draft) => draft.round_number === 1);
-        if (roundOneDraft?.draft_json && typeof roundOneDraft.draft_json === "object" && "text" in roundOneDraft.draft_json) {
-          const text = (roundOneDraft.draft_json as { text?: unknown }).text;
-          if (typeof text === "string") {
-            setParticipantResponseText(text);
+        if (roundOneDraft?.draft_json) {
+          const answers = roundOneAnswersFromPayload(roundOneDraft.draft_json, inviteQuestions);
+          if (Object.keys(answers).length > 0) {
+            setParticipantRoundOneAnswers(answers);
+            setParticipantResponseText(firstRoundOneAnswerText(answers, inviteQuestions));
             setParticipantDraftSavedAt(roundOneDraft.updated_at);
           }
         }
@@ -607,7 +711,8 @@ function App() {
   }, [participantInviteToken]);
 
   useEffect(() => {
-    if (!participantResponseText.trim() || participantSubmittedRoundOneText) return;
+    const hasDraftText = participantResponseText.trim() || Object.values(participantRoundOneAnswers).some((value) => value.trim());
+    if (!hasDraftText || participantSubmittedRoundOneText) return;
 
     function warnBeforeLeaving(event: BeforeUnloadEvent) {
       event.preventDefault();
@@ -616,7 +721,7 @@ function App() {
 
     window.addEventListener("beforeunload", warnBeforeLeaving);
     return () => window.removeEventListener("beforeunload", warnBeforeLeaving);
-  }, [participantResponseText, participantSubmittedRoundOneText]);
+  }, [participantResponseText, participantRoundOneAnswers, participantSubmittedRoundOneText]);
 
   useEffect(() => {
     if (participantInviteToken || magicToken) return;
@@ -996,8 +1101,18 @@ function App() {
       return;
     }
 
-    if (!participantResponseText.trim()) {
-      setParticipantError("Round 1 response text is required.");
+    const activeQuestions = roundOneQuestions(wizard);
+    const answerMap = {
+      ...participantRoundOneAnswers,
+      ...(activeQuestions.length === 1 && !participantRoundOneAnswers[activeQuestions[0]!.id]
+        ? { [activeQuestions[0]!.id]: participantResponseText }
+        : {}),
+    };
+    const missingRequired = activeQuestions.find((question) =>
+      question.requiredForRound1Response && !answerMap[question.id]?.trim()
+    );
+    if (missingRequired) {
+      setParticipantError(`${questionLabel(missingRequired, activeQuestions.indexOf(missingRequired))} response is required.`);
       return;
     }
 
@@ -1006,7 +1121,8 @@ function App() {
     setParticipantMessage(null);
 
     try {
-      const submittedText = participantResponseText.trim();
+      const submittedAnswers = roundOneAnswerInputs(answerMap, activeQuestions);
+      const submittedText = firstRoundOneAnswerText(answerMap, activeQuestions);
       const roundOneConfig = roundConfigs.find((config) => config.round_number === 1);
       if (!roundOneConfig && workflow.version.opened_round1_at) {
         await conductorApi.saveRoundConfig(workflow.study.id, workflow.version.id, 1, "study_owner", {
@@ -1048,7 +1164,7 @@ function App() {
 
       if (participantInviteToken) {
         await conductorApi.recordInvitationConsent(participantInviteToken);
-        await conductorApi.submitInvitationRoundOneResponse(participantInviteToken, submittedText);
+        await conductorApi.submitInvitationRoundOneResponse(participantInviteToken, submittedAnswers);
       } else {
         const participantId = "demo-panelist-001";
         await conductorApi.recordConsent(workflow.study.id, workflow.version.id, participantId, "panelist");
@@ -1057,14 +1173,16 @@ function App() {
           workflow.version.id,
           participantId,
           "panelist",
-          submittedText,
+          submittedAnswers,
         );
       }
       setParticipantSubmittedRoundOneText(submittedText);
+      setParticipantSubmittedRoundOneAnswers(Object.fromEntries(submittedAnswers.map((answer) => [answer.researchQuestionId, answer.text])));
       setParticipantRoundOneEditing(false);
       setParticipantRoundOneComplete(false);
       setParticipantMessage("Round 1 response submitted. Please review what was recorded.");
       setParticipantResponseText("");
+      setParticipantRoundOneAnswers({});
       void loadRuntimeData(workflow.study.id, workflow.version.id);
     } catch (error) {
       setParticipantError(error instanceof Error ? error.message : "Unable to submit Round 1 response.");
@@ -1108,6 +1226,7 @@ function App() {
   function editSubmittedRoundOneResponse() {
     if (!participantSubmittedRoundOneText) return;
     setParticipantResponseText(participantSubmittedRoundOneText);
+    if (participantSubmittedRoundOneAnswers) setParticipantRoundOneAnswers(participantSubmittedRoundOneAnswers);
     setParticipantRoundOneEditing(true);
     setParticipantRoundOneComplete(false);
     setParticipantMessage("You can revise your Round 1 response below.");
@@ -1118,19 +1237,20 @@ function App() {
     setParticipantRoundOneEditing(false);
     setParticipantRoundOneComplete(true);
     setParticipantResponseText("");
+    setParticipantRoundOneAnswers({});
     setParticipantMessage("Round 1 task complete. Your submitted response is recorded.");
     setParticipantError(null);
   }
 
-  async function createManualItemFromResponse(response: ResponseRecord) {
+  async function createManualItemFromResponse(response: ResponseRecord, entry?: RoundOneResponseEntry) {
     if (!workflow.study || !workflow.version) return;
-    const text = responseOpenText(response.response_json);
+    const text = entry?.text ?? responseOpenText(response.response_json);
     if (!text) {
       setRuntimeData((current) => ({ ...current, error: "The selected response does not contain open text.", message: null }));
       return;
     }
 
-    setRuntimeActionBusy(`manual-${response.response_id}`);
+    setRuntimeActionBusy(`manual-${response.response_id}-${entry?.researchQuestionId ?? "legacy"}`);
     try {
       await conductorApi.createItem(workflow.study.id, workflow.version.id, role, {
         text,
@@ -1140,7 +1260,7 @@ function App() {
           source_type: "response",
           source_id: response.response_id,
           source_round_number: 1,
-          excerpt: excerpt(text),
+          excerpt: excerpt(entry ? `${entry.researchQuestionLabel}: ${text}` : text),
         }],
         rationale: "Human curator preserved this Round 1 response as a candidate Round 2 item.",
       });
@@ -1346,12 +1466,35 @@ function App() {
     setRoundTwoRationales((current) => ({ ...current, [itemId]: rationale }));
   }
 
+  function updateParticipantRoundOneAnswer(questionId: string, value: string) {
+    setParticipantRoundOneAnswers((current) => ({ ...current, [questionId]: value }));
+    const firstQuestionId = roundOneQuestions(wizard)[0]?.id;
+    if (questionId === firstQuestionId) setParticipantResponseText(value);
+  }
+
+  function updateMagicRoundOneAnswer(questionId: string, value: string) {
+    setMagicRoundOneAnswers((current) => ({ ...current, [questionId]: value }));
+    const firstQuestionId = (magicContext?.research_questions?.length ? magicContext.research_questions : [fallbackResearchQuestion()])[0]?.id;
+    if (questionId === firstQuestionId) setMagicResponseText(value);
+  }
+
   async function saveParticipantRoundOneDraft() {
     setParticipantBusy(true);
     setParticipantError(null);
     try {
+      const questions = roundOneQuestions(wizard);
+      const answers = {
+        ...participantRoundOneAnswers,
+        ...(questions.length === 1 && !participantRoundOneAnswers[questions[0]!.id]
+          ? { [questions[0]!.id]: participantResponseText }
+          : {}),
+      };
+      const draftJson = {
+        responses: roundOneAnswerInputs(answers, questions),
+        text: firstRoundOneAnswerText(answers, questions),
+      };
       if (participantInviteToken) {
-        const result = await conductorApi.saveInvitationDraft(participantInviteToken, 1, { text: participantResponseText });
+        const result = await conductorApi.saveInvitationDraft(participantInviteToken, 1, draftJson);
         setParticipantDraftSavedAt(result.draft.updated_at);
       } else {
         setParticipantDraftSavedAt(new Date().toISOString());
@@ -1683,8 +1826,16 @@ function App() {
     try {
       const roundNumber = magicContext.round.round_number;
       if (roundNumber === 1) {
-        if (!magicResponseText.trim()) throw new Error("Round response text is required.");
-        await conductorApi.submitMagicRoundOneResponse(roundNumber, magicResponseText.trim());
+        const questions = magicContext.research_questions?.length ? magicContext.research_questions : [fallbackResearchQuestion()];
+        const answers = {
+          ...magicRoundOneAnswers,
+          ...(questions.length === 1 && !magicRoundOneAnswers[questions[0]!.id]
+            ? { [questions[0]!.id]: magicResponseText }
+            : {}),
+        };
+        const missingRequired = questions.find((question) => question.requiredForRound1Response && !answers[question.id]?.trim());
+        if (missingRequired) throw new Error(`${questionLabel(missingRequired, questions.indexOf(missingRequired))} response is required.`);
+        await conductorApi.submitMagicRoundOneResponse(roundNumber, roundOneAnswerInputs(answers, questions));
       } else {
         if (magicItems.some((item) => !magicRatings[item.item_id])) {
           throw new Error(`A response option is required for each Round ${roundNumber} statement.`);
@@ -2179,7 +2330,9 @@ function App() {
           roundActionError={roundActionError}
           roundActionBusy={roundActionBusy}
           participantResponseText={participantResponseText}
+          participantRoundOneAnswers={participantRoundOneAnswers}
           participantSubmittedRoundOneText={participantSubmittedRoundOneText}
+          participantSubmittedRoundOneAnswers={participantSubmittedRoundOneAnswers}
           participantRoundOneEditing={participantRoundOneEditing}
           participantRoundOneComplete={participantRoundOneComplete}
           participantSubmittedRatings={participantSubmittedRatings}
@@ -2198,6 +2351,7 @@ function App() {
           magicContext={magicContext}
           magicItems={magicItems}
           magicResponseText={magicResponseText}
+          magicRoundOneAnswers={magicRoundOneAnswers}
           magicRatings={magicRatings}
           magicRationales={magicRationales}
           magicMessage={magicMessage}
@@ -2224,6 +2378,7 @@ function App() {
           onSaveRatingRoundSetup={saveRatingRoundConfiguration}
           onTransitionRound={transitionRound}
           onParticipantResponseChange={setParticipantResponseText}
+          onParticipantRoundOneAnswerChange={updateParticipantRoundOneAnswer}
           onParticipantConsentChange={setParticipantConsentChecked}
           onCompleteParticipantOrientation={completeParticipantOrientation}
           onSubmitParticipantRoundOne={submitParticipantRoundOne}
@@ -2237,6 +2392,7 @@ function App() {
           onRequestDeletionReview={requestParticipantDeletionReview}
           onReportParticipantIssue={reportParticipantIssue}
           onMagicResponseTextChange={setMagicResponseText}
+          onMagicRoundOneAnswerChange={updateMagicRoundOneAnswer}
           onMagicRatingChange={(itemId, rating) => setMagicRatings((current) => ({ ...current, [itemId]: rating }))}
           onMagicRationaleChange={(itemId, text) => setMagicRationales((current) => ({ ...current, [itemId]: text }))}
           onSubmitMagicRound={submitMagicRound}
@@ -2297,7 +2453,9 @@ function ModuleRenderer({
   roundActionError,
   roundActionBusy,
   participantResponseText,
+  participantRoundOneAnswers,
   participantSubmittedRoundOneText,
+  participantSubmittedRoundOneAnswers,
   participantRoundOneEditing,
   participantRoundOneComplete,
   participantSubmittedRatings,
@@ -2316,6 +2474,7 @@ function ModuleRenderer({
   magicContext,
   magicItems,
   magicResponseText,
+  magicRoundOneAnswers,
   magicRatings,
   magicRationales,
   magicMessage,
@@ -2342,6 +2501,7 @@ function ModuleRenderer({
   onSaveRatingRoundSetup,
   onTransitionRound,
   onParticipantResponseChange,
+  onParticipantRoundOneAnswerChange,
   onParticipantConsentChange,
   onCompleteParticipantOrientation,
   onSubmitParticipantRoundOne,
@@ -2355,6 +2515,7 @@ function ModuleRenderer({
   onRequestDeletionReview,
   onReportParticipantIssue,
   onMagicResponseTextChange,
+  onMagicRoundOneAnswerChange,
   onMagicRatingChange,
   onMagicRationaleChange,
   onSubmitMagicRound,
@@ -2404,7 +2565,9 @@ function ModuleRenderer({
   roundActionError: string | null;
   roundActionBusy: string | null;
   participantResponseText: string;
+  participantRoundOneAnswers: Record<string, string>;
   participantSubmittedRoundOneText: string | null;
+  participantSubmittedRoundOneAnswers: Record<string, string> | null;
   participantRoundOneEditing: boolean;
   participantRoundOneComplete: boolean;
   participantSubmittedRatings: Record<number, RatingDraft>;
@@ -2423,6 +2586,7 @@ function ModuleRenderer({
   magicContext: MagicRoundEntryContext | null;
   magicItems: RoundItemForParticipant[];
   magicResponseText: string;
+  magicRoundOneAnswers: Record<string, string>;
   magicRatings: RatingDraft;
   magicRationales: RationaleDraft;
   magicMessage: string | null;
@@ -2449,6 +2613,7 @@ function ModuleRenderer({
   onSaveRatingRoundSetup: (roundNumber: number) => void;
   onTransitionRound: (roundNumber: number, action: "open" | "close") => void;
   onParticipantResponseChange: (value: string) => void;
+  onParticipantRoundOneAnswerChange: (questionId: string, value: string) => void;
   onParticipantConsentChange: (value: boolean) => void;
   onCompleteParticipantOrientation: () => void;
   onSubmitParticipantRoundOne: () => void;
@@ -2462,12 +2627,13 @@ function ModuleRenderer({
   onRequestDeletionReview: () => void;
   onReportParticipantIssue: (input: ParticipantIssueInput) => void;
   onMagicResponseTextChange: (value: string) => void;
+  onMagicRoundOneAnswerChange: (questionId: string, value: string) => void;
   onMagicRatingChange: (itemId: string, rating: number) => void;
   onMagicRationaleChange: (itemId: string, text: string) => void;
   onSubmitMagicRound: () => void;
   onDeclineMagicRound: () => void;
   onRefreshRuntimeData: () => void;
-  onCreateManualItemFromResponse: (response: ResponseRecord) => void;
+  onCreateManualItemFromResponse: (response: ResponseRecord, entry?: RoundOneResponseEntry) => void;
   onSynthesizeRoundTwoCandidates: () => void;
   onSynthesizeRoundCandidates: (targetRoundNumber: number) => void;
   onAcceptSuggestion: (suggestion: AISuggestionRecord) => void;
@@ -2590,7 +2756,9 @@ function ModuleRenderer({
           wizard={wizard}
           roundConfigs={roundConfigs}
           participantResponseText={participantResponseText}
+          participantRoundOneAnswers={participantRoundOneAnswers}
           participantSubmittedRoundOneText={participantSubmittedRoundOneText}
+          participantSubmittedRoundOneAnswers={participantSubmittedRoundOneAnswers}
           participantRoundOneEditing={participantRoundOneEditing}
           participantRoundOneComplete={participantRoundOneComplete}
           participantSubmittedRatings={participantSubmittedRatings}
@@ -2609,6 +2777,7 @@ function ModuleRenderer({
           magicContext={magicContext}
           magicItems={magicItems}
           magicResponseText={magicResponseText}
+          magicRoundOneAnswers={magicRoundOneAnswers}
           magicRatings={magicRatings}
           magicRationales={magicRationales}
           magicMessage={magicMessage}
@@ -2618,6 +2787,7 @@ function ModuleRenderer({
           roundTwoRatings={roundTwoRatings}
           roundTwoRationales={roundTwoRationales}
           onParticipantResponseChange={onParticipantResponseChange}
+          onParticipantRoundOneAnswerChange={onParticipantRoundOneAnswerChange}
           onParticipantConsentChange={onParticipantConsentChange}
           onCompleteParticipantOrientation={onCompleteParticipantOrientation}
           onSubmitParticipantRoundOne={onSubmitParticipantRoundOne}
@@ -2631,6 +2801,7 @@ function ModuleRenderer({
           onRequestDeletionReview={onRequestDeletionReview}
           onReportParticipantIssue={onReportParticipantIssue}
           onMagicResponseTextChange={onMagicResponseTextChange}
+          onMagicRoundOneAnswerChange={onMagicRoundOneAnswerChange}
           onMagicRatingChange={onMagicRatingChange}
           onMagicRationaleChange={onMagicRationaleChange}
           onSubmitMagicRound={onSubmitMagicRound}
@@ -3818,6 +3989,7 @@ function StudyBuilderScreen({
     role !== "study_owner" ||
     (workflow.version !== null && workflow.version.status !== "Draft") ||
     workflow.busyStep !== null;
+  const instrumentLocked = Boolean(workflow.version && workflow.version.status !== "Draft");
   const [contextOpen, setContextOpen] = useState(false);
   const [contextRecord, setContextRecord] = useState<StudyContextDisclosure | null>(null);
   const [contextValidation, setContextValidation] = useState<StudyContextValidation | null>(null);
@@ -3988,11 +4160,11 @@ function StudyBuilderScreen({
         : "Optional";
 
   function updateWizard(patch: Partial<StudyWizardState>) {
-    onWizardChange({ ...wizard, ...patch });
+    onWizardChange(normalizeWizardResearchQuestions({ ...wizard, ...patch }));
   }
 
   function updateMethod(studyFormat: StudyWizardState["studyFormat"]) {
-    onWizardChange(normalizeWizardForMethod({ ...wizard, studyFormat }));
+    onWizardChange(normalizeWizardResearchQuestions(normalizeWizardForMethod({ ...wizard, studyFormat })));
   }
 
   function moveWizard(delta: number) {
@@ -4049,6 +4221,7 @@ function StudyBuilderScreen({
           step={activeStep.id}
           wizard={wizard}
           selectedMethodLabel={selectedMethod?.label ?? "Delphi"}
+          instrumentLocked={instrumentLocked}
           onChange={updateWizard}
           onMethodChange={updateMethod}
         />
@@ -4661,37 +4834,173 @@ function WizardStepFields({
   step,
   wizard,
   selectedMethodLabel,
+  instrumentLocked,
   onChange,
   onMethodChange,
 }: {
   step: StudyWizardStepId;
   wizard: StudyWizardState;
   selectedMethodLabel: string;
+  instrumentLocked: boolean;
   onChange: (patch: Partial<StudyWizardState>) => void;
   onMethodChange: (studyFormat: StudyWizardState["studyFormat"]) => void;
 }) {
   if (step === "purpose") {
+    const normalizedWizard = normalizeWizardResearchQuestions(wizard);
+    const questions = normalizedWizard.researchQuestions;
+    const activeQuestions = questions.filter((question) => question.active);
+    const commitQuestions = (nextQuestions: ResearchQuestion[]) => {
+      const normalized = normalizeWizardResearchQuestions({ ...wizard, researchQuestions: nextQuestions });
+      onChange({
+        researchQuestion: normalized.researchQuestion,
+        researchQuestions: normalized.researchQuestions,
+      });
+    };
+    const updateQuestion = (questionId: string, patch: Partial<ResearchQuestion>) => {
+      const now = new Date().toISOString();
+      commitQuestions(questions.map((question) =>
+        question.id === questionId ? { ...question, ...patch, updatedAt: now } : question
+      ));
+    };
+    const addQuestion = () => {
+      const nextQuestion = createResearchQuestionDraft(activeQuestions.length + 1);
+      commitQuestions([...questions, nextQuestion]);
+    };
+    const removeQuestion = (questionId: string) => {
+      if (activeQuestions.length <= 1) return;
+      updateQuestion(questionId, { active: false });
+    };
+    const isDefaultQuestionLabel = (value?: string) => !value?.trim() || /^Research question\s*\d+$/i.test(value.trim());
+    const moveQuestion = (questionId: string, delta: -1 | 1) => {
+      const fromIndex = activeQuestions.findIndex((question) => question.id === questionId);
+      const toIndex = fromIndex + delta;
+      if (fromIndex < 0 || toIndex < 0 || toIndex >= activeQuestions.length) return;
+      const now = new Date().toISOString();
+      const reorderedActiveQuestions = [...activeQuestions];
+      const [movedQuestion] = reorderedActiveQuestions.splice(fromIndex, 1);
+      reorderedActiveQuestions.splice(toIndex, 0, movedQuestion);
+      const orderedActiveQuestions = reorderedActiveQuestions.map((question, index) => ({
+        ...question,
+        displayOrder: index + 1,
+        shortLabel: isDefaultQuestionLabel(question.shortLabel) ? `Research question ${index + 1}` : question.shortLabel,
+        updatedAt: now,
+      }));
+      const inactiveQuestions = questions
+        .filter((question) => !question.active)
+        .map((question, index) => ({ ...question, displayOrder: orderedActiveQuestions.length + index + 1 }));
+      commitQuestions([...orderedActiveQuestions, ...inactiveQuestions]);
+    };
+
     return (
       <div className="form-grid">
         <label className="field wide-field">
           <span>Study title</span>
-          <input value={wizard.title} onChange={(event) => onChange({ title: event.target.value })} />
+          <input disabled={instrumentLocked} value={wizard.title} onChange={(event) => onChange({ title: event.target.value })} />
         </label>
         <label className="field wide-field">
           <span>Short description</span>
-          <textarea value={wizard.description} onChange={(event) => onChange({ description: event.target.value })} />
+          <textarea disabled={instrumentLocked} value={wizard.description} onChange={(event) => onChange({ description: event.target.value })} />
         </label>
-        <label className="field wide-field">
-          <span>Research question</span>
-          <textarea value={wizard.researchQuestion} onChange={(event) => onChange({ researchQuestion: event.target.value })} />
-        </label>
+        <fieldset className="field wide-field research-question-manager">
+          <legend>Research questions</legend>
+          <p className="muted">
+            Most Delphi studies have one central aim. You may add multiple related research questions when they help structure Round 1 collection, item curation, and final reporting.
+          </p>
+          {instrumentLocked ? (
+            <WarningBanner title="Research questions locked" risk="locked">
+              Research questions are part of the study instrument and cannot be changed after governance launch for this version.
+            </WarningBanner>
+          ) : null}
+          {activeQuestions.length > 5 ? (
+            <WarningBanner title="Participant burden warning" risk="warning">
+              Many research questions can increase participant burden, attrition risk, and analytic complexity. Consider whether these are related sub-questions of one Delphi study or should be separate studies.
+            </WarningBanner>
+          ) : null}
+          <div className="research-question-list">
+            {activeQuestions.map((question, index) => (
+              <article className="research-question-card" key={question.id}>
+                <div className="question-card-header">
+                  <strong>Question {index + 1}</strong>
+                  <div className="icon-button-row" aria-label={`Question ${index + 1} order and removal controls`}>
+                    <button
+                      aria-label={`Move question ${index + 1} up`}
+                      className="secondary-button"
+                      disabled={instrumentLocked || index === 0}
+                      onClick={() => moveQuestion(question.id, -1)}
+                      type="button"
+                    >
+                      Move question up
+                    </button>
+                    <button
+                      aria-label={`Move question ${index + 1} down`}
+                      className="secondary-button"
+                      disabled={instrumentLocked || index === activeQuestions.length - 1}
+                      onClick={() => moveQuestion(question.id, 1)}
+                      type="button"
+                    >
+                      Move question down
+                    </button>
+                    <button
+                      aria-label={`Remove question ${index + 1}`}
+                      className="secondary-button danger-button"
+                      disabled={instrumentLocked || activeQuestions.length <= 1}
+                      onClick={() => removeQuestion(question.id)}
+                      type="button"
+                    >
+                      Remove
+                    </button>
+                  </div>
+                </div>
+                <label className="field">
+                  <span>Question text</span>
+                  <textarea
+                    disabled={instrumentLocked}
+                    value={question.text}
+                    onChange={(event) => updateQuestion(question.id, { text: event.target.value })}
+                  />
+                </label>
+                <div className="two-column-fields">
+                  <label className="field">
+                    <span>Short label</span>
+                    <input
+                      disabled={instrumentLocked}
+                      value={question.shortLabel ?? ""}
+                      onChange={(event) => updateQuestion(question.id, { shortLabel: event.target.value })}
+                    />
+                  </label>
+                  <label className="check-field question-required-row">
+                    <input
+                      checked={question.requiredForRound1Response}
+                      disabled={instrumentLocked}
+                      onChange={(event) => updateQuestion(question.id, { requiredForRound1Response: event.target.checked })}
+                      type="checkbox"
+                    />
+                    <span>Required in Round 1</span>
+                  </label>
+                </div>
+                <label className="field">
+                  <span>Optional participant-facing description</span>
+                  <textarea
+                    disabled={instrumentLocked}
+                    value={question.description ?? ""}
+                    onChange={(event) => updateQuestion(question.id, { description: event.target.value })}
+                  />
+                  <small>Keep this neutral. Do not imply a preferred answer or expected agreement.</small>
+                </label>
+              </article>
+            ))}
+          </div>
+          <button className="secondary-button" disabled={instrumentLocked} onClick={addQuestion} type="button">
+            Add research question
+          </button>
+        </fieldset>
         <label className="field wide-field">
           <span>Objective</span>
-          <textarea value={wizard.objective} onChange={(event) => onChange({ objective: event.target.value })} />
+          <textarea disabled={instrumentLocked} value={wizard.objective} onChange={(event) => onChange({ objective: event.target.value })} />
         </label>
         <label className="field wide-field">
           <span>Why Delphi is suitable</span>
-          <textarea value={wizard.delphiSuitability} onChange={(event) => onChange({ delphiSuitability: event.target.value })} />
+          <textarea disabled={instrumentLocked} value={wizard.delphiSuitability} onChange={(event) => onChange({ delphiSuitability: event.target.value })} />
         </label>
       </div>
     );
@@ -5767,7 +6076,7 @@ function CurationScreen({
   runtimeData: RuntimeStudyData;
   runtimeActionBusy: string | null;
   onRefreshRuntimeData: () => void;
-  onCreateManualItemFromResponse: (response: ResponseRecord) => void;
+  onCreateManualItemFromResponse: (response: ResponseRecord, entry?: RoundOneResponseEntry) => void;
   onSynthesizeRoundTwoCandidates: () => void;
   onSynthesizeRoundCandidates: (targetRoundNumber: number) => void;
   onAcceptSuggestion: (suggestion: AISuggestionRecord) => void;
@@ -5780,7 +6089,11 @@ function CurationScreen({
   onMergeItemInto: (item: ItemRecord, target: ItemRecord) => void;
 }) {
   const hasBackendStudy = Boolean(workflow.study && workflow.version);
-  const openResponses = runtimeData.responses.filter((response) => responseOpenText(response.response_json));
+  const curationWizard = wizardFromBackendPacket(workflow.version?.study_design_packet_json, workflow.study ?? undefined);
+  const curationQuestions = roundOneQuestions(curationWizard);
+  const openResponseEntries = runtimeData.responses.flatMap((response) =>
+    roundOneResponseEntries(response.response_json, curationQuestions).map((entry) => ({ response, entry }))
+  );
   const roundTwoItems = runtimeData.items.filter((item) => item.round_number >= 2);
   const interRoundSuggestions = runtimeData.aiSuggestions.filter((suggestion) => suggestion.feature === "inter_round_synthesis");
   const terminalRound = workflow.version?.terminal_round_number ?? 2;
@@ -5841,25 +6154,23 @@ function CurationScreen({
             {runtimeData.message}
           </WarningBanner>
         ) : null}
-        {openResponses.length === 0 ? (
+        {openResponseEntries.length === 0 ? (
           <WarningBanner title="No Round 1 responses yet" risk="info">
             Round 1 participant responses will appear here after consent and submission.
           </WarningBanner>
         ) : null}
-        {openResponses.map((response) => {
-          const text = responseOpenText(response.response_json) ?? "";
-
+        {openResponseEntries.map(({ response, entry }) => {
           return (
-            <article className="response-snippet" key={response.response_id}>
+            <article className="response-snippet" key={`${response.response_id}-${entry.researchQuestionId}`}>
               <div className="split-line">
-                <StatusBadge risk="info" label="Round 1" />
+                <StatusBadge risk="info" label={entry.researchQuestionLabel} />
                 <small>{shortId(response.response_id)}</small>
               </div>
-              <p>{text}</p>
+              <p>{entry.text}</p>
               <button
                 className="secondary-button"
-                disabled={runtimeActionBusy === `manual-${response.response_id}`}
-                onClick={() => onCreateManualItemFromResponse(response)}
+                disabled={runtimeActionBusy === `manual-${response.response_id}-${entry.researchQuestionId}`}
+                onClick={() => onCreateManualItemFromResponse(response, entry)}
                 type="button"
               >
                 Create candidate
@@ -5874,7 +6185,7 @@ function CurationScreen({
           <h3>AI / Human Clusters</h3>
           <button
             className="primary-button"
-            disabled={runtimeActionBusy === "synthesize-r2" || openResponses.length === 0}
+            disabled={runtimeActionBusy === "synthesize-r2" || openResponseEntries.length === 0}
             onClick={onSynthesizeRoundTwoCandidates}
             type="button"
           >
@@ -6299,6 +6610,7 @@ function MagicRoundEntryScreen({
   context,
   items,
   responseText,
+  roundOneAnswers,
   ratings,
   rationales,
   message,
@@ -6306,6 +6618,7 @@ function MagicRoundEntryScreen({
   busy,
   participantIssues,
   onResponseTextChange,
+  onRoundOneAnswerChange,
   onRatingChange,
   onRationaleChange,
   onSubmit,
@@ -6315,6 +6628,7 @@ function MagicRoundEntryScreen({
   context: MagicRoundEntryContext | null;
   items: RoundItemForParticipant[];
   responseText: string;
+  roundOneAnswers: Record<string, string>;
   ratings: RatingDraft;
   rationales: RationaleDraft;
   message: string | null;
@@ -6322,6 +6636,7 @@ function MagicRoundEntryScreen({
   busy: boolean;
   participantIssues: ParticipantIssue[];
   onResponseTextChange: (value: string) => void;
+  onRoundOneAnswerChange: (questionId: string, value: string) => void;
   onRatingChange: (itemId: string, rating: number) => void;
   onRationaleChange: (itemId: string, rationale: string) => void;
   onSubmit: () => void;
@@ -6347,6 +6662,7 @@ function MagicRoundEntryScreen({
   const isOpen = context.round.status === "open";
   const isRoundOne = context.round.round_number === 1;
   const selectedCount = items.filter((item) => Boolean(ratings[item.item_id])).length;
+  const magicResearchQuestions = context.research_questions?.length ? context.research_questions : [fallbackResearchQuestion()];
 
   return (
     <div className="participant-flow magic-entry">
@@ -6381,15 +6697,24 @@ function MagicRoundEntryScreen({
         <section className="panel mobile-response-card">
           <h3>Round 1 response</h3>
           <p>You are giving your independent judgment. There are no correct answers.</p>
-          <label className="field">
-            <span>Your response</span>
-            <textarea
-              aria-label="Round 1 response text"
-              rows={7}
-              value={responseText}
-              onChange={(event) => onResponseTextChange(event.target.value)}
-            />
-          </label>
+          <div className="question-response-list">
+            {magicResearchQuestions.map((question, index) => (
+              <label className="field round-one-question-response" key={question.id}>
+                <span>{questionLabel(question, index)}{question.requiredForRound1Response ? " (required)" : ""}</span>
+                <strong>{question.text}</strong>
+                {question.description ? <small>{question.description}</small> : null}
+                <textarea
+                  aria-label={`Round 1 response for ${questionLabel(question, index)}`}
+                  rows={7}
+                  value={roundOneAnswers[question.id] ?? (index === 0 ? responseText : "")}
+                  onChange={(event) => {
+                    onRoundOneAnswerChange(question.id, event.target.value);
+                    if (index === 0) onResponseTextChange(event.target.value);
+                  }}
+                />
+              </label>
+            ))}
+          </div>
         </section>
       ) : null}
 
@@ -6466,7 +6791,9 @@ function ParticipantScreen({
   wizard,
   roundConfigs,
   participantResponseText,
+  participantRoundOneAnswers,
   participantSubmittedRoundOneText,
+  participantSubmittedRoundOneAnswers,
   participantRoundOneEditing,
   participantRoundOneComplete,
   participantSubmittedRatings,
@@ -6485,6 +6812,7 @@ function ParticipantScreen({
   magicContext,
   magicItems,
   magicResponseText,
+  magicRoundOneAnswers,
   magicRatings,
   magicRationales,
   magicMessage,
@@ -6494,6 +6822,7 @@ function ParticipantScreen({
   roundTwoRatings,
   roundTwoRationales,
   onParticipantResponseChange,
+  onParticipantRoundOneAnswerChange,
   onParticipantConsentChange,
   onCompleteParticipantOrientation,
   onSubmitParticipantRoundOne,
@@ -6507,6 +6836,7 @@ function ParticipantScreen({
   onRequestDeletionReview,
   onReportParticipantIssue,
   onMagicResponseTextChange,
+  onMagicRoundOneAnswerChange,
   onMagicRatingChange,
   onMagicRationaleChange,
   onSubmitMagicRound,
@@ -6519,7 +6849,9 @@ function ParticipantScreen({
   wizard: StudyWizardState;
   roundConfigs: RoundConfig[];
   participantResponseText: string;
+  participantRoundOneAnswers: Record<string, string>;
   participantSubmittedRoundOneText: string | null;
+  participantSubmittedRoundOneAnswers: Record<string, string> | null;
   participantRoundOneEditing: boolean;
   participantRoundOneComplete: boolean;
   participantSubmittedRatings: Record<number, RatingDraft>;
@@ -6538,6 +6870,7 @@ function ParticipantScreen({
   magicContext: MagicRoundEntryContext | null;
   magicItems: RoundItemForParticipant[];
   magicResponseText: string;
+  magicRoundOneAnswers: Record<string, string>;
   magicRatings: RatingDraft;
   magicRationales: RationaleDraft;
   magicMessage: string | null;
@@ -6547,6 +6880,7 @@ function ParticipantScreen({
   roundTwoRatings: RatingDraft;
   roundTwoRationales: RationaleDraft;
   onParticipantResponseChange: (value: string) => void;
+  onParticipantRoundOneAnswerChange: (questionId: string, value: string) => void;
   onParticipantConsentChange: (value: boolean) => void;
   onCompleteParticipantOrientation: () => void;
   onSubmitParticipantRoundOne: () => void;
@@ -6560,6 +6894,7 @@ function ParticipantScreen({
   onRequestDeletionReview: () => void;
   onReportParticipantIssue: (input: ParticipantIssueInput) => void;
   onMagicResponseTextChange: (value: string) => void;
+  onMagicRoundOneAnswerChange: (questionId: string, value: string) => void;
   onMagicRatingChange: (itemId: string, rating: number) => void;
   onMagicRationaleChange: (itemId: string, rationale: string) => void;
   onSubmitMagicRound: () => void;
@@ -6574,6 +6909,7 @@ function ParticipantScreen({
         context={magicContext}
         items={magicItems}
         responseText={magicResponseText}
+        roundOneAnswers={magicRoundOneAnswers}
         ratings={magicRatings}
         rationales={magicRationales}
         message={magicMessage}
@@ -6581,6 +6917,7 @@ function ParticipantScreen({
         busy={magicBusy}
         participantIssues={runtimeData.participantIssues}
         onResponseTextChange={onMagicResponseTextChange}
+        onRoundOneAnswerChange={onMagicRoundOneAnswerChange}
         onRatingChange={onMagicRatingChange}
         onRationaleChange={onMagicRationaleChange}
         onSubmit={onSubmitMagicRound}
@@ -6615,6 +6952,9 @@ function ParticipantScreen({
   const ratingRoundIsComplete = currentRatingRoundNumber ? Boolean(participantRatingRoundComplete[currentRatingRoundNumber]) : false;
   const showRatingEditor = !submittedRatingsForOpenRound || ratingRoundIsEditing;
   const showRoundOneEditor = !participantSubmittedRoundOneText || participantRoundOneEditing;
+  const roundOneResearchQuestions = roundOneQuestions(wizard);
+  const requiredRoundOneQuestions = roundOneResearchQuestions.filter((question) => question.requiredForRound1Response);
+  const answeredRequiredRoundOne = requiredRoundOneQuestions.filter((question) => Boolean(participantRoundOneAnswers[question.id]?.trim())).length;
   const selectedRatingCount = openRatingRoundItems.filter((item) => Boolean(roundTwoRatings[item.item_id])).length;
   const currentRatingDraftSavedAt = currentRatingRoundNumber ? participantRatingDraftSavedAt[currentRatingRoundNumber] ?? null : null;
   const savedRatingPrompt = openRatingRound?.prompt?.trim();
@@ -6840,7 +7180,19 @@ function ParticipantScreen({
             {participantSubmittedRoundOneText ? (
               <div className="submitted-response-review">
                 <strong>What was submitted</strong>
-                <p>{participantSubmittedRoundOneText}</p>
+                <div className="submitted-response-list">
+                  {roundOneResearchQuestions.map((question, index) => {
+                    const text = participantSubmittedRoundOneAnswers?.[question.id] ?? (index === 0 ? participantSubmittedRoundOneText : "");
+                    return text ? (
+                      <article className="submitted-rating-row" key={`submitted-r1-${question.id}`}>
+                        <div>
+                          <small>{questionLabel(question, index)}</small>
+                          <p>{text}</p>
+                        </div>
+                      </article>
+                    ) : null;
+                  })}
+                </div>
                 {participantRoundOneComplete ? (
                   <StatusBadge risk="success" label="Round 1 task complete" />
                 ) : (
@@ -6858,13 +7210,23 @@ function ParticipantScreen({
             {showRoundOneEditor ? (
               <>
                 <SaveStatusIndicator savedAt={participantDraftSavedAt} scope="Round 1 progress" />
-                <label className="field wide-field">
-                  <span>{participantRoundOneEditing ? "Revise your Round 1 response" : effectiveRoundOneConfig.prompt}</span>
-                  <textarea
-                    value={participantResponseText}
-                    onChange={(event) => onParticipantResponseChange(event.target.value)}
-                  />
-                </label>
+                <div className="question-response-list">
+                  {roundOneResearchQuestions.map((question, index) => (
+                    <label className="field wide-field round-one-question-response" key={question.id}>
+                      <span>{participantRoundOneEditing ? `Revise ${questionLabel(question, index)}` : questionLabel(question, index)}{question.requiredForRound1Response ? " (required)" : ""}</span>
+                      <strong>{question.text}</strong>
+                      {question.description ? <small>{question.description}</small> : null}
+                      <textarea
+                        aria-label={`Round 1 response for ${questionLabel(question, index)}`}
+                        value={participantRoundOneAnswers[question.id] ?? (index === 0 ? participantResponseText : "")}
+                        onChange={(event) => {
+                          onParticipantRoundOneAnswerChange(question.id, event.target.value);
+                          if (index === 0) onParticipantResponseChange(event.target.value);
+                        }}
+                      />
+                    </label>
+                  ))}
+                </div>
                 <label className="check-field wide-field">
                   <input
                     checked={participantConsentChecked}
@@ -6875,7 +7237,10 @@ function ParticipantScreen({
                     I have reviewed the consent information, confidentiality language, and withdrawal rights for this study.
                   </span>
                 </label>
-                <DataBar value={participantSubmittedRoundOneText ? 75 : 0} label="Your task progress" />
+                <DataBar
+                  value={participantSubmittedRoundOneText ? 75 : (requiredRoundOneQuestions.length ? (answeredRequiredRoundOne / requiredRoundOneQuestions.length) * 60 : 0)}
+                  label="Your task progress"
+                />
                 <div className="action-row sticky-action-bar">
                   <button className="secondary-button" disabled={participantBusy} onClick={onSaveParticipantRoundOneDraft} type="button">
                     Save progress

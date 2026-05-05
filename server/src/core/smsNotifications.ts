@@ -12,7 +12,8 @@ import { getSmsProvider } from "./smsProvider.js";
 import { hasActiveConsent } from "../stores/consentStore.js";
 import { listParticipantEnrollments, participantCanSubmit } from "../stores/participantStatusStore.js";
 import { getRoundConfig } from "../stores/roundConfigStore.js";
-import { getStudy } from "../studies/store.js";
+import { getStudy, getStudyVersion } from "../studies/store.js";
+import { activeResearchQuestionsFromPacket } from "../studies/researchQuestions.js";
 import {
   consumeMagicLinkByHash,
   createMagicLinkSession,
@@ -69,6 +70,15 @@ export type MagicRoundEntryContext = {
   };
   voluntary_reminder: string;
   controlled_feedback_explanation: string | null;
+  research_questions: Array<{
+    id: string;
+    displayOrder: number;
+    text: string;
+    shortLabel?: string;
+    description?: string;
+    requiredForRound1Response: boolean;
+    active: boolean;
+  }>;
 };
 
 export type SmsFanoutResult = {
@@ -516,6 +526,8 @@ export async function buildMagicRoundContext(input: {
   round_number: number;
 }): Promise<MagicRoundEntryContext> {
   const study = await getStudy(input.study_id);
+  const studyVersion = await getStudyVersion(input.version_id);
+  const researchQuestions = activeResearchQuestionsFromPacket(studyVersion?.study_design_packet_json);
   const round = getRoundConfig(input);
   const status =
     !round
@@ -549,6 +561,15 @@ export async function buildMagicRoundContext(input: {
       input.round_number > 1
         ? "You may see neutral group summaries such as medians, response spread, or distributions. This feedback is informational and is not an instruction to change your answers."
         : null,
+    research_questions: researchQuestions.map((question) => ({
+      id: question.id,
+      displayOrder: question.displayOrder,
+      text: question.text,
+      ...(question.shortLabel ? { shortLabel: question.shortLabel } : {}),
+      ...(question.description ? { description: question.description } : {}),
+      requiredForRound1Response: question.requiredForRound1Response,
+      active: question.active,
+    })),
   };
 }
 

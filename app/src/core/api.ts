@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import type { StudyWizardState } from "./studyWizard";
+import type { ResearchQuestion, StudyWizardState } from "./studyWizard";
 import type { OutputModelId, StudyRecord, UserRole } from "./types";
 
 export type ApiBoundary = {
@@ -133,6 +133,11 @@ export type ResponseRecord = {
   participant_id: string;
   response_json: unknown;
   created_at: string;
+};
+
+export type RoundOneAnswerInput = {
+  researchQuestionId: string;
+  text: string;
 };
 
 export type ItemProvenanceLink = {
@@ -525,6 +530,7 @@ export type MagicRoundEntryContext = {
   };
   voluntary_reminder: string;
   controlled_feedback_explanation: string | null;
+  research_questions: ResearchQuestion[];
 };
 
 export type StudyContextDisclosure = {
@@ -1515,10 +1521,10 @@ export const conductorApi = {
     return requestMagicJson<{ items: RoundItemForParticipant[] }>(`/magic-links/rounds/${roundNumber}/items`);
   },
 
-  async submitMagicRoundOneResponse(roundNumber: number, text: string) {
+  async submitMagicRoundOneResponse(roundNumber: number, responses: string | RoundOneAnswerInput[]) {
     return requestMagicJson<{ response_id: string }>(`/magic-links/rounds/${roundNumber}/responses`, {
       method: "POST",
-      body: { text },
+      body: typeof responses === "string" ? { text: responses } : { responses },
     });
   },
 
@@ -1650,11 +1656,11 @@ export const conductorApi = {
     );
   },
 
-  async submitInvitationRoundOneResponse(token: string, text: string) {
+  async submitInvitationRoundOneResponse(token: string, responses: string | RoundOneAnswerInput[]) {
     return requestInvitationJson<{ response_id: string }>(
       "/participant/invitation/responses",
       token,
-      { method: "POST", body: { text } },
+      { method: "POST", body: typeof responses === "string" ? { text: responses } : { responses } },
     );
   },
 
@@ -1693,7 +1699,7 @@ export const conductorApi = {
     versionId: string,
     participantId: string,
     role: UserRole,
-    text: string,
+    responses: string | RoundOneAnswerInput[],
   ) {
     return requestJson<{ response_id: string }>(
       `/studies/${studyId}/versions/${versionId}/responses`,
@@ -1702,7 +1708,10 @@ export const conductorApi = {
         method: "POST",
         body: {
           participant_id: participantId,
-          response_json: { round_number: 1, text },
+          response_json:
+            typeof responses === "string"
+              ? { round_number: 1, text: responses }
+              : { round_number: 1, responses },
         },
       },
     );

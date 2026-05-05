@@ -25,6 +25,7 @@ import { participantCanSubmit } from "../stores/participantStatusStore.js";
 import { hasOrientationCompletion } from "../stores/orientationStore.js";
 import { createFinalResultSnapshot } from "../core/finalResults.js";
 import { sendRoundOpenSmsNotifications } from "../core/smsNotifications.js";
+import { normalizeRoundOneResponsePayload } from "../studies/researchQuestions.js";
 
 type RatingRoundPayload = {
   round_number: number;
@@ -570,11 +571,14 @@ export async function responsesRoutes(app: FastifyInstance) {
         return reply.code(403).send({ error: "participant_orientation_required" });
       }
 
+      const normalizedRoundOne = normalizeRoundOneResponsePayload(body, studyVersion.study_design_packet_json);
+      if (!normalizedRoundOne.ok) return reply.code(400).send({ error: normalizedRoundOne.error });
+
       const rec = createResponse({
         study_id: studyId,
         version_id: versionId,
         participant_id: String(body.participant_id),
-        response_json: body.response_json ?? {},
+        response_json: normalizedRoundOne.payload,
       });
 
       await writeAuditEvent({

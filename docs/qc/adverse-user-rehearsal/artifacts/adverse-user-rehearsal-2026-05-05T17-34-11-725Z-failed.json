@@ -1,0 +1,274 @@
+{
+  "run_started_at": "2026-05-05T17:34:11.725Z",
+  "run_completed_at": "2026-05-05T17:34:13.097Z",
+  "marker": "ADVERSE-moswr40e",
+  "mode": "local_api_driven_adverse_rehearsal_with_headless_browser_smoke",
+  "scope": {
+    "synthetic_data_only": true,
+    "local_or_controlled_dev_only": true,
+    "production_deployment": false,
+    "real_human_subjects_research": false,
+    "irb_launch": false,
+    "sensitive_participant_data": false,
+    "external_ai_calls": false,
+    "third_party_attack_testing": false
+  },
+  "environment": {
+    "commit_hash": "c7364c5005419be1dd48cd76de51000eacbebbd7",
+    "branch": "master",
+    "backend_url": "http://127.0.0.1:3001",
+    "frontend_url": "http://127.0.0.1:5173",
+    "backend_health": {
+      "status": "ok",
+      "service": "edelphi-server",
+      "environment": "development"
+    },
+    "browser": "Microsoft Edge headless when available",
+    "mobile_widths": [
+      320,
+      390,
+      414
+    ],
+    "auth_note": "Local development mode accepts legacy dev role headers unless EDELPHI_AUTH_REQUIRE_SESSION=true; this is not a production access-control model."
+  },
+  "commands": [
+    {
+      "command": "git rev-parse HEAD",
+      "cwd": "."
+    },
+    {
+      "command": "git branch --show-current",
+      "cwd": "."
+    }
+  ],
+  "study": {
+    "study_id": "118e7b72-8bcf-47b1-ae9e-b057a8ea3098",
+    "version_id": "b718d1f5-362b-44a6-8376-55ca875991d8",
+    "title": "Adverse User Classical Delphi ADVERSE-moswr40e",
+    "method": "ClassicDelphi"
+  },
+  "participants": [
+    {
+      "label": "SYN-P001",
+      "participant_id": "1d13b712-3fdc-479e-8ceb-1f4ca8c2154e",
+      "invitation_id": "11bd4b39-52df-42be-8e30-f35d33eee36d"
+    },
+    {
+      "label": "SYN-P002",
+      "participant_id": "0c04b374-f8ac-4275-8b30-fe1d3e9364a2",
+      "invitation_id": "810d8577-9166-41d0-a643-ecba804983a0"
+    },
+    {
+      "label": "SYN-P003",
+      "participant_id": "660a23ad-81ad-4c82-a24e-79ca187c669b",
+      "invitation_id": "503fa801-67df-4935-a192-bc9aed45dba0"
+    },
+    {
+      "label": "SYN-P004",
+      "participant_id": "e46722fb-5990-4cc3-86f6-d980bc0b79db",
+      "invitation_id": "98f16d65-8e76-4599-9886-c06dace57275"
+    },
+    {
+      "label": "SYN-P005",
+      "participant_id": "2c180c6d-0ca3-4658-b5aa-8c2c50824d79",
+      "invitation_id": "1928e732-b01c-429e-94fe-b0ecf2688c9d"
+    },
+    {
+      "label": "SYN-P006",
+      "participant_id": "c4bb690e-8c24-4bc1-82c5-a14c846cdf21",
+      "invitation_id": "732b50c8-8ed7-4978-99f8-dfdf42e3d12e"
+    },
+    {
+      "label": "SYN-P007",
+      "participant_id": "b62299c3-0ff5-4ff3-8613-d1989adecc6f",
+      "invitation_id": "9a3d70f2-8dc9-4207-ad02-00886bebf93e"
+    },
+    {
+      "label": "SYN-P008",
+      "participant_id": "68ea48f2-3655-42f1-af23-1115feb26500",
+      "invitation_id": "d09a05ea-ac68-470e-88f4-3d69fffbc5b8"
+    }
+  ],
+  "checks": [
+    {
+      "name": "backend environment visibly development",
+      "status": "PASS",
+      "environment": "development"
+    },
+    {
+      "name": "study setup and synthetic invitations",
+      "status": "PASS",
+      "participant_count": 8
+    },
+    {
+      "name": "malicious synthetic Round 1 inputs submitted",
+      "status": "PASS",
+      "fixture_categories": [
+        "html/script-like text",
+        "prompt injection",
+        "coercive synthetic placeholder text",
+        "direct identifiers",
+        "formula-like strings",
+        "unicode/newline stress"
+      ]
+    },
+    {
+      "name": "AI suggestion human edit before publication",
+      "status": "PASS",
+      "participant_facing_items_checked": 4
+    }
+  ],
+  "idor_and_access_control": [
+    {
+      "kind": "consensus_rule_lock",
+      "pathname": "consensus-rule",
+      "expected_statuses": [
+        409
+      ],
+      "actual_status": 409,
+      "pass": true,
+      "error": "consensus_rule_locked"
+    },
+    {
+      "kind": "participant_role_admin_view",
+      "pathname": "/studies/118e7b72-8bcf-47b1-ae9e-b057a8ea3098/versions/b718d1f5-362b-44a6-8376-55ca875991d8/responses",
+      "expected_statuses": [
+        403
+      ],
+      "actual_status": 403,
+      "error": "forbidden",
+      "pass": true
+    },
+    {
+      "kind": "invitation_header_admin_view",
+      "pathname": "/studies/118e7b72-8bcf-47b1-ae9e-b057a8ea3098/versions/b718d1f5-362b-44a6-8376-55ca875991d8/responses",
+      "expected_statuses": [
+        403
+      ],
+      "actual_status": 403,
+      "error": "forbidden",
+      "pass": true
+    },
+    {
+      "kind": "participant_attempts_other_participant_issue_create",
+      "pathname": "/studies/118e7b72-8bcf-47b1-ae9e-b057a8ea3098/versions/b718d1f5-362b-44a6-8376-55ca875991d8/participants/0c04b374-f8ac-4275-8b30-fe1d3e9364a2/issues",
+      "expected_statuses": [
+        403
+      ],
+      "actual_status": 403,
+      "error": "forbidden",
+      "pass": true
+    },
+    {
+      "kind": "participant_guess_export_package",
+      "pathname": "/studies/118e7b72-8bcf-47b1-ae9e-b057a8ea3098/versions/b718d1f5-362b-44a6-8376-55ca875991d8/export-packages/07730375-682f-47c9-9fed-f81c5fcc6155/files",
+      "expected_statuses": [
+        403
+      ],
+      "actual_status": 403,
+      "error": "forbidden",
+      "pass": true
+    },
+    {
+      "kind": "consensus_rule_lock_after_results",
+      "expected_statuses": [
+        409
+      ],
+      "actual_status": 409,
+      "error": "consensus_rule_locked",
+      "pass": true
+    }
+  ],
+  "malicious_input": [
+    {
+      "category": "participant_workflow_abuse",
+      "action": "submit_without_consent",
+      "expected": "403 active_consent_required",
+      "actual_status": 403,
+      "error": "active_consent_required",
+      "pass": true
+    },
+    {
+      "category": "participant_workflow_abuse",
+      "action": "duplicate_round1_submission",
+      "expected": "blocked or idempotent if single-submission policy applies",
+      "actual_status": 201,
+      "error": null,
+      "pass": true,
+      "note": "API accepts another response record; report logic sorts/aggregates responses. Single-submission policy is not clearly asserted by API."
+    },
+    {
+      "category": "participant_workflow_abuse",
+      "action": "submit_after_round_closed",
+      "expected": "409 round1_not_open",
+      "actual_status": 409,
+      "error": "round1_not_open",
+      "pass": true
+    }
+  ],
+  "support_loop_abuse": [
+    {
+      "issue_id": "A03jLdLmTwUf_R0P-EyIe",
+      "stored_note_length": 1200,
+      "note_was_truncated_to_limit": true,
+      "owner_can_see_issue": true,
+      "participant_can_see_own_response": true,
+      "other_participant_issue_count": 0,
+      "pass": true
+    }
+  ],
+  "ai_prompt_injection": [
+    {
+      "target_round_number": 2,
+      "suggestion_id": "bd8c984c-d7c1-490c-ab6b-e55cdafa7dcc",
+      "label": "AI Suggestion (Not Final)",
+      "decision_before_human": "None",
+      "injection_text_present_in_non_final_suggestion": true,
+      "participant_facing_before_human_review": false
+    },
+    {
+      "target_round_number": 3,
+      "suggestion_id": "d5c66117-f675-44bb-838f-e9e670922554",
+      "label": "AI Suggestion (Not Final)",
+      "decision_before_human": "None",
+      "injection_text_present_in_non_final_suggestion": false,
+      "participant_facing_before_human_review": false
+    }
+  ],
+  "export_packages": [],
+  "export_scan": {
+    "privacy_failures": [],
+    "privacy_warnings": [],
+    "formula_failures": [],
+    "rendering_warnings": []
+  },
+  "browser_smoke": [],
+  "same_tab_switching": {},
+  "payload_size": {
+    "round1_too_long_without_consent_status": 403,
+    "round1_too_long_after_consent_status": 400,
+    "round1_too_long_pass": true
+  },
+  "participant_withdrawal_or_removal": {},
+  "defects": {
+    "P0": [
+      {
+        "id": "ADVERSE-P0-RUNNER-FAILURE",
+        "summary": "The controlled adverse-user rehearsal runner failed before completing required evidence.",
+        "error": "POST /studies/118e7b72-8bcf-47b1-ae9e-b057a8ea3098/versions/b718d1f5-362b-44a6-8376-55ca875991d8/items/964b8650-e58f-4a20-8e7b-bbaae4b3ef55/publish returned 409: published_item_traceability_required"
+      }
+    ],
+    "P1": [],
+    "P2": [
+      {
+        "id": "ADVERSE-P2-DUPLICATE-ROUND1",
+        "summary": "Round 1 duplicate submission is accepted; not proven unsafe, but single-submit expectations should be clarified.",
+        "evidence": {
+          "status": 201
+        }
+      }
+    ],
+    "P3": []
+  },
+  "status": "NO_GO_FOR_CONTINUED_CONTROLLED_SYNTHETIC_MOCK_TESTING"
+}

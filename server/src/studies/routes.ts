@@ -40,6 +40,11 @@ import {
 import { writeAuditEvent } from "../core/audit.js";
 import { resolveActor } from "../middleware/auth.js";
 import { getUser, getUserByEmail } from "../auth/userStore.js";
+import {
+  activeResearchQuestionsFromPacket,
+  normalizeResearchQuestionsInPacket,
+  researchQuestionAuditChanges,
+} from "./researchQuestions.js";
 
 async function actorFromRequest(req: Parameters<typeof resolveActor>[0]) {
   const actor = await resolveActor(req);
@@ -629,7 +634,12 @@ export async function studiesRoutes(app: FastifyInstance) {
     if (v.status !== "Draft") return reply.code(409).send({ error: "study_design_packet_locked" });
 
     const body = (req.body ?? {}) as { study_design_packet_json?: unknown };
-    const packet = body.study_design_packet_json;
+    const rawPacket = body.study_design_packet_json;
+    const normalizedPacket = isRecord(rawPacket) ? normalizeResearchQuestionsInPacket(rawPacket) : null;
+    if (normalizedPacket && "error" in normalizedPacket) {
+      return reply.code(400).send({ error: normalizedPacket.error });
+    }
+    const packet = normalizedPacket && "packet" in normalizedPacket ? normalizedPacket.packet : rawPacket;
     if (!isRecord(packet)) {
       return reply.code(400).send({ error: "study_design_packet_required" });
     }
@@ -666,6 +676,22 @@ export async function studiesRoutes(app: FastifyInstance) {
       study_design_packet_json: packet,
     });
 
+    const researchQuestionChanges = researchQuestionAuditChanges(v.study_design_packet_json, packet);
+    for (const change of researchQuestionChanges) {
+      await writeAuditEvent({
+        action: `study_version.research_question.${change.action}`,
+        actor,
+        object: { type: "study_version", id: versionId },
+        details: {
+          study_id: studyId,
+          study_version_id: versionId,
+          research_question_id: change.researchQuestionId,
+          previous_value: change.previousValue,
+          new_value: change.newValue,
+        },
+      });
+    }
+
     await writeAuditEvent({
       action: "study_version.save_wizard_packet",
       actor,
@@ -674,6 +700,7 @@ export async function studiesRoutes(app: FastifyInstance) {
         study_id: studyId,
         synced_study_title: Boolean(title),
         round1_mode: roundOneMode,
+        active_research_question_count: activeResearchQuestionsFromPacket(packet).length,
         modified_delphi_bias_warning_acknowledged:
           roundOneMode === "structured" ? modifiedDesignAcknowledged : null,
       },
@@ -770,6 +797,9 @@ export async function studiesRoutes(app: FastifyInstance) {
 
     if (v.study_design_packet_json === null) {
       return reply.code(409).send({ error: "study_design_packet_missing" });
+    }
+    if (activeResearchQuestionsFromPacket(v.study_design_packet_json).length === 0) {
+      return reply.code(409).send({ error: "active_research_question_required" });
     }
 
     const configHash = sha256Json({
@@ -881,6 +911,9 @@ export async function studiesRoutes(app: FastifyInstance) {
     }
 
     if (v.consensus_rule_json === null) return reply.code(409).send({ error: "consensus_rule_missing" });
+    if (activeResearchQuestionsFromPacket(v.study_design_packet_json).length === 0) {
+      return reply.code(409).send({ error: "active_research_question_required" });
+    }
 
     if (v.opened_round1_at !== null) return reply.code(409).send({ error: "round1_already_opened" });
 
