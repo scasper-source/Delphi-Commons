@@ -6968,6 +6968,19 @@ function ParticipantScreen({
       ? effectiveRoundOneConfig?.title ?? "Round 1: open-ended elicitation"
     : "No round task is currently open";
   const issueRoundNumber = currentRatingRoundNumber ?? (roundOneOpen ? 1 : null);
+  const activeStudyVersion = participantInvite?.study_version ?? workflow.version ?? null;
+  const participantFacingPlannedRounds =
+    activeStudyVersion?.planned_round_count ?? activeStudyVersion?.terminal_round_number ?? null;
+  const participantFacingStudyFormat = activeStudyVersion?.study_format ?? null;
+  const participantStudyTimeCopy = participantFacingPlannedRounds
+    ? `This study is planned for up to ${participantFacingPlannedRounds} rounds. You will only see rounds that are open for your participation.`
+    : "This study's round schedule will be provided by the study team. You will only see rounds that are open for your participation.";
+  const participantStudyFormatLabel =
+    participantFacingStudyFormat === "ClassicDelphi"
+      ? "Classic Delphi"
+      : participantFacingStudyFormat === "ModifiedDelphi"
+        ? "Modified Delphi"
+        : null;
 
   return (
     <div className="participant-flow">
@@ -7275,10 +7288,8 @@ function ParticipantScreen({
 
       <section className="panel">
         <h3>Study Time Commitment</h3>
-        <p>
-          This study is planned for up to {wizard.plannedRoundCount} rounds. You will only see rounds that are open for your participation.
-        </p>
-        <StatusBadge risk="info" label={wizard.studyFormat === "ClassicDelphi" ? "Classic Delphi" : "Modified Delphi"} />
+        <p>{participantStudyTimeCopy}</p>
+        {participantStudyFormatLabel ? <StatusBadge risk="info" label={participantStudyFormatLabel} /> : null}
       </section>
 
       <section className="panel">
