@@ -34,7 +34,7 @@ export type ParticipantIssue = {
   responded_by_user_id: string | null;
   created_at: string;
   updated_at: string;
-  created_by: "participant_invitation" | "magic_link" | "staff_preview";
+  created_by: "participant_invitation" | "participant_portal" | "magic_link" | "staff_preview";
 };
 
 const issues = new JsonCollection<ParticipantIssue>("participant_issues");

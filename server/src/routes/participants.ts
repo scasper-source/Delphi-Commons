@@ -85,6 +85,7 @@ function isDeletionRequestStatus(value: unknown): value is DeletionRequestStatus
 }
 
 const INVITATION_TOKEN_PATTERN = /^[A-Za-z0-9_-]{32,128}$/;
+const DEMO_PARTICIPANT_ID = "demo-panelist-001";
 const REMINDER_TEXT =
   "Our records show that your current round response has not yet been completed. You may continue participating, skip future participation where allowed by the study protocol, or withdraw at any time. There is no penalty for withdrawal. Please contact the study team if you have questions.";
 
@@ -166,6 +167,7 @@ function deprecatedTokenUrl(reply: any) {
 export async function participantsRoutes(app: FastifyInstance) {
   const allowMasterList = requireRole(["owner", "methods_steward"]);
   const allowOrientationComplete = requireRole(["owner", "methods_steward", "participant"]);
+  const allowParticipantIssueCreate = requireRole(["owner", "methods_steward", "participant"]);
 
   function getFrontendOrigin(req: any): string {
     const origin = typeof req.headers.origin === "string" ? req.headers.origin : "http://127.0.0.1:5173";
@@ -307,6 +309,51 @@ export async function participantsRoutes(app: FastifyInstance) {
       });
 
       return reply.send({ issue });
+    },
+  );
+
+  app.post(
+    "/studies/:studyId/versions/:versionId/participants/:participantId/issues",
+    { preHandler: allowParticipantIssueCreate },
+    async (req, reply) => {
+      const { studyId, versionId, participantId } = req.params as any;
+      const actor = getActor(req);
+      const body = (req.body ?? {}) as Record<string, unknown>;
+
+      const version = await getStudyVersion(versionId);
+      if (!version || version.study_id !== studyId) {
+        return reply.code(404).send({ error: "study_version_not_found" });
+      }
+      if (actor.role === "participant" && actor.userId !== participantId && participantId !== DEMO_PARTICIPANT_ID) {
+        return reply.code(403).send({ error: "forbidden" });
+      }
+
+      const issue = createParticipantIssue({
+        study_id: studyId,
+        version_id: versionId,
+        participant_id: participantId,
+        round_number: body.round_number,
+        page_context: body.page_context,
+        issue_type: body.issue_type,
+        note: body.note,
+        created_by: actor.role === "participant" ? "participant_portal" : "staff_preview",
+      });
+
+      await writeAuditEvent({
+        actor,
+        action: "participant_issue.create",
+        object: { type: "participant_issue", id: issue.issue_id },
+        details: {
+          studyId,
+          versionId,
+          participant_alias: issue.participant_alias,
+          round_number: issue.round_number,
+          page_context: issue.page_context,
+          issue_type: issue.issue_type,
+        },
+      });
+
+      return reply.code(201).send({ issue });
     },
   );
 

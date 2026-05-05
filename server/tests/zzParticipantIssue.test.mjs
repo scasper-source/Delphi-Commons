@@ -156,8 +156,31 @@ test("participant issue reporter records safe support notes without audit note l
   assert.equal(participantVisible.issues.length, 1);
   assert.equal(participantVisible.issues[0].staff_response_note, "Thank you. We are checking this control now.");
 
+  const portalCreated = await expectStatus(app, {
+    method: "POST",
+    url: `/studies/${study.id}/versions/${studyVersion.id}/participants/demo-panelist-001/issues`,
+    headers: { "x-user-id": "participant-dev-user", "x-user-role": "participant" },
+    body: {
+      issue_type: "cannot_start_or_continue",
+      page_context: "participant_portal: Round 1 task",
+      round_number: 1,
+      note: "The next button did not respond.",
+    },
+  }, 201);
+
+  assert.equal(portalCreated.issue.created_by, "participant_portal");
+
+  const staffVisibleAfterPortalNote = await expectStatus(app, {
+    method: "GET",
+    url: `/studies/${study.id}/versions/${studyVersion.id}/participant-issues`,
+    headers: owner,
+  }, 200);
+
+  assert.equal(staffVisibleAfterPortalNote.issues.length, 2);
+  assert.equal(staffVisibleAfterPortalNote.issues.some((issue) => issue.issue_id === portalCreated.issue.issue_id), true);
+
   const audit = listAuditEvents().filter((event) => event.action === "participant_issue.create");
-  assert.equal(audit.length, 1);
+  assert.equal(audit.length, 2);
   assert.equal(JSON.stringify(audit[0].details).includes("save button"), false);
   const responseAudit = listAuditEvents().filter((event) => event.action === "participant_issue.respond");
   assert.equal(responseAudit.length, 1);

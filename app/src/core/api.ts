@@ -1622,6 +1622,20 @@ export const conductorApi = {
     );
   },
 
+  async reportParticipantIssue(
+    studyId: string,
+    versionId: string,
+    participantId: string,
+    role: UserRole,
+    input: ParticipantIssueInput,
+  ) {
+    return requestJson<{ issue: ParticipantIssue }>(
+      `/studies/${studyId}/versions/${versionId}/participants/${encodeURIComponent(participantId)}/issues`,
+      role,
+      { method: "POST", body: input },
+    );
+  },
+
   async respondParticipantIssue(
     studyId: string,
     versionId: string,

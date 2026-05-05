@@ -110,6 +110,8 @@ const roleOrder: UserRole[] = [
   "open_source_admin",
 ];
 
+const DEMO_PARTICIPANT_ID = "demo-panelist-001";
+
 const statusLabels: Record<string, string> = {
   ReadyForReview: "Ready for review",
   NotOpen: "Not open",
@@ -253,7 +255,7 @@ function downloadPackageFile(file: ExportPackageFile) {
   const url = window.URL.createObjectURL(blob);
   const link = document.createElement("a");
   link.href = url;
-  link.download = file.path.split("/").at(-1) ?? "edelphi-export-file";
+  link.download = file.path.split("/").at(-1) ?? "delphi-commons-export-file";
   document.body.append(link);
   link.click();
   link.remove();
@@ -424,8 +426,8 @@ function App() {
   const [participantMessage, setParticipantMessage] = useState<string | null>(null);
   const [participantError, setParticipantError] = useState<string | null>(null);
   const [participantBusy, setParticipantBusy] = useState(false);
-  const [participantInviteToken] = useState(participantInviteTokenFromLocation);
-  const [magicToken] = useState(magicTokenFromLocation);
+  const [participantInviteToken, setParticipantInviteToken] = useState(participantInviteTokenFromLocation);
+  const [magicToken, setMagicToken] = useState(magicTokenFromLocation);
   const [magicContext, setMagicContext] = useState<MagicRoundEntryContext | null>(null);
   const [magicItems, setMagicItems] = useState<RoundItemForParticipant[]>([]);
   const [magicResponseText, setMagicResponseText] = useState("");
@@ -457,6 +459,21 @@ function App() {
   const activeTitle = workflow.study?.title ?? selectedStudy.title;
   const activeStatus = workflow.version?.status ?? selectedStudy.status;
   const consensusLocked = Boolean(workflow.version?.consensus_rule_json ?? selectedStudy.consensusRule.locked);
+
+  useEffect(() => {
+    function syncEntryTokensFromLocation() {
+      setParticipantInviteToken(participantInviteTokenFromLocation());
+      setMagicToken(magicTokenFromLocation());
+    }
+
+    syncEntryTokensFromLocation();
+    window.addEventListener("hashchange", syncEntryTokensFromLocation);
+    window.addEventListener("popstate", syncEntryTokensFromLocation);
+    return () => {
+      window.removeEventListener("hashchange", syncEntryTokensFromLocation);
+      window.removeEventListener("popstate", syncEntryTokensFromLocation);
+    };
+  }, []);
 
   async function loadSavedStudies() {
     if (role === "panelist") {
@@ -602,6 +619,8 @@ function App() {
   }, [participantResponseText, participantSubmittedRoundOneText]);
 
   useEffect(() => {
+    if (participantInviteToken || magicToken) return;
+
     if (workflow.study && workflow.version) {
       void loadRoundConfigs(workflow.study.id, workflow.version.id);
       void loadRuntimeData(workflow.study.id, workflow.version.id);
@@ -613,7 +632,7 @@ function App() {
       setFinalResultBlockers(["final_result_snapshot_missing"]);
       setParticipantFinalResponses([]);
     }
-  }, [role, workflow.study?.id, workflow.version?.id]);
+  }, [role, workflow.study?.id, workflow.version?.id, participantInviteToken, magicToken]);
 
   function openSavedStudy(record: SavedStudyRecord) {
     setWizard(wizardFromBackendPacket(record.latestVersion?.study_design_packet_json, record.study));
@@ -990,7 +1009,7 @@ function App() {
       const submittedText = participantResponseText.trim();
       const roundOneConfig = roundConfigs.find((config) => config.round_number === 1);
       if (!roundOneConfig && workflow.version.opened_round1_at) {
-        const repairedConfig = await conductorApi.saveRoundConfig(workflow.study.id, workflow.version.id, 1, "study_owner", {
+        await conductorApi.saveRoundConfig(workflow.study.id, workflow.version.id, 1, "study_owner", {
           task_type: "open_text",
           title: roundOneSetup.title,
           prompt: roundOneSetup.prompt,
@@ -1001,7 +1020,7 @@ function App() {
           controlled_feedback_enabled: false,
           ai_curation_enabled: roundOneSetup.aiCurationEnabled,
           feedback_config: null,
-          status: "Open",
+          status: "Ready",
         });
 
         const consentText = [
@@ -1020,6 +1039,7 @@ function App() {
           consent.consent_version.consent_version_id,
           "study_owner",
         );
+        const repairedConfig = await conductorApi.openRound(workflow.study.id, workflow.version.id, 1, "study_owner");
         setRoundConfigs((current) => [
           ...current.filter((config) => config.round_number !== 1),
           repairedConfig.round_config,
@@ -1542,13 +1562,35 @@ function App() {
     }
 
     if (!participantInviteToken) {
+      if (workflow.study && workflow.version) {
+        setParticipantBusy(true);
+        setParticipantError(null);
+        setParticipantMessage(null);
+        try {
+          const result = await conductorApi.reportParticipantIssue(
+            workflow.study.id,
+            workflow.version.id,
+            DEMO_PARTICIPANT_ID,
+            "panelist",
+            input,
+          );
+          setRuntimeData((current) => ({ ...current, participantIssues: [result.issue, ...current.participantIssues] }));
+          setParticipantMessage(participantCopy.trouble.success);
+        } catch (error) {
+          setParticipantError(error instanceof Error ? error.message : "Unable to send issue note.");
+        } finally {
+          setParticipantBusy(false);
+        }
+        return;
+      }
+
       setParticipantError(null);
       const now = new Date().toISOString();
       const issue: ParticipantIssue = {
         issue_id: `local-${Date.now()}`,
         study_id: workflow.study?.id ?? "local-preview-study",
         version_id: workflow.version?.id ?? "local-preview-version",
-        participant_id: "local-preview-participant",
+        participant_id: DEMO_PARTICIPANT_ID,
         participant_alias: "participant-preview",
         round_number: input.round_number,
         page_context: input.page_context,
@@ -1982,8 +2024,7 @@ function App() {
         return;
       }
 
-      const result = await conductorApi.openRoundOne(workflow.study.id, workflow.version.id, role);
-      const roundConfig = await conductorApi.saveRoundConfig(workflow.study.id, workflow.version.id, 1, role, {
+      await conductorApi.saveRoundConfig(workflow.study.id, workflow.version.id, 1, role, {
         task_type: "open_text",
         title: roundOneSetup.title,
         prompt: roundOneSetup.prompt,
@@ -1994,7 +2035,7 @@ function App() {
         controlled_feedback_enabled: false,
         ai_curation_enabled: roundOneSetup.aiCurationEnabled,
         feedback_config: null,
-        status: "Open",
+        status: "Ready",
       });
       const consentText = [
         `# ${wizard.consentVersion}`,
@@ -2012,16 +2053,18 @@ function App() {
         consent.consent_version.consent_version_id,
         role,
       );
+      const openedRound = await conductorApi.openRound(workflow.study.id, workflow.version.id, 1, role);
+      const openedAt = new Date().toISOString();
+      setRoundConfigs((current) => [
+        ...current.filter((config) => config.round_number !== 1),
+        openedRound.round_config,
+      ]);
       setWorkflow((current) => ({
         ...current,
-        version: result.studyVersion,
+        version: current.version ? { ...current.version, opened_round1_at: current.version.opened_round1_at ?? openedAt } : current.version,
         busyStep: null,
         lastMessage: "Round 1 opened with participant task and consent text.",
       }));
-      setRoundConfigs((current) => [
-        ...current.filter((config) => config.round_number !== 1),
-        roundConfig.round_config,
-      ]);
       void loadSavedStudies();
     } catch (error) {
       setWorkflow((current) => ({
@@ -2060,7 +2103,7 @@ function App() {
         <div className="brand-block">
           <span className="brand-mark">eD</span>
           <div>
-            <strong>eDelphi</strong>
+            <strong>Delphi Commons</strong>
             <small>Method-safe research platform</small>
           </div>
         </div>
@@ -2640,7 +2683,7 @@ function AboutScreen() {
       <section className="panel wide">
         <div className="section-heading">
           <span className="eyebrow">About the platform</span>
-          <h2>eDelphi protects method, participants, and interpretation</h2>
+          <h2>Delphi Commons protects method, participants, and interpretation</h2>
         </div>
         <div className="orientation-fact-grid">
           {platformAboutSections.map((section) => (
@@ -6548,7 +6591,7 @@ function ParticipantScreen({
   }
 
   const roundOneConfig = roundConfigs.find((config) => config.round_number === 1);
-  const effectiveRoundOneConfig = roundOneConfig ?? (workflow.version?.opened_round1_at
+  const effectiveRoundOneConfig = roundOneConfig ?? (workflow.version?.opened_round1_at || participantInvite?.study_version?.opened_round1_at
     ? {
         title: "Round 1: Open-ended elicitation",
         prompt: "What care transition practices should this panel consider for later rating rounds?",
@@ -6563,7 +6606,7 @@ function ParticipantScreen({
     ? undefined
     : roundConfigs.find((config) => config.round_number > 1 && config.status === "Open");
   const openRatingRoundItems = openRatingRound ? runtimeData.ratingRoundItems[openRatingRound.round_number] ?? [] : [];
-  const hasBackendStudy = Boolean(workflow.version);
+  const hasBackendStudy = Boolean(workflow.version || participantInvite?.study_version);
   const hasRatingTask = Boolean(openRatingRound && openRatingRoundItems.length > 0);
   const currentRatingRoundNumber = openRatingRound?.round_number ?? null;
   const submittedRatingsForOpenRound = currentRatingRoundNumber ? participantSubmittedRatings[currentRatingRoundNumber] ?? null : null;
