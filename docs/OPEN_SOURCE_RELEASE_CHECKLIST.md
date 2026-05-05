@@ -52,6 +52,8 @@ This checklist supports GitHub migration/open-source preparation. It does not ce
 
 - [x] Repository builds locally in final pre-migration gate
 - [x] Tests pass locally in final pre-migration gate
+- [x] Private GitHub clean-environment install/build/test check passed
+- [ ] Security audit check completed in GitHub/cloud environment; latest attempt blocked by npm advisory endpoint HTTP 403
 - [x] README has setup instructions
 - [x] CONTRIBUTING.md exists
 - [x] GOVERNANCE.md exists
