@@ -84,6 +84,33 @@ Secrets are redacted.
 | Human accessibility conformance review | NOT RUN | No Phase 10 human WCAG/assistive-technology review was executed. |
 | Independent security/ASVS review | NOT RUN | No independent security certification or ASVS review was executed. |
 
+## Supplemental Full Mock-Trial Rerun Evidence
+
+After the private GitHub migration check, the full mock-trial local runner was executed again in the local/dev environment to replace a failed cloud PR evidence attempt.
+
+| Field | Value |
+|---|---|
+| Operator | Local maintainer / Codex desktop session |
+| Date/time started | `2026-05-05T20:58:23.780Z` |
+| Date/time completed | `2026-05-05T20:58:53.409Z` |
+| Commit hash | `6c90ee57d4d0ab972ef7eebacb4859c88860be0d` |
+| Branch | `master` |
+| Backend URL | `http://127.0.0.1:3001` |
+| Frontend URL | `http://127.0.0.1:5173` |
+| Command | `node docs\qc\full-mock-trial\run_full_mock_trial_local.mjs` |
+| Evidence artifact | `docs/qc/full-mock-trial/artifacts/full-mock-trial-run-2026-05-05T20-58-23-780Z.json` |
+| Latest artifact pointer | `docs/qc/full-mock-trial/artifacts/full-mock-trial-run-latest.json` |
+
+| Area | Result | Notes |
+|---|---|---|
+| 8-participant, 4-round synthetic lifecycle | PASS | Completed through local invitation/API endpoints. |
+| Headless mobile-width smoke | PASS | Participant and staff smoke screenshots captured at 320px, 390px, and 414px. |
+| Export privacy scan | PASS | 0 failures; restricted packages retained warnings appropriate to restricted/internal classifications. |
+| Required Delphi limitation language | PASS | Required limitation sentence present exactly. |
+| Full manual browser UI submission pass | NOT RUN | Manual all-8 participant browser UI submission remains unperformed. |
+| Defects/conditions | PARTIAL | P0: 0; P1: 0; P2: 2. P2 conditions are browser-scope evidence and stale mobile smoke method/round-count copy. |
+| Final status | GO WITH CONDITIONS for controlled synthetic mock testing only | The remaining conditions are browser-scope evidence and stale mobile smoke copy; this does not authorize production, real human-subjects research, IRB launch, or sensitive participant data. |
+
 ## Export Package Evidence
 
 The road-test runtime contained 81 export files. Export package classifications observed:

@@ -18,7 +18,7 @@ Synthetic data only. Local development only. No production deployment. No real h
 
 Primary artifact:
 
-- `docs/qc/full-mock-trial/artifacts/full-mock-trial-run-2026-05-05T17-11-47-924Z.json`
+- `docs/qc/full-mock-trial/artifacts/full-mock-trial-run-2026-05-05T20-58-23-780Z.json`
 - `docs/qc/full-mock-trial/artifacts/full-mock-trial-run-latest.json`
 
 Mobile screenshots:
@@ -34,17 +34,17 @@ Mobile screenshots:
 
 | Field | Value |
 | --- | --- |
-| Commit hash | `9c046cc3594b4e78e607dc37f10989eb2186dfc0` |
+| Commit hash | `6c90ee57d4d0ab972ef7eebacb4859c88860be0d` |
 | Branch | `master` |
-| Run timestamp | `2026-05-05T17:11:47.924Z` |
+| Run timestamp | `2026-05-05T20:58:23.780Z` |
 | Backend URL | `http://127.0.0.1:3001` |
 | Backend health | `{"status":"ok","service":"edelphi-server","environment":"development"}` |
 | Frontend URL | `http://127.0.0.1:5173` |
-| Study ID | `b8bc10f2-8a10-48b5-b82b-85e5d0053c48` |
-| Version ID | `c2c42b39-d285-4ae8-9435-26c96529b0c3` |
+| Study ID | `8a6db895-3a94-4730-a687-8ea55c23f8d6` |
+| Version ID | `f648d68d-efe0-4df9-baf9-f95f5dc660b0` |
 | AI mode | Existing deterministic local AI helpers; No External AI mode |
 
-Note: an older backend process was initially found on port 3001. It was stopped and the backend was restarted from the rebuilt remediation code before the passing run.
+Note: this rerun reused the local development backend and frontend already responding at the documented local URLs. The lifecycle remained API-driven through local invitation endpoints, with headless mobile-width smoke evidence.
 
 ## Commands And Checks
 
@@ -105,11 +105,11 @@ Condition: the full lifecycle was API-driven through local invitation endpoints.
 
 | Package type | Package ID | Classification | Scan failures | Scan warnings | Required limitation |
 | --- | --- | --- | ---: | ---: | --- |
-| `final-delphi-report` | `bfc26b65-1c29-4fc2-95e4-9e5e795c9f77` | deidentified_research_report | 0 | 0 | PASS |
-| `anonymized-response-dataset` | `c72b0bb7-314f-4516-9483-0c4ace7e8711` | deidentified_research_report | 0 | 0 | PASS |
-| `audit-package` | `faaa01f4-e592-480d-8ef0-6db476d20a3d` | restricted_internal_admin_audit | 0 | 16 | PASS WITH RESTRICTED WARNINGS |
-| `provenance-bundle` | `ae0966bc-1994-4c1d-8557-fcb7f924778a` | deidentified_research_report | 0 | 0 | PASS |
-| `complete-archive` | `3ab752c0-b430-4ccf-9d38-657bb5784ad0` | complete_restricted_archive | 0 | 35 | PASS WITH RESTRICTED WARNINGS |
+| `final-delphi-report` | `94f1ad57-a66b-4689-8632-16ea23d5f80e` | deidentified_research_report | 0 | 0 | PASS |
+| `anonymized-response-dataset` | `de734425-c693-4f39-98cf-bb90fd3793b5` | deidentified_research_report | 0 | 0 | PASS |
+| `audit-package` | `4e5c3269-a927-4469-898c-cca571d27505` | restricted_internal_admin_audit | 0 | 16 | PASS WITH RESTRICTED WARNINGS |
+| `provenance-bundle` | `eef6baa6-8d07-4ce0-9b69-3cb6ceee8d33` | deidentified_research_report | 0 | 0 | PASS |
+| `complete-archive` | `a65b3b99-6e91-47b6-b755-d03f75b6ac54` | complete_restricted_archive | 0 | 35 | PASS WITH RESTRICTED WARNINGS |
 
 Required limitation found exactly:
 
@@ -121,7 +121,7 @@ Required limitation found exactly:
 | --- | ---: | --- |
 | P0 | 0 | No P0 remains from the run. |
 | P1 | 0 | No P1 recorded. |
-| P2 | 1 | Browser scope condition: manual all-8 browser UI submission pass not run. |
+| P2 | 2 | Browser scope condition: manual all-8 browser UI submission pass not run. Participant mobile smoke also showed stale method/round-count copy for the 4-round Classical Delphi run. |
 | P3 | 0 | No P3 recorded. |
 
 ## Decision
