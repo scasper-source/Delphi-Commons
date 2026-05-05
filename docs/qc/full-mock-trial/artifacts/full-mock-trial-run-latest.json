@@ -1,0 +1,965 @@
+{
+  "run_started_at": "2026-05-05T17:11:47.924Z",
+  "run_completed_at": "2026-05-05T17:12:15.137Z",
+  "marker": "FMT-mosvyb4l",
+  "mode": "local_api_driven_with_headless_browser_mobile_smoke",
+  "scope": {
+    "synthetic_data_only": true,
+    "local_or_controlled_dev_only": true,
+    "production_deployment": false,
+    "real_human_subjects_research": false,
+    "irb_launch": false,
+    "sensitive_participant_data": false,
+    "external_ai_calls": false
+  },
+  "environment": {
+    "commit_hash": "9c046cc3594b4e78e607dc37f10989eb2186dfc0",
+    "branch": "master",
+    "backend_url": "http://127.0.0.1:3001",
+    "frontend_url": "http://127.0.0.1:5173",
+    "backend_health": {
+      "status": "ok",
+      "service": "edelphi-server",
+      "environment": "development"
+    },
+    "browser": "Microsoft Edge headless when available; in-app browser inspection may be performed separately",
+    "mobile_widths": [
+      320,
+      390,
+      414
+    ]
+  },
+  "commands": [
+    {
+      "command": "git rev-parse HEAD",
+      "cwd": "C:\\Users\\13152\\Dropbox\\eDelphi"
+    },
+    {
+      "command": "git branch --show-current",
+      "cwd": "C:\\Users\\13152\\Dropbox\\eDelphi"
+    }
+  ],
+  "study": {
+    "study_id": "b8bc10f2-8a10-48b5-b82b-85e5d0053c48",
+    "version_id": "c2c42b39-d285-4ae8-9435-26c96529b0c3",
+    "title": "Full Mock Trial Classical Delphi FMT-mosvyb4l",
+    "topic": "Prioritizing features for a fictional community garden scheduling app.",
+    "method": "ClassicDelphi",
+    "participant_count": 8
+  },
+  "checks": [
+    {
+      "name": "backend environment visibly development",
+      "status": "PASS",
+      "environment": "development"
+    },
+    {
+      "name": "study setup and governance signoff",
+      "status": "PASS"
+    },
+    {
+      "name": "consensus rule change after launch blocked",
+      "status": "PASS",
+      "blocked": true,
+      "message": "PATCH /studies/b8bc10f2-8a10-48b5-b82b-85e5d0053c48/versions/c2c42b39-d285-4ae8-9435-26c96529b0c3/consensus-rule returned 409: consensus_rule_locked"
+    },
+    {
+      "name": "Round 1 submission blocked before consent",
+      "status": "PASS"
+    },
+    {
+      "name": "Round 1 all 8 synthetic participants submitted",
+      "status": "PASS"
+    },
+    {
+      "name": "support loop end to end",
+      "status": "PASS",
+      "issue_id": "EvHTQOtz1Fq-kcRuZVuBI",
+      "staff_visible_count": 1,
+      "participant_response_visible": true,
+      "other_participant_issue_count": 0
+    },
+    {
+      "name": "Round 2 all 8 synthetic participants submitted ratings",
+      "status": "PASS",
+      "item_count": 8
+    },
+    {
+      "name": "consensus rule change after Round 2 blocked",
+      "status": "PASS",
+      "blocked": true,
+      "message": "PATCH /studies/b8bc10f2-8a10-48b5-b82b-85e5d0053c48/versions/c2c42b39-d285-4ae8-9435-26c96529b0c3/consensus-rule returned 409: consensus_rule_locked"
+    },
+    {
+      "name": "Round 3 all 8 synthetic participants submitted reratings",
+      "status": "PASS",
+      "item_count": 8,
+      "retained_disagreement_participants": [
+        "SYN-P007",
+        "SYN-P008"
+      ]
+    },
+    {
+      "name": "consensus rule change after Round 3 blocked",
+      "status": "PASS",
+      "blocked": true,
+      "message": "PATCH /studies/b8bc10f2-8a10-48b5-b82b-85e5d0053c48/versions/c2c42b39-d285-4ae8-9435-26c96529b0c3/consensus-rule returned 409: consensus_rule_locked"
+    },
+    {
+      "name": "Round 4 all 8 synthetic participants submitted final ratings",
+      "status": "PASS",
+      "item_count": 8
+    },
+    {
+      "name": "final results released to participant invitation view",
+      "status": "PASS"
+    },
+    {
+      "name": "final report generated with required limitation",
+      "status": "PASS"
+    },
+    {
+      "name": "regenerated exports passed privacy scan",
+      "status": "PASS",
+      "failures": 0,
+      "warnings": 51
+    },
+    {
+      "name": "external AI boundary",
+      "status": "PASS",
+      "external_ai_enabled": false,
+      "no_external_ai_mode": true
+    }
+  ],
+  "counts": {
+    "participants": 8,
+    "round1_open_text_submissions": 8,
+    "round2_rating_participants": 8,
+    "round3_rating_participants": 8,
+    "round4_rating_participants": 8,
+    "round2_items": 8,
+    "export_packages": 5
+  },
+  "ai": {
+    "mode": "existing deterministic local AI helpers; No External AI mode",
+    "external_ai_enabled": false,
+    "no_external_ai_mode": true,
+    "suggestions": [
+      {
+        "suggestion_id": "52d57a25-5bdb-42f9-96d7-efbf8f8b258a",
+        "feature": "inter_round_synthesis",
+        "label": "AI Suggestion (Not Final)",
+        "target_round_number": 2,
+        "candidate_count": 8,
+        "decision_before_human": "None"
+      },
+      {
+        "suggestion_id": "b4c5d29d-10b8-410b-bc4b-1d143957425e",
+        "feature": "inter_round_synthesis",
+        "label": "AI Suggestion (Not Final)",
+        "target_round_number": 3,
+        "candidate_count": 8,
+        "decision_before_human": "None"
+      },
+      {
+        "suggestion_id": "3b3b5f84-c032-4a4b-84a0-5a314b1484b2",
+        "feature": "inter_round_synthesis",
+        "label": "AI Suggestion (Not Final)",
+        "target_round_number": 4,
+        "candidate_count": 8,
+        "decision_before_human": "None"
+      }
+    ]
+  },
+  "support_loop": {
+    "issue_id": "EvHTQOtz1Fq-kcRuZVuBI",
+    "staff_visible_count": 1,
+    "participant_response_visible": true,
+    "other_participant_issue_count": 0
+  },
+  "export_packages": [
+    {
+      "export_type": "final-delphi-report",
+      "export_package_id": "bfc26b65-1c29-4fc2-95e4-9e5e795c9f77",
+      "classification": "deidentified_research_report",
+      "safe_for_deidentified_sharing": true,
+      "direct_identifiers_included": false,
+      "participant_response_mapping_included": false,
+      "file_count": 9,
+      "scan_failure_count": 0,
+      "scan_warning_count": 0,
+      "required_limitation_present": true
+    },
+    {
+      "export_type": "anonymized-response-dataset",
+      "export_package_id": "c72b0bb7-314f-4516-9483-0c4ace7e8711",
+      "classification": "deidentified_research_report",
+      "safe_for_deidentified_sharing": true,
+      "direct_identifiers_included": false,
+      "participant_response_mapping_included": false,
+      "file_count": 12,
+      "scan_failure_count": 0,
+      "scan_warning_count": 0,
+      "required_limitation_present": true
+    },
+    {
+      "export_type": "audit-package",
+      "export_package_id": "faaa01f4-e592-480d-8ef0-6db476d20a3d",
+      "classification": "restricted_internal_admin_audit",
+      "safe_for_deidentified_sharing": false,
+      "direct_identifiers_included": true,
+      "participant_response_mapping_included": true,
+      "file_count": 10,
+      "scan_failure_count": 0,
+      "scan_warning_count": 16,
+      "required_limitation_present": true
+    },
+    {
+      "export_type": "provenance-bundle",
+      "export_package_id": "ae0966bc-1994-4c1d-8557-fcb7f924778a",
+      "classification": "deidentified_research_report",
+      "safe_for_deidentified_sharing": true,
+      "direct_identifiers_included": false,
+      "participant_response_mapping_included": false,
+      "file_count": 10,
+      "scan_failure_count": 0,
+      "scan_warning_count": 0,
+      "required_limitation_present": true
+    },
+    {
+      "export_type": "complete-archive",
+      "export_package_id": "3ab752c0-b430-4ccf-9d38-657bb5784ad0",
+      "classification": "complete_restricted_archive",
+      "safe_for_deidentified_sharing": false,
+      "direct_identifiers_included": true,
+      "participant_response_mapping_included": true,
+      "file_count": 12,
+      "scan_failure_count": 0,
+      "scan_warning_count": 35,
+      "required_limitation_present": true
+    }
+  ],
+  "export_scan": {
+    "failures": [],
+    "warnings": [
+      {
+        "export_type": "audit-package",
+        "severity": "warning",
+        "package_type": "audit-package",
+        "file_path": "audit-package/audit_events.csv",
+        "pattern_class": "raw_participant_id",
+        "context": "[known participant id]"
+      },
+      {
+        "export_type": "audit-package",
+        "severity": "warning",
+        "package_type": "audit-package",
+        "file_path": "audit-package/audit_events.csv",
+        "pattern_class": "raw_participant_id",
+        "context": "[known participant id]"
+      },
+      {
+        "export_type": "audit-package",
+        "severity": "warning",
+        "package_type": "audit-package",
+        "file_path": "audit-package/audit_events.csv",
+        "pattern_class": "raw_participant_id",
+        "context": "[known participant id]"
+      },
+      {
+        "export_type": "audit-package",
+        "severity": "warning",
+        "package_type": "audit-package",
+        "file_path": "audit-package/audit_events.csv",
+        "pattern_class": "raw_participant_id",
+        "context": "[known participant id]"
+      },
+      {
+        "export_type": "audit-package",
+        "severity": "warning",
+        "package_type": "audit-package",
+        "file_path": "audit-package/audit_events.csv",
+        "pattern_class": "raw_participant_id",
+        "context": "[known participant id]"
+      },
+      {
+        "export_type": "audit-package",
+        "severity": "warning",
+        "package_type": "audit-package",
+        "file_path": "audit-package/audit_events.csv",
+        "pattern_class": "raw_participant_id",
+        "context": "[known participant id]"
+      },
+      {
+        "export_type": "audit-package",
+        "severity": "warning",
+        "package_type": "audit-package",
+        "file_path": "audit-package/audit_events.csv",
+        "pattern_class": "raw_participant_id",
+        "context": "[known participant id]"
+      },
+      {
+        "export_type": "audit-package",
+        "severity": "warning",
+        "package_type": "audit-package",
+        "file_path": "audit-package/audit_events.csv",
+        "pattern_class": "raw_participant_id",
+        "context": "[known participant id]"
+      },
+      {
+        "export_type": "audit-package",
+        "severity": "warning",
+        "package_type": "audit-package",
+        "file_path": "audit-package/audit_events.json",
+        "pattern_class": "raw_participant_id",
+        "context": "[known participant id]"
+      },
+      {
+        "export_type": "audit-package",
+        "severity": "warning",
+        "package_type": "audit-package",
+        "file_path": "audit-package/audit_events.json",
+        "pattern_class": "raw_participant_id",
+        "context": "[known participant id]"
+      },
+      {
+        "export_type": "audit-package",
+        "severity": "warning",
+        "package_type": "audit-package",
+        "file_path": "audit-package/audit_events.json",
+        "pattern_class": "raw_participant_id",
+        "context": "[known participant id]"
+      },
+      {
+        "export_type": "audit-package",
+        "severity": "warning",
+        "package_type": "audit-package",
+        "file_path": "audit-package/audit_events.json",
+        "pattern_class": "raw_participant_id",
+        "context": "[known participant id]"
+      },
+      {
+        "export_type": "audit-package",
+        "severity": "warning",
+        "package_type": "audit-package",
+        "file_path": "audit-package/audit_events.json",
+        "pattern_class": "raw_participant_id",
+        "context": "[known participant id]"
+      },
+      {
+        "export_type": "audit-package",
+        "severity": "warning",
+        "package_type": "audit-package",
+        "file_path": "audit-package/audit_events.json",
+        "pattern_class": "raw_participant_id",
+        "context": "[known participant id]"
+      },
+      {
+        "export_type": "audit-package",
+        "severity": "warning",
+        "package_type": "audit-package",
+        "file_path": "audit-package/audit_events.json",
+        "pattern_class": "raw_participant_id",
+        "context": "[known participant id]"
+      },
+      {
+        "export_type": "audit-package",
+        "severity": "warning",
+        "package_type": "audit-package",
+        "file_path": "audit-package/audit_events.json",
+        "pattern_class": "raw_participant_id",
+        "context": "[known participant id]"
+      },
+      {
+        "export_type": "complete-archive",
+        "severity": "warning",
+        "package_type": "complete-archive",
+        "file_path": "complete-archive/audit_summary.json",
+        "pattern_class": "raw_participant_id",
+        "context": "[known participant id]"
+      },
+      {
+        "export_type": "complete-archive",
+        "severity": "warning",
+        "package_type": "complete-archive",
+        "file_path": "complete-archive/audit_summary.json",
+        "pattern_class": "raw_participant_id",
+        "context": "[known participant id]"
+      },
+      {
+        "export_type": "complete-archive",
+        "severity": "warning",
+        "package_type": "complete-archive",
+        "file_path": "complete-archive/audit_summary.json",
+        "pattern_class": "raw_participant_id",
+        "context": "[known participant id]"
+      },
+      {
+        "export_type": "complete-archive",
+        "severity": "warning",
+        "package_type": "complete-archive",
+        "file_path": "complete-archive/audit_summary.json",
+        "pattern_class": "raw_participant_id",
+        "context": "[known participant id]"
+      },
+      {
+        "export_type": "complete-archive",
+        "severity": "warning",
+        "package_type": "complete-archive",
+        "file_path": "complete-archive/audit_summary.json",
+        "pattern_class": "raw_participant_id",
+        "context": "[known participant id]"
+      },
+      {
+        "export_type": "complete-archive",
+        "severity": "warning",
+        "package_type": "complete-archive",
+        "file_path": "complete-archive/audit_summary.json",
+        "pattern_class": "raw_participant_id",
+        "context": "[known participant id]"
+      },
+      {
+        "export_type": "complete-archive",
+        "severity": "warning",
+        "package_type": "complete-archive",
+        "file_path": "complete-archive/audit_summary.json",
+        "pattern_class": "raw_participant_id",
+        "context": "[known participant id]"
+      },
+      {
+        "export_type": "complete-archive",
+        "severity": "warning",
+        "package_type": "complete-archive",
+        "file_path": "complete-archive/audit_summary.json",
+        "pattern_class": "raw_participant_id",
+        "context": "[known participant id]"
+      },
+      {
+        "export_type": "complete-archive",
+        "severity": "warning",
+        "package_type": "complete-archive",
+        "file_path": "complete-archive/items_and_provenance.json",
+        "pattern_class": "synthetic_participant_label",
+        "context": "SYN-P001"
+      },
+      {
+        "export_type": "complete-archive",
+        "severity": "warning",
+        "package_type": "complete-archive",
+        "file_path": "complete-archive/items_and_provenance.json",
+        "pattern_class": "synthetic_participant_label",
+        "context": "SYN-P002"
+      },
+      {
+        "export_type": "complete-archive",
+        "severity": "warning",
+        "package_type": "complete-archive",
+        "file_path": "complete-archive/items_and_provenance.json",
+        "pattern_class": "synthetic_participant_label",
+        "context": "SYN-P003"
+      },
+      {
+        "export_type": "complete-archive",
+        "severity": "warning",
+        "package_type": "complete-archive",
+        "file_path": "complete-archive/items_and_provenance.json",
+        "pattern_class": "synthetic_participant_label",
+        "context": "SYN-P004"
+      },
+      {
+        "export_type": "complete-archive",
+        "severity": "warning",
+        "package_type": "complete-archive",
+        "file_path": "complete-archive/items_and_provenance.json",
+        "pattern_class": "synthetic_participant_label",
+        "context": "SYN-P005"
+      },
+      {
+        "export_type": "complete-archive",
+        "severity": "warning",
+        "package_type": "complete-archive",
+        "file_path": "complete-archive/items_and_provenance.json",
+        "pattern_class": "synthetic_participant_label",
+        "context": "SYN-P006"
+      },
+      {
+        "export_type": "complete-archive",
+        "severity": "warning",
+        "package_type": "complete-archive",
+        "file_path": "complete-archive/items_and_provenance.json",
+        "pattern_class": "synthetic_participant_label",
+        "context": "SYN-P007"
+      },
+      {
+        "export_type": "complete-archive",
+        "severity": "warning",
+        "package_type": "complete-archive",
+        "file_path": "complete-archive/items_and_provenance.json",
+        "pattern_class": "synthetic_participant_label",
+        "context": "SYN-P008"
+      },
+      {
+        "export_type": "complete-archive",
+        "severity": "warning",
+        "package_type": "complete-archive",
+        "file_path": "complete-archive/items_and_provenance.json",
+        "pattern_class": "synthetic_participant_label",
+        "context": "SYN-P00X"
+      },
+      {
+        "export_type": "complete-archive",
+        "severity": "warning",
+        "package_type": "complete-archive",
+        "file_path": "complete-archive/items_and_provenance.json",
+        "pattern_class": "raw_participant_id",
+        "context": "[known participant id]"
+      },
+      {
+        "export_type": "complete-archive",
+        "severity": "warning",
+        "package_type": "complete-archive",
+        "file_path": "complete-archive/items_and_provenance.json",
+        "pattern_class": "raw_participant_id",
+        "context": "[known participant id]"
+      },
+      {
+        "export_type": "complete-archive",
+        "severity": "warning",
+        "package_type": "complete-archive",
+        "file_path": "complete-archive/items_and_provenance.json",
+        "pattern_class": "raw_participant_id",
+        "context": "[known participant id]"
+      },
+      {
+        "export_type": "complete-archive",
+        "severity": "warning",
+        "package_type": "complete-archive",
+        "file_path": "complete-archive/items_and_provenance.json",
+        "pattern_class": "raw_participant_id",
+        "context": "[known participant id]"
+      },
+      {
+        "export_type": "complete-archive",
+        "severity": "warning",
+        "package_type": "complete-archive",
+        "file_path": "complete-archive/items_and_provenance.json",
+        "pattern_class": "raw_participant_id",
+        "context": "[known participant id]"
+      },
+      {
+        "export_type": "complete-archive",
+        "severity": "warning",
+        "package_type": "complete-archive",
+        "file_path": "complete-archive/items_and_provenance.json",
+        "pattern_class": "raw_participant_id",
+        "context": "[known participant id]"
+      },
+      {
+        "export_type": "complete-archive",
+        "severity": "warning",
+        "package_type": "complete-archive",
+        "file_path": "complete-archive/items_and_provenance.json",
+        "pattern_class": "raw_participant_id",
+        "context": "[known participant id]"
+      },
+      {
+        "export_type": "complete-archive",
+        "severity": "warning",
+        "package_type": "complete-archive",
+        "file_path": "complete-archive/items_and_provenance.json",
+        "pattern_class": "raw_participant_id",
+        "context": "[known participant id]"
+      },
+      {
+        "export_type": "complete-archive",
+        "severity": "warning",
+        "package_type": "complete-archive",
+        "file_path": "complete-archive/items_and_provenance.json",
+        "pattern_class": "email_identifier",
+        "context": "[known email]"
+      },
+      {
+        "export_type": "complete-archive",
+        "severity": "warning",
+        "package_type": "complete-archive",
+        "file_path": "complete-archive/items_and_provenance.json",
+        "pattern_class": "email_identifier",
+        "context": "[known email]"
+      },
+      {
+        "export_type": "complete-archive",
+        "severity": "warning",
+        "package_type": "complete-archive",
+        "file_path": "complete-archive/items_and_provenance.json",
+        "pattern_class": "email_identifier",
+        "context": "[known email]"
+      },
+      {
+        "export_type": "complete-archive",
+        "severity": "warning",
+        "package_type": "complete-archive",
+        "file_path": "complete-archive/items_and_provenance.json",
+        "pattern_class": "email_identifier",
+        "context": "[known email]"
+      },
+      {
+        "export_type": "complete-archive",
+        "severity": "warning",
+        "package_type": "complete-archive",
+        "file_path": "complete-archive/items_and_provenance.json",
+        "pattern_class": "email_identifier",
+        "context": "[known email]"
+      },
+      {
+        "export_type": "complete-archive",
+        "severity": "warning",
+        "package_type": "complete-archive",
+        "file_path": "complete-archive/items_and_provenance.json",
+        "pattern_class": "email_identifier",
+        "context": "[known email]"
+      },
+      {
+        "export_type": "complete-archive",
+        "severity": "warning",
+        "package_type": "complete-archive",
+        "file_path": "complete-archive/items_and_provenance.json",
+        "pattern_class": "email_identifier",
+        "context": "[known email]"
+      },
+      {
+        "export_type": "complete-archive",
+        "severity": "warning",
+        "package_type": "complete-archive",
+        "file_path": "complete-archive/items_and_provenance.json",
+        "pattern_class": "email_identifier",
+        "context": "[known email]"
+      },
+      {
+        "export_type": "complete-archive",
+        "severity": "warning",
+        "package_type": "complete-archive",
+        "file_path": "complete-archive/items_and_provenance.json",
+        "pattern_class": "email_like_string",
+        "context": "[email-like string]"
+      },
+      {
+        "export_type": "complete-archive",
+        "severity": "warning",
+        "package_type": "complete-archive",
+        "file_path": "complete-archive/items_and_provenance.json",
+        "pattern_class": "phone_like_string",
+        "context": "[phone-like string]"
+      }
+    ]
+  },
+  "browser_mobile_smoke": [
+    {
+      "label": "participant-final-320",
+      "width": 320,
+      "url": "http://127.0.0.1:5173/#invite=aPVzc1tyVngsaeZN81x8UqKP674LV5N1gwqEtcmJG2I",
+      "executable": "C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe",
+      "screenshot_path": "docs/qc/full-mock-trial/artifacts/participant-final-320-320.png",
+      "metrics": {
+        "url": "http://127.0.0.1:5173/#invite=aPVzc1tyVngsaeZN81x8UqKP674LV5N1gwqEtcmJG2I",
+        "title": "app",
+        "innerWidth": 320,
+        "clientWidth": 320,
+        "scrollWidth": 320,
+        "horizontalOverflow": false,
+        "bodyTextSample": "About\nGlossary\nACTIVE STUDY\nFull Mock Trial Classical Delphi FMT-mosvyb4l\nPARTICIPANT PORTAL\nConsent, confidentiality, rights, and current task\nConfidentiality\nResponses are confidential to research team members with approved access and are linked across rounds through participant IDs.\nInvitation link active\nYou do not need an account, password, API key, or access code. This private invitation link identifies your study task.\nSave and resume\nDraft responses are not stored in browser local storage. Use Save progress if you need to pause, and submit when you are ready for the study team to receive your response.\nYour Current Round\n\nNo round task is currently open\n\nWhat to do next\n\nWait for the study team to open the next task.\n\nSave and resume\n\nSaving progress is separate from final submission. Submitted responses can be reviewed before you finish the task.\n\nConsent information\nWaiting for study team\nThe next task will appear here when the research team opens the round and configures the participant task.\nHaving trouble?\n\nTell the study team what is not working. Do not include medical details, passwords, API keys, or anything you would not want in a support note.\n\nHaving trouble?\nStudy Time Commitment\n\nThis study is planned for up to 3 rounds. You will only see rounds that are open for your participation.\n\nModified Delphi\nParticipant Rights\nParticipation is voluntary.\nYou may withdraw from future rounds at any time.\nDepending on the study protocol and consent terms, prior submitted responses may remain in already aggregated or historical study data.\nYou may contact the study team about data deletion where feasible.\nYou may skip items where permitted by the study protocol.\nAI assistance, if offered, is optional and non-directive.\nWithdraw from future participation\nRequest retention/deletion review\nCite this tool",
+        "visibleButtons": [
+          "Feedback",
+          "Participant Portal",
+          "Closeout",
+          "About",
+          "Glossary",
+          "Open Curation",
+          "Having trouble?",
+          "Withdraw from future participation",
+          "Request retention/deletion review",
+          "Cite this tool"
+        ],
+        "fieldCount": 1,
+        "fields": [
+          {
+            "tag": "SELECT",
+            "type": "select-one",
+            "disabled": false,
+            "text": ""
+          }
+        ],
+        "hasTroubleSupport": true,
+        "hasConsensusLimitation": false,
+        "hasForbiddenSyntheticLabel": false,
+        "hasForbiddenEmail": false
+      },
+      "status": "PASS"
+    },
+    {
+      "label": "staff-dashboard-320",
+      "width": 320,
+      "url": "http://127.0.0.1:5173",
+      "executable": "C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe",
+      "screenshot_path": "docs/qc/full-mock-trial/artifacts/staff-dashboard-320-320.png",
+      "metrics": {
+        "url": "http://127.0.0.1:5173/",
+        "title": "app",
+        "innerWidth": 320,
+        "clientWidth": 320,
+        "scrollWidth": 320,
+        "horizontalOverflow": false,
+        "bodyTextSample": "eD\nDelphi Commons\nMethod-safe research platform\nCURRENT ROLE\nStudy Owner / PI\nEthics & Methods Steward\nStudy Coordinator\nPanelist / Participant\nData Custodian\nSecurity & Privacy Lead\nOpen Source Maintainer / Admin\nArchitecture\nDashboard\nStudy Builder\nGovernance\nRounds\nCuration\nFeedback\nParticipant Portal\nCloseout\nReporting\nAudit Log\nAdmin / Security\nAbout\nGlossary\nACTIVE STUDY\nCare Transitions Expert Delphi\nActive\nConsensus threshold locked\nNEXT REQUIRED ACTION\nCreate or open a study\n\nStart a backend study workspace from Study Builder, or open an existing saved study from the Dashboard.\n\nGo to Study Builder\nVISUAL MANAGEMENT\nBlockers, flow, and risk are visible before handoffs\nResponse rate\n82%\nAcross currently open tasks.\nLaunch blockers\n1\nGovernance and reporting safeguards.\nCurrent role\nStudy Owner / PI\nUI visibility mirrors backend roles.\nBackend setup\n0/10\nUse Study Builder to launch.\nStudy flow\n0/8\nLive conductor checklist.\nPARTICIPANT SUPPORT\nParticipant Issue Notes\n\nNotes from “Having trouble?” appear here for quick PI/study-team response.\n\n0 open\nNo participant issue notes\nNo button, textbox, save, or access problems have been reported for this study.\nActionable Workflow Checklist\n\nUse this to see the study-level path from design through reporting.\n\n0/8 complete\n1\nStudy design saved\n\nStudy Builder packet is attached to the version.\n\nWaiting\n2\nGovernance complete\n\nMethod, consensus threshold, dual signoff, and activation are complete.\n\nWaiting\n3\nRound 1 configured\n\nPrompt, instructions, consent, window, and reminders are ready.\n\nWaiting\n4\nRound 1 collection complete\n\nRound 1 has collected responses and is closed before curation release.\n\nWaiting\n5\nRound 2 items published\n\nTraceable candidate statements are participant-facing.\n\nWaiting\n6\nRound 2 configured and open\n\nStructured rating task is available to participants.\n\nWaiting\n7\nRound 2 ratings received\n\nReal ratings are available for reporting.\n\nWaiting\n8\nReporting review ready\n\nConsensus, non-consensus, lim",
+        "visibleButtons": [
+          "Architecture",
+          "Dashboard",
+          "Study Builder",
+          "Governance",
+          "Rounds",
+          "Curation",
+          "Feedback",
+          "Participant Portal",
+          "Closeout",
+          "Reporting",
+          "Audit Log",
+          "Admin / Security",
+          "About",
+          "Glossary",
+          "Go to Study Builder",
+          "Refresh",
+          "Archive test workspaces",
+          "Manage study",
+          "Archive",
+          "Manage study"
+        ],
+        "fieldCount": 1,
+        "fields": [
+          {
+            "tag": "SELECT",
+            "type": "select-one",
+            "disabled": false,
+            "text": ""
+          }
+        ],
+        "hasTroubleSupport": true,
+        "hasConsensusLimitation": false,
+        "hasForbiddenSyntheticLabel": false,
+        "hasForbiddenEmail": false
+      },
+      "status": "PASS"
+    },
+    {
+      "label": "participant-final-390",
+      "width": 390,
+      "url": "http://127.0.0.1:5173/#invite=aPVzc1tyVngsaeZN81x8UqKP674LV5N1gwqEtcmJG2I",
+      "executable": "C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe",
+      "screenshot_path": "docs/qc/full-mock-trial/artifacts/participant-final-390-390.png",
+      "metrics": {
+        "url": "http://127.0.0.1:5173/#invite=aPVzc1tyVngsaeZN81x8UqKP674LV5N1gwqEtcmJG2I",
+        "title": "app",
+        "innerWidth": 390,
+        "clientWidth": 390,
+        "scrollWidth": 390,
+        "horizontalOverflow": false,
+        "bodyTextSample": "About\nGlossary\nACTIVE STUDY\nFull Mock Trial Classical Delphi FMT-mosvyb4l\nPARTICIPANT PORTAL\nConsent, confidentiality, rights, and current task\nConfidentiality\nResponses are confidential to research team members with approved access and are linked across rounds through participant IDs.\nInvitation link active\nYou do not need an account, password, API key, or access code. This private invitation link identifies your study task.\nSave and resume\nDraft responses are not stored in browser local storage. Use Save progress if you need to pause, and submit when you are ready for the study team to receive your response.\nYour Current Round\n\nNo round task is currently open\n\nWhat to do next\n\nWait for the study team to open the next task.\n\nSave and resume\n\nSaving progress is separate from final submission. Submitted responses can be reviewed before you finish the task.\n\nConsent information\nWaiting for study team\nThe next task will appear here when the research team opens the round and configures the participant task.\nHaving trouble?\n\nTell the study team what is not working. Do not include medical details, passwords, API keys, or anything you would not want in a support note.\n\nHaving trouble?\nStudy Time Commitment\n\nThis study is planned for up to 3 rounds. You will only see rounds that are open for your participation.\n\nModified Delphi\nParticipant Rights\nParticipation is voluntary.\nYou may withdraw from future rounds at any time.\nDepending on the study protocol and consent terms, prior submitted responses may remain in already aggregated or historical study data.\nYou may contact the study team about data deletion where feasible.\nYou may skip items where permitted by the study protocol.\nAI assistance, if offered, is optional and non-directive.\nWithdraw from future participation\nRequest retention/deletion review\nCite this tool",
+        "visibleButtons": [
+          "Feedback",
+          "Participant Portal",
+          "Closeout",
+          "About",
+          "Glossary",
+          "Open Curation",
+          "Having trouble?",
+          "Withdraw from future participation",
+          "Request retention/deletion review",
+          "Cite this tool"
+        ],
+        "fieldCount": 1,
+        "fields": [
+          {
+            "tag": "SELECT",
+            "type": "select-one",
+            "disabled": false,
+            "text": ""
+          }
+        ],
+        "hasTroubleSupport": true,
+        "hasConsensusLimitation": false,
+        "hasForbiddenSyntheticLabel": false,
+        "hasForbiddenEmail": false
+      },
+      "status": "PASS"
+    },
+    {
+      "label": "staff-dashboard-390",
+      "width": 390,
+      "url": "http://127.0.0.1:5173",
+      "executable": "C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe",
+      "screenshot_path": "docs/qc/full-mock-trial/artifacts/staff-dashboard-390-390.png",
+      "metrics": {
+        "url": "http://127.0.0.1:5173/",
+        "title": "app",
+        "innerWidth": 390,
+        "clientWidth": 390,
+        "scrollWidth": 390,
+        "horizontalOverflow": false,
+        "bodyTextSample": "eD\nDelphi Commons\nMethod-safe research platform\nCURRENT ROLE\nStudy Owner / PI\nEthics & Methods Steward\nStudy Coordinator\nPanelist / Participant\nData Custodian\nSecurity & Privacy Lead\nOpen Source Maintainer / Admin\nArchitecture\nDashboard\nStudy Builder\nGovernance\nRounds\nCuration\nFeedback\nParticipant Portal\nCloseout\nReporting\nAudit Log\nAdmin / Security\nAbout\nGlossary\nACTIVE STUDY\nCare Transitions Expert Delphi\nActive\nConsensus threshold locked\nNEXT REQUIRED ACTION\nCreate or open a study\n\nStart a backend study workspace from Study Builder, or open an existing saved study from the Dashboard.\n\nGo to Study Builder\nVISUAL MANAGEMENT\nBlockers, flow, and risk are visible before handoffs\nResponse rate\n82%\nAcross currently open tasks.\nLaunch blockers\n1\nGovernance and reporting safeguards.\nCurrent role\nStudy Owner / PI\nUI visibility mirrors backend roles.\nBackend setup\n0/10\nUse Study Builder to launch.\nStudy flow\n0/8\nLive conductor checklist.\nPARTICIPANT SUPPORT\nParticipant Issue Notes\n\nNotes from “Having trouble?” appear here for quick PI/study-team response.\n\n0 open\nNo participant issue notes\nNo button, textbox, save, or access problems have been reported for this study.\nActionable Workflow Checklist\n\nUse this to see the study-level path from design through reporting.\n\n0/8 complete\n1\nStudy design saved\n\nStudy Builder packet is attached to the version.\n\nWaiting\n2\nGovernance complete\n\nMethod, consensus threshold, dual signoff, and activation are complete.\n\nWaiting\n3\nRound 1 configured\n\nPrompt, instructions, consent, window, and reminders are ready.\n\nWaiting\n4\nRound 1 collection complete\n\nRound 1 has collected responses and is closed before curation release.\n\nWaiting\n5\nRound 2 items published\n\nTraceable candidate statements are participant-facing.\n\nWaiting\n6\nRound 2 configured and open\n\nStructured rating task is available to participants.\n\nWaiting\n7\nRound 2 ratings received\n\nReal ratings are available for reporting.\n\nWaiting\n8\nReporting review ready\n\nConsensus, non-consensus, lim",
+        "visibleButtons": [
+          "Architecture",
+          "Dashboard",
+          "Study Builder",
+          "Governance",
+          "Rounds",
+          "Curation",
+          "Feedback",
+          "Participant Portal",
+          "Closeout",
+          "Reporting",
+          "Audit Log",
+          "Admin / Security",
+          "About",
+          "Glossary",
+          "Go to Study Builder",
+          "Refresh",
+          "Archive test workspaces",
+          "Manage study",
+          "Archive",
+          "Manage study"
+        ],
+        "fieldCount": 1,
+        "fields": [
+          {
+            "tag": "SELECT",
+            "type": "select-one",
+            "disabled": false,
+            "text": ""
+          }
+        ],
+        "hasTroubleSupport": true,
+        "hasConsensusLimitation": false,
+        "hasForbiddenSyntheticLabel": false,
+        "hasForbiddenEmail": false
+      },
+      "status": "PASS"
+    },
+    {
+      "label": "participant-final-414",
+      "width": 414,
+      "url": "http://127.0.0.1:5173/#invite=aPVzc1tyVngsaeZN81x8UqKP674LV5N1gwqEtcmJG2I",
+      "executable": "C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe",
+      "screenshot_path": "docs/qc/full-mock-trial/artifacts/participant-final-414-414.png",
+      "metrics": {
+        "url": "http://127.0.0.1:5173/#invite=aPVzc1tyVngsaeZN81x8UqKP674LV5N1gwqEtcmJG2I",
+        "title": "app",
+        "innerWidth": 414,
+        "clientWidth": 414,
+        "scrollWidth": 414,
+        "horizontalOverflow": false,
+        "bodyTextSample": "About\nGlossary\nACTIVE STUDY\nFull Mock Trial Classical Delphi FMT-mosvyb4l\nPARTICIPANT PORTAL\nConsent, confidentiality, rights, and current task\nConfidentiality\nResponses are confidential to research team members with approved access and are linked across rounds through participant IDs.\nInvitation link active\nYou do not need an account, password, API key, or access code. This private invitation link identifies your study task.\nSave and resume\nDraft responses are not stored in browser local storage. Use Save progress if you need to pause, and submit when you are ready for the study team to receive your response.\nYour Current Round\n\nNo round task is currently open\n\nWhat to do next\n\nWait for the study team to open the next task.\n\nSave and resume\n\nSaving progress is separate from final submission. Submitted responses can be reviewed before you finish the task.\n\nConsent information\nWaiting for study team\nThe next task will appear here when the research team opens the round and configures the participant task.\nHaving trouble?\n\nTell the study team what is not working. Do not include medical details, passwords, API keys, or anything you would not want in a support note.\n\nHaving trouble?\nStudy Time Commitment\n\nThis study is planned for up to 3 rounds. You will only see rounds that are open for your participation.\n\nModified Delphi\nParticipant Rights\nParticipation is voluntary.\nYou may withdraw from future rounds at any time.\nDepending on the study protocol and consent terms, prior submitted responses may remain in already aggregated or historical study data.\nYou may contact the study team about data deletion where feasible.\nYou may skip items where permitted by the study protocol.\nAI assistance, if offered, is optional and non-directive.\nWithdraw from future participation\nRequest retention/deletion review\nCite this tool",
+        "visibleButtons": [
+          "Feedback",
+          "Participant Portal",
+          "Closeout",
+          "About",
+          "Glossary",
+          "Open Curation",
+          "Having trouble?",
+          "Withdraw from future participation",
+          "Request retention/deletion review",
+          "Cite this tool"
+        ],
+        "fieldCount": 1,
+        "fields": [
+          {
+            "tag": "SELECT",
+            "type": "select-one",
+            "disabled": false,
+            "text": ""
+          }
+        ],
+        "hasTroubleSupport": true,
+        "hasConsensusLimitation": false,
+        "hasForbiddenSyntheticLabel": false,
+        "hasForbiddenEmail": false
+      },
+      "status": "PASS"
+    },
+    {
+      "label": "staff-dashboard-414",
+      "width": 414,
+      "url": "http://127.0.0.1:5173",
+      "executable": "C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe",
+      "screenshot_path": "docs/qc/full-mock-trial/artifacts/staff-dashboard-414-414.png",
+      "metrics": {
+        "url": "http://127.0.0.1:5173/",
+        "title": "app",
+        "innerWidth": 414,
+        "clientWidth": 414,
+        "scrollWidth": 414,
+        "horizontalOverflow": false,
+        "bodyTextSample": "eD\nDelphi Commons\nMethod-safe research platform\nCURRENT ROLE\nStudy Owner / PI\nEthics & Methods Steward\nStudy Coordinator\nPanelist / Participant\nData Custodian\nSecurity & Privacy Lead\nOpen Source Maintainer / Admin\nArchitecture\nDashboard\nStudy Builder\nGovernance\nRounds\nCuration\nFeedback\nParticipant Portal\nCloseout\nReporting\nAudit Log\nAdmin / Security\nAbout\nGlossary\nACTIVE STUDY\nCare Transitions Expert Delphi\nActive\nConsensus threshold locked\nNEXT REQUIRED ACTION\nCreate or open a study\n\nStart a backend study workspace from Study Builder, or open an existing saved study from the Dashboard.\n\nGo to Study Builder\nVISUAL MANAGEMENT\nBlockers, flow, and risk are visible before handoffs\nResponse rate\n82%\nAcross currently open tasks.\nLaunch blockers\n1\nGovernance and reporting safeguards.\nCurrent role\nStudy Owner / PI\nUI visibility mirrors backend roles.\nBackend setup\n0/10\nUse Study Builder to launch.\nStudy flow\n0/8\nLive conductor checklist.\nPARTICIPANT SUPPORT\nParticipant Issue Notes\n\nNotes from “Having trouble?” appear here for quick PI/study-team response.\n\n0 open\nNo participant issue notes\nNo button, textbox, save, or access problems have been reported for this study.\nActionable Workflow Checklist\n\nUse this to see the study-level path from design through reporting.\n\n0/8 complete\n1\nStudy design saved\n\nStudy Builder packet is attached to the version.\n\nWaiting\n2\nGovernance complete\n\nMethod, consensus threshold, dual signoff, and activation are complete.\n\nWaiting\n3\nRound 1 configured\n\nPrompt, instructions, consent, window, and reminders are ready.\n\nWaiting\n4\nRound 1 collection complete\n\nRound 1 has collected responses and is closed before curation release.\n\nWaiting\n5\nRound 2 items published\n\nTraceable candidate statements are participant-facing.\n\nWaiting\n6\nRound 2 configured and open\n\nStructured rating task is available to participants.\n\nWaiting\n7\nRound 2 ratings received\n\nReal ratings are available for reporting.\n\nWaiting\n8\nReporting review ready\n\nConsensus, non-consensus, lim",
+        "visibleButtons": [
+          "Architecture",
+          "Dashboard",
+          "Study Builder",
+          "Governance",
+          "Rounds",
+          "Curation",
+          "Feedback",
+          "Participant Portal",
+          "Closeout",
+          "Reporting",
+          "Audit Log",
+          "Admin / Security",
+          "About",
+          "Glossary",
+          "Go to Study Builder",
+          "Refresh",
+          "Archive test workspaces",
+          "Manage study",
+          "Archive",
+          "Manage study"
+        ],
+        "fieldCount": 1,
+        "fields": [
+          {
+            "tag": "SELECT",
+            "type": "select-one",
+            "disabled": false,
+            "text": ""
+          }
+        ],
+        "hasTroubleSupport": true,
+        "hasConsensusLimitation": false,
+        "hasForbiddenSyntheticLabel": false,
+        "hasForbiddenEmail": false
+      },
+      "status": "PASS"
+    }
+  ],
+  "browser_execution_scope": {
+    "all_8_participant_submissions_via_browser_ui": false,
+    "all_8_participant_submissions_via_local_invitation_api": true,
+    "headless_mobile_smoke_completed": true,
+    "manual_in_app_browser_pass_completed": false,
+    "note": "The full 8-participant, 4-round lifecycle is API-driven through local invitation endpoints. Browser evidence is headless mobile-width smoke of participant and staff views, not a manual all-8 UI submission pass."
+  },
+  "defects": {
+    "P0": [],
+    "P1": [],
+    "P2": [
+      {
+        "id": "FMT-P2-BROWSER-SCOPE",
+        "summary": "The complete 8-participant, 4-round lifecycle was API-driven through local invitation endpoints; browser evidence was headless mobile smoke, not a manual all-8 browser submission pass.",
+        "evidence": {
+          "all_8_participant_submissions_via_browser_ui": false,
+          "all_8_participant_submissions_via_local_invitation_api": true,
+          "headless_mobile_smoke_completed": true,
+          "manual_in_app_browser_pass_completed": false,
+          "note": "The full 8-participant, 4-round lifecycle is API-driven through local invitation endpoints. Browser evidence is headless mobile-width smoke of participant and staff views, not a manual all-8 UI submission pass."
+        }
+      }
+    ],
+    "P3": []
+  },
+  "status": "GO_WITH_CONDITIONS_FOR_CONTROLLED_SYNTHETIC_MOCK_TESTING_ONLY"
+}

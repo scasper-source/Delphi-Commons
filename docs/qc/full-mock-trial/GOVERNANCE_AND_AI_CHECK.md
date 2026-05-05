@@ -1,8 +1,8 @@
 # Governance And AI Check
 
-Live execution status: API-DRIVEN LOCAL RUN COMPLETED; FULL BROWSER/MOBILE RUN NOT COMPLETED.
+Live execution status: CONTROLLED SYNTHETIC LOCAL RUN COMPLETED WITH CONDITIONS.
 
-This checklist records what was verified through the 2026-05-05 local API-driven run. UI-only and mobile-only checks remain NOT RUN until a manual browser rehearsal is completed.
+This checklist records what was verified through the 2026-05-05 local API-driven run with headless browser/mobile smoke. Manual all-8 browser UI checks remain NOT RUN until a future manual browser rehearsal is completed.
 
 ## Study Governance Checks
 
@@ -22,7 +22,7 @@ This checklist records what was verified through the 2026-05-05 local API-driven
 | Identity-response separation represented accurately | No participant-facing identity mapping | PASS through API path; browser UI NOT RUN |
 | Non-consensus preserved | Report/export retains non-consensus | PASS |
 | Required limitation exact | Present in report/export | PASS |
-| Export privacy safe | No direct identifiers or identity-response mapping risk | PASS after focused remediation regression; full browser rerun NOT RUN |
+| Export privacy safe | No direct identifiers or identity-response mapping risk | PASS after focused remediation regression and rerun scan |
 
 ## AI Configuration Checks
 
@@ -84,5 +84,5 @@ Observed forbidden consensus-as-truth hits in export scan: 0.
 
 Governance and AI-HITL checks passed through the API-driven local run, with two important limits:
 
-- Full browser-visible governance copy and participant-facing UI checks remain NOT RUN.
-- Original export privacy failed with P0; focused remediation regression now passes for regenerated de-identified exports. Browser/mobile rerun remains required before any GO or GO WITH CONDITIONS for the larger controlled full mock trial.
+- Full browser-visible governance copy and participant-facing UI checks remain only smoke-checked, not manually walked by all roles.
+- Original export privacy failed with P0; focused remediation regression now passes for regenerated de-identified exports. The current decision is GO WITH CONDITIONS for controlled synthetic mock testing only, with manual all-8 browser UI submission still tracked as a P2 condition.

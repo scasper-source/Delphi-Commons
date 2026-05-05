@@ -1,6 +1,6 @@
 # Synthetic Study Setup
 
-Live execution status: API-DRIVEN LOCAL RUN COMPLETED; FULL BROWSER/MOBILE RUN NOT COMPLETED.
+Live execution status: CONTROLLED SYNTHETIC LOCAL RUN COMPLETED WITH CONDITIONS.
 
 ## Study Scenario
 
@@ -136,5 +136,5 @@ Round 3 and Round 4 may reuse these patterns with small deterministic changes th
 | Round 3 completed by all 8 | PASS |
 | Round 4 completed by all 8 | PASS |
 | Export generated | PASS |
-| Export privacy checked | PASS after focused remediation regression; full browser rerun NOT RUN |
+| Export privacy checked | PASS after focused remediation regression and rerun scan |
 | AI governance checked | PASS through API-driven local helper path |

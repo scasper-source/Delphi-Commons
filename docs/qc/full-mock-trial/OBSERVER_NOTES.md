@@ -1,43 +1,43 @@
 # Observer Notes
 
-Live execution status: API-DRIVEN LOCAL RUN COMPLETED; FULL BROWSER/MOBILE RUN NOT COMPLETED.
+Live execution status: CONTROLLED SYNTHETIC LOCAL RUN COMPLETED WITH CONDITIONS.
 
-Use this file as evidence from the 2026-05-05 local API-driven run and as the starting point for the next manual browser/mobile rehearsal.
+Use this file as evidence from the 2026-05-05 local API-driven run with headless browser/mobile smoke, and as the starting point for any future manual all-8 browser UI rehearsal.
 
 ## Session Metadata
 
 | Field | Value |
 | --- | --- |
 | Observer | Codex local API runner |
-| Date/time started | `2026-05-05T12:23:15.0179669-04:00` |
-| Date/time completed | API run completed before evidence update at `2026-05-05T12:24:42.5791970-04:00` |
-| Commit hash | `f4ff08b` |
+| Date/time started | `2026-05-05T17:11:47.924Z` |
+| Date/time completed | `2026-05-05T17:11:47.924Z` artifact timestamp |
+| Commit hash | `9c046cc3594b4e78e607dc37f10989eb2186dfc0` |
 | Branch | `master` |
 | App URL | `http://127.0.0.1:5173/` |
 | Backend URL | `http://127.0.0.1:3001` |
-| Browser | NOT RUN |
-| Desktop viewport | NOT RUN |
-| Mobile viewport 320px | NOT RUN |
-| Mobile viewport 390px | NOT RUN |
-| Mobile viewport 414px | NOT RUN |
+| Browser | Microsoft Edge headless smoke |
+| Desktop viewport | Staff dashboard headless smoke |
+| Mobile viewport 320px | PASS headless smoke |
+| Mobile viewport 390px | PASS headless smoke |
+| Mobile viewport 414px | PASS headless smoke |
 | AI mode | Existing deterministic local AI helpers with No External AI mode |
-| Study ID | `cd8d8653-e9a7-48d8-8077-ad2c3c2966a2` |
-| Version ID | `94949d0c-999b-4703-a544-961ccecfcdc6` |
+| Study ID | `b8bc10f2-8a10-48b5-b82b-85e5d0053c48` |
+| Version ID | `c2c42b39-d285-4ae8-9435-26c96529b0c3` |
 
 ## Commands And Checks
 
 | Command/check | Result | Notes |
 | --- | --- | --- |
-| `git status --short` | PASS | Documentation changes were present. |
-| `git rev-parse --short HEAD` | PASS | `f4ff08b`. |
+| `git status --short` | PASS | Evidence changes were present. |
+| `git rev-parse --short HEAD` | PASS | `9c046cc3594b4e78e607dc37f10989eb2186dfc0`. |
 | `git branch --show-current` | PASS | `master`. |
 | `Get-Date -Format o` | PASS | Timestamp captured. |
 | Backend health | PASS | `{"status":"ok","service":"edelphi-server","environment":"development"}`. |
-| Local Node API rehearsal runner | PASS WITH DEFECTS | Completed synthetic lifecycle and found P0 export privacy defect. |
-| App build | NOT RUN | No executable code change in evidence update. |
+| Local Node API rehearsal runner | PASS WITH CONDITIONS | Completed synthetic lifecycle, regenerated exports, privacy-scanned exports, and captured headless mobile smoke evidence. |
+| App build | PASS | Completed before the successful rerun. |
 | App lint | NOT RUN | No executable code change in evidence update. |
 | App tests | NOT RUN | No executable code change in evidence update. |
-| Server build | NOT RUN | No executable code change in evidence update. |
+| Server build | PASS | Completed before the successful rerun. |
 | Server tests | NOT RUN | No executable code change in evidence update. |
 | Security audits | NOT RUN | No dependency/security change in evidence update. |
 
@@ -65,7 +65,7 @@ Use this file as evidence from the 2026-05-05 local API-driven run and as the st
 | Consensus rule locked after launch | PASS | Backend returned `consensus_rule_locked`. |
 | Consensus rule locked after Round 2 | PASS | Backend returned `consensus_rule_locked`. |
 | Consensus rule locked after Round 3 | PASS | Backend returned `consensus_rule_locked`. |
-| Consent/acknowledgement required | PASS through API | Browser gate NOT RUN. |
+| Consent/acknowledgement required | PASS through API | Manual browser gate remains NOT RUN. |
 | Withdrawal/voluntariness visible | NOT RUN | Browser-visible copy check required. |
 | Confidentiality/anonymity limits truthful | NOT RUN | Browser-visible copy check required. |
 | No production-readiness implication | PASS | Backend health reported `development`; docs retain controlled synthetic boundary. |
@@ -78,7 +78,7 @@ Use this file as evidence from the 2026-05-05 local API-driven run and as the st
 | PI/admin sees note | PASS | Owner/admin issue list included the note. |
 | PI/admin responds | PASS | Staff response recorded. |
 | SYN-P003 sees response | PASS | Participant issue history returned staff response. |
-| Other participants do not see identity-linked support info | NOT RUN | Needs browser/API negative test in next pass. |
+| Other participants do not see identity-linked support info | NOT RUN | Needs negative visibility test in a future manual/browser pass. |
 
 ## AI Observations
 
@@ -112,6 +112,6 @@ Observed defects:
 | ID | Severity | Summary |
 | --- | --- | --- |
 | FMT-2026-05-05-P0-001 | P0 | REMEDIATED: export package files contained synthetic participant labels and raw participant UUIDs in the original run; regenerated de-identified exports now pass privacy scan. |
-| FMT-2026-05-05-P2-001 | P2 | Full manual browser and mobile-width rehearsal still NOT RUN. |
+| FMT-P2-BROWSER-SCOPE | P2 | Full lifecycle was API-driven through local invitation endpoints; browser evidence was headless mobile smoke rather than a manual all-8 UI submission pass. |
 
 See `DEFECT_LOG.md` and `EXPORT_PRIVACY_CHECK.md` for details.

@@ -1,8 +1,8 @@
 # Four-Round Classical Delphi Runbook
 
-Live execution status: API-DRIVEN LOCAL RUN COMPLETED; FULL BROWSER/MOBILE RUN NOT COMPLETED.
+Live execution status: CONTROLLED SYNTHETIC LOCAL RUN COMPLETED WITH CONDITIONS.
 
-This runbook is for Study Owner / PI, Ethics & Methods Steward, PI/admin support role, and observer use during controlled synthetic rehearsal. API-driven workflow evidence was recorded on 2026-05-05; browser/mobile checks remain required.
+This runbook is for Study Owner / PI, Ethics & Methods Steward, PI/admin support role, and observer use during controlled synthetic rehearsal. API-driven workflow evidence and headless browser/mobile smoke evidence were recorded on 2026-05-05; a manual all-8 browser UI submission pass remains required only as a documented condition for broader rehearsal confidence.
 
 ## Repository Support Confirmed During Inspection
 
@@ -25,7 +25,7 @@ This runbook is for Study Owner / PI, Ethics & Methods Steward, PI/admin support
 8. Obtain required governance signoff before activation/opening.
 9. Attempt to change the consensus rule after activation and verify it is locked or requires a governed new version.
 
-Status: PASS through API for setup, activation, governance signoff, and consensus lock checks. Browser-visible governance copy checks remain NOT RUN.
+Status: PASS through API for setup, activation, governance signoff, and consensus lock checks. Browser-visible governance copy was only smoke-checked, not manually walked by all roles.
 
 ## Round 1: Open-Ended Elicitation
 
@@ -175,4 +175,4 @@ Owner/steward/data-custodian actions:
 7. Run export privacy check.
 8. Review export package and record approval/rejection notes.
 
-Status: PASS after focused remediation regression for regenerated de-identified exports. The original API run failed export privacy, but the P0 is now remediated in regression evidence. Full browser/mobile rerun remains required.
+Status: PASS after focused remediation regression for regenerated de-identified exports. The original API run failed export privacy, but the P0 is now remediated in regression evidence. Manual all-8 browser UI submission remains a P2 condition.

@@ -1,156 +1,131 @@
-# Live API Run Results
+# Live Run Results
 
 Run date: 2026-05-05
 
-Live execution status: API-DRIVEN LOCAL RUN COMPLETED; EXPORT PRIVACY REMEDIATION VERIFIED; FULL BROWSER/MOBILE RUN NOT COMPLETED.
+Live execution status: CONTROLLED SYNTHETIC LOCAL RUN COMPLETED WITH CONDITIONS.
 
-Final decision from original API run: NO-GO.
+Current decision: GO WITH CONDITIONS for controlled synthetic mock testing only.
 
-Current post-remediation status: P0 export privacy defect remediated; ready to rerun full browser/mobile controlled synthetic mock trial.
+The run completed an 8-synthetic-participant, 4-round Classical Delphi lifecycle through local development APIs and participant invitation endpoints. It also completed headless browser smoke checks at 320px, 390px, and 414px for participant and staff views. It did not complete a manual all-8 browser UI submission pass.
 
-## Scope Actually Executed
+## Boundary
 
-This was a controlled synthetic local development run through backend APIs. It exercised the full 8-participant, 4-round Classical Delphi lifecycle, support-loop API path, governed AI suggestion path, final report generation, export package generation, and export privacy scanning.
+Synthetic data only. Local development only. No production deployment. No real human-subjects research. No IRB launch. No sensitive participant data. No live external AI calls.
 
-It was not a full manual browser rehearsal. It did not complete the required mobile-width checks at 320px, 390px, or 414px.
+"Any GO or GO WITH CONDITIONS applies only to controlled synthetic mock testing. It does not authorize production deployment, real human-subjects research, IRB launch, or use of sensitive participant data."
+
+## Evidence Artifact
+
+Primary artifact:
+
+- `docs/qc/full-mock-trial/artifacts/full-mock-trial-run-2026-05-05T17-11-47-924Z.json`
+- `docs/qc/full-mock-trial/artifacts/full-mock-trial-run-latest.json`
+
+Mobile screenshots:
+
+- `docs/qc/full-mock-trial/artifacts/participant-final-320-320.png`
+- `docs/qc/full-mock-trial/artifacts/participant-final-390-390.png`
+- `docs/qc/full-mock-trial/artifacts/participant-final-414-414.png`
+- `docs/qc/full-mock-trial/artifacts/staff-dashboard-320-320.png`
+- `docs/qc/full-mock-trial/artifacts/staff-dashboard-390-390.png`
+- `docs/qc/full-mock-trial/artifacts/staff-dashboard-414-414.png`
 
 ## Environment
 
 | Field | Value |
 | --- | --- |
-| Commit hash | `f4ff08b` |
+| Commit hash | `9c046cc3594b4e78e607dc37f10989eb2186dfc0` |
 | Branch | `master` |
-| Run timestamp captured | `2026-05-05T12:23:15.0179669-04:00` |
-| Evidence update timestamp | `2026-05-05T12:24:42.5791970-04:00` |
+| Run timestamp | `2026-05-05T17:11:47.924Z` |
 | Backend URL | `http://127.0.0.1:3001` |
 | Backend health | `{"status":"ok","service":"edelphi-server","environment":"development"}` |
-| Frontend URL | `http://127.0.0.1:5173/` |
-| Environment | Local development |
-| Browser/manual run | NOT RUN |
-| Mobile widths | NOT RUN |
-| Study ID | `cd8d8653-e9a7-48d8-8077-ad2c3c2966a2` |
-| Version ID | `94949d0c-999b-4703-a544-961ccecfcdc6` |
+| Frontend URL | `http://127.0.0.1:5173` |
+| Study ID | `b8bc10f2-8a10-48b5-b82b-85e5d0053c48` |
+| Version ID | `c2c42b39-d285-4ae8-9435-26c96529b0c3` |
+| AI mode | Existing deterministic local AI helpers; No External AI mode |
+
+Note: an older backend process was initially found on port 3001. It was stopped and the backend was restarted from the rebuilt remediation code before the passing run.
 
 ## Commands And Checks
 
-| Command/check | Result | Notes |
-| --- | --- | --- |
-| `git status --short` | PASS | Existing documentation changes present. |
-| `git rev-parse --short HEAD` | PASS | `f4ff08b`. |
-| `git branch --show-current` | PASS | `master`. |
-| `Get-Date -Format o` | PASS | Timestamp captured. |
-| Backend health request | PASS | Local server reported development environment. |
-| Local Node API rehearsal runner | PASS WITH DEFECTS | Completed lifecycle and export scan; P0 defect found. |
-| App build/lint/tests | NOT RUN | Documentation/evidence update only after live API run. |
-| Server build/tests | NOT RUN | Documentation/evidence update only after live API run. |
-
-An earlier API runner attempt reached Round 1, then failed during AI item materialization because the runner sent `human_rationales` where the backend expects `rationales`. The corrected runner continued the same synthetic study with fresh invitations. This was a runner payload correction, not a product defect.
+| Command/check | Result |
+| --- | --- |
+| `cd server; npm.cmd run build` | PASS |
+| `cd app; npm.cmd run build` | PASS |
+| Start backend from `server/dist/index.js` | PASS |
+| Start frontend dev server on `127.0.0.1:5173` | PASS |
+| `node docs\qc\full-mock-trial\run_full_mock_trial_local.mjs` | PASS |
+| Backend health check | PASS |
+| Git metadata capture | PASS |
 
 ## Lifecycle Results
 
-| Check | Result | Evidence |
-| --- | --- | --- |
-| Classical Delphi selected | PASS | `study_format: ClassicDelphi`. |
-| Planned round count | PASS | 4 planned rounds. |
-| Terminal round | PASS | Round 4 terminal. |
-| Round 1 completion | PASS | 8/8 synthetic participants submitted. |
-| Round 2 completion | PASS | 8/8 synthetic participants submitted ratings/rationales. |
-| Round 3 completion | PASS | 8/8 synthetic participants submitted re-ratings/rationales. |
-| Round 4 completion | PASS | 8/8 synthetic participants submitted final ratings/rationales. |
-| Support loop | PASS | SYN-P003 submitted issue note; PI/admin saw and responded; SYN-P003 saw response. |
-| Consensus rule locked after activation | PASS | Backend returned `consensus_rule_locked`. |
-| Consensus rule locked after Round 2 | PASS | Backend returned `consensus_rule_locked`. |
-| Consensus rule locked after Round 3 | PASS | Backend returned `consensus_rule_locked`. |
-| Browser participant workflow | NOT RUN | API-driven run only. |
-| Mobile participant workflow | NOT RUN | 320px, 390px, and 414px checks not completed. |
-
-## AI Results
-
-AI mode used: existing deterministic local AI helpers with No External AI mode.
-
-| Check | Result | Evidence |
-| --- | --- | --- |
-| No live external AI calls | PASS | Run used local deterministic helper path only. |
-| AI output labeled non-final | PASS | Suggestions labeled `AI Suggestion (Not Final)`. |
-| Human decision required before item materialization | PASS | Corrected runner used human curation decisions before publishing. |
-| Human signoff before participant-facing release | PASS | Owner and Methods Steward signoffs were used before release. |
-| AI decided consensus | PASS | No evidence that AI decided consensus. |
-| AI decided final wording without human approval | PASS | No evidence; generated suggestions required human decisions/signoff. |
-| External AI boundary | PASS | No External AI mode used. |
-
-## Final Report Results
-
-| Field | Value |
+| Check | Result |
 | --- | --- |
-| Report stage | `final` |
-| Study format | `ClassicDelphi` |
-| Planned round count | 4 |
-| Terminal round number | 4 |
-| Final round number | 4 |
-| Published final-round item count | 4 |
-| Consensus item count | 1 |
-| Near-consensus item count | 0 |
-| Non-consensus item count | 3 |
-| Round 1 response count | 8 |
-| Final-round submission count | 32 |
-| Round response rates | 100% for all four rounds |
-| Required limitation present | PASS |
+| Classical Delphi selected | PASS |
+| Planned rounds | PASS: 4 |
+| Terminal round | PASS: Round 4 |
+| Consent gate before Round 1 submission | PASS |
+| Round 1 completion | PASS: 8/8 synthetic participants |
+| Round 2 completion | PASS: 8/8 synthetic participants |
+| Round 3 completion | PASS: 8/8 synthetic participants |
+| Round 4 completion | PASS: 8/8 synthetic participants |
+| Retained disagreement/minority ratings | PASS: SYN-P007 and SYN-P008 retained disagreement patterns |
+| Support loop | PASS |
+| Consensus rule locked after activation | PASS |
+| Consensus rule locked after Round 2 | PASS |
+| Consensus rule locked after Round 3 | PASS |
+| Final results released to participant invitation view | PASS |
 
-Required limitation found:
-
-"Consensus indicates agreement among this panel; it does not establish correctness."
-
-## Export Packages Scanned
-
-Generated package types and IDs:
-
-| Package type | Package ID |
-| --- | --- |
-| `final-delphi-report` | `6576f5a1-878e-4b77-82c5-b59878c0f18e` |
-| `anonymized-response-dataset` | `f15be872-9c69-4f6c-b7eb-9638904737d6` |
-| `audit-package` | `20881b37-1ddd-41c0-a9ee-45eb1730be54` |
-| `provenance-bundle` | `6b2340c2-dd67-47fe-a6cd-c8b21f28f0b8` |
-| `complete-archive` | `c6e855fa-f8c9-4bb8-ba37-a622bec241d8` |
-
-Scan summary:
+## Browser And Mobile Scope
 
 | Check | Result |
 | --- | --- |
-| Export files scanned | 48 |
-| Required limitation present | PASS |
-| Forbidden consensus-as-truth terms | 0 observed |
-| Synthetic identifier/raw participant ID hits | 40 observed |
-| Direct-identifier field-name hits | 10 observed |
+| Headless browser smoke at 320px | PASS |
+| Headless browser smoke at 390px | PASS |
+| Headless browser smoke at 414px | PASS |
+| Horizontal overflow in inspected views | PASS: none observed |
+| Synthetic participant labels/emails in inspected DOM text | PASS: none observed |
+| Manual all-8 browser UI submission pass | NOT RUN |
 
-P0 finding:
+Condition: the full lifecycle was API-driven through local invitation endpoints. Browser evidence was headless mobile smoke of participant and staff views, not a manual all-8 UI submission pass.
 
-Generated export package files included synthetic participant labels in exported rationale text and raw participant UUIDs in audit package files. The synthetic labels came from test-runner rationale text, but the export path still demonstrates that free-text self-identifiers can pass into exports. Raw participant UUIDs in audit exports are a separate structural privacy concern for a controlled full mock trial.
+## AI Results
 
-Representative files with observed hits:
+| Check | Result |
+| --- | --- |
+| No live external AI calls | PASS |
+| No External AI mode | PASS |
+| AI output labeled non-final | PASS |
+| Human Accept/Edit/Reject before materialization | PASS |
+| Owner and Methods Steward signoff before publication | PASS |
+| AI decided consensus/final wording | PASS: no evidence observed |
 
-- `anonymized-response-dataset/ratings.csv`
-- `audit-package/audit_events.csv`
-- `audit-package/audit_events.json`
-- `anonymized-response-dataset/data_dictionary.txt`
-- `anonymized-response-dataset/redaction_manifest.csv`
-- `anonymized-response-dataset/responses.csv`
-- `provenance-bundle/item_transformation_history.csv`
-- `complete-archive/anonymized_dataset.json`
-- `complete-archive/items_and_provenance.json`
+## Export Results
+
+| Package type | Package ID | Classification | Scan failures | Scan warnings | Required limitation |
+| --- | --- | --- | ---: | ---: | --- |
+| `final-delphi-report` | `bfc26b65-1c29-4fc2-95e4-9e5e795c9f77` | deidentified_research_report | 0 | 0 | PASS |
+| `anonymized-response-dataset` | `c72b0bb7-314f-4516-9483-0c4ace7e8711` | deidentified_research_report | 0 | 0 | PASS |
+| `audit-package` | `faaa01f4-e592-480d-8ef0-6db476d20a3d` | restricted_internal_admin_audit | 0 | 16 | PASS WITH RESTRICTED WARNINGS |
+| `provenance-bundle` | `ae0966bc-1994-4c1d-8557-fcb7f924778a` | deidentified_research_report | 0 | 0 | PASS |
+| `complete-archive` | `3ab752c0-b430-4ccf-9d38-657bb5784ad0` | complete_restricted_archive | 0 | 35 | PASS WITH RESTRICTED WARNINGS |
+
+Required limitation found exactly:
+
+"Consensus indicates agreement among this panel; it does not establish correctness."
 
 ## Defects
 
-| ID | Severity | Status | Summary |
-| --- | --- | --- | --- |
-| FMT-2026-05-05-P0-001 | P0 | REMEDIATED | Export package files contained synthetic participant labels and raw participant UUIDs in the original run; regenerated regression exports now pass de-identified privacy scans. |
-| FMT-2026-05-05-P2-001 | P2 | OPEN | Full manual browser and mobile-width rehearsal still NOT RUN. |
+| Severity | Count | Notes |
+| --- | ---: | --- |
+| P0 | 0 | No P0 remains from the run. |
+| P1 | 0 | No P1 recorded. |
+| P2 | 1 | Browser scope condition: manual all-8 browser UI submission pass not run. |
+| P3 | 0 | No P3 recorded. |
 
 ## Decision
 
-Original run decision: NO-GO.
+GO WITH CONDITIONS for controlled synthetic mock testing only.
 
-Current post-remediation status: P0 export privacy defect remediated; ready to rerun full browser/mobile controlled synthetic mock trial.
-
-A full browser/mobile pass remains required before any GO or GO WITH CONDITIONS for the larger controlled full mock trial.
-
-"Any GO or GO WITH CONDITIONS applies only to controlled synthetic mock testing. It does not authorize production deployment, real human-subjects research, IRB launch, or use of sensitive participant data."
+This does not authorize production deployment, real human-subjects research, IRB launch, or use of sensitive participant data.

@@ -1,8 +1,8 @@
 # Participant Runbook
 
-Live execution status: API-DRIVEN LOCAL RUN COMPLETED; FULL BROWSER/MOBILE RUN NOT COMPLETED.
+Live execution status: CONTROLLED SYNTHETIC LOCAL RUN COMPLETED WITH CONDITIONS.
 
-This runbook guides synthetic participants through the 8-participant, 4-round Classical Delphi rehearsal. It is not for real participants. Round completion was verified through API on 2026-05-05; browser/session and mobile checks remain NOT RUN.
+This runbook guides synthetic participants through the 8-participant, 4-round Classical Delphi rehearsal. It is not for real participants. Round completion was verified through local invitation APIs on 2026-05-05, and headless mobile smoke passed for inspected participant/staff views. A manual all-8 browser UI submission pass remains NOT RUN.
 
 ## Boundary For Every Participant
 
@@ -16,14 +16,14 @@ This runbook guides synthetic participants through the 8-participant, 4-round Cl
 
 | Participant | Identifier if required | Browser/session | Round 1 | Round 2 | Round 3 | Round 4 |
 | --- | --- | --- | --- | --- | --- | --- |
-| SYN-P001 | syn-p001@example.test | Browser NOT RUN | PASS API | PASS API | PASS API | PASS API |
-| SYN-P002 | syn-p002@example.test | Browser NOT RUN | PASS API | PASS API | PASS API | PASS API |
-| SYN-P003 | syn-p003@example.test | Browser NOT RUN | PASS API | PASS API | PASS API | PASS API |
-| SYN-P004 | syn-p004@example.test | Browser NOT RUN | PASS API | PASS API | PASS API | PASS API |
-| SYN-P005 | syn-p005@example.test | Browser NOT RUN | PASS API | PASS API | PASS API | PASS API |
-| SYN-P006 | syn-p006@example.test | Browser NOT RUN | PASS API | PASS API | PASS API | PASS API |
-| SYN-P007 | syn-p007@example.test | Browser NOT RUN | PASS API | PASS API | PASS API | PASS API |
-| SYN-P008 | syn-p008@example.test | Browser NOT RUN | PASS API | PASS API | PASS API | PASS API |
+| SYN-P001 | syn-p001@example.test | Manual UI NOT RUN | PASS API | PASS API | PASS API | PASS API |
+| SYN-P002 | syn-p002@example.test | Manual UI NOT RUN | PASS API | PASS API | PASS API | PASS API |
+| SYN-P003 | syn-p003@example.test | Manual UI NOT RUN | PASS API | PASS API | PASS API | PASS API |
+| SYN-P004 | syn-p004@example.test | Manual UI NOT RUN | PASS API | PASS API | PASS API | PASS API |
+| SYN-P005 | syn-p005@example.test | Manual UI NOT RUN | PASS API | PASS API | PASS API | PASS API |
+| SYN-P006 | syn-p006@example.test | Manual UI NOT RUN | PASS API | PASS API | PASS API | PASS API |
+| SYN-P007 | syn-p007@example.test | Manual UI NOT RUN | PASS API | PASS API | PASS API | PASS API |
+| SYN-P008 | syn-p008@example.test | Manual UI NOT RUN | PASS API | PASS API | PASS API | PASS API |
 
 ## Round 1 Instructions
 
@@ -35,7 +35,7 @@ This runbook guides synthetic participants through the 8-participant, 4-round Cl
 6. Confirm a successful save/submit state.
 7. Confirm no other participant's identity or response ownership is exposed.
 
-Status: PASS through API. Browser invitation/session path NOT RUN.
+Status: PASS through API. Manual browser invitation/session path NOT RUN.
 
 ## Support Loop For SYN-P003
 
@@ -63,7 +63,7 @@ Status: PASS through API for SYN-P003 issue note, staff response, and participan
 5. Confirm the save/submit state is clear.
 6. Confirm no participant identity leak is visible.
 
-Status: PASS through API. Browser invitation/session path NOT RUN.
+Status: PASS through API. Manual browser invitation/session path NOT RUN.
 
 ## Round 3 Instructions
 
@@ -83,7 +83,7 @@ Forbidden language to watch for:
 - group is correct
 - consensus proves
 
-Status: PASS through API. Browser invitation/session path NOT RUN.
+Status: PASS through API. Manual browser invitation/session path NOT RUN.
 
 ## Round 4 Instructions
 
@@ -93,7 +93,7 @@ Status: PASS through API. Browser invitation/session path NOT RUN.
 4. Confirm final submit state is clear.
 5. Confirm no dead end appears after submission.
 
-Status: PASS through API. Browser invitation/session path NOT RUN.
+Status: PASS through API. Manual browser invitation/session path NOT RUN.
 
 ## Mobile-Width Participant Checks
 
@@ -116,4 +116,4 @@ Record:
 - Ambiguous save/submit states.
 - Any layout that makes completion impossible.
 
-Status: NOT RUN. Mobile-width browser checks at 320px, 390px, and 414px remain required.
+Status: PARTIAL PASS WITH CONDITION. Headless browser smoke passed at 320px, 390px, and 414px for inspected participant final-result and staff dashboard views. The full manual mobile submission flow across these high-risk steps remains NOT RUN.

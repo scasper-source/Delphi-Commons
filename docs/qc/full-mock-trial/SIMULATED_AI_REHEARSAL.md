@@ -1,6 +1,6 @@
 # Simulated AI Rehearsal
 
-Live execution status: API-DRIVEN LOCAL RUN COMPLETED; FULL BROWSER/MOBILE RUN NOT COMPLETED.
+Live execution status: CONTROLLED SYNTHETIC LOCAL RUN COMPLETED WITH CONDITIONS.
 
 AI mode observed in the API-driven run: existing deterministic local AI helpers with No External AI mode.
 

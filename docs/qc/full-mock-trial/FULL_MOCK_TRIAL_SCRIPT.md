@@ -1,8 +1,8 @@
 # Full Controlled Mock-Trial Script
 
-Live execution status: API-DRIVEN LOCAL RUN COMPLETED; FULL BROWSER/MOBILE RUN NOT COMPLETED.
+Live execution status: CONTROLLED SYNTHETIC LOCAL RERUN COMPLETED WITH CONDITIONS.
 
-This script is the controlling script for the full controlled synthetic mock-participant rehearsal. API-driven evidence was recorded on 2026-05-05; UI-specific browser/mobile checks remain NOT RUN.
+This script is the controlling script for the full controlled synthetic mock-participant rehearsal. The latest evidence was recorded on 2026-05-05 after export privacy remediation. The full 8-participant, 4-round lifecycle was completed through local invitation APIs, and headless browser mobile smoke was completed at 320px, 390px, and 414px. A manual all-8 browser UI submission pass remains NOT RUN and is tracked as a P2 condition.
 
 ## Scope
 
@@ -47,18 +47,19 @@ No Playwright or Cypress command was found during inspection. Current automated 
 
 | Field | Value |
 | --- | --- |
-| Commit hash | `f4ff08b` |
+| Commit hash | `9c046cc3594b4e78e607dc37f10989eb2186dfc0` |
 | Branch | `master` |
-| Date/time | `2026-05-05T12:23:15.0179669-04:00` |
+| Date/time | `2026-05-05T17:11:47.924Z` |
 | Environment | Local development |
 | Backend URL | `http://127.0.0.1:3001` |
-| Frontend URL | `http://127.0.0.1:5173/` |
-| Browser | NOT RUN |
-| Desktop viewport | NOT RUN |
-| Mobile widths | NOT RUN |
-| Commands run | Git metadata, backend health, local Node API rehearsal runner |
+| Frontend URL | `http://127.0.0.1:5173` |
+| Browser | Microsoft Edge headless smoke |
+| Desktop viewport | Staff dashboard headless smoke |
+| Mobile widths | PASS at 320px, 390px, and 414px for participant/staff inspected views |
+| Commands run | Git metadata, backend health, app/server build, local mock-trial runner |
 | AI mode used | Existing deterministic local AI helpers with No External AI mode |
 | Observer | Codex local API runner |
+| Evidence artifact | `docs/qc/full-mock-trial/artifacts/full-mock-trial-run-latest.json` |
 
 ## Future Live Script
 
@@ -70,7 +71,7 @@ No Playwright or Cypress command was found during inspection. Current automated 
 4. Start backend and frontend using documented local/dev commands.
 5. Confirm environment is visibly not production, or document absence of staging/mock banner as a defect.
 
-Result: PASS through API for backend environment and metadata capture; browser non-production banner check NOT RUN.
+Result: PASS. Backend health reported `environment: development`; headless browser smoke inspected the local frontend.
 
 ### B. Study Setup And Governance
 
@@ -87,7 +88,7 @@ Result: PASS through API for backend environment and metadata capture; browser n
 16. Confirm the rule is locked or requires a new study version/governance workflow.
 17. Repeat this consensus-rule-change attempt after Round 2 and Round 3 if feasible.
 
-Result: PASS through API for study setup, launch, and consensus lock checks. Browser-visible governance copy checks remain NOT RUN.
+Result: PASS through local APIs for study setup, launch, and consensus lock checks. Browser-visible copy was smoke-checked in headless mobile views but not manually clicked through by all participants.
 
 ### C. Round 1
 
@@ -208,7 +209,7 @@ Required widths:
 - 390px
 - 414px
 
-Result: NOT RUN. Mobile-width browser checks at 320px, 390px, and 414px remain required.
+Result: PARTIAL PASS WITH CONDITION. Headless browser smoke checks passed at 320px, 390px, and 414px for inspected participant final-result and staff dashboard views, with no horizontal overflow and no synthetic participant labels/emails observed in inspected DOM text. A full manual mobile participant submission flow across all high-risk steps remains NOT RUN and is included in the browser scope P2 condition.
 
 ## Severity System
 
@@ -257,7 +258,7 @@ P3 backlog:
 - Minor documentation improvement.
 - Low-risk UX improvement.
 
-## Future Decision Criteria
+## Decision Criteria
 
 - P0 defects: 0.
 - P1 defects: 0 unless a safe workaround is documented for synthetic testing only.
@@ -273,4 +274,4 @@ P3 backlog:
 - No AI output decides consensus, item inclusion, final wording, or final reporting.
 - No production or real human-subjects use is implied.
 
-Current status after focused remediation: P0 export privacy defect remediated; ready to rerun full browser/mobile controlled synthetic mock trial. No GO is issued because the full browser/mobile run is NOT RUN.
+Current status: GO WITH CONDITIONS for controlled synthetic mock testing only. The export privacy P0 is remediated, all 8 synthetic participants completed 4 Classical Delphi rounds through local invitation APIs, and regenerated de-identified exports passed privacy scanning. The condition is that the lifecycle was API-driven with headless browser/mobile smoke, not a manual all-8 browser UI submission pass.

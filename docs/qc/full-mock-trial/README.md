@@ -6,9 +6,9 @@ Scope: controlled synthetic mock-participant trial only.
 
 This package prepares and records evidence for a deeper Delphi Commons rehearsal using 8 synthetic participants, 4 Classical Delphi rounds, mobile-width checks, export privacy checks, support-loop checks, and simulated AI governance checks.
 
-Current live execution status: API-DRIVEN LOCAL RUN COMPLETED; EXPORT PRIVACY REMEDIATION VERIFIED; FULL BROWSER/MOBILE RUN NOT COMPLETED.
+Current live execution status: CONTROLLED SYNTHETIC LOCAL RERUN COMPLETED WITH CONDITIONS.
 
-Current documentation-package status: evidence updated after the API-driven local development run and focused export privacy remediation. The run completed the synthetic 8-participant, 4-round lifecycle, and the export privacy P0 is remediated in regression evidence. No GO is issued for the larger controlled full mock trial because browser/mobile execution remains NOT RUN.
+Current documentation-package status: evidence updated after the export privacy remediation rerun. The run completed the synthetic 8-participant, 4-round lifecycle through local invitation APIs, regenerated and rescanned export packages, and completed headless browser smoke checks at 320px, 390px, and 414px. Current decision is GO WITH CONDITIONS for controlled synthetic mock testing only. The condition is that this was not a manual all-8 browser UI submission pass.
 
 Boundary:
 
@@ -32,9 +32,9 @@ Live run summary:
 - API-driven lifecycle: Round 1 through Round 4 completed by all 8 synthetic participants.
 - Support loop: SYN-P003 issue note, PI/admin response, and participant-visible response completed through API.
 - AI mode: existing deterministic local AI helpers with No External AI mode; no live external AI calls.
-- Browser/mobile pass: NOT RUN.
-- Export privacy scan: P0 defect remediated in regenerated regression export packages.
-- Current status: P0 export privacy defect remediated; ready to rerun full browser/mobile controlled synthetic mock trial.
+- Browser/mobile pass: headless mobile smoke completed at 320px, 390px, and 414px; manual all-8 browser UI submission pass NOT RUN.
+- Export privacy scan: PASS for regenerated de-identified export packages; restricted/internal packages produced warnings only.
+- Current status: GO WITH CONDITIONS for controlled synthetic mock testing only.
 
 Repository findings used to prepare this package:
 
@@ -45,6 +45,11 @@ Repository findings used to prepare this package:
 - Modified Delphi maps to 3 planned/terminal rounds.
 - Existing AI defaults are no external AI mode, external AI disabled, and feature permissions disabled unless configured.
 - Existing AI routes include deterministic local helper outputs such as `deterministic_mvp_synthesizer`.
+
+Latest evidence artifact:
+
+- `docs/qc/full-mock-trial/artifacts/full-mock-trial-run-2026-05-05T17-11-47-924Z.json`
+- `docs/qc/full-mock-trial/artifacts/full-mock-trial-run-latest.json`
 
 Files:
 
