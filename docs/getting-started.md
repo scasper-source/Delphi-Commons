@@ -9,6 +9,8 @@ Do not use a local development checkout for real human-subjects studies. Local d
 - Install Node.js 20 or later.
 - Install npm.
 - Install Git if you plan to clone or contribute.
+
+Delphi Commons does not currently provide a root-level npm workspace command. Run install, build, test, and development commands from `app/` and `server/`.
 - Use a modern browser such as Edge, Chrome, Firefox, or Safari.
 
 ## 2. Install Dependencies

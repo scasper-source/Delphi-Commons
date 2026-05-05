@@ -38,6 +38,8 @@ Open-source code does not imply open study data. Study data, participant identit
 - A modern browser is required for the web app.
 - Windows, macOS, and Linux setup notes are in [docs/install](./docs/install/).
 
+There is no root-level npm workspace command yet. Run install, build, test, and development commands from `app/` and `server/` as shown below.
+
 ## Local Install
 
 Install frontend dependencies:
