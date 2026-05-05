@@ -37,6 +37,7 @@ Current readiness: controlled mock-participant MVP testing with synthetic or low
 - [Full controlled mock-trial package](./qc/full-mock-trial/README.md)
 - [Adverse-user rehearsal package](./qc/adverse-user-rehearsal/README.md)
 - [Multi-question regression evidence](./qc/multi-question-regression/README.md)
+- [GitHub fresh clone/build/test evidence](./qc/github-fresh-clone-check/README.md)
 
 ## Licensing
 
