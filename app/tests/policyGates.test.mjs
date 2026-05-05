@@ -400,6 +400,24 @@ test("participant mobile workflow exposes save state, item progress, rationale, 
   assert.match(css, /\.compact-distribution[\s\S]*grid-template-columns:\s*repeat\(3/);
 });
 
+test("participant study time and method copy use active study version values", () => {
+  const source = appSource();
+  const participantSource = sourceSlice(source, "function ParticipantScreen", "function RoundContextPanel");
+  const studyTimeSource = sourceSlice(source, "<h3>Study Time Commitment</h3>", "<h3>{participantCopy.portal.participantRightsTitle}</h3>");
+
+  assert.match(participantSource, /activeStudyVersion = participantInvite\?\.study_version \?\? workflow\.version \?\? null/);
+  assert.match(participantSource, /activeStudyVersion\?\.planned_round_count \?\? activeStudyVersion\?\.terminal_round_number \?\? null/);
+  assert.match(participantSource, /participantFacingStudyFormat = activeStudyVersion\?\.study_format \?\? null/);
+  assert.match(participantSource, /participantStudyTimeCopy = participantFacingPlannedRounds/);
+  assert.match(participantSource, /participantFacingStudyFormat === "ClassicDelphi"/);
+  assert.match(participantSource, /participantFacingStudyFormat === "ModifiedDelphi"/);
+  assert.match(participantSource, /study's round schedule will be provided by the study team/);
+  assert.match(studyTimeSource, /participantStudyTimeCopy/);
+  assert.match(studyTimeSource, /participantStudyFormatLabel/);
+  assert.doesNotMatch(studyTimeSource, /wizard\.plannedRoundCount/);
+  assert.doesNotMatch(studyTimeSource, /wizard\.studyFormat/);
+});
+
 test("Phase 1A multi-research-question setup and Round 1 capture stay lean and governed", () => {
   const source = appSource();
   const wizardSource = fs.readFileSync(path.join(appRoot, "src", "core", "studyWizard.ts"), "utf8");
