@@ -28,6 +28,7 @@ Current readiness: controlled mock-participant MVP testing with synthetic or low
 - [Ethical Governance Charter](../documents/governance/ethical-governance-charter.md)
 - [AI Governance & Human-in-the-Loop Thin Spec](../documents/governance/ai-assistance-thin-spec.md)
 - [Human-subjects readiness plan](../documents/compliance/human-subjects-readiness/HUMAN_SUBJECTS_READINESS.md)
+- [Phase 10 operational readiness documentation](./operations/phase-10/README.md)
 - [Open-source release checklist](./OPEN_SOURCE_RELEASE_CHECKLIST.md)
 - [License rationale](./LICENSE_RATIONALE.md)
 - [Light baseline QC](./qc/light-baseline/README.md)
