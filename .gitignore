@@ -65,3 +65,6 @@ server/audit/audit.log
 *.tgz
 *.gz
 coverage/
+
+# Local browser profiles produced during synthetic QC screenshot capture
+docs/qc/full-mock-trial/artifacts/edge-profile-*/
