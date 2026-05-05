@@ -49,44 +49,44 @@
   },
   "participants": [
     {
-      "label": "SYN-P001",
-      "participant_id": "1d13b712-3fdc-479e-8ceb-1f4ca8c2154e",
-      "invitation_id": "11bd4b39-52df-42be-8e30-f35d33eee36d"
+      "label": "[REDACTED_SYNTHETIC_PARTICIPANT_LABEL]",
+      "participant_id": "[REDACTED_SYNTHETIC_PARTICIPANT_ID]",
+      "invitation_id": "[REDACTED_SYNTHETIC_INVITATION_ID]"
     },
     {
-      "label": "SYN-P002",
-      "participant_id": "0c04b374-f8ac-4275-8b30-fe1d3e9364a2",
-      "invitation_id": "810d8577-9166-41d0-a643-ecba804983a0"
+      "label": "[REDACTED_SYNTHETIC_PARTICIPANT_LABEL]",
+      "participant_id": "[REDACTED_SYNTHETIC_PARTICIPANT_ID]",
+      "invitation_id": "[REDACTED_SYNTHETIC_INVITATION_ID]"
     },
     {
-      "label": "SYN-P003",
-      "participant_id": "660a23ad-81ad-4c82-a24e-79ca187c669b",
-      "invitation_id": "503fa801-67df-4935-a192-bc9aed45dba0"
+      "label": "[REDACTED_SYNTHETIC_PARTICIPANT_LABEL]",
+      "participant_id": "[REDACTED_SYNTHETIC_PARTICIPANT_ID]",
+      "invitation_id": "[REDACTED_SYNTHETIC_INVITATION_ID]"
     },
     {
-      "label": "SYN-P004",
-      "participant_id": "e46722fb-5990-4cc3-86f6-d980bc0b79db",
-      "invitation_id": "98f16d65-8e76-4599-9886-c06dace57275"
+      "label": "[REDACTED_SYNTHETIC_PARTICIPANT_LABEL]",
+      "participant_id": "[REDACTED_SYNTHETIC_PARTICIPANT_ID]",
+      "invitation_id": "[REDACTED_SYNTHETIC_INVITATION_ID]"
     },
     {
-      "label": "SYN-P005",
-      "participant_id": "2c180c6d-0ca3-4658-b5aa-8c2c50824d79",
-      "invitation_id": "1928e732-b01c-429e-94fe-b0ecf2688c9d"
+      "label": "[REDACTED_SYNTHETIC_PARTICIPANT_LABEL]",
+      "participant_id": "[REDACTED_SYNTHETIC_PARTICIPANT_ID]",
+      "invitation_id": "[REDACTED_SYNTHETIC_INVITATION_ID]"
     },
     {
-      "label": "SYN-P006",
-      "participant_id": "c4bb690e-8c24-4bc1-82c5-a14c846cdf21",
-      "invitation_id": "732b50c8-8ed7-4978-99f8-dfdf42e3d12e"
+      "label": "[REDACTED_SYNTHETIC_PARTICIPANT_LABEL]",
+      "participant_id": "[REDACTED_SYNTHETIC_PARTICIPANT_ID]",
+      "invitation_id": "[REDACTED_SYNTHETIC_INVITATION_ID]"
     },
     {
-      "label": "SYN-P007",
-      "participant_id": "b62299c3-0ff5-4ff3-8613-d1989adecc6f",
-      "invitation_id": "9a3d70f2-8dc9-4207-ad02-00886bebf93e"
+      "label": "[REDACTED_SYNTHETIC_PARTICIPANT_LABEL]",
+      "participant_id": "[REDACTED_SYNTHETIC_PARTICIPANT_ID]",
+      "invitation_id": "[REDACTED_SYNTHETIC_INVITATION_ID]"
     },
     {
-      "label": "SYN-P008",
-      "participant_id": "68ea48f2-3655-42f1-af23-1115feb26500",
-      "invitation_id": "d09a05ea-ac68-470e-88f4-3d69fffbc5b8"
+      "label": "[REDACTED_SYNTHETIC_PARTICIPANT_LABEL]",
+      "participant_id": "[REDACTED_SYNTHETIC_PARTICIPANT_ID]",
+      "invitation_id": "[REDACTED_SYNTHETIC_INVITATION_ID]"
     }
   ],
   "checks": [

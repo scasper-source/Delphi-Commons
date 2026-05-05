@@ -32,11 +32,11 @@
   "commands": [
     {
       "command": "git rev-parse HEAD",
-      "cwd": "C:\\Users\\13152\\Dropbox\\eDelphi"
+      "cwd": "[REPO_ROOT]"
     },
     {
       "command": "git branch --show-current",
-      "cwd": "C:\\Users\\13152\\Dropbox\\eDelphi"
+      "cwd": "[REPO_ROOT]"
     }
   ],
   "study": {
@@ -95,8 +95,8 @@
       "status": "PASS",
       "item_count": 8,
       "retained_disagreement_participants": [
-        "SYN-P007",
-        "SYN-P008"
+        "[REDACTED_SYNTHETIC_PARTICIPANT_LABEL]",
+        "[REDACTED_SYNTHETIC_PARTICIPANT_LABEL]"
       ]
     },
     {
@@ -440,7 +440,7 @@
         "package_type": "complete-archive",
         "file_path": "complete-archive/items_and_provenance.json",
         "pattern_class": "synthetic_participant_label",
-        "context": "SYN-P001"
+        "context": "[REDACTED_SYNTHETIC_PARTICIPANT_LABEL]"
       },
       {
         "export_type": "complete-archive",
@@ -448,7 +448,7 @@
         "package_type": "complete-archive",
         "file_path": "complete-archive/items_and_provenance.json",
         "pattern_class": "synthetic_participant_label",
-        "context": "SYN-P002"
+        "context": "[REDACTED_SYNTHETIC_PARTICIPANT_LABEL]"
       },
       {
         "export_type": "complete-archive",
@@ -456,7 +456,7 @@
         "package_type": "complete-archive",
         "file_path": "complete-archive/items_and_provenance.json",
         "pattern_class": "synthetic_participant_label",
-        "context": "SYN-P003"
+        "context": "[REDACTED_SYNTHETIC_PARTICIPANT_LABEL]"
       },
       {
         "export_type": "complete-archive",
@@ -464,7 +464,7 @@
         "package_type": "complete-archive",
         "file_path": "complete-archive/items_and_provenance.json",
         "pattern_class": "synthetic_participant_label",
-        "context": "SYN-P004"
+        "context": "[REDACTED_SYNTHETIC_PARTICIPANT_LABEL]"
       },
       {
         "export_type": "complete-archive",
@@ -472,7 +472,7 @@
         "package_type": "complete-archive",
         "file_path": "complete-archive/items_and_provenance.json",
         "pattern_class": "synthetic_participant_label",
-        "context": "SYN-P005"
+        "context": "[REDACTED_SYNTHETIC_PARTICIPANT_LABEL]"
       },
       {
         "export_type": "complete-archive",
@@ -480,7 +480,7 @@
         "package_type": "complete-archive",
         "file_path": "complete-archive/items_and_provenance.json",
         "pattern_class": "synthetic_participant_label",
-        "context": "SYN-P006"
+        "context": "[REDACTED_SYNTHETIC_PARTICIPANT_LABEL]"
       },
       {
         "export_type": "complete-archive",
@@ -488,7 +488,7 @@
         "package_type": "complete-archive",
         "file_path": "complete-archive/items_and_provenance.json",
         "pattern_class": "synthetic_participant_label",
-        "context": "SYN-P007"
+        "context": "[REDACTED_SYNTHETIC_PARTICIPANT_LABEL]"
       },
       {
         "export_type": "complete-archive",
@@ -496,7 +496,7 @@
         "package_type": "complete-archive",
         "file_path": "complete-archive/items_and_provenance.json",
         "pattern_class": "synthetic_participant_label",
-        "context": "SYN-P008"
+        "context": "[REDACTED_SYNTHETIC_PARTICIPANT_LABEL]"
       },
       {
         "export_type": "complete-archive",
@@ -656,11 +656,11 @@
     {
       "label": "participant-final-320",
       "width": 320,
-      "url": "http://127.0.0.1:5173/#invite=aPVzc1tyVngsaeZN81x8UqKP674LV5N1gwqEtcmJG2I",
-      "executable": "C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe",
+      "url": "http://127.0.0.1:5173/#invite=[REDACTED_SYNTHETIC_INVITATION_TOKEN]",
+      "executable": "[REDACTED_LOCAL_BROWSER_EXECUTABLE]",
       "screenshot_path": "docs/qc/full-mock-trial/artifacts/participant-final-320-320.png",
       "metrics": {
-        "url": "http://127.0.0.1:5173/#invite=aPVzc1tyVngsaeZN81x8UqKP674LV5N1gwqEtcmJG2I",
+        "url": "http://127.0.0.1:5173/#invite=[REDACTED_SYNTHETIC_INVITATION_TOKEN]",
         "title": "app",
         "innerWidth": 320,
         "clientWidth": 320,
@@ -699,7 +699,7 @@
       "label": "staff-dashboard-320",
       "width": 320,
       "url": "http://127.0.0.1:5173",
-      "executable": "C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe",
+      "executable": "[REDACTED_LOCAL_BROWSER_EXECUTABLE]",
       "screenshot_path": "docs/qc/full-mock-trial/artifacts/staff-dashboard-320-320.png",
       "metrics": {
         "url": "http://127.0.0.1:5173/",
@@ -750,11 +750,11 @@
     {
       "label": "participant-final-390",
       "width": 390,
-      "url": "http://127.0.0.1:5173/#invite=aPVzc1tyVngsaeZN81x8UqKP674LV5N1gwqEtcmJG2I",
-      "executable": "C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe",
+      "url": "http://127.0.0.1:5173/#invite=[REDACTED_SYNTHETIC_INVITATION_TOKEN]",
+      "executable": "[REDACTED_LOCAL_BROWSER_EXECUTABLE]",
       "screenshot_path": "docs/qc/full-mock-trial/artifacts/participant-final-390-390.png",
       "metrics": {
-        "url": "http://127.0.0.1:5173/#invite=aPVzc1tyVngsaeZN81x8UqKP674LV5N1gwqEtcmJG2I",
+        "url": "http://127.0.0.1:5173/#invite=[REDACTED_SYNTHETIC_INVITATION_TOKEN]",
         "title": "app",
         "innerWidth": 390,
         "clientWidth": 390,
@@ -793,7 +793,7 @@
       "label": "staff-dashboard-390",
       "width": 390,
       "url": "http://127.0.0.1:5173",
-      "executable": "C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe",
+      "executable": "[REDACTED_LOCAL_BROWSER_EXECUTABLE]",
       "screenshot_path": "docs/qc/full-mock-trial/artifacts/staff-dashboard-390-390.png",
       "metrics": {
         "url": "http://127.0.0.1:5173/",
@@ -844,11 +844,11 @@
     {
       "label": "participant-final-414",
       "width": 414,
-      "url": "http://127.0.0.1:5173/#invite=aPVzc1tyVngsaeZN81x8UqKP674LV5N1gwqEtcmJG2I",
-      "executable": "C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe",
+      "url": "http://127.0.0.1:5173/#invite=[REDACTED_SYNTHETIC_INVITATION_TOKEN]",
+      "executable": "[REDACTED_LOCAL_BROWSER_EXECUTABLE]",
       "screenshot_path": "docs/qc/full-mock-trial/artifacts/participant-final-414-414.png",
       "metrics": {
-        "url": "http://127.0.0.1:5173/#invite=aPVzc1tyVngsaeZN81x8UqKP674LV5N1gwqEtcmJG2I",
+        "url": "http://127.0.0.1:5173/#invite=[REDACTED_SYNTHETIC_INVITATION_TOKEN]",
         "title": "app",
         "innerWidth": 414,
         "clientWidth": 414,
@@ -887,7 +887,7 @@
       "label": "staff-dashboard-414",
       "width": 414,
       "url": "http://127.0.0.1:5173",
-      "executable": "C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe",
+      "executable": "[REDACTED_LOCAL_BROWSER_EXECUTABLE]",
       "screenshot_path": "docs/qc/full-mock-trial/artifacts/staff-dashboard-414-414.png",
       "metrics": {
         "url": "http://127.0.0.1:5173/",

@@ -21,10 +21,10 @@ This rehearsal used synthetic/dev data only. It does not claim production readin
 
 | Purpose | Directory |
 |---|---|
-| Initial isolated backend start attempt | `C:\Users\13152\Dropbox\eDelphi\server\data\phase10-rehearsal-20260505-154444` |
-| Isolated backend health smoke | `C:\Users\13152\Dropbox\eDelphi\server\data\phase10-rehearsal-20260505-154521` |
-| Backend road-test disposable runtime | `C:\Users\13152\Dropbox\eDelphi\server\data\test-runtime\road-1778010422232-f39ad0924cb3` |
-| Admin disable/session disposable runtime | `C:\Users\13152\Dropbox\eDelphi\server\data\test-runtime\phase10-admin-1778010463755-65092d289e7628` |
+| Initial isolated backend start attempt | `server\data\phase10-rehearsal-20260505-154444` |
+| Isolated backend health smoke | `server\data\phase10-rehearsal-20260505-154521` |
+| Backend road-test disposable runtime | `server\data\test-runtime\road-1778010422232-f39ad0924cb3` |
+| Admin disable/session disposable runtime | `server\data\test-runtime\phase10-admin-1778010463755-65092d289e7628` |
 
 ## Environment Variables Used
 

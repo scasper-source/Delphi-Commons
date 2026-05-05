@@ -6,10 +6,12 @@ Until a production security review, backup/restore verification, retention autom
 
 ## Reporting a Vulnerability
 
-Please report suspected vulnerabilities privately to:
+Use GitHub private vulnerability reporting if enabled. If private vulnerability reporting is not yet enabled, do not post exploit details publicly. Open a minimal public issue asking maintainers to provide a private security contact, without including exploit details, logs, tokens, participant data, reproduction details, or sensitive files.
 
-[security contact placeholder]
+Do not include real participant data, identity mappings, consent records, secrets, credentials, tokens, private institutional data, real study exports, or sensitive runtime artifacts in public issues, pull requests, screenshots, logs, or attachments.
 
 Do not disclose vulnerabilities publicly until maintainers have had a reasonable opportunity to investigate and remediate.
 
 Reports involving participant privacy, identity separation, consent records, audit logs, data exports, authentication, authorization, AI governance, or study integrity should be treated as high priority.
+
+This policy does not certify production readiness, completed security review, legal compliance, or human-subjects readiness.

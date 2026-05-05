@@ -49,44 +49,44 @@
   },
   "participants": [
     {
-      "label": "SYN-P001",
-      "participant_id": "7043bc1f-e0b2-4566-a73c-dde12dd3956f",
-      "invitation_id": "5dcfdce9-269a-45f8-8529-b2a735c53311"
+      "label": "[REDACTED_SYNTHETIC_PARTICIPANT_LABEL]",
+      "participant_id": "[REDACTED_SYNTHETIC_PARTICIPANT_ID]",
+      "invitation_id": "[REDACTED_SYNTHETIC_INVITATION_ID]"
     },
     {
-      "label": "SYN-P002",
-      "participant_id": "b2ddbb57-a997-40d6-a073-91ba6e359781",
-      "invitation_id": "15558d87-8646-4313-9868-c4edc46b244c"
+      "label": "[REDACTED_SYNTHETIC_PARTICIPANT_LABEL]",
+      "participant_id": "[REDACTED_SYNTHETIC_PARTICIPANT_ID]",
+      "invitation_id": "[REDACTED_SYNTHETIC_INVITATION_ID]"
     },
     {
-      "label": "SYN-P003",
-      "participant_id": "16dbb279-2520-4f17-b224-7330fb9e8655",
-      "invitation_id": "e712f020-53c4-4949-b2b4-5bbe6a151ac3"
+      "label": "[REDACTED_SYNTHETIC_PARTICIPANT_LABEL]",
+      "participant_id": "[REDACTED_SYNTHETIC_PARTICIPANT_ID]",
+      "invitation_id": "[REDACTED_SYNTHETIC_INVITATION_ID]"
     },
     {
-      "label": "SYN-P004",
-      "participant_id": "c6b7e379-4927-4748-9597-892c41f65002",
-      "invitation_id": "a30d7460-695b-4439-b18a-d1009b5eefb7"
+      "label": "[REDACTED_SYNTHETIC_PARTICIPANT_LABEL]",
+      "participant_id": "[REDACTED_SYNTHETIC_PARTICIPANT_ID]",
+      "invitation_id": "[REDACTED_SYNTHETIC_INVITATION_ID]"
     },
     {
-      "label": "SYN-P005",
-      "participant_id": "32fb91cc-0276-4bfd-b502-cb9637dd3383",
-      "invitation_id": "8c8b1fec-0bb2-44a7-8b5d-4bb46dc37161"
+      "label": "[REDACTED_SYNTHETIC_PARTICIPANT_LABEL]",
+      "participant_id": "[REDACTED_SYNTHETIC_PARTICIPANT_ID]",
+      "invitation_id": "[REDACTED_SYNTHETIC_INVITATION_ID]"
     },
     {
-      "label": "SYN-P006",
-      "participant_id": "d694cae1-94c7-4785-a3b7-afcf9e88fc97",
-      "invitation_id": "217bec1c-60cd-4773-923c-c9d971abc8b3"
+      "label": "[REDACTED_SYNTHETIC_PARTICIPANT_LABEL]",
+      "participant_id": "[REDACTED_SYNTHETIC_PARTICIPANT_ID]",
+      "invitation_id": "[REDACTED_SYNTHETIC_INVITATION_ID]"
     },
     {
-      "label": "SYN-P007",
-      "participant_id": "d7e3b65d-8a33-4fd0-b8dd-c5ff660c828a",
-      "invitation_id": "69130be6-2c59-4bea-b9ff-665b53e31343"
+      "label": "[REDACTED_SYNTHETIC_PARTICIPANT_LABEL]",
+      "participant_id": "[REDACTED_SYNTHETIC_PARTICIPANT_ID]",
+      "invitation_id": "[REDACTED_SYNTHETIC_INVITATION_ID]"
     },
     {
-      "label": "SYN-P008",
-      "participant_id": "a92789ae-caeb-4d5c-b2a2-6f3d4b4a3ac1",
-      "invitation_id": "8d596eab-1ae7-4712-b539-bd48a6633fcc"
+      "label": "[REDACTED_SYNTHETIC_PARTICIPANT_LABEL]",
+      "participant_id": "[REDACTED_SYNTHETIC_PARTICIPANT_ID]",
+      "invitation_id": "[REDACTED_SYNTHETIC_INVITATION_ID]"
     }
   ],
   "checks": [
@@ -510,7 +510,7 @@
         "package_type": "complete-archive",
         "file_path": "complete-archive/items_and_provenance.json",
         "pattern_class": "synthetic_participant_label",
-        "context": "SYN-P001"
+        "context": "[REDACTED_SYNTHETIC_PARTICIPANT_LABEL]"
       },
       {
         "export_type": "complete-archive",
@@ -518,7 +518,7 @@
         "package_type": "complete-archive",
         "file_path": "complete-archive/items_and_provenance.json",
         "pattern_class": "synthetic_participant_label",
-        "context": "SYN-P003"
+        "context": "[REDACTED_SYNTHETIC_PARTICIPANT_LABEL]"
       },
       {
         "export_type": "complete-archive",
@@ -526,7 +526,7 @@
         "package_type": "complete-archive",
         "file_path": "complete-archive/items_and_provenance.json",
         "pattern_class": "synthetic_participant_label",
-        "context": "SYN-P004"
+        "context": "[REDACTED_SYNTHETIC_PARTICIPANT_LABEL]"
       },
       {
         "export_type": "complete-archive",
@@ -787,12 +787,12 @@
     {
       "label": "adverse-participant-320",
       "width": 320,
-      "url": "http://127.0.0.1:5173/#invite=bsrTufhzNuuMQ1ZxUZzDBaU9bh7D9qQRdKMhyI-mQlk",
+      "url": "http://127.0.0.1:5173/#invite=[REDACTED_SYNTHETIC_INVITATION_TOKEN]",
       "second_url": null,
-      "executable": "C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe",
+      "executable": "[REDACTED_LOCAL_BROWSER_EXECUTABLE]",
       "screenshot_path": "docs/qc/adverse-user-rehearsal/artifacts/adverse-participant-320-320.png",
       "metrics": {
-        "url": "http://127.0.0.1:5173/#invite=bsrTufhzNuuMQ1ZxUZzDBaU9bh7D9qQRdKMhyI-mQlk",
+        "url": "http://127.0.0.1:5173/#invite=[REDACTED_SYNTHETIC_INVITATION_TOKEN]",
         "title": "app",
         "innerWidth": 320,
         "clientWidth": 320,
@@ -811,12 +811,12 @@
     {
       "label": "adverse-participant-390",
       "width": 390,
-      "url": "http://127.0.0.1:5173/#invite=bsrTufhzNuuMQ1ZxUZzDBaU9bh7D9qQRdKMhyI-mQlk",
+      "url": "http://127.0.0.1:5173/#invite=[REDACTED_SYNTHETIC_INVITATION_TOKEN]",
       "second_url": null,
-      "executable": "C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe",
+      "executable": "[REDACTED_LOCAL_BROWSER_EXECUTABLE]",
       "screenshot_path": "docs/qc/adverse-user-rehearsal/artifacts/adverse-participant-390-390.png",
       "metrics": {
-        "url": "http://127.0.0.1:5173/#invite=bsrTufhzNuuMQ1ZxUZzDBaU9bh7D9qQRdKMhyI-mQlk",
+        "url": "http://127.0.0.1:5173/#invite=[REDACTED_SYNTHETIC_INVITATION_TOKEN]",
         "title": "app",
         "innerWidth": 390,
         "clientWidth": 390,
@@ -835,12 +835,12 @@
     {
       "label": "adverse-participant-414",
       "width": 414,
-      "url": "http://127.0.0.1:5173/#invite=bsrTufhzNuuMQ1ZxUZzDBaU9bh7D9qQRdKMhyI-mQlk",
+      "url": "http://127.0.0.1:5173/#invite=[REDACTED_SYNTHETIC_INVITATION_TOKEN]",
       "second_url": null,
-      "executable": "C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe",
+      "executable": "[REDACTED_LOCAL_BROWSER_EXECUTABLE]",
       "screenshot_path": "docs/qc/adverse-user-rehearsal/artifacts/adverse-participant-414-414.png",
       "metrics": {
-        "url": "http://127.0.0.1:5173/#invite=bsrTufhzNuuMQ1ZxUZzDBaU9bh7D9qQRdKMhyI-mQlk",
+        "url": "http://127.0.0.1:5173/#invite=[REDACTED_SYNTHETIC_INVITATION_TOKEN]",
         "title": "app",
         "innerWidth": 414,
         "clientWidth": 414,
@@ -859,12 +859,12 @@
     {
       "label": "same-tab-invite-switch",
       "width": 390,
-      "url": "http://127.0.0.1:5173/#invite=bsrTufhzNuuMQ1ZxUZzDBaU9bh7D9qQRdKMhyI-mQlk",
-      "second_url": "http://127.0.0.1:5173/#invite=w4lsZwI-t4PMZwXpmqiPcgXY_uwq1Ny1Q_AnJiSwbMQ",
-      "executable": "C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe",
+      "url": "http://127.0.0.1:5173/#invite=[REDACTED_SYNTHETIC_INVITATION_TOKEN]",
+      "second_url": "http://127.0.0.1:5173/#invite=[REDACTED_SYNTHETIC_INVITATION_TOKEN]",
+      "executable": "[REDACTED_LOCAL_BROWSER_EXECUTABLE]",
       "screenshot_path": "docs/qc/adverse-user-rehearsal/artifacts/same-tab-invite-switch-390.png",
       "metrics": {
-        "url": "http://127.0.0.1:5173/#invite=w4lsZwI-t4PMZwXpmqiPcgXY_uwq1Ny1Q_AnJiSwbMQ",
+        "url": "http://127.0.0.1:5173/#invite=[REDACTED_SYNTHETIC_INVITATION_TOKEN]",
         "title": "app",
         "innerWidth": 390,
         "clientWidth": 390,
@@ -883,7 +883,7 @@
   ],
   "same_tab_switching": {
     "status": "PASS",
-    "final_url": "http://127.0.0.1:5173/#invite=w4lsZwI-t4PMZwXpmqiPcgXY_uwq1Ny1Q_AnJiSwbMQ",
+    "final_url": "http://127.0.0.1:5173/#invite=[REDACTED_SYNTHETIC_INVITATION_TOKEN]",
     "xss_executed": false,
     "forbidden_label_observed": false,
     "forbidden_email_observed": false,

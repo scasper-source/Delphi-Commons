@@ -22,6 +22,8 @@ Current readiness: controlled mock-participant MVP testing with synthetic or low
 - [Testing guide](./development/testing.md)
 - [AI-assisted development policy](./development/ai-assisted-development.md)
 - [Architecture overview](./architecture/overview.md)
+- [Contributing guide](../CONTRIBUTING.md)
+- [Security policy](../SECURITY.md)
 
 ## Governance And Readiness
 
@@ -33,6 +35,8 @@ Current readiness: controlled mock-participant MVP testing with synthetic or low
 - [License rationale](./LICENSE_RATIONALE.md)
 - [Light baseline QC](./qc/light-baseline/README.md)
 - [Full controlled mock-trial package](./qc/full-mock-trial/README.md)
+- [Adverse-user rehearsal package](./qc/adverse-user-rehearsal/README.md)
+- [Multi-question regression evidence](./qc/multi-question-regression/README.md)
 
 ## Licensing
 

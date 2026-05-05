@@ -11,6 +11,9 @@ Do not submit:
 - consent records
 - identity mappings
 - secrets or credentials
+- runtime databases
+- logs containing private data
+- backup or archive artifacts
 - private institutional records
 - third-party code without compatible licensing
 - AI-generated code or text that you do not have the right to contribute

@@ -9,6 +9,8 @@ node_modules/
 dist/
 build/
 .env
+.env.*
+!.env.example
 # local server data
 server/data/
 
@@ -43,6 +45,23 @@ dist-ssr
 
 # Delphi Commons runtime persistence (local-only)
 server/data/
+server/backups/
+server/audit/
 
 # Delphi Commons audit log (append-only local file)
 server/audit/audit.log
+
+# Local databases and generated operational artifacts
+*.sqlite
+*.sqlite3
+*.db
+*.db-wal
+*.db-shm
+*.sqlite-wal
+*.sqlite-shm
+*.backup
+*.zip
+*.tar
+*.tgz
+*.gz
+coverage/

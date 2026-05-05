@@ -12,6 +12,8 @@ Delphi Commons is for researchers, study owners, methods stewards, open-source m
 
 Current readiness: controlled mock-participant MVP testing with synthetic or low-risk data only.
 
+“Delphi Commons is suitable only for controlled mock-trial use with synthetic or low-risk test data in local, development, or staging environments. It is not approved or ready for production deployment or real human-subjects research.”
+
 This repository is not yet approved for real human-subjects studies, production deployments, regulated data, institutional data, or sensitive participant data. Before real use, the project still needs production security review, backup/restore verification, retention automation, accessibility review, incident response, deployment hardening, and IRB/institutional approval where applicable.
 
 ## What It Is Not Ready For
@@ -139,6 +141,12 @@ npm run security:audit
 - [Ethical Governance Charter](./documents/governance/ethical-governance-charter.md)
 - [AI Governance & Human-in-the-Loop Thin Spec](./documents/governance/ai-assistance-thin-spec.md)
 - [Human-subjects readiness plan](./documents/compliance/human-subjects-readiness/HUMAN_SUBJECTS_READINESS.md)
+- [Phase 10 operational readiness docs](./docs/operations/phase-10/README.md)
+- [Phase 10 rehearsal results](./docs/operations/phase-10/PHASE_10_REHEARSAL_RESULTS.md)
+- [Full controlled mock-trial package](./docs/qc/full-mock-trial/README.md)
+- [Adverse-user rehearsal package](./docs/qc/adverse-user-rehearsal/README.md)
+- [Open-source release checklist](./docs/OPEN_SOURCE_RELEASE_CHECKLIST.md)
+- [Security policy](./SECURITY.md)
 
 ## License
 
