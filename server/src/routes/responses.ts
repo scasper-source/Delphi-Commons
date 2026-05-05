@@ -26,6 +26,7 @@ import { hasOrientationCompletion } from "../stores/orientationStore.js";
 import { createFinalResultSnapshot } from "../core/finalResults.js";
 import { sendRoundOpenSmsNotifications } from "../core/smsNotifications.js";
 import { normalizeRoundOneResponsePayload } from "../studies/researchQuestions.js";
+import { summarizeRatings } from "../core/ratingStats.js";
 
 type RatingRoundPayload = {
   round_number: number;
@@ -99,53 +100,6 @@ function getLatestRatingsForItem(
   }
 
   return latest;
-}
-
-function median(values: number[]): number | null {
-  if (values.length === 0) return null;
-
-  const sorted = [...values].sort((a, b) => a - b);
-  const mid = Math.floor(sorted.length / 2);
-
-  if (sorted.length % 2 === 1) {
-    const value = sorted[mid];
-    return value ?? null;
-  }
-
-  const left = sorted[mid - 1];
-  const right = sorted[mid];
-
-  if (left === undefined || right === undefined) return null;
-  return (left + right) / 2;
-}
-
-function percentileFromSorted(sorted: number[], p: number): number | null {
-  if (sorted.length === 0) return null;
-  if (sorted.length === 1) return sorted[0] ?? null;
-
-  const idx = (sorted.length - 1) * p;
-  const lower = Math.floor(idx);
-  const upper = Math.ceil(idx);
-
-  const lowerValue = sorted[lower];
-  const upperValue = sorted[upper];
-
-  if (lowerValue === undefined || upperValue === undefined) return null;
-  if (lower === upper) return lowerValue;
-
-  const fraction = idx - lower;
-  return lowerValue + (upperValue - lowerValue) * fraction;
-}
-
-function buildDistribution(values: number[]): Record<string, number> {
-  const distribution: Record<string, number> = {};
-
-  for (const value of values) {
-    const key = String(value);
-    distribution[key] = (distribution[key] ?? 0) + 1;
-  }
-
-  return distribution;
 }
 
 function getMaxAllowedRound(studyFormat: string | null): number {
@@ -967,12 +921,7 @@ export async function responsesRoutes(app: FastifyInstance) {
           return [response.response_json.rating];
         });
 
-      const sorted = [...latestRatings].sort((a, b) => a - b);
-      const medianValue = median(sorted);
-      const q1 = percentileFromSorted(sorted, 0.25);
-      const q3 = percentileFromSorted(sorted, 0.75);
-      const minValue = sorted.length > 0 ? sorted[0] ?? null : null;
-      const maxValue = sorted.length > 0 ? sorted[sorted.length - 1] ?? null : null;
+      const stats = summarizeRatings(latestRatings);
 
       const prior = latestByParticipant.get(participantId) ?? null;
 
@@ -986,8 +935,6 @@ export async function responsesRoutes(app: FastifyInstance) {
         };
       }
 
-      const distribution = buildDistribution(sorted);
-
       await writeAuditEvent({
         actor,
         action: "round.feedback_get",
@@ -997,7 +944,7 @@ export async function responsesRoutes(app: FastifyInstance) {
           versionId,
           round_number: roundNumber,
           participant_id: participantId,
-          response_count: sorted.length,
+          response_count: stats.responseCount,
         },
       });
 
@@ -1008,16 +955,16 @@ export async function responsesRoutes(app: FastifyInstance) {
           round_number: item.round_number,
         },
         feedback: {
-          median: medianValue,
+          median: stats.median,
           dispersion: {
-            min: minValue,
-            max: maxValue,
-            iqr: q1 !== null && q3 !== null ? q3 - q1 : null,
-            q1,
-            q3,
+            min: stats.min,
+            max: stats.max,
+            iqr: stats.iqr,
+            q1: stats.q1,
+            q3: stats.q3,
           },
-          distribution,
-          response_count: sorted.length,
+          distribution: stats.distribution,
+          response_count: stats.responseCount,
         },
         your_prior_response: yourPriorResponse,
         actions: {

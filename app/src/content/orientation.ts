@@ -61,7 +61,7 @@ export const glossaryTerms: GlossaryTerm[] = [
     term: "Interquartile range / IQR",
     plain: "IQR shows the middle range of responses.",
     technical:
-      "The interquartile range is the distance between the 25th and 75th percentiles. It describes response spread without identifying individuals.",
+      "The interquartile range is Q3 minus Q1. Delphi Commons calculates Q1 and Q3 as the 25th and 75th percentiles of sorted numeric ratings using linear percentile interpolation.",
     aliases: ["interquartile range"],
   },
   {

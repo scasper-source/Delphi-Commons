@@ -2029,6 +2029,11 @@ test("backend road test covers study, consent, AI, reporting, and audit flows", 
   );
   assert.equal(feedback.feedback.response_count, 3);
   assert.equal(feedback.feedback.median, 8);
+  assert.equal(feedback.feedback.dispersion.q1, 7);
+  assert.equal(feedback.feedback.dispersion.q3, 8);
+  assert.equal(feedback.feedback.dispersion.iqr, 1);
+  assert.equal(feedback.feedback.distribution["6"], 1);
+  assert.equal(feedback.feedback.distribution["8"], 2);
 
   const roundTwoReport = await expectStatus(
     app,
@@ -2181,6 +2186,11 @@ test("backend road test covers study, consent, AI, reporting, and audit flows", 
   assert.equal(participantRoundThreeItems.items[0].controlled_feedback.source_round_number, 2);
   assert.equal(participantRoundThreeItems.items[0].controlled_feedback.participant_prior_response.rating, 8);
   assert.equal(participantRoundThreeItems.items[0].controlled_feedback.group_summary.median, 8);
+  assert.equal(participantRoundThreeItems.items[0].controlled_feedback.group_summary.q1, 7);
+  assert.equal(participantRoundThreeItems.items[0].controlled_feedback.group_summary.q3, 8);
+  assert.equal(participantRoundThreeItems.items[0].controlled_feedback.group_summary.iqr, 1);
+  assert.equal(participantRoundThreeItems.items[0].controlled_feedback.group_summary.distribution["6"], 1);
+  assert.equal(participantRoundThreeItems.items[0].controlled_feedback.group_summary.distribution["8"], 2);
   assert.ok(Array.isArray(participantRoundThreeItems.items[0].controlled_feedback.rationale_excerpts.excerpts));
 
   await expectStatus(

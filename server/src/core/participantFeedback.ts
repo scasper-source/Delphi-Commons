@@ -6,6 +6,7 @@
 import type { ItemRecord } from "../stores/itemStore.js";
 import type { ResponseRecord } from "../stores/responseStore.js";
 import type { FeedbackConfig } from "../stores/roundConfigStore.js";
+import { summarizeRatings } from "./ratingStats.js";
 
 type RatingPayload = {
   round_number: number;
@@ -24,35 +25,6 @@ function isRatingPayload(value: unknown, roundNumber: number): value is RatingPa
     Number.isFinite(rec.rating) &&
     (rec.action === "keep" || rec.action === "revise")
   );
-}
-
-function median(values: number[]): number | null {
-  if (values.length === 0) return null;
-  const sorted = [...values].sort((a, b) => a - b);
-  const mid = Math.floor(sorted.length / 2);
-  if (sorted.length % 2 === 1) return sorted[mid] ?? null;
-  const left = sorted[mid - 1];
-  const right = sorted[mid];
-  return left === undefined || right === undefined ? null : (left + right) / 2;
-}
-
-function percentile(sorted: number[], p: number): number | null {
-  if (sorted.length === 0) return null;
-  if (sorted.length === 1) return sorted[0] ?? null;
-  const idx = (sorted.length - 1) * p;
-  const lower = Math.floor(idx);
-  const upper = Math.ceil(idx);
-  const lowerValue = sorted[lower];
-  const upperValue = sorted[upper];
-  if (lowerValue === undefined || upperValue === undefined) return null;
-  if (lower === upper) return lowerValue;
-  return lowerValue + (upperValue - lowerValue) * (idx - lower);
-}
-
-function distribution(values: number[]): Record<string, number> {
-  const output: Record<string, number> = {};
-  for (const value of values) output[String(value)] = (output[String(value)] ?? 0) + 1;
-  return output;
 }
 
 export function participantProvenanceLabel(item: ItemRecord):
@@ -109,8 +81,7 @@ export function buildParticipantControlledFeedback(input: {
   const ratings = [...latestByParticipant.values()]
     .flatMap((response) => isRatingPayload(response.response_json, sourceRound) ? [response.response_json.rating] : [])
     .sort((a, b) => a - b);
-  const q1 = percentile(ratings, 0.25);
-  const q3 = percentile(ratings, 0.75);
+  const stats = summarizeRatings(ratings);
   const prior = latestRatingForParticipant(input.responses, itemIds, sourceRound, input.participantId);
   const priorPayload = prior && isRatingPayload(prior.response_json, sourceRound) ? prior.response_json : null;
   const format = input.feedbackConfig?.format ?? "distribution_only";
@@ -125,19 +96,19 @@ export function buildParticipantControlledFeedback(input: {
         ? null
         : { rating: priorPayload.rating, action: priorPayload.action, submitted_at: prior?.created_at ?? null },
     group_summary: {
-      median: median(ratings),
-      iqr: q1 !== null && q3 !== null ? q3 - q1 : null,
-      q1,
-      q3,
-      response_count: ratings.length,
-      distribution: distribution(ratings),
+      median: stats.median,
+      iqr: stats.iqr,
+      q1: stats.q1,
+      q3: stats.q3,
+      response_count: stats.responseCount,
+      distribution: stats.distribution,
     },
     neutral_summary:
       format === "distribution_summary" || format === "distribution_rationales"
         ? {
             approved: true,
             text:
-              ratings.length > 0
+              stats.responseCount > 0
                 ? "Anonymized prior-round responses are summarized as aggregate ratings. Different views remain valuable."
                 : "No prior-round aggregate ratings are available for this item yet.",
           }

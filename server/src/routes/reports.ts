@@ -61,6 +61,7 @@ import {
   roundOneResponseEntries,
   type ResearchQuestionConfig,
 } from "../studies/researchQuestions.js";
+import { summarizeRatings } from "../core/ratingStats.js";
 
 type RatingRoundPayload = {
   round_number: number;
@@ -131,53 +132,6 @@ function getLatestRatingsForItem(
   }
 
   return latest;
-}
-
-function median(values: number[]): number | null {
-  if (values.length === 0) return null;
-
-  const sorted = [...values].sort((a, b) => a - b);
-  const mid = Math.floor(sorted.length / 2);
-
-  if (sorted.length % 2 === 1) {
-    const value = sorted[mid];
-    return value ?? null;
-  }
-
-  const left = sorted[mid - 1];
-  const right = sorted[mid];
-
-  if (left === undefined || right === undefined) return null;
-  return (left + right) / 2;
-}
-
-function percentileFromSorted(sorted: number[], p: number): number | null {
-  if (sorted.length === 0) return null;
-  if (sorted.length === 1) return sorted[0] ?? null;
-
-  const idx = (sorted.length - 1) * p;
-  const lower = Math.floor(idx);
-  const upper = Math.ceil(idx);
-
-  const lowerValue = sorted[lower];
-  const upperValue = sorted[upper];
-
-  if (lowerValue === undefined || upperValue === undefined) return null;
-  if (lower === upper) return lowerValue;
-
-  const fraction = idx - lower;
-  return lowerValue + (upperValue - lowerValue) * fraction;
-}
-
-function buildDistribution(values: number[]): Record<string, number> {
-  const distribution: Record<string, number> = {};
-
-  for (const value of values) {
-    const key = String(value);
-    distribution[key] = (distribution[key] ?? 0) + 1;
-  }
-
-  return distribution;
 }
 
 function sortItems(items: ItemRecord[]): ItemRecord[] {
@@ -341,14 +295,7 @@ function buildRoundItemReports(
         return [response.response_json.rating];
       })
       .sort((a, b) => a - b);
-
-    const distribution = buildDistribution(latestRatings);
-    const medianValue = median(latestRatings);
-    const q1 = percentileFromSorted(latestRatings, 0.25);
-    const q3 = percentileFromSorted(latestRatings, 0.75);
-    const minValue = latestRatings.length > 0 ? latestRatings[0] ?? null : null;
-    const maxValue =
-      latestRatings.length > 0 ? latestRatings[latestRatings.length - 1] ?? null : null;
+    const stats = summarizeRatings(latestRatings);
 
     const consensus = evaluateConsensus(consensusRule, latestRatings);
 
@@ -360,16 +307,16 @@ function buildRoundItemReports(
       created_from: item.created_from,
       created_at: item.created_at,
       rating_summary: {
-        response_count: latestRatings.length,
-        median: medianValue,
+        response_count: stats.responseCount,
+        median: stats.median,
         dispersion: {
-          min: minValue,
-          max: maxValue,
-          iqr: q1 !== null && q3 !== null ? q3 - q1 : null,
-          q1,
-          q3,
+          min: stats.min,
+          max: stats.max,
+          iqr: stats.iqr,
+          q1: stats.q1,
+          q3: stats.q3,
         },
-        distribution,
+        distribution: stats.distribution,
       },
       consensus,
     };

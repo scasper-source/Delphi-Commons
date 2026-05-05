@@ -20,6 +20,7 @@ import {
   listNonResponseEscalations,
   listParticipantEnrollments,
 } from "../stores/participantStatusStore.js";
+import { summarizeRatings } from "./ratingStats.js";
 
 type RatingPayload = {
   round_number: number;
@@ -50,44 +51,6 @@ function isRatingPayload(value: unknown, roundNumber?: number): value is RatingP
     Number.isFinite(rec.rating) &&
     (rec.action === "keep" || rec.action === "revise")
   );
-}
-
-function median(values: number[]): number | null {
-  if (values.length === 0) return null;
-  const sorted = [...values].sort((a, b) => a - b);
-  const mid = Math.floor(sorted.length / 2);
-  if (sorted.length % 2 === 1) return sorted[mid] ?? null;
-  const left = sorted[mid - 1];
-  const right = sorted[mid];
-  return left === undefined || right === undefined ? null : (left + right) / 2;
-}
-
-function percentile(sorted: number[], p: number): number | null {
-  if (sorted.length === 0) return null;
-  if (sorted.length === 1) return sorted[0] ?? null;
-  const position = (sorted.length - 1) * p;
-  const lower = Math.floor(position);
-  const upper = Math.ceil(position);
-  const lowerValue = sorted[lower];
-  const upperValue = sorted[upper];
-  if (lowerValue === undefined || upperValue === undefined) return null;
-  if (lower === upper) return lowerValue;
-  return lowerValue + (upperValue - lowerValue) * (position - lower);
-}
-
-function iqr(values: number[]): number | null {
-  if (values.length === 0) return null;
-  const sorted = [...values].sort((a, b) => a - b);
-  const q1 = percentile(sorted, 0.25);
-  const q3 = percentile(sorted, 0.75);
-  return q1 === null || q3 === null ? null : Number((q3 - q1).toFixed(2));
-}
-
-function distribution(values: number[]): Record<string, number> {
-  const counts: Record<string, number> = {};
-  for (let value = 1; value <= 9; value += 1) counts[String(value)] = 0;
-  for (const value of values) counts[String(value)] = (counts[String(value)] ?? 0) + 1;
-  return counts;
 }
 
 function latestRatingsForItem(responses: ResponseRecord[], itemId: string, roundNumber: number): Map<string, RatingPayload> {
@@ -135,14 +98,15 @@ function roundStats(input: {
 }) {
   const latest = latestRatingsForItem(input.responses, input.itemId, input.roundNumber);
   const values = Array.from(latest.values()).map((payload) => payload.rating);
+  const stats = summarizeRatings(values, { includeScaleValues: true, scaleMin: 1, scaleMax: 9 });
   const agreementCount = values.filter((rating) => rating >= input.agreementMinRating).length;
   const agreementPercent = values.length ? Number(((agreementCount / values.length) * 100).toFixed(2)) : null;
   return {
-    median: median(values),
-    iqr: iqr(values),
+    median: stats.median,
+    iqr: stats.iqr,
     agreementPercent,
-    distribution: distribution(values),
-    n: values.length,
+    distribution: stats.distribution,
+    n: stats.responseCount,
   };
 }
 

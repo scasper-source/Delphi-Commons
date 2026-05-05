@@ -77,6 +77,8 @@ For later rounds, use compact feedback:
 
 Participants must be free to keep or revise their response.
 
+IQR convention: Delphi Commons calculates Q1 and Q3 as the 25th and 75th percentiles of sorted numeric ratings using linear percentile interpolation. IQR is Q3 minus Q1. The same convention is used for participant feedback, reports, final result snapshots, and exports.
+
 ## 9. Final Report And Export
 
 Generate exports and reports from the study record. The final report should include:

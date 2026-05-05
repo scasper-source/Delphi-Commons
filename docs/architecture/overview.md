@@ -101,11 +101,15 @@ Relevant areas:
 
 Controlled feedback is neutral, compact, and participant-protective. It may include prior response, group median, IQR/distribution, neutral summaries, and approved anonymized rationales. It must not pressure convergence.
 
+Delphi Commons reports IQR using linear percentile interpolation: Q1 is the 25th percentile and Q3 is the 75th percentile of sorted numeric ratings; IQR = Q3 - Q1. Participant feedback, interim reports, final result snapshots, and exports should use the shared backend rating-statistics helper so the median, distribution, and IQR convention stays consistent.
+
 Relevant areas:
 
 - participant feedback UI in `app/src/App.tsx`
+- rating-statistics helper in `server/src/core/ratingStats.ts`
 - orientation and help content in `app/src/content/orientation.ts`
 - frontend policy tests in `app/tests/policyGates.test.mjs`
+- backend rating-statistics tests in `server/tests/ratingStats.test.mjs`
 
 ## Audit Logs
 
