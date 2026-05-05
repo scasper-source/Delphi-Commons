@@ -1,0 +1,416 @@
+{
+  "generated_at": "2026-05-02T20:45:20.547Z",
+  "target": "WCAG 2.2 AA practical validation pass",
+  "screenshots": [
+    "screenshots/desktop-dashboard.png",
+    "screenshots/mobile-dashboard.png",
+    "screenshots/mobile-participant.png"
+  ],
+  "viewports": [
+    {
+      "name": "desktop-dashboard",
+      "title": "app",
+      "viewport": "1365x900",
+      "bodyScrollWidth": 1365,
+      "documentScrollWidth": 1365,
+      "horizontalOverflow": false,
+      "interactiveCount": 26,
+      "unnamedInteractiveCount": 0,
+      "unnamedInteractive": [],
+      "smallTargetCount": 0,
+      "smallTargets": [],
+      "tabStops": [
+        {
+          "tag": "select",
+          "role": null,
+          "text": "Study Owner / PI\nEthics & Methods Steward\nStudy Coordinator\nPanelist / Participa",
+          "visible": true,
+          "outline": "3px solid rgb(47, 111, 115)"
+        },
+        {
+          "tag": "button",
+          "role": null,
+          "text": "Architecture",
+          "visible": true,
+          "outline": "3px solid rgb(47, 111, 115)"
+        },
+        {
+          "tag": "button",
+          "role": null,
+          "text": "Dashboard",
+          "visible": true,
+          "outline": "3px solid rgb(47, 111, 115)"
+        },
+        {
+          "tag": "button",
+          "role": null,
+          "text": "Study Builder",
+          "visible": true,
+          "outline": "3px solid rgb(47, 111, 115)"
+        },
+        {
+          "tag": "button",
+          "role": null,
+          "text": "Governance",
+          "visible": true,
+          "outline": "3px solid rgb(47, 111, 115)"
+        },
+        {
+          "tag": "button",
+          "role": null,
+          "text": "Rounds",
+          "visible": true,
+          "outline": "3px solid rgb(47, 111, 115)"
+        },
+        {
+          "tag": "button",
+          "role": null,
+          "text": "Curation",
+          "visible": true,
+          "outline": "3px solid rgb(47, 111, 115)"
+        },
+        {
+          "tag": "button",
+          "role": null,
+          "text": "Feedback",
+          "visible": true,
+          "outline": "3px solid rgb(47, 111, 115)"
+        },
+        {
+          "tag": "button",
+          "role": null,
+          "text": "Participant Portal",
+          "visible": true,
+          "outline": "3px solid rgb(47, 111, 115)"
+        },
+        {
+          "tag": "button",
+          "role": null,
+          "text": "Reporting",
+          "visible": true,
+          "outline": "3px solid rgb(47, 111, 115)"
+        },
+        {
+          "tag": "button",
+          "role": null,
+          "text": "Audit Log",
+          "visible": true,
+          "outline": "3px solid rgb(47, 111, 115)"
+        },
+        {
+          "tag": "button",
+          "role": null,
+          "text": "Go to Study Builder",
+          "visible": true,
+          "outline": "3px solid rgb(47, 111, 115)"
+        },
+        {
+          "tag": "button",
+          "role": null,
+          "text": "Refresh",
+          "visible": true,
+          "outline": "3px solid rgb(47, 111, 115)"
+        },
+        {
+          "tag": "button",
+          "role": null,
+          "text": "Archive smoke tests",
+          "visible": true,
+          "outline": "3px solid rgb(47, 111, 115)"
+        },
+        {
+          "tag": "button",
+          "role": null,
+          "text": "Manage study",
+          "visible": true,
+          "outline": "3px solid rgb(47, 111, 115)"
+        },
+        {
+          "tag": "button",
+          "role": null,
+          "text": "Archive",
+          "visible": true,
+          "outline": "3px solid rgb(47, 111, 115)"
+        },
+        {
+          "tag": "button",
+          "role": null,
+          "text": "Manage study",
+          "visible": true,
+          "outline": "3px solid rgb(47, 111, 115)"
+        },
+        {
+          "tag": "button",
+          "role": null,
+          "text": "Archive",
+          "visible": true,
+          "outline": "3px solid rgb(47, 111, 115)"
+        }
+      ]
+    },
+    {
+      "name": "mobile-dashboard",
+      "title": "app",
+      "viewport": "390x844",
+      "bodyScrollWidth": 390,
+      "documentScrollWidth": 390,
+      "horizontalOverflow": false,
+      "interactiveCount": 26,
+      "unnamedInteractiveCount": 0,
+      "unnamedInteractive": [],
+      "smallTargetCount": 0,
+      "smallTargets": [],
+      "tabStops": [
+        {
+          "tag": "select",
+          "role": null,
+          "text": "Study Owner / PI\nEthics & Methods Steward\nStudy Coordinator\nPanelist / Participa",
+          "visible": true,
+          "outline": "3px solid rgb(47, 111, 115)"
+        },
+        {
+          "tag": "button",
+          "role": null,
+          "text": "Architecture",
+          "visible": true,
+          "outline": "3px solid rgb(47, 111, 115)"
+        },
+        {
+          "tag": "button",
+          "role": null,
+          "text": "Dashboard",
+          "visible": true,
+          "outline": "3px solid rgb(47, 111, 115)"
+        },
+        {
+          "tag": "button",
+          "role": null,
+          "text": "Study Builder",
+          "visible": true,
+          "outline": "3px solid rgb(47, 111, 115)"
+        },
+        {
+          "tag": "button",
+          "role": null,
+          "text": "Governance",
+          "visible": true,
+          "outline": "3px solid rgb(47, 111, 115)"
+        },
+        {
+          "tag": "button",
+          "role": null,
+          "text": "Rounds",
+          "visible": true,
+          "outline": "3px solid rgb(47, 111, 115)"
+        },
+        {
+          "tag": "button",
+          "role": null,
+          "text": "Curation",
+          "visible": true,
+          "outline": "3px solid rgb(47, 111, 115)"
+        },
+        {
+          "tag": "button",
+          "role": null,
+          "text": "Feedback",
+          "visible": true,
+          "outline": "3px solid rgb(47, 111, 115)"
+        },
+        {
+          "tag": "button",
+          "role": null,
+          "text": "Participant Portal",
+          "visible": true,
+          "outline": "3px solid rgb(47, 111, 115)"
+        },
+        {
+          "tag": "button",
+          "role": null,
+          "text": "Reporting",
+          "visible": true,
+          "outline": "3px solid rgb(47, 111, 115)"
+        },
+        {
+          "tag": "button",
+          "role": null,
+          "text": "Audit Log",
+          "visible": true,
+          "outline": "3px solid rgb(47, 111, 115)"
+        },
+        {
+          "tag": "button",
+          "role": null,
+          "text": "Go to Study Builder",
+          "visible": true,
+          "outline": "3px solid rgb(47, 111, 115)"
+        },
+        {
+          "tag": "button",
+          "role": null,
+          "text": "Refresh",
+          "visible": true,
+          "outline": "3px solid rgb(47, 111, 115)"
+        },
+        {
+          "tag": "button",
+          "role": null,
+          "text": "Archive smoke tests",
+          "visible": true,
+          "outline": "3px solid rgb(47, 111, 115)"
+        },
+        {
+          "tag": "button",
+          "role": null,
+          "text": "Manage study",
+          "visible": true,
+          "outline": "3px solid rgb(47, 111, 115)"
+        },
+        {
+          "tag": "button",
+          "role": null,
+          "text": "Archive",
+          "visible": true,
+          "outline": "3px solid rgb(47, 111, 115)"
+        },
+        {
+          "tag": "button",
+          "role": null,
+          "text": "Manage study",
+          "visible": true,
+          "outline": "3px solid rgb(47, 111, 115)"
+        },
+        {
+          "tag": "button",
+          "role": null,
+          "text": "Archive",
+          "visible": true,
+          "outline": "3px solid rgb(47, 111, 115)"
+        }
+      ]
+    },
+    {
+      "name": "mobile-participant",
+      "title": "app",
+      "viewport": "390x844",
+      "bodyScrollWidth": 390,
+      "documentScrollWidth": 390,
+      "horizontalOverflow": false,
+      "interactiveCount": 0,
+      "unnamedInteractiveCount": 0,
+      "unnamedInteractive": [],
+      "smallTargetCount": 0,
+      "smallTargets": [],
+      "tabStops": [
+        {
+          "tag": "body",
+          "text": "",
+          "visible": true,
+          "outline": ""
+        },
+        {
+          "tag": "body",
+          "text": "",
+          "visible": true,
+          "outline": ""
+        },
+        {
+          "tag": "body",
+          "text": "",
+          "visible": true,
+          "outline": ""
+        },
+        {
+          "tag": "body",
+          "text": "",
+          "visible": true,
+          "outline": ""
+        },
+        {
+          "tag": "body",
+          "text": "",
+          "visible": true,
+          "outline": ""
+        },
+        {
+          "tag": "body",
+          "text": "",
+          "visible": true,
+          "outline": ""
+        },
+        {
+          "tag": "body",
+          "text": "",
+          "visible": true,
+          "outline": ""
+        },
+        {
+          "tag": "body",
+          "text": "",
+          "visible": true,
+          "outline": ""
+        },
+        {
+          "tag": "body",
+          "text": "",
+          "visible": true,
+          "outline": ""
+        },
+        {
+          "tag": "body",
+          "text": "",
+          "visible": true,
+          "outline": ""
+        },
+        {
+          "tag": "body",
+          "text": "",
+          "visible": true,
+          "outline": ""
+        },
+        {
+          "tag": "body",
+          "text": "",
+          "visible": true,
+          "outline": ""
+        },
+        {
+          "tag": "body",
+          "text": "",
+          "visible": true,
+          "outline": ""
+        },
+        {
+          "tag": "body",
+          "text": "",
+          "visible": true,
+          "outline": ""
+        },
+        {
+          "tag": "body",
+          "text": "",
+          "visible": true,
+          "outline": ""
+        },
+        {
+          "tag": "body",
+          "text": "",
+          "visible": true,
+          "outline": ""
+        },
+        {
+          "tag": "body",
+          "text": "",
+          "visible": true,
+          "outline": ""
+        },
+        {
+          "tag": "body",
+          "text": "",
+          "visible": true,
+          "outline": ""
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,23 @@
+{
+  "name": "server",
+  "version": "1.0.0",
+  "private": true,
+  "license": "Apache-2.0",
+  "type": "module",
+  "scripts": {
+    "dev": "npm run build && node dist/index.js",
+    "build": "tsc",
+    "test": "npm run build && node --test --test-isolation=none tests/*.test.mjs",
+    "security:audit": "npm audit --audit-level=high",
+    "start": "node dist/index.js"
+  },
+  "dependencies": {
+    "fastify": "^5.7.4",
+    "nanoid": "^5.1.6"
+  },
+  "devDependencies": {
+    "@types/node": "^25.3.3",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.9.2"
+  }
+}
