@@ -44,8 +44,8 @@ This checklist supports GitHub migration/open-source preparation. It does not ce
 - [x] No local filesystem paths or private synced-folder paths found in tracked file scan
 - [x] Environment files checked
 - [x] Example environment file uses placeholders only
-- [ ] Lightweight Git history risk check reviewed by maintainer after GitHub migration plan is final
-- [ ] Full-history push, clean-history import, squash import, or fresh-import strategy selected before public GitHub migration
+- [x] Lightweight Git history risk check reviewed for migration planning
+- [x] Clean-history import into a new private GitHub repository selected before public GitHub migration
 - [ ] Independent security/ASVS review completed
 
 ## GitHub Readiness
@@ -83,8 +83,10 @@ This checklist supports GitHub migration/open-source preparation. It does not ce
 
 ## GitHub Migration Readiness
 
-- [ ] Final gate decision recorded after cleanup commit
+- [x] Final gate decision recorded after cleanup commit
 - [x] No tracked runtime/sensitive files found
-- [ ] Full-history migration risk reviewed: pre-cleanup QC artifact revisions contained synthetic runtime identifiers and local-path evidence now redacted in the working tree
+- [x] Full-history migration risk addressed by selected clean-history import strategy
 - [x] Build/test checks passing or explicitly deferred with acceptable rationale
 - [ ] Remaining production/human-subjects/IRB/security/accessibility limitations remain visible
+
+Selected migration strategy: create a new private GitHub repository from the sanitized current tree as a clean first commit. Do not push the existing local Git history to GitHub unless maintainers later approve a separate private archival plan.
