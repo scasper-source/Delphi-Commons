@@ -11,6 +11,8 @@ npm test
 
 The frontend tests cover governance gates, participant-facing copy constraints, orientation, controlled feedback, attrition UI, mobile workflow expectations, closeout language, SMS magic-link UI copy, study context sidecar behavior, and participant issue reporting.
 
+The `npm test` scripts use the repository's lightweight in-process test runner at `scripts/run-tests.mjs`. This keeps the command compatible with supported Node versions without relying on Node test-runner child-process isolation flags.
+
 ## Frontend Build
 
 ```powershell

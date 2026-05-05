@@ -2182,16 +2182,19 @@ test("backend road test covers study, consent, AI, reporting, and audit flows", 
     },
     200
   );
-  assert.equal(participantRoundThreeItems.items[0].controlled_feedback.format, "distribution_rationales");
-  assert.equal(participantRoundThreeItems.items[0].controlled_feedback.source_round_number, 2);
-  assert.equal(participantRoundThreeItems.items[0].controlled_feedback.participant_prior_response.rating, 8);
-  assert.equal(participantRoundThreeItems.items[0].controlled_feedback.group_summary.median, 8);
-  assert.equal(participantRoundThreeItems.items[0].controlled_feedback.group_summary.q1, 7);
-  assert.equal(participantRoundThreeItems.items[0].controlled_feedback.group_summary.q3, 8);
-  assert.equal(participantRoundThreeItems.items[0].controlled_feedback.group_summary.iqr, 1);
-  assert.equal(participantRoundThreeItems.items[0].controlled_feedback.group_summary.distribution["6"], 1);
-  assert.equal(participantRoundThreeItems.items[0].controlled_feedback.group_summary.distribution["8"], 2);
-  assert.ok(Array.isArray(participantRoundThreeItems.items[0].controlled_feedback.rationale_excerpts.excerpts));
+  const mixedFeedbackItem = participantRoundThreeItems.items.find(
+    (item) => item.controlled_feedback?.participant_prior_response?.rating === 8
+  );
+  assert.ok(mixedFeedbackItem);
+  assert.equal(mixedFeedbackItem.controlled_feedback.format, "distribution_rationales");
+  assert.equal(mixedFeedbackItem.controlled_feedback.source_round_number, 2);
+  assert.equal(mixedFeedbackItem.controlled_feedback.group_summary.median, 8);
+  assert.equal(mixedFeedbackItem.controlled_feedback.group_summary.q1, 7);
+  assert.equal(mixedFeedbackItem.controlled_feedback.group_summary.q3, 8);
+  assert.equal(mixedFeedbackItem.controlled_feedback.group_summary.iqr, 1);
+  assert.equal(mixedFeedbackItem.controlled_feedback.group_summary.distribution["6"], 1);
+  assert.equal(mixedFeedbackItem.controlled_feedback.group_summary.distribution["8"], 2);
+  assert.ok(Array.isArray(mixedFeedbackItem.controlled_feedback.rationale_excerpts.excerpts));
 
   await expectStatus(
     app,
