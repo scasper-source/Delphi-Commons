@@ -31,6 +31,7 @@ Current readiness: controlled mock-participant MVP testing with synthetic or low
 - [Open-source release checklist](./OPEN_SOURCE_RELEASE_CHECKLIST.md)
 - [License rationale](./LICENSE_RATIONALE.md)
 - [Light baseline QC](./qc/light-baseline/README.md)
+- [Full controlled mock-trial package](./qc/full-mock-trial/README.md)
 
 ## Licensing
 

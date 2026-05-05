@@ -49,6 +49,12 @@ import {
   getStudyContextDisclosure,
   validateStudyContextDisclosure,
 } from "../stores/studyContextStore.js";
+import {
+  privacyMetadataForExportType,
+  redactExportFileContent,
+  redactExportText,
+  redactExportValue,
+} from "../exports/exportPrivacy.js";
 
 type RatingRoundPayload = {
   round_number: number;
@@ -342,7 +348,7 @@ function buildRoundItemReports(
 
     return {
       item_id: item.item_id,
-      text: item.text,
+      text: redactExportText(item.text),
       round_number: item.round_number,
       provenance_type: item.provenance_type,
       created_from: item.created_from,
@@ -476,6 +482,7 @@ function exportManifestFile(input: {
   recordCounts: Record<string, number>;
   consensusRule?: ReturnType<typeof consensusRuleMetadata>;
   aiDisclosure?: ReturnType<typeof aiConfigDisclosureForExport>;
+  privacyMetadata?: ReturnType<typeof privacyMetadataForExportType>;
 }) {
   return JSON.stringify({
     schema_name: "edelphi_export_manifest",
@@ -490,9 +497,11 @@ function exportManifestFile(input: {
     redaction_status: input.redactionStatus,
     review_status: "pending_review",
     limitations_text_version_id: "charter-required-limitations-v1",
+    privacy_metadata: input.privacyMetadata ?? null,
     consensus_rule: input.consensusRule ?? null,
     required_disclosures: {
       consensus_not_correctness_statement_included: true,
+      required_limitation_language: "Consensus indicates agreement among this panel; it does not establish correctness.",
       non_consensus_items_included: true,
       panel_not_random_sample_disclosure_included: true,
       ai_disclosure_included: true,
@@ -534,17 +543,19 @@ function buildExportDataset(input: {
   const ratingRounds = [2, 3, 4];
   const responseRows = input.responses.flatMap((response) => {
     if (ratingRounds.some((round) => isRatingRoundPayload(response.response_json, round))) return [];
+    const responseText = extractOpenResponseText(response.response_json);
+    const redactedResponseText = redactExportText(responseText);
     return [{
       response_id: response.response_id,
       study_id: response.study_id,
       round_number: 1,
       participant_pseudonym: participantCodes.get(response.participant_id) ?? "P000",
       item_id: "",
-      response_text_redacted: extractOpenResponseText(response.response_json),
+      response_text_redacted: redactedResponseText,
       submitted_at_shifted: "",
-      word_count: extractOpenResponseText(response.response_json).split(/\s+/).filter(Boolean).length,
-      redaction_applied: false,
-      redaction_level: "none",
+      word_count: responseText.split(/\s+/).filter(Boolean).length,
+      redaction_applied: redactedResponseText !== responseText,
+      redaction_level: redactedResponseText !== responseText ? "obvious_direct_identifier_tokens" : "none",
       withdrawal_status: input.participantStatuses?.find((status) => status.participant_id === response.participant_id)?.status.toLowerCase() ?? "active",
       included_in_analysis: true,
     }];
@@ -555,6 +566,8 @@ function buildExportDataset(input: {
       isRatingRoundPayload(response.response_json, round) ? [response.response_json] : []
     )[0];
     if (!ratingPayload) return [];
+    const rationaleText = typeof ratingPayload.rationale_text === "string" ? ratingPayload.rationale_text : "";
+    const redactedRationaleText = redactExportText(rationaleText);
     return [{
       rating_id: response.response_id,
       study_id: response.study_id,
@@ -567,8 +580,9 @@ function buildExportDataset(input: {
       rating_label: ratingLabel(ratingPayload.rating),
       prior_rating_value: "",
       changed_from_prior: "",
-      rationale_text_redacted: typeof ratingPayload.rationale_text === "string" ? ratingPayload.rationale_text : "",
+      rationale_text_redacted: redactedRationaleText,
       submitted_at_shifted: "",
+      redaction_applied: redactedRationaleText !== rationaleText,
       included_in_analysis: true,
     }];
   });
@@ -578,7 +592,7 @@ function buildExportDataset(input: {
     return {
       item_id: item.item_id,
       item_version_id: item.item_id,
-      item_text: item.text,
+      item_text: redactExportText(item.text),
       item_origin: item.created_from === "ai" ? "ai_suggested" : item.provenance_type === "LiteratureDerived" ? "literature_derived" : "panel_derived",
       source_type: item.ai_provenance_links.at(0)?.source_type ?? "other",
       created_round_number: item.round_number,
@@ -653,7 +667,7 @@ function provenanceEdges(input: {
       created_by_user_role: "",
       ai_operation_id: item.source_ai_suggestion_id ?? "",
       human_review_status: item.status === "Rejected" ? "rejected" : item.status === "Published" ? "accepted" : "pending",
-      rationale: item.ai_provenance_rationale ?? "Source link retained for traceability.",
+      rationale: redactExportText(item.ai_provenance_rationale ?? "Source link retained for traceability."),
       created_at: item.created_at,
     }))
   );
@@ -672,7 +686,7 @@ function provenanceEdges(input: {
       created_by_user_role: "",
       ai_operation_id: revision.suggestion_id,
       human_review_status: "edited",
-      rationale: revision.rationale,
+      rationale: redactExportText(revision.rationale),
       created_at: revision.applied_at,
     }))
   );
@@ -689,12 +703,12 @@ function transformationRows(input: {
     transformation_id: `${item.item_id}:current`,
     item_id: item.item_id,
     from_record_id: item.ai_provenance_links.map((link) => link.source_id).join(";"),
-    from_text: item.ai_provenance_links.map((link) => link.excerpt ?? "").filter(Boolean).join(" | "),
+    from_text: redactExportText(item.ai_provenance_links.map((link) => link.excerpt ?? "").filter(Boolean).join(" | ")),
     to_record_id: item.item_id,
-    to_text: item.text,
+    to_text: redactExportText(item.text),
     transformation_type: item.status === "Rejected" ? "reject" : item.status === "Published" ? "finalize" : "draft",
     reason_code: item.ai_provenance_rationale ? "human_judgment" : "other",
-    rationale_text: item.ai_provenance_rationale ?? "Candidate item retained with source links.",
+    rationale_text: redactExportText(item.ai_provenance_rationale ?? "Candidate item retained with source links."),
     ai_assisted: item.created_from === "ai" || item.ai_assisted_revisions.length > 0,
     human_approved: item.status === "Published",
     approved_by_role: item.status === "Published" ? "study_owner_or_methods_steward" : "",
@@ -706,12 +720,12 @@ function transformationRows(input: {
       transformation_id: `${item.item_id}:ai_revision:${index + 1}`,
       item_id: item.item_id,
       from_record_id: revision.suggestion_id,
-      from_text: revision.previous_text,
+      from_text: redactExportText(revision.previous_text),
       to_record_id: item.item_id,
-      to_text: revision.revised_text,
+      to_text: redactExportText(revision.revised_text),
       transformation_type: "edit",
       reason_code: "human_judgment",
-      rationale_text: revision.rationale,
+      rationale_text: redactExportText(revision.rationale),
       ai_assisted: true,
       human_approved: true,
       approved_by_role: "study_owner_or_methods_steward",
@@ -728,7 +742,7 @@ function transformationRows(input: {
     to_text: "",
     transformation_type: "merge",
     reason_code: "human_judgment",
-    rationale_text: merge.rationale,
+    rationale_text: redactExportText(merge.rationale),
     ai_assisted: false,
     human_approved: true,
     approved_by_role: "study_owner_or_methods_steward",
@@ -744,7 +758,7 @@ function transformationRows(input: {
     to_text: "",
     transformation_type: "split",
     reason_code: "human_judgment",
-    rationale_text: split.rationale,
+    rationale_text: redactExportText(split.rationale),
     ai_assisted: false,
     human_approved: true,
     approved_by_role: "study_owner_or_methods_steward",
@@ -1259,6 +1273,10 @@ export async function reportsRoutes(app: FastifyInstance) {
           software_citation: softwareCitation,
         },
       };
+      const privacyMetadata = privacyMetadataForExportType("final-delphi-report");
+      const deidentifiedReport = redactExportValue(report);
+      const deidentifiedItemResultsRows = redactExportValue(itemResultsRows);
+      const deidentifiedItemResultsCsv = toCsv(deidentifiedItemResultsRows);
 
       const auditEvent = await writeAuditEvent({
         actor,
@@ -1284,7 +1302,7 @@ export async function reportsRoutes(app: FastifyInstance) {
         audit_event_id: auditEvent.id,
         config_hash: studyVersion.config_hash,
         dataset_hash: datasetHash,
-        content: report,
+        content: deidentifiedReport,
         data_scope: {
           final_round_number: finalRoundNumber,
           response_scope: "terminal_rating_round_and_round1_summary",
@@ -1293,13 +1311,14 @@ export async function reportsRoutes(app: FastifyInstance) {
         redaction_profile: {
           direct_identifiers: "excluded",
           identity_response_mapping: "excluded",
-          participant_ids: "retained_for_internal_traceability_only",
+          participant_ids: "excluded_from_export_content",
         },
+        privacy_metadata: privacyMetadata,
       });
 
       const finalReportDocx = renderFinalDelphiReportDocx({
-        report,
-        itemResults: itemResultsRows,
+        report: deidentifiedReport,
+        itemResults: deidentifiedItemResultsRows,
         limitationsMarkdown,
         softwareCitation: {
           preferred: softwareCitation.preferred,
@@ -1307,8 +1326,8 @@ export async function reportsRoutes(app: FastifyInstance) {
         },
       });
       const finalItemResultsXlsx = renderFinalItemResultsXlsx({
-        report,
-        itemResults: itemResultsRows,
+        report: deidentifiedReport,
+        itemResults: deidentifiedItemResultsRows,
         limitationsMarkdown,
       });
       const aiConnectorDisclosure = aiConfigDisclosureForExport(studyId);
@@ -1317,7 +1336,7 @@ export async function reportsRoutes(app: FastifyInstance) {
         ? [
             {
               path: "final_report/final_result_snapshot.json",
-              content: JSON.stringify(finalResultSnapshot, null, 2),
+              content: JSON.stringify(redactExportValue(finalResultSnapshot), null, 2),
               format: ".json" as const,
               record_count: finalResultSnapshot.itemOutcomes.length,
               contains_identifiable_data: false,
@@ -1331,7 +1350,7 @@ export async function reportsRoutes(app: FastifyInstance) {
               path: "final_report/final_item_outcomes_from_snapshot.csv",
               content: toCsv(finalResultSnapshot.itemOutcomes.map((item) => ({
                 item_id: item.itemId,
-                item_text: item.finalText,
+                item_text: redactExportText(item.finalText),
                 outcome: item.outcome,
                 final_n: item.finalN,
                 median: item.median ?? "",
@@ -1369,7 +1388,18 @@ export async function reportsRoutes(app: FastifyInstance) {
         human_review_required: true,
         human_review_status: "pending_review",
         limitations_text_version_id: "charter-required-limitations-v1",
+        privacy_metadata: privacyMetadata,
         files: [
+          {
+            path: "final_report/privacy_classification.json",
+            content: JSON.stringify(privacyMetadata, null, 2),
+            format: ".json",
+            record_count: null,
+            contains_identifiable_data: false,
+            redaction_profile: {
+              privacy_metadata: "package classification",
+            },
+          },
           {
             path: "final_report/final_delphi_report.docx",
             content: finalReportDocx,
@@ -1396,7 +1426,7 @@ export async function reportsRoutes(app: FastifyInstance) {
           },
           {
             path: "final_report/final_delphi_report.json",
-            content: JSON.stringify(report, null, 2),
+            content: JSON.stringify(deidentifiedReport, null, 2),
             format: ".json",
             record_count: itemReports.length,
             contains_identifiable_data: false,
@@ -1408,7 +1438,7 @@ export async function reportsRoutes(app: FastifyInstance) {
           },
           {
             path: "final_report/final_item_results.csv",
-            content: itemResultsCsv,
+            content: deidentifiedItemResultsCsv,
             format: ".csv",
             record_count: itemReports.length,
             contains_identifiable_data: false,
@@ -1433,7 +1463,7 @@ export async function reportsRoutes(app: FastifyInstance) {
         ],
       });
 
-      return reply.send({ report, export_manifest: manifest, export_package: exportPackage });
+      return reply.send({ report: deidentifiedReport, export_manifest: manifest, export_package: exportPackage });
     }
   );
 
@@ -1539,17 +1569,17 @@ export async function reportsRoutes(app: FastifyInstance) {
         study_id: suggestion.study_id,
         feature_invoked: suggestion.feature,
         operation_timestamp: suggestion.created_at,
-        invoked_by_user_id: suggestion.created_by_user_id,
+        invoked_by_user_id: "[REDACTED_ID]",
         invoked_by_role: suggestion.created_by_role,
         model_identifier: suggestion.model_id,
         prompt_template_version_id: suggestion.prompt_template_version,
-        input_scope_ids: suggestion.input_scope_ids.join(";"),
+        input_scope_ids: suggestion.input_scope_ids.map((_, index) => `input_scope_${index + 1}`).join(";"),
         direct_identifiers_included: false,
         external_ai_connector_used: aiConnectorDisclosure.external_ai_enabled,
         ai_output_hash: suggestion.output_hash,
         human_action: suggestion.decision,
         final_content_version_id: suggestion.resulting_object_ids.join(";"),
-        reviewed_by_user_id: suggestion.decided_by_user_id ?? "",
+        reviewed_by_user_id: suggestion.decided_by_user_id ? "[REDACTED_ID]" : "",
         reviewed_by_role: suggestion.decided_by_role ?? "",
         reviewed_at: suggestion.decided_at ?? "",
       }));
@@ -1603,6 +1633,12 @@ export async function reportsRoutes(app: FastifyInstance) {
         provenance_edges: edgeRows.length,
         ai_operations: aiRows.length,
       };
+      const privacyMetadata = privacyMetadataForExportType(exportType);
+      const containsIdentifiableData =
+        privacyMetadata.direct_identifiers_included || privacyMetadata.participant_response_mapping_included;
+      const anonymizationLevel = privacyMetadata.data_classification === "deidentified_research_report"
+        ? exportType === "final-delphi-report" ? "aggregated_only" : "anonymized"
+        : "none";
 
       const manifestContent = exportManifestFile({
         export_type: exportType,
@@ -1610,12 +1646,15 @@ export async function reportsRoutes(app: FastifyInstance) {
         versionId,
         actorRole: actor.role,
         dataCutoffAt,
-        containsIdentifiableData: false,
-        anonymizationLevel: exportType === "final-delphi-report" ? "aggregated_only" : "anonymized",
-        redactionStatus: "direct identifiers and identity-response mapping excluded",
+        containsIdentifiableData,
+        anonymizationLevel,
+        redactionStatus: privacyMetadata.data_classification === "deidentified_research_report"
+          ? "direct identifiers and identity-response mapping excluded"
+          : "restricted internal package; participant-linkable identifiers may be included and are not safe for de-identified sharing",
         recordCounts,
         consensusRule: consensusMetadata,
         aiDisclosure: aiConnectorDisclosure,
+        privacyMetadata,
       });
       const softwareCitation = {
         metadata: citationMetadata(),
@@ -1629,7 +1668,7 @@ export async function reportsRoutes(app: FastifyInstance) {
         ? [
             {
               path: `${exportType}/final_result_snapshot.json`,
-              content: JSON.stringify(finalResultSnapshot, null, 2),
+              content: JSON.stringify(redactExportValue(finalResultSnapshot), null, 2),
               format: ".json" as const,
               record_count: finalResultSnapshot.itemOutcomes.length,
               contains_identifiable_data: false,
@@ -1643,7 +1682,7 @@ export async function reportsRoutes(app: FastifyInstance) {
               path: `${exportType}/final_item_outcomes_from_snapshot.csv`,
               content: toCsv(finalResultSnapshot.itemOutcomes.map((item) => ({
                 item_id: item.itemId,
-                item_text: item.finalText,
+                item_text: redactExportText(item.finalText),
                 outcome: item.outcome,
                 final_n: item.finalN,
                 median: item.median ?? "",
@@ -1696,6 +1735,14 @@ export async function reportsRoutes(app: FastifyInstance) {
           contains_identifiable_data: false,
           redaction_profile: { manifest: "package-level metadata" },
         },
+        {
+          path: `${exportType}/privacy_classification.json`,
+          content: JSON.stringify(privacyMetadata, null, 2),
+          format: ".json" as const,
+          record_count: null,
+          contains_identifiable_data: privacyMetadata.direct_identifiers_included,
+          redaction_profile: { privacy_metadata: "package classification" },
+        },
         ...finalSnapshotFiles,
       ];
 
@@ -1704,7 +1751,7 @@ export async function reportsRoutes(app: FastifyInstance) {
           ...baseFiles,
           {
             path: "final-delphi-report/final_delphi_report.json",
-            content: JSON.stringify({
+            content: JSON.stringify(redactExportValue({
               study,
               study_version: studyVersion,
               consensus_rule: consensusMetadata,
@@ -1729,7 +1776,7 @@ export async function reportsRoutes(app: FastifyInstance) {
               },
               items: itemReports,
               limitations: limitationsMarkdown,
-            }, null, 2),
+            }), null, 2),
             format: ".json",
             record_count: itemReports.length,
             contains_identifiable_data: false,
@@ -1877,13 +1924,18 @@ export async function reportsRoutes(app: FastifyInstance) {
         content: { exportType, recordCounts },
         data_scope: { export_type: exportType, package_builder: "governed_package_v1" },
         redaction_profile: {
-          direct_identifiers: "excluded",
-          identity_response_mapping: "excluded",
-          redaction_status: "package_files_review_required",
+          direct_identifiers: privacyMetadata.direct_identifiers_included ? "restricted_internal_only" : "excluded",
+          identity_response_mapping: privacyMetadata.participant_response_mapping_included ? "restricted_internal_only" : "excluded",
+          redaction_status: privacyMetadata.data_classification === "deidentified_research_report"
+            ? "direct identifiers and identity-response mapping excluded"
+            : "restricted identifiers may be included and package is not safe for de-identified sharing",
           participant_facing_context: "concise_disclosure_only",
-          admin_context_record: exportType === "irb-pack" || exportType === "complete-archive" ? "included" : "limited_summary",
+          admin_context_record: privacyMetadata.restricted_internal_only ? "included_restricted" : "limited_summary",
         },
+        privacy_metadata: privacyMetadata,
       });
+
+      const packageFiles = filesByType[exportType].map((file) => redactExportFileContent(file, privacyMetadata));
 
       const exportPackage = createExportPackage({
         study_id: studyId,
@@ -1895,13 +1947,14 @@ export async function reportsRoutes(app: FastifyInstance) {
         consensus_rule_version_id: studyVersion.config_hash,
         feedback_config_version_id: studyVersion.config_hash,
         instrument_version_ids: [versionId],
-        contains_identifiable_data: false,
-        anonymization_level: exportType === "final-delphi-report" ? "aggregated_only" : "anonymized",
+        contains_identifiable_data: containsIdentifiableData,
+        anonymization_level: anonymizationLevel,
         external_ai_used: false,
         human_review_required: true,
         human_review_status: "pending_review",
         limitations_text_version_id: "charter-required-limitations-v1",
-        files: filesByType[exportType],
+        privacy_metadata: privacyMetadata,
+        files: packageFiles,
       });
 
       return reply.code(201).send({ export_manifest: manifest, export_package: exportPackage });

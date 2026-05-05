@@ -23,6 +23,29 @@ export type AnonymizationLevel = "none" | "pseudonymized" | "anonymized" | "aggr
 export type HumanReviewStatus = "draft" | "pending_review" | "approved" | "rejected" | "superseded";
 export type ReleaseStatus = "not_released" | "released" | "superseded";
 export type ExportPackageReviewStatus = "approved" | "rejected";
+export type ExportDataClassification =
+  | "deidentified_research_report"
+  | "restricted_internal_admin_audit"
+  | "complete_restricted_archive";
+
+export type ExportPrivacyMetadata = {
+  export_name: string;
+  export_audience: string;
+  data_classification: ExportDataClassification;
+  direct_identifiers_included: boolean;
+  participant_response_mapping_included: boolean;
+  restricted_internal_only: boolean;
+  safe_for_deidentified_research_report_sharing: boolean;
+  ai_prompts_included: boolean;
+  ai_inputs_included: boolean;
+  ai_outputs_included: boolean;
+  ai_provenance_records_included: boolean;
+  support_issue_note_content_included: boolean;
+  audit_log_content_included: boolean;
+  generated_timestamp: string;
+  study_export_identifier: string | null;
+  applicable_privacy_notes: string[];
+};
 
 export type ExportManifest = {
   export_id: string;
@@ -40,6 +63,7 @@ export type ExportManifest = {
   content_hash: string;
   data_scope: Record<string, unknown>;
   redaction_profile: Record<string, unknown>;
+  privacy_metadata?: ExportPrivacyMetadata;
 };
 
 type ExportManifestRow = {
@@ -91,6 +115,7 @@ export type ExportPackage = {
   package_hash: string;
   audit_event_id: string;
   files: Omit<ExportPackageFile, "content_text">[];
+  privacy_metadata?: ExportPrivacyMetadata;
 };
 
 type ExportPackageRow = {
@@ -170,6 +195,7 @@ export function recordExportManifest(input: {
   content: unknown;
   data_scope: Record<string, unknown>;
   redaction_profile: Record<string, unknown>;
+  privacy_metadata?: ExportPrivacyMetadata;
 }): ExportManifest {
   const manifest: ExportManifest = {
     export_id: crypto.randomUUID(),
@@ -187,6 +213,7 @@ export function recordExportManifest(input: {
     content_hash: sha256Json(input.content),
     data_scope: input.data_scope,
     redaction_profile: input.redaction_profile,
+    ...(input.privacy_metadata ? { privacy_metadata: input.privacy_metadata } : {}),
   };
 
   getDatabase()
@@ -279,6 +306,7 @@ export function createExportPackage(input: {
   human_review_status?: HumanReviewStatus;
   limitations_text_version_id: string;
   supersedes_export_package_id?: string | null;
+  privacy_metadata?: ExportPrivacyMetadata;
   files: Array<{
     path: string;
     content: string | Buffer;
@@ -291,6 +319,7 @@ export function createExportPackage(input: {
 }): ExportPackage {
   const exportPackageId = crypto.randomUUID();
   const createdAt = new Date().toISOString();
+  const privacyMetadata = input.privacy_metadata;
   const inputFiles = input.files.some((file) => file.path === "CITATION.md")
     ? input.files
     : [
@@ -359,6 +388,7 @@ export function createExportPackage(input: {
     ai_assistance: {
       external_ai_used: input.external_ai_used,
     },
+    ...(privacyMetadata ? { privacy_metadata: privacyMetadata } : {}),
     files: files.map(({ content_text: _content, ...file }) => file),
   };
   const manifestHash = sha256Json(manifestBase);
@@ -398,6 +428,7 @@ export function createExportPackage(input: {
     package_hash: packageHash,
     audit_event_id: input.audit_event_id,
     files: files.map(({ content_text: _content, ...file }) => file),
+    ...(privacyMetadata ? { privacy_metadata: privacyMetadata } : {}),
   };
 
   getDatabase()
