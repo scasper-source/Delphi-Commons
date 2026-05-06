@@ -1,12 +1,12 @@
 # Live Run Results
 
-Run date: 2026-05-05
+Run date: 2026-05-06
 
 Live execution status: CONTROLLED SYNTHETIC LOCAL RUN COMPLETED WITH CONDITIONS.
 
 Current decision: GO WITH CONDITIONS for controlled synthetic mock testing only.
 
-The run completed an 8-synthetic-participant, 4-round Classical Delphi lifecycle through local development APIs and participant invitation endpoints. It also completed headless browser smoke checks at 320px, 390px, and 414px for participant and staff views. It did not complete a manual all-8 browser UI submission pass.
+The latest run completed an 8-synthetic-participant, 4-round Classical Delphi lifecycle with all participant Round 1, Round 2, Round 3, and Round 4 submissions made through a local Microsoft Edge browser UI automation pass. Study setup, curation, round progression, staff support response, final-results release, and export/package generation used local development APIs. Mobile-width browser checks covered 320px, 390px, and 414px. The remaining condition is a non-blocking 320px horizontal-overflow finding in the final participant closeout view.
 
 ## Boundary
 
@@ -16,35 +16,41 @@ Synthetic data only. Local development only. No production deployment. No real h
 
 ## Evidence Artifact
 
-Primary artifact:
+Latest primary artifact:
+
+- `docs/qc/full-mock-trial/artifacts/manual-browser-mock-trial-run-2026-05-06T17-13-46-275Z.json`
+- `docs/qc/full-mock-trial/artifacts/manual-browser-mock-trial-run-latest.json`
+
+Historical API-driven artifact:
 
 - `docs/qc/full-mock-trial/artifacts/full-mock-trial-run-2026-05-05T20-58-23-780Z.json`
 - `docs/qc/full-mock-trial/artifacts/full-mock-trial-run-latest.json`
 
 Mobile screenshots:
 
-- `docs/qc/full-mock-trial/artifacts/participant-final-320-320.png`
-- `docs/qc/full-mock-trial/artifacts/participant-final-390-390.png`
-- `docs/qc/full-mock-trial/artifacts/participant-final-414-414.png`
-- `docs/qc/full-mock-trial/artifacts/staff-dashboard-320-320.png`
-- `docs/qc/full-mock-trial/artifacts/staff-dashboard-390-390.png`
-- `docs/qc/full-mock-trial/artifacts/staff-dashboard-414-414.png`
+- `docs/qc/full-mock-trial/artifacts/manual-browser-final-SYN-P001-320.png`
+- `docs/qc/full-mock-trial/artifacts/manual-browser-final-SYN-P001-390.png`
+- `docs/qc/full-mock-trial/artifacts/manual-browser-final-SYN-P001-414.png`
+- `docs/qc/full-mock-trial/artifacts/manual-browser-r1-SYN-P001.png`
+- `docs/qc/full-mock-trial/artifacts/manual-browser-r2-SYN-P002.png`
+- `docs/qc/full-mock-trial/artifacts/manual-browser-r3-SYN-P007.png`
+- `docs/qc/full-mock-trial/artifacts/manual-browser-r4-SYN-P008.png`
 
 ## Environment
 
 | Field | Value |
 | --- | --- |
-| Commit hash | `6c90ee57d4d0ab972ef7eebacb4859c88860be0d` |
+| Commit hash | `9df7f75af31a152db46729d1bb60ae22a2af2c68` |
 | Branch | `master` |
-| Run timestamp | `2026-05-05T20:58:23.780Z` |
+| Run timestamp | `2026-05-06T17:13:46.275Z` |
 | Backend URL | `http://127.0.0.1:3001` |
 | Backend health | `{"status":"ok","service":"edelphi-server","environment":"development"}` |
 | Frontend URL | `http://127.0.0.1:5173` |
-| Study ID | `8a6db895-3a94-4730-a687-8ea55c23f8d6` |
-| Version ID | `f648d68d-efe0-4df9-baf9-f95f5dc660b0` |
+| Study ID | `255f09b8-f750-48ff-ba26-ead58965b75b` |
+| Version ID | `f6a662e6-6722-498c-9d07-501b2f8f7f77` |
 | AI mode | Existing deterministic local AI helpers; No External AI mode |
 
-Note: this rerun reused the local development backend and frontend already responding at the documented local URLs. The lifecycle remained API-driven through local invitation endpoints, with headless mobile-width smoke evidence.
+Note: this rerun used the local development backend and frontend at the documented local URLs. It included browser UI automation for all participant submissions. The run was performed from the listed local HEAD with uncommitted rehearsal/remediation changes in the working tree; commit after review is recommended before treating the artifact as reproducible from a clean checkout. The runner respected default local rate limiting with recorded retry/backoff events during compressed automation.
 
 ## Commands And Checks
 
@@ -54,7 +60,7 @@ Note: this rerun reused the local development backend and frontend already respo
 | `cd app; npm.cmd run build` | PASS |
 | Start backend from `server/dist/index.js` | PASS |
 | Start frontend dev server on `127.0.0.1:5173` | PASS |
-| `node docs\qc\full-mock-trial\run_full_mock_trial_local.mjs` | PASS |
+| `node docs\qc\full-mock-trial\run_manual_browser_mock_trial_local.mjs` | PASS WITH CONDITIONS |
 | Backend health check | PASS |
 | Git metadata capture | PASS |
 
@@ -70,6 +76,10 @@ Note: this rerun reused the local development backend and frontend already respo
 | Round 2 completion | PASS: 8/8 synthetic participants |
 | Round 3 completion | PASS: 8/8 synthetic participants |
 | Round 4 completion | PASS: 8/8 synthetic participants |
+| Round 1 browser UI submissions | PASS: 8/8 synthetic participants |
+| Round 2 browser UI submissions | PASS: 8/8 synthetic participants |
+| Round 3 browser UI submissions | PASS: 8/8 synthetic participants |
+| Round 4 browser UI submissions | PASS: 8/8 synthetic participants |
 | Retained disagreement/minority ratings | PASS: SYN-P007 and SYN-P008 retained disagreement patterns |
 | Support loop | PASS |
 | Consensus rule locked after activation | PASS |
@@ -81,14 +91,14 @@ Note: this rerun reused the local development backend and frontend already respo
 
 | Check | Result |
 | --- | --- |
-| Headless browser smoke at 320px | PASS |
-| Headless browser smoke at 390px | PASS |
-| Headless browser smoke at 414px | PASS |
-| Horizontal overflow in inspected views | PASS: none observed |
-| Synthetic participant labels/emails in inspected DOM text | PASS: none observed |
-| Manual all-8 browser UI submission pass | NOT RUN |
+| Participant browser UI submission pass | PASS: 8 participants x 4 rounds |
+| Mobile-width participant checks at 320px | PASS WITH CONDITION: final closeout limitation visible and identifiers redacted; horizontal overflow detected |
+| Mobile-width participant checks at 390px | PASS |
+| Mobile-width participant checks at 414px | PASS |
+| Synthetic participant labels/emails in inspected final closeout DOM text | PASS: none observed after remediation |
+| Human-observed manual click-through | NOT RUN: this pass used local browser automation |
 
-Condition: the full lifecycle was API-driven through local invitation endpoints. Browser evidence was headless mobile smoke of participant and staff views, not a manual all-8 UI submission pass.
+Condition: participant submissions were exercised through the local browser UI, but study setup, curation, round progression, staff response, final release, and export generation used local APIs. The pass was automated rather than human-observed manual clicking.
 
 ## AI Results
 
@@ -105,11 +115,11 @@ Condition: the full lifecycle was API-driven through local invitation endpoints.
 
 | Package type | Package ID | Classification | Scan failures | Scan warnings | Required limitation |
 | --- | --- | --- | ---: | ---: | --- |
-| `final-delphi-report` | `94f1ad57-a66b-4689-8632-16ea23d5f80e` | deidentified_research_report | 0 | 0 | PASS |
-| `anonymized-response-dataset` | `de734425-c693-4f39-98cf-bb90fd3793b5` | deidentified_research_report | 0 | 0 | PASS |
-| `audit-package` | `4e5c3269-a927-4469-898c-cca571d27505` | restricted_internal_admin_audit | 0 | 16 | PASS WITH RESTRICTED WARNINGS |
-| `provenance-bundle` | `eef6baa6-8d07-4ce0-9b69-3cb6ceee8d33` | deidentified_research_report | 0 | 0 | PASS |
-| `complete-archive` | `a65b3b99-6e91-47b6-b755-d03f75b6ac54` | complete_restricted_archive | 0 | 35 | PASS WITH RESTRICTED WARNINGS |
+| `final-delphi-report` | `c48cf948-7d4a-417c-b3d2-0e80a1fe8360` | deidentified_research_report | 0 | 0 | PASS |
+| `anonymized-response-dataset` | `539c7ec5-6bb1-4514-9d84-1c6d6dbdd367` | deidentified_research_report | 0 | 0 | PASS |
+| `audit-package` | `a6d27173-ab7a-4330-9a5b-bd2b5c720c7e` | restricted_internal_admin_audit | 0 | 17 | PASS WITH RESTRICTED WARNINGS |
+| `provenance-bundle` | `4ba988da-5aae-4024-8f81-dd9226bd090c` | deidentified_research_report | 0 | 0 | PASS |
+| `complete-archive` | `6ff98504-f84b-4d5a-bbec-0608826887f4` | complete_restricted_archive | 0 | 35 | PASS WITH RESTRICTED WARNINGS |
 
 Required limitation found exactly:
 
@@ -121,7 +131,7 @@ Required limitation found exactly:
 | --- | ---: | --- |
 | P0 | 0 | No P0 remains from the run. |
 | P1 | 0 | No P1 recorded. |
-| P2 | 2 | Browser scope condition: manual all-8 browser UI submission pass not run. Participant mobile smoke also showed stale method/round-count copy for the 4-round Classical Delphi run. |
+| P2 | 1 | Mobile final closeout at 320px had horizontal overflow. |
 | P3 | 0 | No P3 recorded. |
 
 ## Decision
