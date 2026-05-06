@@ -1,8 +1,8 @@
-# Defect Log
+﻿# Defect Log
 
 Live execution status: CONTROLLED SYNTHETIC LOCAL BROWSER UI RERUN COMPLETED WITH CONDITIONS.
 
-Current decision impact: no P0/P1 defects remain. The run is GO WITH CONDITIONS for controlled synthetic mock testing only. The latest pass completed all 8 synthetic participant submissions for Rounds 1-4 through local Microsoft Edge browser UI automation. The prior `fetch failed` attempt remains classified as an environment/startup blocked attempt, not a confirmed product P0. The remaining open P2 condition is a 320px mobile horizontal-overflow finding in the final participant closeout view. This pass was automated and local; it is not production, human-subjects, IRB, or accessibility-conformance evidence.
+Current decision impact: no P0/P1 defects remain. The run is GO WITH CONDITIONS for controlled synthetic mock testing only. The latest pass completed all 8 synthetic participant submissions for Rounds 1-4 through local Microsoft Edge browser UI automation. The prior `fetch failed` attempt remains classified as an environment/startup blocked attempt, not a confirmed product P0. The remaining open P2 condition is still a 320px mobile horizontal-overflow finding in the final participant closeout view, confirmed again by the 2026-05-06 Windows focused mobile evidence rerun. This pass was automated and local; it is not production, human-subjects, IRB, or accessibility-conformance evidence.
 
 ## Severity Definitions
 
@@ -61,14 +61,15 @@ P3 backlog:
 | FMT-P2-MOBILE-METHOD-COPY | P2 | Participant mobile smoke copy | REMEDIATED | Earlier participant mobile smoke for a 4-round Classical Delphi run showed stale "3 rounds" / "Modified Delphi" text. The 2026-05-06 manual-browser pass showed "up to 4 rounds" and "Classic Delphi" in participant screenshots. | Fixed in participant portal code by binding Study Time Commitment copy to the active invitation-backed study version, with `workflow.version` fallback and neutral fallback copy when metadata is missing. | Root cause: participant portal copy read wizard defaults instead of active study-version data. Verification: `app/tests/policyGates.test.mjs` plus browser evidence in `manual-browser-mock-trial-run-2026-05-06T17-13-46-275Z.json`. |
 | FMT-BROWSER-P1-MOBILE-CLOSEOUT-NAV | P1 | Participant mobile closeout navigation | REMEDIATED | During the browser pass, 320/390/414 participant final checks could not reach Closeout because participant-mode mobile hides the sidebar and the reference bar did not include Closeout. | Added Participant Portal and Closeout to the panelist reference bar; rerun showed required limitation language visible at 320/390/414. | Root cause: mobile participant navigation exposed About/Glossary only while Closeout was allowed for panelists. |
 | FMT-BROWSER-P0-FINAL-CLOSEOUT-IDENTIFIER-LEAK | P0 | Participant final closeout privacy | REMEDIATED | `manual-browser-mock-trial-run-2026-05-06T17-01-49-423Z.json` found synthetic labels in participant final closeout item text. | Redacted final-result item wording and participant final-response item/rationale text using the existing export privacy redaction rules; rerun artifact `manual-browser-mock-trial-run-2026-05-06T17-13-46-275Z.json` has P0=0 and no synthetic labels/emails in inspected final closeout DOM text. | Root cause: participant-facing final closeout reused raw materialized item text and final-response rationale text from synthetic participant-authored fields; export redaction existed but closeout redaction did not. |
-| FMT-BROWSER-P2-MOBILE-OVERFLOW | P2 | Mobile final closeout layout | OPEN CONDITION | Latest 320px final closeout check reported horizontal overflow while 390px and 414px passed. Required limitation was visible and identifiers were redacted. | Continue controlled synthetic testing with the condition documented; before broader mobile/browser testing, tighten mobile wrapping for final closeout cards and charts. | Non-blocking mobile layout issue; no workflow block or privacy leak observed after remediation. |
+| FMT-BROWSER-P2-MOBILE-OVERFLOW | P2 | Mobile final closeout layout | OPEN CONDITION | Focused Windows rerun artifact `manual-browser-mock-trial-run-2026-05-06T19-42-16-959Z.json` reported horizontal overflow at 320px; 390px and 414px passed. Screenshot paths: `focused-mobile-closeout-2026-05-06T19-42-16-959Z-320.png`, `focused-mobile-closeout-2026-05-06T19-42-16-959Z-390.png`, and `focused-mobile-closeout-2026-05-06T19-42-16-959Z-414.png`. | Continue controlled synthetic testing with the condition documented; before broader mobile/browser claims, inspect and tighten the final closeout content/cards region at 320px. | Non-blocking mobile layout issue; no workflow block, missing limitation language, or privacy leak observed. The runner reports page-level overflow but not an element-level attribution. |
 
 ## Live Rerun Evidence
 
 Latest browser UI artifact:
 
-- `docs/qc/full-mock-trial/artifacts/manual-browser-mock-trial-run-2026-05-06T17-13-46-275Z.json`
+- `docs/qc/full-mock-trial/artifacts/manual-browser-mock-trial-run-2026-05-06T19-42-16-959Z.json`
 - `docs/qc/full-mock-trial/artifacts/manual-browser-mock-trial-run-latest.json`
+- previous browser artifact: `docs/qc/full-mock-trial/artifacts/manual-browser-mock-trial-run-2026-05-06T17-13-46-275Z.json`
 
 Historical API-driven artifacts:
 
@@ -121,11 +122,11 @@ Live rerun package evidence:
 
 | Package type | Package ID | Classification | Scan failures | Scan warnings | Safe for de-identified sharing |
 | --- | --- | --- | ---: | ---: | --- |
-| `final-delphi-report` | `94f1ad57-a66b-4689-8632-16ea23d5f80e` | deidentified_research_report | 0 | 0 | yes |
-| `anonymized-response-dataset` | `de734425-c693-4f39-98cf-bb90fd3793b5` | deidentified_research_report | 0 | 0 | yes |
-| `audit-package` | `4e5c3269-a927-4469-898c-cca571d27505` | restricted_internal_admin_audit | 0 | 16 | no |
-| `provenance-bundle` | `eef6baa6-8d07-4ce0-9b69-3cb6ceee8d33` | deidentified_research_report | 0 | 0 | yes |
-| `complete-archive` | `a65b3b99-6e91-47b6-b755-d03f75b6ac54` | complete_restricted_archive | 0 | 35 | no |
+| `final-delphi-report` | `abd662eb-8a7c-400f-8cf3-1e444004a2fb` | deidentified_research_report | 0 | 0 | yes |
+| `anonymized-response-dataset` | `6e4d561a-b048-460c-905a-411c774b51dc` | deidentified_research_report | 0 | 0 | yes |
+| `audit-package` | `8edeeee2-fb41-4aa1-b621-c940815aed89` | restricted_internal_admin_audit | 0 | 16 | no |
+| `provenance-bundle` | `8900b6fd-cf9c-459f-bf3c-f3668c9a0eb0` | deidentified_research_report | 0 | 0 | yes |
+| `complete-archive` | `cf51550b-d950-4ba4-9d56-568f107a89b1` | complete_restricted_archive | 0 | 35 | no |
 
 ## Carryover Watch List
 
@@ -145,5 +146,5 @@ These should continue to be rechecked during later mock testing.
 | --- | ---: | --- |
 | P0 | 0 | No P0 recorded in the successful rerun |
 | P1 | 0 | No P1 recorded |
-| P2 | 1 | 320px final closeout horizontal overflow condition |
+| P2 | 1 | 320px final closeout horizontal overflow condition confirmed by focused Windows rerun |
 | P3 | 0 | No P3 recorded |

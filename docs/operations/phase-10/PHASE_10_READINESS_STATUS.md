@@ -1,6 +1,6 @@
-# Phase 10 Readiness Status
+﻿# Phase 10 Readiness Status
 
-Boundary statement: “Delphi Commons is suitable only for controlled mock-trial use with synthetic or low-risk test data in local, development, or staging environments. It is not approved or ready for production deployment or real human-subjects research.”
+Boundary statement: â€œDelphi Commons is suitable only for controlled mock-trial use with synthetic or low-risk test data in local, development, or staging environments. It is not approved or ready for production deployment or real human-subjects research.â€
 
 Final Phase 10 status: Phase 10 synthetic/dev/staging rehearsal partially completed for the tested environment.
 
@@ -16,7 +16,7 @@ Latest rehearsal evidence: [Phase 10 rehearsal results](./PHASE_10_REHEARSAL_RES
 | Procedures documented | COMPLETE | Non-production deployment, environment, migration, backup/restore, incident response, escalation, admin onboarding, disclosure, dry-run, and GitHub handoff are documented. |
 | Commands identified | COMPLETE | [Command inventory](./command-inventory.md) is based on `app/package.json`, `server/package.json`, source routes, and existing QC scripts. |
 | Fresh deploy from docs | PARTIAL | Install/build commands passed, backend health returned development from disposable runtime, and frontend smoke returned HTTP 200 on an alternate port. A true fresh clone and retained `npm.cmd start` terminal rehearsal remain unperformed. |
-| Full test-study dry run performed for Phase 10 | PARTIAL | Backend road-test lifecycle, exports, backup/restore, invitations, and AI gates passed in disposable runtime. A 2026-05-06 API-driven rerun completed 8/8 through Round 4 with backend/frontend health confirmed and fresh artifact output. A 2026-05-06 local browser UI automation pass completed 8 synthetic participants through 4 Classical Delphi rounds with export privacy scan failures at 0. Study setup, curation, round progression, staff support response, final release, and exports still used local APIs, and the pass was automated rather than human-observed. A 320px final closeout horizontal-overflow condition remains open. |
+| Full test-study dry run performed for Phase 10 | PARTIAL | Backend road-test lifecycle, exports, backup/restore, invitations, and AI gates passed in disposable runtime. A 2026-05-06 API-driven rerun completed 8/8 through Round 4 with backend/frontend health confirmed and fresh artifact output. A 2026-05-06 local browser UI automation pass completed 8 synthetic participants through 4 Classical Delphi rounds with export privacy scan failures at 0. Study setup, curation, round progression, staff support response, final release, and exports still used local APIs, and the pass was automated rather than human-observed. A 2026-05-06 focused Windows mobile closeout rerun again found the 320px final closeout horizontal-overflow condition; 390px and 414px passed. |
 | Migration/init rehearsal performed for Phase 10 | PASS | Disposable SQLite runtime initialized and migrations were exercised by backend road test and storage checks. No standalone migration CLI exists. |
 | Backup creation rehearsal performed for Phase 10 | PASS | Backend road test created backup `c92a0f49-eff9-44ab-8a34-b420fa4a1352` in disposable runtime. |
 | Restore rehearsal performed for Phase 10 | PASS | Backend road test restored the disposable backup and verified audit/data integrity. |

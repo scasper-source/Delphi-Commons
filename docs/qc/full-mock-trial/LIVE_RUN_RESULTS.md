@@ -1,4 +1,35 @@
-# Live Run Results
+﻿# Live Run Results
+
+## Update: 2026-05-06 Windows Focused Mobile Closeout Evidence
+
+- Operator date/time (UTC): 2026-05-06T19:42:16Z to 2026-05-06T19:46:52Z.
+- Clean GitHub checkout branch/commit: `codex/windows-focused-mobile-closeout-evidence-results` / `1dfcef9635c55fe724fa9b050fd413c7569a73c9`.
+- Disposable runtime paths used: `%TEMP%\delphi-commons-mobile-evidence-data`, `%TEMP%\delphi-commons-mobile-evidence-audit`, and `%TEMP%\delphi-commons-mobile-evidence-backups`.
+- Backend health check: PASS at `http://127.0.0.1:3001/health`.
+- Frontend availability check: PASS at `http://127.0.0.1:5173/` (HTTP 200).
+- Execution command: `node docs\qc\full-mock-trial\run_manual_browser_mock_trial_local.mjs`.
+- New artifact: `docs/qc/full-mock-trial/artifacts/manual-browser-mock-trial-run-2026-05-06T19-42-16-959Z.json` (and `docs/qc/full-mock-trial/artifacts/manual-browser-mock-trial-run-latest.json`).
+- Focused screenshots: `docs/qc/full-mock-trial/artifacts/focused-mobile-closeout-2026-05-06T19-42-16-959Z-320.png`, `docs/qc/full-mock-trial/artifacts/focused-mobile-closeout-2026-05-06T19-42-16-959Z-390.png`, `docs/qc/full-mock-trial/artifacts/focused-mobile-closeout-2026-05-06T19-42-16-959Z-414.png`.
+
+Focused mobile result:
+
+| Check | 320px | 390px | 414px |
+| --- | --- | --- | --- |
+| Participant Portal reachable | PASS | PASS | PASS |
+| Closeout reachable | PASS | PASS | PASS |
+| Required limitation visible exactly | PASS | PASS | PASS |
+| Synthetic participant labels visible | PASS: none observed | PASS: none observed | PASS: none observed |
+| `example.test` emails visible | PASS: none observed | PASS: none observed | PASS: none observed |
+| Raw participant-linkable IDs visible | PASS: none observed in inspected closeout DOM text | PASS: none observed in inspected closeout DOM text | PASS: none observed in inspected closeout DOM text |
+| Identity-response mapping visible | PASS: none observed | PASS: none observed | PASS: none observed |
+| Consensus-as-truth language | PASS: none observed | PASS: none observed | PASS: none observed |
+| Coercive convergence language | PASS: none observed | PASS: none observed | PASS: none observed |
+| Page-level horizontal overflow | FAIL/P2: detected | PASS | PASS |
+| Buttons/navigation usable | PASS | PASS | PASS |
+| Text readable without zoom | PASS WITH CONDITION | PASS | PASS |
+
+The 320px horizontal-overflow condition remains open as P2. The runner reports page-level overflow with `document.documentElement.scrollWidth > document.documentElement.clientWidth + 1`; the likely affected area is the participant final closeout content/cards region at 320px. The screenshot did not show privacy leakage, missing limitation language, or workflow blockage.
+
 
 ## Update: 2026-05-06 Browser UI Automation Mock-Trial Pass
 
@@ -28,10 +59,12 @@ Synthetic data only. Local development only. No production deployment. No real h
 
 Latest primary artifact:
 
-- `docs/qc/full-mock-trial/artifacts/manual-browser-mock-trial-run-2026-05-06T17-13-46-275Z.json`
+- `docs/qc/full-mock-trial/artifacts/manual-browser-mock-trial-run-2026-05-06T19-42-16-959Z.json`
 - `docs/qc/full-mock-trial/artifacts/manual-browser-mock-trial-run-latest.json`
 
-Historical API-driven artifacts:
+Historical browser/API-driven artifacts:
+
+- `docs/qc/full-mock-trial/artifacts/manual-browser-mock-trial-run-2026-05-06T17-13-46-275Z.json`
 
 - `docs/qc/full-mock-trial/artifacts/full-mock-trial-run-2026-05-06T14-18-57-949Z.json`
 - `docs/qc/full-mock-trial/artifacts/full-mock-trial-run-2026-05-05T21-34-02-906Z.json`
@@ -43,6 +76,9 @@ Prior blocked attempt (environment/startup):
 
 Mobile screenshots:
 
+- `docs/qc/full-mock-trial/artifacts/focused-mobile-closeout-2026-05-06T19-42-16-959Z-320.png`
+- `docs/qc/full-mock-trial/artifacts/focused-mobile-closeout-2026-05-06T19-42-16-959Z-390.png`
+- `docs/qc/full-mock-trial/artifacts/focused-mobile-closeout-2026-05-06T19-42-16-959Z-414.png`
 - `docs/qc/full-mock-trial/artifacts/manual-browser-final-SYN-P001-320.png`
 - `docs/qc/full-mock-trial/artifacts/manual-browser-final-SYN-P001-390.png`
 - `docs/qc/full-mock-trial/artifacts/manual-browser-final-SYN-P001-414.png`
@@ -55,24 +91,24 @@ Mobile screenshots:
 
 | Field | Value |
 | --- | --- |
-| Commit hash | `9df7f75af31a152db46729d1bb60ae22a2af2c68` |
-| Branch | `master` |
-| Run timestamp | `2026-05-06T17:13:46.275Z` |
+| Commit hash | `1dfcef9635c55fe724fa9b050fd413c7569a73c9` |
+| Branch | `codex/windows-focused-mobile-closeout-evidence-results` |
+| Run timestamp | `2026-05-06T19:42:16.959Z` |
 | Backend URL | `http://127.0.0.1:3001` |
 | Backend health | `{"status":"ok","service":"edelphi-server","environment":"development"}` |
 | Frontend URL | `http://127.0.0.1:5173` |
-| Study ID | `255f09b8-f750-48ff-ba26-ead58965b75b` |
-| Version ID | `f6a662e6-6722-498c-9d07-501b2f8f7f77` |
+| Study ID | `11bc1b5f-f6bf-4f4a-a81b-debfd0cc379e` |
+| Version ID | `20dc37a6-2a1e-4ed5-a8bb-54f8787e90a6` |
 | AI mode | Existing deterministic local AI helpers; No External AI mode |
 
-Note: this rerun used the local development backend and frontend at the documented local URLs. It included browser UI automation for all participant submissions. The run was performed from the listed local HEAD with uncommitted rehearsal/remediation changes in the working tree; commit after review is recommended before treating the artifact as reproducible from a clean checkout. The runner respected default local rate limiting with recorded retry/backoff events during compressed automation.
+Note: this rerun used the clean GitHub checkout, disposable local runtime paths, and the local development backend/frontend at the documented local URLs. It included browser UI automation for all participant submissions. The run was performed before this evidence/docs commit, with no production data and no code remediation in this branch. The runner respected default local rate limiting with recorded retry/backoff events during compressed automation.
 
 ## Commands And Checks
 
 | Command/check | Result |
 | --- | --- |
-| `cd server; npm.cmd run build` | PASS |
-| `cd app; npm.cmd run build` | PASS |
+| `cd server; npm.cmd install` | PASS |`r`n| `cd server; npm.cmd run build` | PASS |`r`n| `cd server; npm.cmd test` | PASS |
+| `cd app; npm.cmd install` | PASS |`r`n| `cd app; npm.cmd run build` | PASS |`r`n| `cd app; npm.cmd test` | PASS |
 | Start backend from `server/dist/index.js` | PASS |
 | Start frontend dev server on `127.0.0.1:5173` | PASS |
 | `node docs\qc\full-mock-trial\run_manual_browser_mock_trial_local.mjs` | PASS WITH CONDITIONS |
@@ -130,11 +166,11 @@ Condition: participant submissions were exercised through the local browser UI, 
 
 | Package type | Package ID | Classification | Scan failures | Scan warnings | Required limitation |
 | --- | --- | --- | ---: | ---: | --- |
-| `final-delphi-report` | `c48cf948-7d4a-417c-b3d2-0e80a1fe8360` | deidentified_research_report | 0 | 0 | PASS |
-| `anonymized-response-dataset` | `539c7ec5-6bb1-4514-9d84-1c6d6dbdd367` | deidentified_research_report | 0 | 0 | PASS |
-| `audit-package` | `a6d27173-ab7a-4330-9a5b-bd2b5c720c7e` | restricted_internal_admin_audit | 0 | 17 | PASS WITH RESTRICTED WARNINGS |
-| `provenance-bundle` | `4ba988da-5aae-4024-8f81-dd9226bd090c` | deidentified_research_report | 0 | 0 | PASS |
-| `complete-archive` | `6ff98504-f84b-4d5a-bbec-0608826887f4` | complete_restricted_archive | 0 | 35 | PASS WITH RESTRICTED WARNINGS |
+| `final-delphi-report` | `abd662eb-8a7c-400f-8cf3-1e444004a2fb` | deidentified_research_report | 0 | 0 | PASS |
+| `anonymized-response-dataset` | `6e4d561a-b048-460c-905a-411c774b51dc` | deidentified_research_report | 0 | 0 | PASS |
+| `audit-package` | `8edeeee2-fb41-4aa1-b621-c940815aed89` | restricted_internal_admin_audit | 0 | 17 | PASS WITH RESTRICTED WARNINGS |
+| `provenance-bundle` | `8900b6fd-cf9c-459f-bf3c-f3668c9a0eb0` | deidentified_research_report | 0 | 0 | PASS |
+| `complete-archive` | `cf51550b-d950-4ba4-9d56-568f107a89b1` | complete_restricted_archive | 0 | 35 | PASS WITH RESTRICTED WARNINGS |
 
 Required limitation found exactly:
 
@@ -146,7 +182,7 @@ Required limitation found exactly:
 | --- | ---: | --- |
 | P0 | 0 | No P0 remains from the rerun. |
 | P1 | 0 | No P1 recorded. |
-| P2 | 1 | Mobile final closeout at 320px had horizontal overflow. |
+| P2 | 1 | Mobile final closeout at 320px still had horizontal overflow in the focused Windows rerun. |
 | P3 | 0 | No P3 recorded. |
 
 ## Decision
