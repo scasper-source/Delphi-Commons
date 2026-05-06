@@ -1,0 +1,74 @@
+{
+  "run_started_at": "2026-05-05T21:28:25.629Z",
+  "run_completed_at": "2026-05-05T21:28:25.737Z",
+  "marker": "FMT-mot54c2m",
+  "mode": "local_api_driven_with_headless_browser_mobile_smoke",
+  "scope": {
+    "synthetic_data_only": true,
+    "local_or_controlled_dev_only": true,
+    "production_deployment": false,
+    "real_human_subjects_research": false,
+    "irb_launch": false,
+    "sensitive_participant_data": false,
+    "external_ai_calls": false
+  },
+  "environment": {
+    "commit_hash": null,
+    "branch": null,
+    "backend_url": "http://127.0.0.1:3001",
+    "frontend_url": "http://127.0.0.1:5173",
+    "backend_health": null,
+    "browser": "Microsoft Edge headless when available; in-app browser inspection may be performed separately",
+    "mobile_widths": [
+      320,
+      390,
+      414
+    ]
+  },
+  "commands": [
+    {
+      "command": "git rev-parse HEAD",
+      "cwd": "/workspace/Delphi-Commons"
+    },
+    {
+      "command": "git branch --show-current",
+      "cwd": "/workspace/Delphi-Commons"
+    }
+  ],
+  "study": {},
+  "checks": [],
+  "counts": {},
+  "ai": {
+    "mode": "existing deterministic local AI helpers; No External AI mode",
+    "external_ai_enabled": null,
+    "no_external_ai_mode": null,
+    "suggestions": []
+  },
+  "support_loop": {},
+  "export_packages": [],
+  "export_scan": {
+    "failures": [],
+    "warnings": []
+  },
+  "browser_mobile_smoke": [],
+  "browser_execution_scope": {
+    "all_8_participant_submissions_via_browser_ui": false,
+    "all_8_participant_submissions_via_local_invitation_api": true,
+    "headless_mobile_smoke_completed": false,
+    "manual_in_app_browser_pass_completed": false,
+    "note": "The full 8-participant, 4-round lifecycle is API-driven through local invitation endpoints. Browser evidence is headless mobile-width smoke of participant and staff views, not a manual all-8 UI submission pass."
+  },
+  "defects": {
+    "P0": [
+      {
+        "id": "FMT-P0-RUNNER-FAILURE",
+        "summary": "The controlled synthetic mock-trial runner failed before completing required evidence.",
+        "error": "fetch failed"
+      }
+    ],
+    "P1": [],
+    "P2": [],
+    "P3": []
+  },
+  "status": "NO_GO"
+}

@@ -2,7 +2,7 @@
 
 Live execution status: CONTROLLED SYNTHETIC LOCAL RERUN COMPLETED WITH CONDITIONS.
 
-Current decision impact: no P0/P1 defects remain. The run is GO WITH CONDITIONS for controlled synthetic mock testing only. The remaining open P2 condition is evidence scope: the full lifecycle was API-driven through local invitation endpoints with headless mobile browser smoke, not a manual all-8 browser UI submission pass. The stale mobile method/round-count copy defect has been remediated in code and regression tests after the latest live artifact; it has not yet been re-evidenced by a new manual browser pass.
+Current decision impact: no P0/P1 defects remain for the successful rerun. The prior `fetch failed` attempt is classified as an environment/startup blocked attempt (backend/frontend not started), not a confirmed product P0. Manual all-8 browser UI submission remains NOT RUN. FMT-P2-MOBILE-METHOD-COPY remains remediated in code/tests pending explicit manual browser re-evidence.
 
 ## Severity Definitions
 
@@ -57,15 +57,17 @@ P3 backlog:
 | ID | Severity | Area | Status | Evidence | Workaround | Notes |
 | --- | --- | --- | --- | --- | --- | --- |
 | FMT-2026-05-05-P0-001 | P0 | Export privacy | REMEDIATED | Original scan found synthetic identifier/raw participant ID hits in generated export files. Rerun de-identified packages had zero scan failures. | Fixed by export classification metadata, de-identified free-text redaction, restricted/internal package separation, and regression privacy scanning. | Root cause: standard exports could carry participant self-identifiers in free text, and internal audit/archive content was not clearly separated from de-identified exports. |
-| FMT-P2-BROWSER-SCOPE | P2 | Browser evidence scope | OPEN CONDITION | The complete 8-participant, 4-round lifecycle was API-driven through local invitation endpoints. Browser evidence was headless mobile smoke, not a manual all-8 UI submission pass. | For a later human-observed rehearsal, run all participant flows manually or with browser UI automation using isolated profiles/reloads. | Does not block controlled synthetic mock testing; it does prevent claiming a manual all-8 browser pass. |
-| FMT-P2-MOBILE-METHOD-COPY | P2 | Participant mobile smoke copy | REMEDIATED | The latest participant mobile smoke for the 4-round Classical Delphi synthetic run showed stale text: "This study is planned for up to 3 rounds" and a "Modified Delphi" badge. | Fixed in participant portal code by binding Study Time Commitment copy to the active invitation-backed study version, with `workflow.version` fallback and neutral fallback copy when metadata is missing. | Root cause: participant portal copy read wizard defaults instead of active study-version data. Verification: `app/tests/policyGates.test.mjs` now covers active version binding and guards this section against `wizard.plannedRoundCount` / `wizard.studyFormat`; this is code/test verification, not a new manual browser pass. |
+| FMT-P2-BROWSER-SCOPE | P2 | Browser evidence scope | OPEN CONDITION | The complete 8-participant, 4-round lifecycle was API-driven through local invitation endpoints in the prior successful run. Manual all-8 browser UI submission pass remains not performed. | For a later human-observed rehearsal, run all participant flows manually or with browser UI automation using isolated profiles/reloads. | Does not block controlled synthetic mock testing; it does prevent claiming a manual all-8 browser pass. |
+| FMT-ENV-2026-05-05-FETCH-STARTUP | P2 | Runner startup precondition | BLOCKED ATTEMPT (NOT PRODUCT DEFECT) | `docs/qc/full-mock-trial/artifacts/full-mock-trial-run-2026-05-05T21-28-25-629Z-failed.json` captured `fetch failed` when services were not up; a subsequent rerun with backend health OK and frontend running succeeded (`...21-34-02-906Z.json`). | Start backend (`server/dist/index.js`) and verify `/health` before running; start frontend for browser smoke capture. | Reclassified from temporary P0 framing to environment/startup evidence issue. |
+| FMT-P2-MOBILE-METHOD-COPY | P2 | Participant mobile smoke copy | REMEDIATED (CODE/TEST), BROWSER EVIDENCE PENDING | Prior participant mobile smoke for the 4-round Classical Delphi synthetic run showed stale text: "This study is planned for up to 3 rounds" and a "Modified Delphi" badge. | Fixed in participant portal code by binding Study Time Commitment copy to the active invitation-backed study version, with `workflow.version` fallback and neutral fallback copy when metadata is missing. | Root cause: participant portal copy read wizard defaults instead of active study-version data. Verification: `app/tests/policyGates.test.mjs` covers active-version method/round copy behavior and guards against wizard-default leakage. No new browser/mobile rerun evidence was captured because the runner failed before smoke checks. |
 
 ## Live Rerun Evidence
 
 Primary artifact:
 
-- `docs/qc/full-mock-trial/artifacts/full-mock-trial-run-2026-05-05T20-58-23-780Z.json`
+- `docs/qc/full-mock-trial/artifacts/full-mock-trial-run-2026-05-05T21-34-02-906Z.json`
 - `docs/qc/full-mock-trial/artifacts/full-mock-trial-run-latest.json`
+- prior blocked attempt: `docs/qc/full-mock-trial/artifacts/full-mock-trial-run-2026-05-05T21-28-25-629Z-failed.json`
 
 Live rerun status:
 
@@ -131,7 +133,7 @@ These should continue to be rechecked during later mock testing.
 
 | Severity | Count | Status |
 | --- | ---: | --- |
-| P0 | 0 | Export privacy P0 remediated and rerun passed |
+| P0 | 0 | No P0 recorded in the successful rerun |
 | P1 | 0 | No P1 recorded |
-| P2 | 2 | Browser evidence scope condition; stale method/round-count copy in participant mobile smoke |
+| P2 | 2 | Browser evidence scope condition; headless smoke NOT RUN where executable unavailable |
 | P3 | 0 | No P3 recorded |
