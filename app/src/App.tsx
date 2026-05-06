@@ -550,7 +550,9 @@ function App() {
   const [savedStudiesError, setSavedStudiesError] = useState<string | null>(null);
   const studyApi = useMemo(() => createStudyApi(mockStudies), []);
   const accessibleModules = moduleRegistry.filter((module) => canAccessModule(role, module));
-  const headerModuleIds: ModuleId[] = ["about", "glossary"];
+  const headerModuleIds: ModuleId[] = role === "panelist"
+    ? ["about", "participant", "closeout", "glossary"]
+    : ["about", "glossary"];
   const headerModules = accessibleModules.filter((module) => headerModuleIds.includes(module.id));
   const navigationModules = accessibleModules.filter((module) => !headerModuleIds.includes(module.id));
   const selectedStudy = mockStudy;

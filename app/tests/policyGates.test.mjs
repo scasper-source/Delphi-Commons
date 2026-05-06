@@ -225,7 +225,9 @@ test("participant orientation modules are global, searchable, and gated before R
   assert.match(source, /case "glossary"/);
   assert.match(source, /function AboutScreen/);
   assert.match(source, /function GlossaryScreen/);
-  assert.match(source, /headerModuleIds: ModuleId\[\] = \["about", "glossary"\]/);
+  assert.match(source, /headerModuleIds: ModuleId\[\] = role === "panelist"/);
+  assert.match(source, /\["about", "participant", "closeout", "glossary"\]/);
+  assert.match(source, /\["about", "glossary"\]/);
   assert.match(source, /navigationModules = accessibleModules\.filter/);
   assert.match(source, /reference-bar/);
   assert.match(source, /reference-link/);
@@ -474,10 +476,15 @@ test("final closeout uses one canonical snapshot and respectful participant lang
   const source = appSource();
   const apiSource = fs.readFileSync(path.join(appRoot, "src", "core", "api.ts"), "utf8");
   const serverSource = fs.readFileSync(path.resolve(appRoot, "..", "server", "src", "core", "finalResults.ts"), "utf8");
+  const participantRouteSource = fs.readFileSync(path.resolve(appRoot, "..", "server", "src", "routes", "participants.ts"), "utf8");
   const closeoutSource = sourceSlice(source, "function FinalResultsCloseoutScreen", "function FinalItemOutcomeCard");
 
   assert.match(serverSource, /createFinalResultSnapshot/);
   assert.match(serverSource, /FINAL_RESULT_REQUIRED_STATEMENT/);
+  assert.match(serverSource, /redactExportText\(item\.text\)/);
+  assert.match(participantRouteSource, /redactExportText\(item\?\.text \?\? ""\)/);
+  assert.match(participantRouteSource, /redactExportText\(payload\.rationale_text\)/);
+  assert.match(participantRouteSource, /snapshot: redactExportValue\(snapshot\)/);
   assert.match(apiSource, /type FinalResultSnapshot/);
   assert.match(closeoutSource, /Final Results & Study Closeout/);
   assert.match(closeoutSource, /Thank you - this Delphi study is complete/);

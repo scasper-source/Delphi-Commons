@@ -8,6 +8,7 @@ import { getStudy, getStudyVersion } from "../studies/store.js";
 import { getRoundConfig, listRoundConfigs } from "../stores/roundConfigStore.js";
 import { listItems, type ItemRecord } from "../stores/itemStore.js";
 import { listResponses, type ResponseRecord } from "../stores/responseStore.js";
+import { redactExportText } from "../exports/exportPrivacy.js";
 import { buildAttritionSummary } from "./attrition.js";
 import {
   FINAL_RESULT_REQUIRED_STATEMENT,
@@ -221,14 +222,15 @@ export async function createFinalResultSnapshot(input: {
             privacySuppressionReason: privacySuppressed ? "Small final-round response count." : null,
             humanReviewed: true,
           }];
+    const finalText = redactExportText(item.text);
     return {
       itemId: item.item_id,
-      finalText: item.text,
+      finalText,
       wordingHistory: [{
         roundNumber: item.round_number,
-        text: item.text,
+        text: finalText,
         changedAt: item.created_at,
-        changeReason: item.ai_provenance_rationale ?? "Final wording retained for terminal-round analysis.",
+        changeReason: redactExportText(item.ai_provenance_rationale ?? "Final wording retained for terminal-round analysis."),
       }],
       provenance: provenanceForItem(item),
       finalN: finalStats.n,

@@ -6,7 +6,7 @@ Update 2026-05-06: API-driven rerun completed successfully with backend/frontend
 
 Decision scope: controlled synthetic mock testing only.
 
-Reason: the export privacy P0 was remediated and the rerun completed the 8-synthetic-participant, 4-round Classical Delphi lifecycle through local participant invitation APIs. Regenerated de-identified exports passed privacy scanning with zero failures. Headless browser smoke checks at 320px, 390px, and 414px passed for participant and staff views. The remaining condition is that this was not a manual all-8 browser UI submission pass.
+Reason: the export privacy P0 was remediated and the latest rerun completed the 8-synthetic-participant, 4-round Classical Delphi lifecycle with all participant submissions made through local Microsoft Edge browser UI automation. Regenerated de-identified exports passed privacy scanning with zero failures. Final participant closeout checks at 320px, 390px, and 414px showed the required limitation language and no synthetic labels/emails after remediation. The remaining condition is a non-blocking 320px horizontal-overflow finding in final participant closeout.
 
 "Any GO or GO WITH CONDITIONS applies only to controlled synthetic mock testing. It does not authorize production deployment, real human-subjects research, IRB launch, or use of sensitive participant data."
 
@@ -23,8 +23,9 @@ Reason: the export privacy P0 was remediated and the rerun completed the 8-synth
 | Final results and report/export generation | PASS |
 | Export privacy scan | PASS for de-identified exports; restricted warnings only for restricted packages |
 | Required limitation language | PASS |
-| Headless mobile smoke at 320px, 390px, 414px | PASS |
-| Manual all-8 browser UI submission pass | NOT RUN |
+| Browser UI submission pass for all 8 participants, Rounds 1-4 | PASS |
+| Mobile final closeout at 320px, 390px, 414px | PASS WITH CONDITION: 320px horizontal overflow |
+| Human-observed manual click-through | NOT RUN |
 
 ## AI Mode
 
@@ -43,7 +44,7 @@ Not used:
 | --- | ---: | --- |
 | P0 | 0 | Export privacy P0 remediated and rerun de-identified exports had zero scan failures. |
 | P1 | 0 | No P1 recorded from this run. |
-| P2 | 1 | Browser scope condition: the full lifecycle was API-driven; browser evidence was headless mobile smoke rather than manual all-8 UI submission. |
+| P2 | 1 | 320px final participant closeout horizontal overflow. |
 | P3 | 0 | No P3 recorded. |
 
 ## Decision Criteria Result
@@ -70,8 +71,9 @@ Required limitation observed exactly:
 
 ## Conditions
 
-- Treat the run as a controlled synthetic local/API-driven trial with headless browser mobile smoke, not as a fully manual human-clicked browser rehearsal.
-- Before a larger human-observed mock exercise, optionally run a manual all-8 browser UI pass with separate browser profiles or deliberate reloads between invitation links.
+- Treat the run as a controlled synthetic local trial with browser UI automation for participant submissions and local API support for setup, curation, staff support response, final release, and exports.
+- Treat the 320px final closeout horizontal overflow as a P2 condition before broader mobile/browser testing.
+- Before a larger human-observed mock exercise, optionally repeat the pass with a human operator and separate browser profiles or deliberate reloads between invitation links.
 - Keep using synthetic data only.
 - Keep external AI disabled unless a future synthetic-only protocol explicitly configures and discloses it.
 
@@ -79,11 +81,11 @@ Required limitation observed exactly:
 
 | Package type | Package ID | Classification | Scan failures | Scan warnings | Result |
 | --- | --- | --- | ---: | ---: | --- |
-| `final-delphi-report` | `bfc26b65-1c29-4fc2-95e4-9e5e795c9f77` | deidentified_research_report | 0 | 0 | PASS |
-| `anonymized-response-dataset` | `c72b0bb7-314f-4516-9483-0c4ace7e8711` | deidentified_research_report | 0 | 0 | PASS |
-| `audit-package` | `faaa01f4-e592-480d-8ef0-6db476d20a3d` | restricted_internal_admin_audit | 0 | 16 | PASS WITH RESTRICTED WARNINGS |
-| `provenance-bundle` | `ae0966bc-1994-4c1d-8557-fcb7f924778a` | deidentified_research_report | 0 | 0 | PASS |
-| `complete-archive` | `3ab752c0-b430-4ccf-9d38-657bb5784ad0` | complete_restricted_archive | 0 | 35 | PASS WITH RESTRICTED WARNINGS |
+| `final-delphi-report` | `c48cf948-7d4a-417c-b3d2-0e80a1fe8360` | deidentified_research_report | 0 | 0 | PASS |
+| `anonymized-response-dataset` | `539c7ec5-6bb1-4514-9d84-1c6d6dbdd367` | deidentified_research_report | 0 | 0 | PASS |
+| `audit-package` | `a6d27173-ab7a-4330-9a5b-bd2b5c720c7e` | restricted_internal_admin_audit | 0 | 17 | PASS WITH RESTRICTED WARNINGS |
+| `provenance-bundle` | `4ba988da-5aae-4024-8f81-dd9226bd090c` | deidentified_research_report | 0 | 0 | PASS |
+| `complete-archive` | `6ff98504-f84b-4d5a-bbec-0608826887f4` | complete_restricted_archive | 0 | 35 | PASS WITH RESTRICTED WARNINGS |
 
 Restricted warning interpretation: warnings in `audit-package` and `complete-archive` are acceptable only because those packages are clearly classified as restricted/internal and not safe for de-identified research/report sharing.
 

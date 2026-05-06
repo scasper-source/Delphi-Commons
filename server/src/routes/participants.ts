@@ -67,6 +67,7 @@ import {
   upsertParticipantDraft,
 } from "../stores/participantDraftStore.js";
 import { getFinalResultSnapshot } from "../stores/finalResultStore.js";
+import { redactExportText, redactExportValue } from "../exports/exportPrivacy.js";
 import {
   createParticipantIssue,
   listParticipantIssues,
@@ -971,9 +972,9 @@ export async function participantsRoutes(app: FastifyInstance) {
         const item = getItem(payload.item_id);
         return [{
           item_id: payload.item_id,
-          item_text: item?.text ?? "",
+          item_text: redactExportText(item?.text ?? ""),
           rating: payload.rating,
-          rationale_text: typeof payload.rationale_text === "string" ? payload.rationale_text : "",
+          rationale_text: typeof payload.rationale_text === "string" ? redactExportText(payload.rationale_text) : "",
           submitted_at: response.created_at,
         }];
       }
@@ -987,7 +988,7 @@ export async function participantsRoutes(app: FastifyInstance) {
       details: { studyId: invitation.study_id, versionId: invitation.version_id },
     });
 
-    return reply.send({ snapshot, my_final_responses: myFinalResponses });
+    return reply.send({ snapshot: redactExportValue(snapshot), my_final_responses: myFinalResponses });
   });
 
   app.put("/participant/invitation/rounds/:roundNumber/draft", async (req, reply) => {
