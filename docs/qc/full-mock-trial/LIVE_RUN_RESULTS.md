@@ -2,11 +2,11 @@
 
 Run date: 2026-05-05
 
-Live execution status: CONTROLLED SYNTHETIC LOCAL RUN COMPLETED WITH CONDITIONS.
+Live execution status: CONTROLLED SYNTHETIC LOCAL RERUN COMPLETED WITH CONDITIONS.
 
 Current decision: GO WITH CONDITIONS for controlled synthetic mock testing only.
 
-The run completed an 8-synthetic-participant, 4-round Classical Delphi lifecycle through local development APIs and participant invitation endpoints. It also completed headless browser smoke checks at 320px, 390px, and 414px for participant and staff views. It did not complete a manual all-8 browser UI submission pass.
+This rerun completed the synthetic 8-participant, 4-round lifecycle through local APIs and produced fresh evidence. A prior `fetch failed` attempt was reproduced as an environment/startup issue when backend/frontend were not running, not as a confirmed product defect.
 
 ## Boundary
 
@@ -16,10 +16,14 @@ Synthetic data only. Local development only. No production deployment. No real h
 
 ## Evidence Artifact
 
-Primary artifact:
+Primary artifact for this rerun:
 
-- `docs/qc/full-mock-trial/artifacts/full-mock-trial-run-2026-05-05T20-58-23-780Z.json`
+- `docs/qc/full-mock-trial/artifacts/full-mock-trial-run-2026-05-05T21-34-02-906Z.json`
 - `docs/qc/full-mock-trial/artifacts/full-mock-trial-run-latest.json`
+
+Prior blocked attempt (environment/startup):
+
+- `docs/qc/full-mock-trial/artifacts/full-mock-trial-run-2026-05-05T21-28-25-629Z-failed.json`
 
 Mobile screenshots:
 
@@ -119,9 +123,9 @@ Required limitation found exactly:
 
 | Severity | Count | Notes |
 | --- | ---: | --- |
-| P0 | 0 | No P0 remains from the run. |
+| P0 | 0 | No P0 remains from the rerun. |
 | P1 | 0 | No P1 recorded. |
-| P2 | 2 | Browser scope condition: manual all-8 browser UI submission pass not run. Participant mobile smoke also showed stale method/round-count copy for the 4-round Classical Delphi run. |
+| P2 | 2 | Browser scope condition: manual all-8 browser UI submission pass not run; headless smoke had NOT RUN entries where no supported headless browser executable was available. |
 | P3 | 0 | No P3 recorded. |
 
 ## Decision
