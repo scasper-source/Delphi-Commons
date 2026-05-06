@@ -34,7 +34,13 @@ Regression test:
 
 - `server/tests/zzExportPrivacy.test.mjs`
 
-Live rerun command:
+Latest browser rerun command:
+
+```powershell
+node docs\qc\full-mock-trial\run_manual_browser_mock_trial_local.mjs
+```
+
+Earlier API-driven rerun command:
 
 ```powershell
 node docs\qc\full-mock-trial\run_full_mock_trial_local.mjs
@@ -68,18 +74,23 @@ UUID handling:
 
 ## Live Rerun Package Evidence
 
-Evidence artifact:
+Latest browser UI evidence artifact:
+
+- `docs/qc/full-mock-trial/artifacts/manual-browser-mock-trial-run-2026-05-06T17-13-46-275Z.json`
+- `docs/qc/full-mock-trial/artifacts/manual-browser-mock-trial-run-latest.json`
+
+Earlier API-driven evidence artifact:
 
 - `docs/qc/full-mock-trial/artifacts/full-mock-trial-run-2026-05-05T17-11-47-924Z.json`
 - `docs/qc/full-mock-trial/artifacts/full-mock-trial-run-latest.json`
 
 | Package type | Package ID | Classification | Files scanned | Failures | Warnings | Required limitation | Result |
 | --- | --- | --- | ---: | ---: | ---: | --- | --- |
-| `final-delphi-report` | `bfc26b65-1c29-4fc2-95e4-9e5e795c9f77` | deidentified_research_report | 9 | 0 | 0 | PASS | PASS |
-| `anonymized-response-dataset` | `c72b0bb7-314f-4516-9483-0c4ace7e8711` | deidentified_research_report | 12 | 0 | 0 | PASS | PASS |
-| `audit-package` | `faaa01f4-e592-480d-8ef0-6db476d20a3d` | restricted_internal_admin_audit | 10 | 0 | 16 | PASS | PASS WITH RESTRICTED WARNINGS |
-| `provenance-bundle` | `ae0966bc-1994-4c1d-8557-fcb7f924778a` | deidentified_research_report | 10 | 0 | 0 | PASS | PASS |
-| `complete-archive` | `3ab752c0-b430-4ccf-9d38-657bb5784ad0` | complete_restricted_archive | 12 | 0 | 35 | PASS | PASS WITH RESTRICTED WARNINGS |
+| `final-delphi-report` | `c48cf948-7d4a-417c-b3d2-0e80a1fe8360` | deidentified_research_report | 9 | 0 | 0 | PASS | PASS |
+| `anonymized-response-dataset` | `539c7ec5-6bb1-4514-9d84-1c6d6dbdd367` | deidentified_research_report | 14 | 0 | 0 | PASS | PASS |
+| `audit-package` | `a6d27173-ab7a-4330-9a5b-bd2b5c720c7e` | restricted_internal_admin_audit | 10 | 0 | 17 | PASS | PASS WITH RESTRICTED WARNINGS |
+| `provenance-bundle` | `4ba988da-5aae-4024-8f81-dd9226bd090c` | deidentified_research_report | 10 | 0 | 0 | PASS | PASS |
+| `complete-archive` | `6ff98504-f84b-4d5a-bbec-0608826887f4` | complete_restricted_archive | 12 | 0 | 35 | PASS | PASS WITH RESTRICTED WARNINGS |
 
 Restricted warning interpretation:
 
@@ -100,6 +111,12 @@ Support-loop export privacy:
 
 - Standard de-identified export packages do not include support/issue-note identity linkages.
 - Restricted/internal packages declare whether support content is included.
+
+Participant final closeout privacy:
+
+- A 2026-05-06 browser run found participant-facing final closeout item text could expose synthetic participant labels from participant-authored Round 1 text.
+- The closeout path now applies the same obvious direct-identifier redaction used by de-identified exports to final-result item wording and participant final-response item/rationale text.
+- The latest browser rerun observed no `SYN-P001` through `SYN-P008` labels or `example.test` emails in inspected final closeout DOM text at 320px, 390px, or 414px.
 
 ## Result Summary
 

@@ -1,8 +1,8 @@
 # Defect Log
 
-Live execution status: CONTROLLED SYNTHETIC LOCAL RERUN COMPLETED WITH CONDITIONS.
+Live execution status: CONTROLLED SYNTHETIC LOCAL BROWSER UI RERUN COMPLETED WITH CONDITIONS.
 
-Current decision impact: no P0/P1 defects remain for the successful rerun. The prior `fetch failed` attempt is classified as an environment/startup blocked attempt (backend/frontend not started), not a confirmed product P0. Manual all-8 browser UI submission remains NOT RUN. FMT-P2-MOBILE-METHOD-COPY remains remediated in code/tests pending explicit manual browser re-evidence.
+Current decision impact: no P0/P1 defects remain. The run is GO WITH CONDITIONS for controlled synthetic mock testing only. The latest pass completed all 8 synthetic participant submissions for Rounds 1-4 through local Microsoft Edge browser UI automation. The prior `fetch failed` attempt remains classified as an environment/startup blocked attempt, not a confirmed product P0. The remaining open P2 condition is a 320px mobile horizontal-overflow finding in the final participant closeout view. This pass was automated and local; it is not production, human-subjects, IRB, or accessibility-conformance evidence.
 
 ## Severity Definitions
 
@@ -57,25 +57,30 @@ P3 backlog:
 | ID | Severity | Area | Status | Evidence | Workaround | Notes |
 | --- | --- | --- | --- | --- | --- | --- |
 | FMT-2026-05-05-P0-001 | P0 | Export privacy | REMEDIATED | Original scan found synthetic identifier/raw participant ID hits in generated export files. Rerun de-identified packages had zero scan failures. | Fixed by export classification metadata, de-identified free-text redaction, restricted/internal package separation, and regression privacy scanning. | Root cause: standard exports could carry participant self-identifiers in free text, and internal audit/archive content was not clearly separated from de-identified exports. |
-| FMT-P2-BROWSER-SCOPE | P2 | Browser evidence scope | OPEN CONDITION | The complete 8-participant, 4-round lifecycle was API-driven through local invitation endpoints in the prior successful run. Manual all-8 browser UI submission pass remains not performed. | For a later human-observed rehearsal, run all participant flows manually or with browser UI automation using isolated profiles/reloads. | Does not block controlled synthetic mock testing; it does prevent claiming a manual all-8 browser pass. |
-| FMT-ENV-2026-05-05-FETCH-STARTUP | P2 | Runner startup precondition | BLOCKED ATTEMPT (NOT PRODUCT DEFECT) | `docs/qc/full-mock-trial/artifacts/full-mock-trial-run-2026-05-05T21-28-25-629Z-failed.json` captured `fetch failed` when services were not up; a subsequent rerun with backend health OK and frontend running succeeded (`...21-34-02-906Z.json`). | Start backend (`server/dist/index.js`) and verify `/health` before running; start frontend for browser smoke capture. | Reclassified from temporary P0 framing to environment/startup evidence issue. |
-| FMT-P2-MOBILE-METHOD-COPY | P2 | Participant mobile smoke copy | REMEDIATED (CODE/TEST), BROWSER EVIDENCE PENDING | Prior participant mobile smoke for the 4-round Classical Delphi synthetic run showed stale text: "This study is planned for up to 3 rounds" and a "Modified Delphi" badge. | Fixed in participant portal code by binding Study Time Commitment copy to the active invitation-backed study version, with `workflow.version` fallback and neutral fallback copy when metadata is missing. | Root cause: participant portal copy read wizard defaults instead of active study-version data. Verification: `app/tests/policyGates.test.mjs` covers active-version method/round copy behavior and guards against wizard-default leakage. 2026-05-06 rerun still lacks manual/mobile browser re-evidence. |
-| FMT-2026-05-06-MANUAL-BROWSER-GAP | P2 | Browser evidence scope | OPEN CONDITION | 2026-05-06 rerun succeeded for API-driven lifecycle but did not perform manual all-8 browser UI submissions. | Manual participant-by-participant browser run (or stable UI automation) must be executed and evidenced before claiming full browser pass completion. | Keeps readiness evidence gap open for manual browser submission coverage. |
-| FMT-2026-05-06-MOBILE-NOT-RUN | P2 | Mobile-width browser pass | OPEN CONDITION | 2026-05-06 artifact recorded 320/390/414 smoke as NOT_RUN because no supported headless browser executable was found. | Install/configure supported browser executable and rerun mobile checks in controlled environment. | This is an evidence limitation, not an API lifecycle failure. |
+| FMT-P2-BROWSER-SCOPE | P2 | Browser evidence scope | CLOSED FOR BROWSER AUTOMATION | 2026-05-06 browser UI automation completed 8/8 synthetic participants through Rounds 1-4. | For a later human-observed rehearsal, repeat the pass manually with separate browser profiles or deliberate reloads. | The participant submission gap is closed for local browser automation; it is still not a human-observed manual click-through. |
+| FMT-P2-MOBILE-METHOD-COPY | P2 | Participant mobile smoke copy | REMEDIATED | Earlier participant mobile smoke for a 4-round Classical Delphi run showed stale "3 rounds" / "Modified Delphi" text. The 2026-05-06 manual-browser pass showed "up to 4 rounds" and "Classic Delphi" in participant screenshots. | Fixed in participant portal code by binding Study Time Commitment copy to the active invitation-backed study version, with `workflow.version` fallback and neutral fallback copy when metadata is missing. | Root cause: participant portal copy read wizard defaults instead of active study-version data. Verification: `app/tests/policyGates.test.mjs` plus browser evidence in `manual-browser-mock-trial-run-2026-05-06T17-13-46-275Z.json`. |
+| FMT-BROWSER-P1-MOBILE-CLOSEOUT-NAV | P1 | Participant mobile closeout navigation | REMEDIATED | During the browser pass, 320/390/414 participant final checks could not reach Closeout because participant-mode mobile hides the sidebar and the reference bar did not include Closeout. | Added Participant Portal and Closeout to the panelist reference bar; rerun showed required limitation language visible at 320/390/414. | Root cause: mobile participant navigation exposed About/Glossary only while Closeout was allowed for panelists. |
+| FMT-BROWSER-P0-FINAL-CLOSEOUT-IDENTIFIER-LEAK | P0 | Participant final closeout privacy | REMEDIATED | `manual-browser-mock-trial-run-2026-05-06T17-01-49-423Z.json` found synthetic labels in participant final closeout item text. | Redacted final-result item wording and participant final-response item/rationale text using the existing export privacy redaction rules; rerun artifact `manual-browser-mock-trial-run-2026-05-06T17-13-46-275Z.json` has P0=0 and no synthetic labels/emails in inspected final closeout DOM text. | Root cause: participant-facing final closeout reused raw materialized item text and final-response rationale text from synthetic participant-authored fields; export redaction existed but closeout redaction did not. |
+| FMT-BROWSER-P2-MOBILE-OVERFLOW | P2 | Mobile final closeout layout | OPEN CONDITION | Latest 320px final closeout check reported horizontal overflow while 390px and 414px passed. Required limitation was visible and identifiers were redacted. | Continue controlled synthetic testing with the condition documented; before broader mobile/browser testing, tighten mobile wrapping for final closeout cards and charts. | Non-blocking mobile layout issue; no workflow block or privacy leak observed after remediation. |
 
 ## Live Rerun Evidence
 
-Primary artifact:
+Latest browser UI artifact:
 
+- `docs/qc/full-mock-trial/artifacts/manual-browser-mock-trial-run-2026-05-06T17-13-46-275Z.json`
+- `docs/qc/full-mock-trial/artifacts/manual-browser-mock-trial-run-latest.json`
+
+Historical API-driven artifacts:
+
+- `docs/qc/full-mock-trial/artifacts/full-mock-trial-run-2026-05-06T14-18-57-949Z.json`
 - `docs/qc/full-mock-trial/artifacts/full-mock-trial-run-2026-05-05T21-34-02-906Z.json`
-- `docs/qc/full-mock-trial/artifacts/full-mock-trial-run-latest.json`
 - prior blocked attempt: `docs/qc/full-mock-trial/artifacts/full-mock-trial-run-2026-05-05T21-28-25-629Z-failed.json`
 
 Live rerun status:
 
 - P0: 0.
 - P1: 0.
-- P2: 2.
+- P2: 1.
 - P3: 0.
 
 Lifecycle:
@@ -88,14 +93,17 @@ Lifecycle:
 - Support loop completed end to end.
 - Consensus rule change attempts after activation, Round 2, and Round 3 were blocked.
 
-Mobile/headless browser smoke:
+Browser/mobile evidence:
 
-- 320px participant/staff views: PASS.
-- 390px participant/staff views: PASS.
-- 414px participant/staff views: PASS.
-- No horizontal overflow observed in inspected views.
-- No synthetic participant labels or `example.test` emails observed in inspected DOM text.
-- Stale method/round-count text was observed in participant mobile smoke and recorded as P2.
+- 8/8 synthetic participants submitted Round 1 through local Edge browser UI automation.
+- 8/8 synthetic participants submitted Round 2 through local Edge browser UI automation.
+- 8/8 synthetic participants submitted Round 3 through local Edge browser UI automation.
+- 8/8 synthetic participants submitted Round 4 through local Edge browser UI automation.
+- 320px participant final closeout: PASS WITH P2 layout condition.
+- 390px participant final closeout: PASS.
+- 414px participant final closeout: PASS.
+- Required limitation language visible in final participant closeout at 320px, 390px, and 414px.
+- No synthetic participant labels or `example.test` emails observed in inspected final closeout DOM text after remediation.
 
 ## Export Privacy Remediation Evidence
 
@@ -125,8 +133,8 @@ These should continue to be rechecked during later mock testing.
 
 | Watch item | Prior classification | Future check |
 | --- | --- | --- |
-| Manual all-8 browser UI pass not completed | P2 evidence scope condition | Complete manual/in-app browser pass if the next rehearsal requires human-observed UI evidence |
-| Participant mobile smoke shows stale method/round-count copy | P2 confusing copy | Correct participant time-commitment/method badge copy so it reflects the active study version |
+| Human-observed all-8 browser click-through not completed | Evidence scope note | Optional if a future rehearsal requires non-automated operator evidence |
+| 320px final closeout horizontal overflow | P2 mobile layout condition | Tighten final closeout wrapping/charts before broader mobile/browser testing |
 | Final report action may be available before terminal round close while UI marks report stage interim | P2 labeling/workflow condition | Confirm Round 4 terminal close before treating final report/export as final |
 | Same-tab switching between invitation links may briefly retain prior participant state until reload | P3 friction | Use separate browser profiles/incognito sessions or reload after switching links |
 | Continue watching for broken buttons/textboxes and inconsistent smoke-test language | Monitoring item | Record as P0/P1/P2/P3 depending on impact |
@@ -137,5 +145,5 @@ These should continue to be rechecked during later mock testing.
 | --- | ---: | --- |
 | P0 | 0 | No P0 recorded in the successful rerun |
 | P1 | 0 | No P1 recorded |
-| P2 | 2 | Browser evidence scope condition; headless smoke NOT RUN where executable unavailable |
+| P2 | 1 | 320px final closeout horizontal overflow condition |
 | P3 | 0 | No P3 recorded |

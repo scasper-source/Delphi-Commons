@@ -16,7 +16,7 @@ Latest rehearsal evidence: [Phase 10 rehearsal results](./PHASE_10_REHEARSAL_RES
 | Procedures documented | COMPLETE | Non-production deployment, environment, migration, backup/restore, incident response, escalation, admin onboarding, disclosure, dry-run, and GitHub handoff are documented. |
 | Commands identified | COMPLETE | [Command inventory](./command-inventory.md) is based on `app/package.json`, `server/package.json`, source routes, and existing QC scripts. |
 | Fresh deploy from docs | PARTIAL | Install/build commands passed, backend health returned development from disposable runtime, and frontend smoke returned HTTP 200 on an alternate port. A true fresh clone and retained `npm.cmd start` terminal rehearsal remain unperformed. |
-| Full test-study dry run performed for Phase 10 | PARTIAL | Backend road-test lifecycle, exports, backup/restore, invitations, and AI gates passed in disposable runtime. A 2026-05-05 rerun completed the 8-participant, 4-round API-driven synthetic lifecycle with fresh artifact evidence after confirming backend health and starting required local services. A prior `fetch failed` attempt was an environment/startup blocked attempt. A 2026-05-06 rerun again completed 8/8 through Round 4 API flows with backend/frontend health confirmed and fresh artifact output. Full manual all-8 browser UI submission pass remains NOT RUN. Mobile-width browser smoke for 320/390/414 was NOT RUN in that environment because no supported headless browser executable was available. The participant mobile method/round-count defect is remediated in code/tests, with manual browser re-evidence still pending. |
+| Full test-study dry run performed for Phase 10 | PARTIAL | Backend road-test lifecycle, exports, backup/restore, invitations, and AI gates passed in disposable runtime. A 2026-05-06 API-driven rerun completed 8/8 through Round 4 with backend/frontend health confirmed and fresh artifact output. A 2026-05-06 local browser UI automation pass completed 8 synthetic participants through 4 Classical Delphi rounds with export privacy scan failures at 0. Study setup, curation, round progression, staff support response, final release, and exports still used local APIs, and the pass was automated rather than human-observed. A 320px final closeout horizontal-overflow condition remains open. |
 | Migration/init rehearsal performed for Phase 10 | PASS | Disposable SQLite runtime initialized and migrations were exercised by backend road test and storage checks. No standalone migration CLI exists. |
 | Backup creation rehearsal performed for Phase 10 | PASS | Backend road test created backup `c92a0f49-eff9-44ab-8a34-b420fa4a1352` in disposable runtime. |
 | Restore rehearsal performed for Phase 10 | PASS | Backend road test restored the disposable backup and verified audit/data integrity. |
@@ -39,7 +39,8 @@ Phase 10 documentation is prepared and the first synthetic/dev rehearsal is part
 
 - Run a true fresh-clone or clean-checkout rehearsal.
 - Run a retained backend/frontend process rehearsal using the documented commands.
-- Execute and record a full manual browser dry run if operational readiness depends on browser operations.
+- Execute and record a human-observed manual browser dry run if operational readiness depends on non-automated operator evidence.
+- Resolve or accept the documented 320px final closeout horizontal-overflow condition before broader mobile/browser readiness claims.
 - Run an incident response drill using the runbooks in this package.
 - Record commands, operator, date/time, environment, defects, and artifacts.
 - Keep all evidence synthetic or low-risk unless separate human/institutional approvals exist.
