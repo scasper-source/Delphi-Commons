@@ -56,6 +56,7 @@ Files:
 - `FULL_MOCK_TRIAL_SCRIPT.md` - end-to-end live script, observed API-driven results, and decision criteria.
 - `SYNTHETIC_STUDY_SETUP.md` - synthetic study topic, roles, fields, and participant data.
 - `PARTICIPANT_RUNBOOK.md` - participant-specific task guide and mobile checks.
+- `WINDOWS_FOCUSED_MOBILE_EVIDENCE_RUNBOOK.md` - focused Windows runbook for 320px, 390px, and 414px final closeout/mobile evidence.
 - `FOUR_ROUND_CLASSICAL_DELPHI_RUNBOOK.md` - round-by-round owner/steward workflow.
 - `SIMULATED_AI_REHEARSAL.md` - deterministic AI fixture plan and AI boundary checks.
 - `LIVE_RUN_RESULTS.md` - API-driven local run evidence and decision summary.

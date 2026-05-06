@@ -1,0 +1,301 @@
+# Windows Focused Mobile Evidence Runbook
+
+Status: PREPARED / NOT RUN.
+
+Boundary statement: "Delphi Commons is suitable only for controlled mock-trial use with synthetic or low-risk test data in local, development, or staging environments. It is not approved or ready for production deployment or real human-subjects research."
+
+## Purpose
+
+Use this runbook to capture focused Windows evidence for the participant mobile experience after the manual/browser mock-trial evidence branch has been merged into the clean GitHub repository.
+
+The focused target is the participant final closeout and mobile-width workflow at:
+
+- 320px width
+- 390px width
+- 414px width
+
+The current evidence question is whether the prior 320px final closeout horizontal-overflow condition remains, has been remediated, or has changed severity.
+
+This runbook does not authorize production deployment, real human-subjects research, IRB launch, or use of sensitive participant data.
+
+## Scope
+
+In scope:
+
+- Clean GitHub checkout of `https://github.com/scasper-source/Delphi-Commons.git`.
+- Local Windows development environment only.
+- Synthetic data only.
+- Microsoft Edge or Chrome local browser surface.
+- Focused mobile-width evidence at 320px, 390px, and 414px.
+- Final closeout checks for required limitation language, redaction, navigation, layout, and screenshots.
+- Export privacy scan result from the local runner where available.
+
+Out of scope:
+
+- Production deployment.
+- Real participant data.
+- Human-subjects research.
+- IRB launch.
+- Sensitive data.
+- Live external AI calls.
+- Legal, security, accessibility, or WCAG certification claims.
+
+## Preconditions
+
+1. Use the clean GitHub repository, not the older local Dropbox history.
+2. Confirm the latest GitHub `main` includes the manual browser evidence and the mobile closeout remediation branch.
+3. Use only synthetic/local data.
+4. Confirm no real `.env` secrets, production credentials, real participant exports, or institutional data are present.
+5. Confirm Node.js and npm are available on Windows.
+6. Confirm Microsoft Edge or Chrome is installed.
+7. Close unrelated browser sessions if needed to reduce invitation/session confusion.
+
+Recommended starting commands from the clean GitHub checkout:
+
+```powershell
+git status --short
+git branch --show-current
+git rev-parse --short HEAD
+git pull --ff-only origin main
+```
+
+Record the resulting branch and commit in the evidence table below.
+
+## Disposable Runtime Setup
+
+Use local/dev data only. If the app supports disposable paths in the current checkout, prefer setting them before starting the server:
+
+```powershell
+$env:EDELPHI_DATA_DIR = "$env:TEMP\delphi-commons-mobile-evidence-data"
+$env:EDELPHI_AUDIT_DIR = "$env:TEMP\delphi-commons-mobile-evidence-audit"
+$env:EDELPHI_BACKUP_DIR = "$env:TEMP\delphi-commons-mobile-evidence-backups"
+```
+
+Do not overwrite current developer, staging, production, or persistent local data.
+
+If disposable paths are not supported in the current code path, record that as `NOT FOUND` rather than inventing support.
+
+## Build And Test Preflight
+
+Run the canonical commands from the GitHub checkout:
+
+```powershell
+cd app
+npm.cmd install
+npm.cmd run build
+npm.cmd test
+
+cd ..\server
+npm.cmd install
+npm.cmd run build
+npm.cmd test
+```
+
+Record results as `PASS`, `FAIL`, `BLOCKED`, or `NOT RUN`.
+
+For a docs-only evidence pass, a failing build/test should stop the run unless the failure is clearly unrelated and documented.
+
+## Start Local Services
+
+From the GitHub checkout, start the backend and frontend in separate terminals or hidden processes.
+
+Backend:
+
+```powershell
+cd server
+npm.cmd start
+```
+
+Frontend:
+
+```powershell
+cd app
+npm.cmd run dev -- --host 127.0.0.1 --port 5173
+```
+
+Health checks:
+
+```powershell
+Invoke-WebRequest -UseBasicParsing http://127.0.0.1:3001/health
+Invoke-WebRequest -UseBasicParsing http://127.0.0.1:5173/
+```
+
+Expected:
+
+- Backend health returns `status: ok`.
+- Frontend returns HTTP 200 or equivalent successful response.
+- Browser URL is `http://127.0.0.1:5173/`.
+
+## Automated Evidence Path
+
+If local browser automation is available, run the existing controlled synthetic runner:
+
+```powershell
+node docs\qc\full-mock-trial\run_manual_browser_mock_trial_local.mjs
+```
+
+Expected outputs:
+
+- Timestamped JSON artifact under `docs/qc/full-mock-trial/artifacts/`.
+- Refreshed `manual-browser-mock-trial-run-latest.json`.
+- Mobile screenshots for 320px, 390px, and 414px where supported.
+- Export privacy scan result.
+
+This path may run the broader 8-participant browser UI automation flow, not only the final closeout check. Treat the result as local synthetic evidence only.
+
+## Manual Focused Browser Check
+
+Use this path when a human operator needs to visually confirm the mobile result after the automated runner or when automation is unavailable.
+
+1. Open `http://127.0.0.1:5173/` in Microsoft Edge or Chrome.
+2. Open the latest synthetic participant invitation link generated by the runner, or use a known synthetic invitation link from the latest local artifact.
+3. Use DevTools responsive/device mode.
+4. Set viewport width to 320px.
+5. Navigate to Participant Portal and Closeout.
+6. Verify the final closeout view.
+7. Repeat at 390px.
+8. Repeat at 414px.
+
+For each width, verify:
+
+- Participant can reach `Participant Portal`.
+- Participant can reach `Closeout`.
+- Required limitation language appears exactly:
+
+```text
+Consensus indicates agreement among this panel; it does not establish correctness.
+```
+
+- No synthetic participant labels appear in inspected closeout text:
+  - `SYN-P001` through `SYN-P008`.
+- No `example.test` emails appear in inspected closeout text.
+- No raw participant UUIDs or participant-linkable IDs appear in inspected closeout text.
+- No script-like or unsafe HTML is executed.
+- No participant identity-response mapping is visible.
+- No wording frames consensus as truth or correctness.
+- No wording pressures the participant to conform.
+- Buttons and navigation are visible and usable.
+- Text wraps inside the viewport.
+- No horizontal scrolling is required for ordinary reading.
+- Charts/tables/cards do not force page-level horizontal overflow.
+- Final status/closeout text is readable without zooming.
+
+Screenshot requirements:
+
+- Capture one screenshot at 320px.
+- Capture one screenshot at 390px.
+- Capture one screenshot at 414px.
+- Store screenshots under `docs/qc/full-mock-trial/artifacts/` using a timestamped name such as:
+  - `focused-mobile-closeout-YYYY-MM-DDTHH-MM-SS-320.png`
+  - `focused-mobile-closeout-YYYY-MM-DDTHH-MM-SS-390.png`
+  - `focused-mobile-closeout-YYYY-MM-DDTHH-MM-SS-414.png`
+
+Do not include screenshots containing real data, secrets, production URLs, real participant names, real emails, or private institutional information.
+
+## Evidence Table
+
+Fill this table during execution. Do not change `NOT RUN` to `PASS` without actual evidence.
+
+| Field | Value |
+| --- | --- |
+| Operator | NOT RUN |
+| Date/time local | NOT RUN |
+| Date/time UTC | NOT RUN |
+| GitHub repository | `https://github.com/scasper-source/Delphi-Commons.git` |
+| Branch | NOT RUN |
+| Commit hash | NOT RUN |
+| Windows version | NOT RUN |
+| Browser | NOT RUN |
+| Node version | NOT RUN |
+| npm version | NOT RUN |
+| Backend URL | `http://127.0.0.1:3001` |
+| Frontend URL | `http://127.0.0.1:5173/` |
+| Disposable data dir used | NOT RUN |
+| Disposable audit dir used | NOT RUN |
+| Disposable backup dir used | NOT RUN |
+| Backend health | NOT RUN |
+| Frontend health | NOT RUN |
+| App build | NOT RUN |
+| App tests | NOT RUN |
+| Server build | NOT RUN |
+| Server tests | NOT RUN |
+| Runner command | NOT RUN |
+| Runner artifact path | NOT RUN |
+| Export privacy scan | NOT RUN |
+| 320px screenshot path | NOT RUN |
+| 390px screenshot path | NOT RUN |
+| 414px screenshot path | NOT RUN |
+
+## Focused Mobile Results Table
+
+| Check | 320px | 390px | 414px | Notes |
+| --- | --- | --- | --- | --- |
+| Participant Portal reachable | NOT RUN | NOT RUN | NOT RUN |  |
+| Closeout reachable | NOT RUN | NOT RUN | NOT RUN |  |
+| Required limitation visible exactly | NOT RUN | NOT RUN | NOT RUN |  |
+| No synthetic labels visible | NOT RUN | NOT RUN | NOT RUN |  |
+| No `example.test` emails visible | NOT RUN | NOT RUN | NOT RUN |  |
+| No raw participant-linkable IDs visible | NOT RUN | NOT RUN | NOT RUN |  |
+| No identity-response mapping visible | NOT RUN | NOT RUN | NOT RUN |  |
+| No consensus-as-truth language | NOT RUN | NOT RUN | NOT RUN |  |
+| No coercive convergence language | NOT RUN | NOT RUN | NOT RUN |  |
+| No script/unsafe HTML execution | NOT RUN | NOT RUN | NOT RUN |  |
+| No page-level horizontal overflow | NOT RUN | NOT RUN | NOT RUN |  |
+| Buttons/navigation usable | NOT RUN | NOT RUN | NOT RUN |  |
+| Text readable without zoom | NOT RUN | NOT RUN | NOT RUN |  |
+
+## Decision Rules
+
+Classify findings using the full mock-trial severity rubric.
+
+P0 examples:
+
+- Participant identity-response mapping visible.
+- Raw participant identifiers visible in participant closeout.
+- Required limitation language missing from final closeout/report where required.
+- Consensus framed as truth/correctness.
+- Coercive convergence language appears participant-facing.
+- Malicious content executes as script.
+
+P1 examples:
+
+- Participant cannot reach Closeout at a tested mobile width.
+- Mobile workflow blocks final participant completion.
+- Privacy boundary uncertain in participant-facing final closeout.
+
+P2 examples:
+
+- Non-blocking horizontal overflow.
+- Text wrapping/layout issue that does not block reading or leak data.
+- Minor mobile awkwardness with safe workaround.
+
+P3 examples:
+
+- Cosmetic polish.
+- Minor wording improvement.
+
+## Documentation Updates After Execution
+
+After the focused mobile run is actually performed, update:
+
+- `docs/qc/full-mock-trial/LIVE_RUN_RESULTS.md`
+- `docs/qc/full-mock-trial/DEFECT_LOG.md`
+- `docs/qc/full-mock-trial/GO_NO_GO_FOR_CONTROLLED_MOCK_TRIAL.md`
+- `docs/operations/phase-10/PHASE_10_READINESS_STATUS.md`, if Phase 10 readiness evidence changes
+
+Only close `FMT-BROWSER-P2-MOBILE-OVERFLOW` if the new 320px evidence actually shows no blocking or non-blocking page-level horizontal overflow.
+
+If the issue remains but is non-blocking, keep it open as P2 or update the notes with fresh evidence.
+
+If the issue worsens into workflow blockage, privacy leakage, or inability to reach Closeout, reclassify according to severity.
+
+## Final Status Language
+
+Use one of these exact status patterns:
+
+- `Focused Windows mobile evidence NOT RUN.`
+- `Focused Windows mobile evidence PASS for controlled synthetic testing only.`
+- `Focused Windows mobile evidence PASS WITH CONDITIONS for controlled synthetic testing only.`
+- `Focused Windows mobile evidence NO-GO for continued controlled synthetic testing until listed P0/P1 issues are remediated.`
+
+Never use this runbook to claim production readiness, real human-subjects readiness, IRB readiness, legal compliance, completed accessibility conformance, or security certification.
