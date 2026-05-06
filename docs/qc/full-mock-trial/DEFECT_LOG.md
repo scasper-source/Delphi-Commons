@@ -2,7 +2,7 @@
 
 Live execution status: CONTROLLED SYNTHETIC LOCAL BROWSER UI RERUN COMPLETED WITH CONDITIONS.
 
-Current decision impact: no P0/P1 defects remain. The run is GO WITH CONDITIONS for controlled synthetic mock testing only. The latest pass completed all 8 synthetic participant submissions for Rounds 1-4 through local Microsoft Edge browser UI automation. The prior `fetch failed` attempt remains classified as an environment/startup blocked attempt, not a confirmed product P0. The remaining open P2 condition is still a 320px mobile horizontal-overflow finding in the final participant closeout view, confirmed again by the 2026-05-06 Windows focused mobile evidence rerun. This pass was automated and local; it is not production, human-subjects, IRB, or accessibility-conformance evidence.
+Current decision impact: no P0/P1/P2 defects remain in the latest controlled synthetic local browser evidence. The run is GO WITH CONDITIONS for controlled synthetic mock testing only. The latest pass completed all 8 synthetic participant submissions for Rounds 1-4 through local Microsoft Edge browser UI automation. The prior `fetch failed` attempt remains classified as an environment/startup blocked attempt, not a confirmed product P0. The prior 320px mobile horizontal-overflow finding in the final participant closeout view is remediated by the 2026-05-06 Windows focused mobile evidence rerun. This pass was automated and local; it is not production, human-subjects, IRB, or accessibility-conformance evidence.
 
 ## Severity Definitions
 
@@ -61,14 +61,15 @@ P3 backlog:
 | FMT-P2-MOBILE-METHOD-COPY | P2 | Participant mobile smoke copy | REMEDIATED | Earlier participant mobile smoke for a 4-round Classical Delphi run showed stale "3 rounds" / "Modified Delphi" text. The 2026-05-06 manual-browser pass showed "up to 4 rounds" and "Classic Delphi" in participant screenshots. | Fixed in participant portal code by binding Study Time Commitment copy to the active invitation-backed study version, with `workflow.version` fallback and neutral fallback copy when metadata is missing. | Root cause: participant portal copy read wizard defaults instead of active study-version data. Verification: `app/tests/policyGates.test.mjs` plus browser evidence in `manual-browser-mock-trial-run-2026-05-06T17-13-46-275Z.json`. |
 | FMT-BROWSER-P1-MOBILE-CLOSEOUT-NAV | P1 | Participant mobile closeout navigation | REMEDIATED | During the browser pass, 320/390/414 participant final checks could not reach Closeout because participant-mode mobile hides the sidebar and the reference bar did not include Closeout. | Added Participant Portal and Closeout to the panelist reference bar; rerun showed required limitation language visible at 320/390/414. | Root cause: mobile participant navigation exposed About/Glossary only while Closeout was allowed for panelists. |
 | FMT-BROWSER-P0-FINAL-CLOSEOUT-IDENTIFIER-LEAK | P0 | Participant final closeout privacy | REMEDIATED | `manual-browser-mock-trial-run-2026-05-06T17-01-49-423Z.json` found synthetic labels in participant final closeout item text. | Redacted final-result item wording and participant final-response item/rationale text using the existing export privacy redaction rules; rerun artifact `manual-browser-mock-trial-run-2026-05-06T17-13-46-275Z.json` has P0=0 and no synthetic labels/emails in inspected final closeout DOM text. | Root cause: participant-facing final closeout reused raw materialized item text and final-response rationale text from synthetic participant-authored fields; export redaction existed but closeout redaction did not. |
-| FMT-BROWSER-P2-MOBILE-OVERFLOW | P2 | Mobile final closeout layout | OPEN CONDITION | Focused Windows rerun artifact `manual-browser-mock-trial-run-2026-05-06T19-42-16-959Z.json` reported horizontal overflow at 320px; 390px and 414px passed. Screenshot paths: `focused-mobile-closeout-2026-05-06T19-42-16-959Z-320.png`, `focused-mobile-closeout-2026-05-06T19-42-16-959Z-390.png`, and `focused-mobile-closeout-2026-05-06T19-42-16-959Z-414.png`. | Continue controlled synthetic testing with the condition documented; before broader mobile/browser claims, inspect and tighten the final closeout content/cards region at 320px. | Non-blocking mobile layout issue; no workflow block, missing limitation language, or privacy leak observed. The runner reports page-level overflow but not an element-level attribution. |
+| FMT-BROWSER-P2-MOBILE-OVERFLOW | P2 | Mobile final closeout layout | REMEDIATED | Earlier focused Windows rerun artifact `manual-browser-mock-trial-run-2026-05-06T19-42-16-959Z.json` reported horizontal overflow at 320px. Remediation artifact `manual-browser-mock-trial-run-2026-05-06T21-15-16-308Z.json` reports 320px, 390px, and 414px final closeout checks all PASS with overflow delta 0. Screenshot paths: `focused-mobile-closeout-2026-05-06T21-15-16-308Z-320.png`, `focused-mobile-closeout-2026-05-06T21-15-16-308Z-390.png`, and `focused-mobile-closeout-2026-05-06T21-15-16-308Z-414.png`. | Fixed by adding global border-box sizing plus `min-width: 0` / `max-width: 100%` containment for panels inside the mobile grid. | Root cause: content-based minimum sizing for `.panel.wide` grid items inside `.screen-grid` caused an 11px page-level overflow at 320px. The evidence runner now records layout diagnostics for mobile closeout checks. |
 
 ## Live Rerun Evidence
 
 Latest browser UI artifact:
 
-- `docs/qc/full-mock-trial/artifacts/manual-browser-mock-trial-run-2026-05-06T19-42-16-959Z.json`
+- `docs/qc/full-mock-trial/artifacts/manual-browser-mock-trial-run-2026-05-06T21-15-16-308Z.json`
 - `docs/qc/full-mock-trial/artifacts/manual-browser-mock-trial-run-latest.json`
+- previous focused mobile artifact: `docs/qc/full-mock-trial/artifacts/manual-browser-mock-trial-run-2026-05-06T19-42-16-959Z.json`
 - previous browser artifact: `docs/qc/full-mock-trial/artifacts/manual-browser-mock-trial-run-2026-05-06T17-13-46-275Z.json`
 
 Historical API-driven artifacts:
@@ -81,7 +82,7 @@ Live rerun status:
 
 - P0: 0.
 - P1: 0.
-- P2: 1.
+- P2: 0.
 - P3: 0.
 
 Lifecycle:
@@ -100,7 +101,7 @@ Browser/mobile evidence:
 - 8/8 synthetic participants submitted Round 2 through local Edge browser UI automation.
 - 8/8 synthetic participants submitted Round 3 through local Edge browser UI automation.
 - 8/8 synthetic participants submitted Round 4 through local Edge browser UI automation.
-- 320px participant final closeout: PASS WITH P2 layout condition.
+- 320px participant final closeout: PASS.
 - 390px participant final closeout: PASS.
 - 414px participant final closeout: PASS.
 - Required limitation language visible in final participant closeout at 320px, 390px, and 414px.
@@ -122,11 +123,11 @@ Live rerun package evidence:
 
 | Package type | Package ID | Classification | Scan failures | Scan warnings | Safe for de-identified sharing |
 | --- | --- | --- | ---: | ---: | --- |
-| `final-delphi-report` | `abd662eb-8a7c-400f-8cf3-1e444004a2fb` | deidentified_research_report | 0 | 0 | yes |
-| `anonymized-response-dataset` | `6e4d561a-b048-460c-905a-411c774b51dc` | deidentified_research_report | 0 | 0 | yes |
-| `audit-package` | `8edeeee2-fb41-4aa1-b621-c940815aed89` | restricted_internal_admin_audit | 0 | 16 | no |
-| `provenance-bundle` | `8900b6fd-cf9c-459f-bf3c-f3668c9a0eb0` | deidentified_research_report | 0 | 0 | yes |
-| `complete-archive` | `cf51550b-d950-4ba4-9d56-568f107a89b1` | complete_restricted_archive | 0 | 35 | no |
+| `final-delphi-report` | `ebb790ce-8c34-432a-9ac5-a94f75e88c53` | deidentified_research_report | 0 | 0 | yes |
+| `anonymized-response-dataset` | `53e43718-3468-4fea-bacd-7fd240c06e9d` | deidentified_research_report | 0 | 0 | yes |
+| `audit-package` | `71abb86b-84bd-43b4-a8a4-b135892da89b` | restricted_internal_admin_audit | 0 | 17 | no |
+| `provenance-bundle` | `bea0ca43-08c2-47ce-985c-6b4727f9cdb8` | deidentified_research_report | 0 | 0 | yes |
+| `complete-archive` | `b34fef2b-de8b-4cc3-9503-ac6c65f613db` | complete_restricted_archive | 0 | 35 | no |
 
 ## Carryover Watch List
 
@@ -135,7 +136,7 @@ These should continue to be rechecked during later mock testing.
 | Watch item | Prior classification | Future check |
 | --- | --- | --- |
 | Human-observed all-8 browser click-through not completed | Evidence scope note | Optional if a future rehearsal requires non-automated operator evidence |
-| 320px final closeout horizontal overflow | P2 mobile layout condition | Tighten final closeout wrapping/charts before broader mobile/browser testing |
+| 320px final closeout horizontal overflow | Remediated P2 | Closed by `manual-browser-mock-trial-run-2026-05-06T21-15-16-308Z.json`; keep watching future mobile evidence for regression |
 | Final report action may be available before terminal round close while UI marks report stage interim | P2 labeling/workflow condition | Confirm Round 4 terminal close before treating final report/export as final |
 | Same-tab switching between invitation links may briefly retain prior participant state until reload | P3 friction | Use separate browser profiles/incognito sessions or reload after switching links |
 | Continue watching for broken buttons/textboxes and inconsistent smoke-test language | Monitoring item | Record as P0/P1/P2/P3 depending on impact |
@@ -146,5 +147,5 @@ These should continue to be rechecked during later mock testing.
 | --- | ---: | --- |
 | P0 | 0 | No P0 recorded in the successful rerun |
 | P1 | 0 | No P1 recorded |
-| P2 | 1 | 320px final closeout horizontal overflow condition confirmed by focused Windows rerun |
+| P2 | 0 | No P2 recorded in the latest focused Windows rerun |
 | P3 | 0 | No P3 recorded |

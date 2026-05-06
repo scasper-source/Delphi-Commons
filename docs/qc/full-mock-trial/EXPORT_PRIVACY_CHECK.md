@@ -76,7 +76,7 @@ UUID handling:
 
 Latest browser UI evidence artifact:
 
-- `docs/qc/full-mock-trial/artifacts/manual-browser-mock-trial-run-2026-05-06T19-42-16-959Z.json`
+- `docs/qc/full-mock-trial/artifacts/manual-browser-mock-trial-run-2026-05-06T21-15-16-308Z.json`
 - `docs/qc/full-mock-trial/artifacts/manual-browser-mock-trial-run-latest.json`
 
 Earlier API-driven evidence artifact:
@@ -86,11 +86,11 @@ Earlier API-driven evidence artifact:
 
 | Package type | Package ID | Classification | Files scanned | Failures | Warnings | Required limitation | Result |
 | --- | --- | --- | ---: | ---: | ---: | --- | --- |
-| `final-delphi-report` | `abd662eb-8a7c-400f-8cf3-1e444004a2fb` | deidentified_research_report | 9 | 0 | 0 | PASS | PASS |
-| `anonymized-response-dataset` | `6e4d561a-b048-460c-905a-411c774b51dc` | deidentified_research_report | 14 | 0 | 0 | PASS | PASS |
-| `audit-package` | `8edeeee2-fb41-4aa1-b621-c940815aed89` | restricted_internal_admin_audit | 10 | 0 | 17 | PASS | PASS WITH RESTRICTED WARNINGS |
-| `provenance-bundle` | `8900b6fd-cf9c-459f-bf3c-f3668c9a0eb0` | deidentified_research_report | 10 | 0 | 0 | PASS | PASS |
-| `complete-archive` | `cf51550b-d950-4ba4-9d56-568f107a89b1` | complete_restricted_archive | 12 | 0 | 35 | PASS | PASS WITH RESTRICTED WARNINGS |
+| `final-delphi-report` | `ebb790ce-8c34-432a-9ac5-a94f75e88c53` | deidentified_research_report | 9 | 0 | 0 | PASS | PASS |
+| `anonymized-response-dataset` | `53e43718-3468-4fea-bacd-7fd240c06e9d` | deidentified_research_report | 14 | 0 | 0 | PASS | PASS |
+| `audit-package` | `71abb86b-84bd-43b4-a8a4-b135892da89b` | restricted_internal_admin_audit | 10 | 0 | 17 | PASS | PASS WITH RESTRICTED WARNINGS |
+| `provenance-bundle` | `bea0ca43-08c2-47ce-985c-6b4727f9cdb8` | deidentified_research_report | 10 | 0 | 0 | PASS | PASS |
+| `complete-archive` | `b34fef2b-de8b-4cc3-9503-ac6c65f613db` | complete_restricted_archive | 12 | 0 | 35 | PASS | PASS WITH RESTRICTED WARNINGS |
 
 Restricted warning interpretation:
 
