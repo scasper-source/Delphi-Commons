@@ -474,6 +474,7 @@ test("study-designer mobile basics keep governance and AI controls touch-friendl
 
 test("final closeout uses one canonical snapshot and respectful participant language", () => {
   const source = appSource();
+  const css = fs.readFileSync(path.join(appRoot, "src", "App.css"), "utf8");
   const apiSource = fs.readFileSync(path.join(appRoot, "src", "core", "api.ts"), "utf8");
   const serverSource = fs.readFileSync(path.resolve(appRoot, "..", "server", "src", "core", "finalResults.ts"), "utf8");
   const participantRouteSource = fs.readFileSync(path.resolve(appRoot, "..", "server", "src", "routes", "participants.ts"), "utf8");
@@ -486,6 +487,11 @@ test("final closeout uses one canonical snapshot and respectful participant lang
   assert.match(participantRouteSource, /redactExportText\(payload\.rationale_text\)/);
   assert.match(participantRouteSource, /snapshot: redactExportValue\(snapshot\)/);
   assert.match(apiSource, /type FinalResultSnapshot/);
+  assert.match(css, /\*\s*,\s*\*::before\s*,\s*\*::after\s*\{[^}]*box-sizing:\s*border-box/s);
+  assert.match(css, /\.workspace\s*\{[^}]*box-sizing:\s*border-box/s);
+  assert.match(css, /\.panel\s*\{[^}]*min-width:\s*0/s);
+  assert.match(css, /\.panel\s*\{[^}]*max-width:\s*100%/s);
+  assert.match(css, /\.final-item-card\s*,[\s\S]*overflow-wrap:\s*anywhere/);
   assert.match(closeoutSource, /Final Results & Study Closeout/);
   assert.match(closeoutSource, /Thank you - this Delphi study is complete/);
   assert.match(closeoutSource, /snapshot\.requiredStatement/);
