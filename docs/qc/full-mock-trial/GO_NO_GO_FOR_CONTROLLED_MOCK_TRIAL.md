@@ -2,6 +2,8 @@
 
 Current decision: GO WITH CONDITIONS.
 
+Update 2026-05-06: API-driven rerun completed successfully with backend/frontend health confirmed; manual all-8 browser UI submission pass remains NOT RUN, and mobile-width browser smoke remained NOT RUN in this environment (missing supported headless browser executable).
+
 Decision scope: controlled synthetic mock testing only.
 
 Reason: the export privacy P0 was remediated and the rerun completed the 8-synthetic-participant, 4-round Classical Delphi lifecycle through local participant invitation APIs. Regenerated de-identified exports passed privacy scanning with zero failures. Headless browser smoke checks at 320px, 390px, and 414px passed for participant and staff views. The remaining condition is that this was not a manual all-8 browser UI submission pass.
