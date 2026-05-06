@@ -1,5 +1,27 @@
 # Live Run Results
 
+## Update: 2026-05-06 Browser/UI Mock-Trial Execution Attempt
+
+- Operator date/time (UTC): 2026-05-06T14:18:57Z to 2026-05-06T14:19:00Z.
+- Branch/commit: `work` / `e6d0f368dde5a54786672201898b35359d939755`.
+- Backend health check: PASS at `http://127.0.0.1:3001/health`.
+- Frontend availability check: PASS at `http://127.0.0.1:5173/` (HTTP 200).
+- Execution command: `node docs/qc/full-mock-trial/run_full_mock_trial_local.mjs`.
+- New artifact: `docs/qc/full-mock-trial/artifacts/full-mock-trial-run-2026-05-06T14-18-57-949Z.json` (and `.../full-mock-trial-run-latest.json`).
+
+### Result
+
+- 8/8 synthetic participants completed Round 1 through local invitation API flow.
+- 8/8 synthetic participants completed Round 2 through local invitation API flow.
+- 8/8 synthetic participants completed Round 3 through local invitation API flow.
+- 8/8 synthetic participants completed Round 4 through local invitation API flow.
+- Support loop passed (SYN-P003 note, staff response, participant visibility; no cross-participant visibility).
+- Export privacy scan: zero failures; warnings were limited to restricted/internal package classes.
+- Manual all-8 browser UI submission pass: NOT RUN.
+- Mobile-width browser pass (320/390/414): NOT RUN in this environment due to missing supported headless browser executable.
+
+Decision remains GO WITH CONDITIONS for controlled synthetic mock testing only.
+
 Run date: 2026-05-05
 
 Live execution status: CONTROLLED SYNTHETIC LOCAL RERUN COMPLETED WITH CONDITIONS.
