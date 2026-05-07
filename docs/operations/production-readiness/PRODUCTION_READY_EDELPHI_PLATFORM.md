@@ -126,6 +126,7 @@ Required evidence:
 - Backup/restore artifact and audit verification result.
 - Incident drill artifact.
 - Incident workflow record using the Phase 1 incident drill template, including pause-study equivalent actions, severity rationale, notification decisions, and remediation/recovery timeline.
+- Human-observed pilot dry-run package (operator checklist, observer transcript, screenshot/log evidence index, defect rubric output, and release decision template output).
 
 Exit gate:
 
