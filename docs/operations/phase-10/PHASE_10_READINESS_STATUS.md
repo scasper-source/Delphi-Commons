@@ -1,6 +1,6 @@
 ﻿# Phase 10 Readiness Status
 
-Boundary statement: â€œDelphi Commons is suitable only for controlled mock-trial use with synthetic or low-risk test data in local, development, or staging environments. It is not approved or ready for production deployment or real human-subjects research.â€
+Boundary statement: “Delphi Commons is suitable only for controlled mock-trial use with synthetic or low-risk test data in local, development, or staging environments. It is not approved or ready for production deployment or real human-subjects research.”
 
 Final Phase 10 status: Phase 10 synthetic/dev/staging rehearsal partially completed for the tested environment.
 
