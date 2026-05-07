@@ -75,6 +75,10 @@ async function getSessionActor(req: FastifyRequest): Promise<Actor | null> {
   };
 }
 
+function sessionAuthRequired(): boolean {
+  return process.env.EDELPHI_AUTH_REQUIRE_SESSION === "true" || process.env.NODE_ENV === "production";
+}
+
 function getLegacyDevActor(req: FastifyRequest): Actor {
   const userId = String(req.headers["x-user-id"] ?? "anonymous");
   const role = String(req.headers["x-user-role"] ?? "anonymous");
@@ -97,7 +101,7 @@ export function requireRole(allowed: string[]) {
     const actor = sessionActor ?? getLegacyDevActor(req);
     (req as any).actor = actor;
 
-    if (process.env.EDELPHI_AUTH_REQUIRE_SESSION === "true" && actor.authSource !== "session") {
+    if (sessionAuthRequired() && actor.authSource !== "session") {
       reply.code(401).send({ error: "session_required" });
       return;
     }
@@ -115,6 +119,8 @@ export async function resolveActor(req: FastifyRequest): Promise<Actor> {
   (req as any).actor = actor;
   return actor;
 }
+
+export { sessionAuthRequired };
 
 export function userResponse(actor: Actor) {
   return {

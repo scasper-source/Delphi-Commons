@@ -125,6 +125,7 @@ Required evidence:
 - Security/deployment checklist with residual risks.
 - Backup/restore artifact and audit verification result.
 - Incident drill artifact.
+- Incident workflow record using the Phase 1 incident drill template, including pause-study equivalent actions, severity rationale, notification decisions, and remediation/recovery timeline.
 
 Exit gate:
 
