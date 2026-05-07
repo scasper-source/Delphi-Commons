@@ -3,6 +3,7 @@
 Boundary statement: “Delphi Commons is suitable only for controlled mock-trial use with synthetic or low-risk test data in local, development, or staging environments. It is not approved or ready for production deployment or real human-subjects research.”
 
 Status: COMPLETE as a documented workflow. Phase 10 escalation drill: NOT RUN.
+Incident/escalation readiness remains NOT READY until a completed drill artifact exists.
 
 This workflow avoids legal conclusions. Use "suspected data exposure/security incident" until an authorized human determines otherwise.
 
@@ -10,7 +11,7 @@ This workflow avoids legal conclusions. Use "suspected data exposure/security in
 
 1. Reporter notifies the Study Owner and Security & Privacy Lead privately.
 2. Security & Privacy Lead opens a restricted incident note.
-3. Study Owner pauses relevant synthetic study activity if participant rights or confidentiality may be affected.
+3. Study Owner applies pause-study equivalent controls (stop progression/invitations/exports for affected scope) if participant rights or confidentiality may be affected.
 4. Data Custodian preserves database, audit, backup, and export evidence.
 5. Ethics & Methods Steward assesses consent, disclosure, participant-facing language, and study-integrity implications.
 6. Open Source Maintainer coordinates software fix planning if the issue is code-related.
@@ -49,4 +50,3 @@ Authorized humans must decide:
 - residual risk.
 
 Phase 10 suspected incident drill: NOT RUN.
-
