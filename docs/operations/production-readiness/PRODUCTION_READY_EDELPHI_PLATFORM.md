@@ -38,6 +38,7 @@ The platform is production-ready only when all of the following are true for a n
 - Accessibility evidence supports WCAG 2.2 AA readiness for participant and staff workflows, including manual assistive-technology review.
 - Deployment, upgrade, rollback, monitoring, backup, restore, and incident-response procedures have been rehearsed in production-like conditions.
 - Release artifacts are reproducible from a clean checkout, signed or checksummed where appropriate, and linked to evidence.
+- Supported client/install targets are named, tested, and documented; unsupported desktop or phone applications are explicitly marked not shipped.
 - Remaining residual risks are documented and accepted by the authorized roles.
 
 Production readiness is release-specific. Passing one release candidate does not automatically certify later code, later deployments, external AI connectors, new study designs, or new data classes.
@@ -50,6 +51,21 @@ Production readiness is release-specific. Passing one release candidate does not
 | `pilot` | Controlled pilot under named institutional, legal, ethical, and operational constraints. | Real participant data only if all required approvals and P0 gates are closed. | Pilot authorization by Study Owner, Ethics & Methods Steward, Security & Privacy Lead, and Data Custodian. |
 | `production_candidate` | Release candidate for production deployment by a controlled operator. | Deployment-specific real data only after pilot evidence and production gates pass. | Production-candidate approval with signed evidence bundle and residual-risk acceptance. |
 | `public_open_source` | Public repository and tagged open-source release. | No real study data, secrets, identity mappings, or sensitive exports in the repository. | Public-release approval by maintainers after security/privacy/license/release gates pass. |
+
+## Client Distribution Targets
+
+Production readiness must name the client distribution targets that are supported by the release. Web deployment should be treated as the primary pilot path unless desktop or mobile packaging has its own evidence.
+
+| Target | Intended role | Minimum release evidence |
+| --- | --- | --- |
+| Hosted web app | Default staff and participant client for pilot and production-candidate deployments. | Browser support matrix, TLS/session evidence, responsive/mobile checks, accessibility evidence, cache/storage privacy review. |
+| Windows desktop install | Optional packaged staff/operator client or local controlled deployment shell. | Signed installer or documented unsigned-dev limitation, install/uninstall test, Windows compatibility matrix, update strategy, local data directory policy, SmartScreen/Defender notes, accessibility smoke. |
+| macOS desktop install | Optional packaged staff/operator client or local controlled deployment shell. | Signed and notarized package for release candidates, Intel/Apple Silicon support statement, install/uninstall test, Gatekeeper notes, update strategy, local data directory policy, accessibility smoke. |
+| Mobile web / PWA | Preferred phone path before native apps unless native capabilities are required. | iOS Safari and Android Chrome evidence, install-to-home-screen behavior if enabled, offline/cache privacy review, small-screen accessibility, no sensitive data in unsafe browser storage. |
+| Native iOS app | Optional later distribution path for approved deployments. | App Store/TestFlight plan, privacy labels, permission inventory, secure storage/keychain review, session revocation, push-notification governance if used, mobile accessibility evidence. |
+| Native Android app | Optional later distribution path for approved deployments. | Play/internal testing plan, Data Safety form inputs, permission inventory, secure storage/Keystore review, session revocation, push-notification governance if used, mobile accessibility evidence. |
+
+Desktop and phone applications must not broaden data or readiness claims. A native app release is blocked if it introduces offline storage, push notifications, device identifiers, crash analytics, third-party SDKs, or app-store telemetry without privacy review, participant disclosure, and Data Custodian approval.
 
 ## Current State Summary
 
@@ -64,6 +80,7 @@ Use existing evidence instead of repeating completed mock-trial work. The curren
 | Phase 10 operations | Documentation exists; some synthetic/dev rehearsals passed; incident response, production-like staging, independent security review, and human accessibility review remain incomplete. | Reuse documentation and partial rehearsal evidence. Complete missing drills before pilot or production-candidate claims. |
 | Human-subjects readiness package | Human-subjects readiness plan, blockers, control matrix, and evidence checklist exist. | Use as the detailed control baseline. Update statuses as implementation lands. |
 | Open-source readiness | Clean GitHub import exists; governance, security policy, contribution files, and release checklist exist. | Use as repository baseline. Public release still needs dependency/license/security/release evidence. |
+| Install packaging | Web/local developer operation exists as the practical baseline. Windows, macOS, PWA, and native mobile packaging are not yet release-supported unless separately evidenced. | Treat installers and phone apps as future distribution work, not implied current capability. |
 
 ## Phase Roadmap
 
@@ -183,6 +200,8 @@ Required implementation:
 - Dependency license review and third-party notice review.
 - Maintainer response process for security reports and governance issues.
 - Public docs that clearly separate software capabilities from institutional approval or study authorization.
+- Public install matrix showing which targets are supported, experimental, or not shipped.
+- Public-safe packaging docs for Windows, macOS, mobile web/PWA, and any native app only after those packages pass their evidence gates.
 
 Required evidence:
 
@@ -190,6 +209,7 @@ Required evidence:
 - Secret/data scan results.
 - Dependency license and vulnerability scan results.
 - Tagged release and checksums.
+- Installer/app checksums or store build identifiers for supported packaged clients.
 - Public documentation review.
 - Maintainer approval record.
 
@@ -209,6 +229,7 @@ Exit gate:
 | AI governance | No External AI mode and local AI-HITL tests. | Study-specific AI disclosure and no external AI unless approved. | AI provenance, audit, minimization, connector controls. | Public docs for AI boundaries and safe configuration. |
 | Accessibility | Automated/mobile baseline. | Human assistive-technology evidence for active tasks. | WCAG 2.2 AA evidence package and remediation log. | Public docs disclose status accurately. |
 | Operations | Local/dev runbooks and partial rehearsals. | Incident, backup/restore, support, monitoring rehearsal. | Production-like deploy, upgrade, rollback, restore, incident drill. | Public install and maintainer processes. |
+| Client packaging | No packaged clients required. | Hosted web client unless a named desktop/mobile pilot package is approved. | Supported Windows, macOS, PWA, iOS, or Android targets each need install, update, security, privacy, and accessibility evidence. | Public release page clearly marks shipped, experimental, and unsupported client targets. |
 
 ## Testing Requirements
 
@@ -222,6 +243,7 @@ Minimum release-candidate commands must include:
 - backup/restore and audit-integrity test,
 - accessibility automated checks,
 - documentation link and readiness-claim scan,
+- installer/package smoke tests for every supported desktop or mobile target,
 - `git diff --check`.
 
 Manual testing is required before pilot and production-candidate gates:
@@ -234,6 +256,10 @@ Manual testing is required before pilot and production-candidate gates:
 - Keyboard-only workflow.
 - Screen reader workflow.
 - Mobile viewport and real-device checks.
+- Windows install/uninstall and update checks if Windows packaging is in scope.
+- macOS install/uninstall, signing/notarization, and update checks if macOS packaging is in scope.
+- PWA install/cache/storage checks if mobile web/PWA packaging is in scope.
+- iOS/Android app install, permission, secure storage, session revocation, and accessibility checks if native phone applications are in scope.
 
 ## Security And Privacy Requirements
 
@@ -310,17 +336,29 @@ Before `pilot`:
 
 - Environment variables are documented with safe defaults.
 - Production-like install path is documented.
+- Supported client targets are explicitly named; unsupported targets are marked not shipped.
 - Database initialization, migration, backup, restore, and rollback are rehearsed.
 - Operator can start, stop, monitor, and recover services from docs.
 - Secrets and runtime data directories are outside version control.
+- Hosted web deployment has the first complete support path unless a desktop or mobile client has its own pilot evidence.
+- Any Windows/macOS installer or phone app used in pilot has a documented installation, update, uninstall, and data-removal path.
 
 Before `production_candidate`:
 
 - Release artifacts are versioned, checksummed, and reproducible.
 - Supported deployment targets are named.
+- Windows installers, macOS packages, PWA manifests/service workers, and native mobile app builds are each versioned, checksummed or store-identified, and tied to the release commit if shipped.
 - Upgrade and rollback from the prior release are tested.
 - SBOM and dependency license review exist.
 - Operational runbooks are linked from release notes.
+- Code signing, notarization, app-store review status, privacy labels, permission inventories, and third-party SDK inventories are documented for packaged clients where applicable.
+
+Client packaging-specific gates:
+
+- Windows: installer format selected, package signed for production candidates or explicitly marked unsigned development build, install/uninstall tested on supported Windows versions, update strategy documented, local data and log directories documented, no secrets stored in application files.
+- macOS: package format selected, release-candidate package signed and notarized, Intel/Apple Silicon support documented, install/uninstall tested, update strategy documented, local data and log directories documented, no secrets stored in application bundle.
+- Mobile web/PWA: manifest and service worker reviewed, cache does not retain sensitive study data beyond approved policy, iOS Safari and Android Chrome tested, home-screen install behavior documented, mobile accessibility evidence recorded.
+- Native iOS/Android: app permissions minimized, secure storage used for tokens, logout and remote revocation tested, crash/analytics SDKs reviewed or disabled, push notifications do not reveal study participation or sensitive content, store privacy disclosures prepared.
 
 ## Documentation Requirements
 
@@ -407,6 +445,8 @@ Unrestricted real-world use is blocked until all of the following are true:
 | P3-WP2 | Add migration upgrade/rollback rehearsal. | Database migration procedure. | Empty-db, prior-release upgrade, rollback, restore, and audit-integrity evidence. |
 | P3-WP3 | Produce SBOM and dependency/license review. | Package manifests. | SBOM, license table, unresolved risk log. |
 | P3-WP4 | Assemble production-candidate evidence bundle. | Pilot and CI evidence. | Immutable evidence folder linked from release notes. |
+| P3-WP5 | Define desktop installer packaging plan. | Deployment docs, supported platform decision. | Windows and macOS package format, signing/notarization, update, uninstall, data-directory, and evidence requirements documented. |
+| P3-WP6 | Define mobile distribution plan. | Mobile/PWA requirements, privacy requirements. | PWA vs native app decision, iOS/Android support matrix, privacy labels, permission inventory, secure storage, app-store/testing path documented. |
 
 ### Phase 4 Work Packets
 
@@ -416,6 +456,7 @@ Unrestricted real-world use is blocked until all of the following are true:
 | P4-WP2 | Finalize public docs and release notes. | Docs index, README, known limitations. | Public docs state scope, setup, governance, AI limits, data boundaries, accessibility status, support path. |
 | P4-WP3 | Finalize public release metadata. | LICENSE, NOTICE, CITATION.cff, SECURITY.md. | Tagged release, checksums, citation URL, maintainer approval. |
 | P4-WP4 | Create post-release maintenance workflow. | Governance and contribution docs. | Issue labels, security triage, release cadence, vulnerability response process. |
+| P4-WP5 | Publish supported client install matrix. | Packaging evidence. | Public release page identifies Windows, macOS, PWA, iOS, and Android status as supported, experimental, or not shipped. |
 
 ## Maintenance Rules
 
