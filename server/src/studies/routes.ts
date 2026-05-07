@@ -38,7 +38,7 @@ import {
 } from "./store.js";
 
 import { writeAuditEvent } from "../core/audit.js";
-import { resolveActor } from "../middleware/auth.js";
+import { resolveActor, sessionAuthRequired } from "../middleware/auth.js";
 import { getUser, getUserByEmail } from "../auth/userStore.js";
 import {
   activeResearchQuestionsFromPacket,
@@ -48,7 +48,7 @@ import {
 
 async function actorFromRequest(req: Parameters<typeof resolveActor>[0]) {
   const actor = await resolveActor(req);
-  if (process.env.EDELPHI_AUTH_REQUIRE_SESSION === "true" && actor.authSource !== "session") {
+  if (sessionAuthRequired() && actor.authSource !== "session") {
     const err: any = new Error("session_required");
     err.statusCode = 401;
     throw err;

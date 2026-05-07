@@ -167,7 +167,7 @@ function deprecatedTokenUrl(reply: any) {
 }
 
 export async function participantsRoutes(app: FastifyInstance) {
-  const allowMasterList = requireRole(["owner", "methods_steward"]);
+  const allowMasterList = requireRole(["owner", "methods_steward", "data_custodian"]);
   const allowOrientationComplete = requireRole(["owner", "methods_steward", "participant"]);
   const allowParticipantIssueCreate = requireRole(["owner", "methods_steward", "participant"]);
 
@@ -550,6 +550,10 @@ export async function participantsRoutes(app: FastifyInstance) {
       if (!isDeletionRequestStatus(body.status)) {
         return reply.code(400).send({ error: "valid_deletion_request_status_required" });
       }
+      const targetStatus = body.status;
+      if ((targetStatus === "Approved" || targetStatus === "Rejected" || targetStatus === "Completed") && actor.role !== "data_custodian") {
+        return reply.code(403).send({ error: "data_custodian_review_required" });
+      }
       if (body.status !== "UnderReview" && !String(body.review_note ?? "").trim()) {
         return reply.code(400).send({ error: "review_note_required" });
       }
@@ -568,7 +572,7 @@ export async function participantsRoutes(app: FastifyInstance) {
         actor,
         action: "participant.deletion_request.review",
         object: { type: "deletion_request", id: requestId },
-        details: { studyId, versionId, status: updated.status },
+        details: { studyId, versionId, status: updated.status, reviewed_by_role: actor.role },
       });
 
       return reply.send({ deletion_request: updated });
