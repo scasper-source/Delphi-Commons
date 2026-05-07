@@ -57,3 +57,6 @@ A supervised internal dry run may proceed with P0 blockers only if:
 - Update related HSR rows in `control-matrix.md`.
 - Add test evidence in `test-evidence-checklist.md`.
 - Require Study Owner and Ethics & Methods Steward review before closing blockers related to participant rights, AI, reporting, or method integrity.
+
+## 2026-05-07 status note
+- Phase 1 evidence closeout package added; blockers requiring human-observed, deployment-specific, and external approvals remain active.
