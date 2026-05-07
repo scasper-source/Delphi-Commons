@@ -40,3 +40,5 @@ This matrix maps human-subjects readiness requirements to current implementation
 - If a row affects participant rights, identity, AI, exports, or auditability, require Study Owner and Ethics & Methods Steward review before changing status to Implemented.
 - If a row depends on deployment environment, mark it Partial until the deployment runbook and evidence exist.
 - Every P0 release blocker must map to at least one HSR row.
+
+| Phase 1 closeout package generated | partial | docs/operations/production-readiness/phase1-evidence-closeout/PHASE1_EVIDENCE_CLOSEOUT_SUMMARY.md | Human-observed, accessibility manual, backup/restore rehearsal, deployment-specific controls, and external approvals remain pending |
