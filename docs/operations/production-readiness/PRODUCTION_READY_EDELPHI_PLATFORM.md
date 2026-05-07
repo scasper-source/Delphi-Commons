@@ -122,6 +122,7 @@ Required evidence:
 - Closed or accepted P0 blocker list.
 - Pilot dry-run transcript with screenshots or logs.
 - Accessibility report with defects and remediations.
+- Accessibility closeout package output (keyboard walkthrough, NVDA/VoiceOver template output, mobile real-device template output, error/input-association checklist, focus/labels/contrast/time-limit/copy checklist, and defect remediation evidence).
 - Security/deployment checklist with residual risks.
 - Backup/restore artifact and audit verification result.
 - Incident drill artifact.
