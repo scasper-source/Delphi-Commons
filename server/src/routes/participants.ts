@@ -167,7 +167,8 @@ function deprecatedTokenUrl(reply: any) {
 }
 
 export async function participantsRoutes(app: FastifyInstance) {
-  const allowMasterList = requireRole(["owner", "methods_steward", "data_custodian"]);
+  const allowMasterList = requireRole(["owner", "methods_steward"]);
+  const allowDeletionRequestReview = requireRole(["owner", "methods_steward", "data_custodian"]);
   const allowOrientationComplete = requireRole(["owner", "methods_steward", "participant"]);
   const allowParticipantIssueCreate = requireRole(["owner", "methods_steward", "participant"]);
 
@@ -523,7 +524,7 @@ export async function participantsRoutes(app: FastifyInstance) {
 
   app.get(
     "/studies/:studyId/versions/:versionId/deletion-requests",
-    { preHandler: allowMasterList },
+    { preHandler: allowDeletionRequestReview },
     async (req, reply) => {
       const { studyId, versionId } = req.params as any;
       const actor = getActor(req);
@@ -542,7 +543,7 @@ export async function participantsRoutes(app: FastifyInstance) {
 
   app.patch(
     "/studies/:studyId/versions/:versionId/deletion-requests/:requestId",
-    { preHandler: allowMasterList },
+    { preHandler: allowDeletionRequestReview },
     async (req, reply) => {
       const { studyId, versionId, requestId } = req.params as any;
       const actor = getActor(req);
