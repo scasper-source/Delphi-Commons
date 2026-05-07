@@ -699,13 +699,53 @@ async function finalParticipantCheckThroughBrowser(participant, viewport) {
     await clickVisibleButton(page, `el.innerText === "Closeout"`);
     await sleep(1000);
     const text = await visibleText(page);
+    const layoutDiagnostics = await page.evaluate(`(() => {
+      const root = document.documentElement;
+      const body = document.body;
+      const viewportWidth = root.clientWidth;
+      const overflowCandidates = [...document.querySelectorAll("*")]
+        .map((el) => {
+          const rect = el.getBoundingClientRect();
+          const style = getComputedStyle(el);
+          return {
+            tag: el.tagName.toLowerCase(),
+            class_name: String(el.className || "").slice(0, 120),
+            left: Math.round(rect.left * 100) / 100,
+            right: Math.round(rect.right * 100) / 100,
+            width: Math.round(rect.width * 100) / 100,
+            client_width: el.clientWidth,
+            scroll_width: el.scrollWidth,
+            display: style.display,
+            overflow_x: style.overflowX,
+            white_space: style.whiteSpace,
+          };
+        })
+        .filter((entry) =>
+          entry.right > viewportWidth + 1 ||
+          entry.left < -1 ||
+          entry.scroll_width > entry.client_width + 1
+        )
+        .sort((a, b) =>
+          Math.max(b.right - viewportWidth, b.scroll_width - b.client_width) -
+          Math.max(a.right - viewportWidth, a.scroll_width - a.client_width)
+        )
+        .slice(0, 8);
+      return {
+        viewport_width: viewportWidth,
+        document_scroll_width: root.scrollWidth,
+        body_scroll_width: body?.scrollWidth ?? null,
+        overflow_delta_px: root.scrollWidth - viewportWidth,
+        overflow_candidates: overflowCandidates,
+      };
+    })()`);
     const screenshotPath = await page.screenshot(`manual-browser-final-${participant.label}-${viewport.width}`);
     return {
       participant: participant.label,
       viewport,
       status: text.includes(requiredStatement) ? "PASS" : "PARTIAL",
       required_limitation_visible: text.includes(requiredStatement),
-      has_horizontal_overflow: await page.evaluate("document.documentElement.scrollWidth > document.documentElement.clientWidth + 1"),
+      has_horizontal_overflow: layoutDiagnostics.overflow_delta_px > 1,
+      layout_diagnostics: layoutDiagnostics,
       has_forbidden_synthetic_label: /SYN-P00[1-8]/.test(text),
       has_forbidden_email: /syn-p00[1-8]@example\\.test/.test(text),
       screenshot_path: screenshotPath,

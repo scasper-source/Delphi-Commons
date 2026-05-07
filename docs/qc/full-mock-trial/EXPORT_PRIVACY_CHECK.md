@@ -1,4 +1,4 @@
-# Export Privacy Check
+﻿# Export Privacy Check
 
 Live execution status: CONTROLLED SYNTHETIC LOCAL RERUN COMPLETED.
 
@@ -76,7 +76,7 @@ UUID handling:
 
 Latest browser UI evidence artifact:
 
-- `docs/qc/full-mock-trial/artifacts/manual-browser-mock-trial-run-2026-05-06T17-13-46-275Z.json`
+- `docs/qc/full-mock-trial/artifacts/manual-browser-mock-trial-run-2026-05-06T21-15-16-308Z.json`
 - `docs/qc/full-mock-trial/artifacts/manual-browser-mock-trial-run-latest.json`
 
 Earlier API-driven evidence artifact:
@@ -86,11 +86,11 @@ Earlier API-driven evidence artifact:
 
 | Package type | Package ID | Classification | Files scanned | Failures | Warnings | Required limitation | Result |
 | --- | --- | --- | ---: | ---: | ---: | --- | --- |
-| `final-delphi-report` | `c48cf948-7d4a-417c-b3d2-0e80a1fe8360` | deidentified_research_report | 9 | 0 | 0 | PASS | PASS |
-| `anonymized-response-dataset` | `539c7ec5-6bb1-4514-9d84-1c6d6dbdd367` | deidentified_research_report | 14 | 0 | 0 | PASS | PASS |
-| `audit-package` | `a6d27173-ab7a-4330-9a5b-bd2b5c720c7e` | restricted_internal_admin_audit | 10 | 0 | 17 | PASS | PASS WITH RESTRICTED WARNINGS |
-| `provenance-bundle` | `4ba988da-5aae-4024-8f81-dd9226bd090c` | deidentified_research_report | 10 | 0 | 0 | PASS | PASS |
-| `complete-archive` | `6ff98504-f84b-4d5a-bbec-0608826887f4` | complete_restricted_archive | 12 | 0 | 35 | PASS | PASS WITH RESTRICTED WARNINGS |
+| `final-delphi-report` | `ebb790ce-8c34-432a-9ac5-a94f75e88c53` | deidentified_research_report | 9 | 0 | 0 | PASS | PASS |
+| `anonymized-response-dataset` | `53e43718-3468-4fea-bacd-7fd240c06e9d` | deidentified_research_report | 14 | 0 | 0 | PASS | PASS |
+| `audit-package` | `71abb86b-84bd-43b4-a8a4-b135892da89b` | restricted_internal_admin_audit | 10 | 0 | 17 | PASS | PASS WITH RESTRICTED WARNINGS |
+| `provenance-bundle` | `bea0ca43-08c2-47ce-985c-6b4727f9cdb8` | deidentified_research_report | 10 | 0 | 0 | PASS | PASS |
+| `complete-archive` | `b34fef2b-de8b-4cc3-9503-ac6c65f613db` | complete_restricted_archive | 12 | 0 | 35 | PASS | PASS WITH RESTRICTED WARNINGS |
 
 Restricted warning interpretation:
 

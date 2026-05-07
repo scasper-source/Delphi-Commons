@@ -1,7 +1,7 @@
 {
-  "run_started_at": "2026-05-06T21:15:16.308Z",
-  "run_completed_at": "2026-05-06T21:19:58.966Z",
-  "marker": "FMT-BROWSER-mouk39p0",
+  "run_started_at": "2026-05-06T19:42:16.959Z",
+  "run_completed_at": "2026-05-06T19:46:52.168Z",
+  "marker": "FMT-BROWSER-mougron4",
   "mode": "local_api_setup_with_browser_ui_participant_submission_pass",
   "scope": {
     "synthetic_data_only": true,
@@ -13,7 +13,7 @@
     "external_ai_calls": false
   },
   "environment": {
-    "commit_hash": "75834d01a544b3bde7a00536e9772e1c5e22b3bd",
+    "commit_hash": "1dfcef9635c55fe724fa9b050fd413c7569a73c9",
     "branch": "codex/windows-focused-mobile-closeout-evidence-results",
     "backend_url": "http://127.0.0.1:3001",
     "frontend_url": "http://127.0.0.1:5173",
@@ -41,9 +41,9 @@
     }
   ],
   "study": {
-    "study_id": "383e72f9-a15d-42f6-b586-642ad95694b3",
-    "version_id": "c087a947-7d97-4e0d-87d3-b2878b006566",
-    "title": "Manual Browser Mock Trial Classical Delphi FMT-BROWSER-mouk39p0",
+    "study_id": "11bc1b5f-f6bf-4f4a-a81b-debfd0cc379e",
+    "version_id": "20dc37a6-2a1e-4ed5-a8bb-54f8787e90a6",
+    "title": "Manual Browser Mock Trial Classical Delphi FMT-BROWSER-mougron4",
     "topic": "Prioritizing features for a fictional community garden scheduling app.",
     "method": "ClassicDelphi",
     "participant_count": 8
@@ -57,7 +57,7 @@
       "name": "consensus rule change after launch blocked",
       "status": "PASS",
       "blocked": true,
-      "message": "PATCH /studies/383e72f9-a15d-42f6-b586-642ad95694b3/versions/c087a947-7d97-4e0d-87d3-b2878b006566/consensus-rule returned 409: consensus_rule_locked"
+      "message": "PATCH /studies/11bc1b5f-f6bf-4f4a-a81b-debfd0cc379e/versions/20dc37a6-2a1e-4ed5-a8bb-54f8787e90a6/consensus-rule returned 409: consensus_rule_locked"
     },
     {
       "name": "Round 1 submission blocked before consent",
@@ -94,7 +94,7 @@
       "name": "consensus rule change after Round 2 blocked",
       "status": "PASS",
       "blocked": true,
-      "message": "PATCH /studies/383e72f9-a15d-42f6-b586-642ad95694b3/versions/c087a947-7d97-4e0d-87d3-b2878b006566/consensus-rule returned 409: consensus_rule_locked"
+      "message": "PATCH /studies/11bc1b5f-f6bf-4f4a-a81b-debfd0cc379e/versions/20dc37a6-2a1e-4ed5-a8bb-54f8787e90a6/consensus-rule returned 409: consensus_rule_locked"
     },
     {
       "name": "Round 3 all 8 synthetic participants submitted reratings through browser UI",
@@ -108,7 +108,7 @@
       "name": "consensus rule change after Round 3 blocked",
       "status": "PASS",
       "blocked": true,
-      "message": "PATCH /studies/383e72f9-a15d-42f6-b586-642ad95694b3/versions/c087a947-7d97-4e0d-87d3-b2878b006566/consensus-rule returned 409: consensus_rule_locked"
+      "message": "PATCH /studies/11bc1b5f-f6bf-4f4a-a81b-debfd0cc379e/versions/20dc37a6-2a1e-4ed5-a8bb-54f8787e90a6/consensus-rule returned 409: consensus_rule_locked"
     },
     {
       "name": "Round 4 all 8 synthetic participants submitted final ratings through browser UI",
@@ -534,51 +534,7 @@
     },
     "status": "PASS",
     "required_limitation_visible": true,
-    "has_horizontal_overflow": false,
-    "layout_diagnostics": {
-      "viewport_width": 320,
-      "document_scroll_width": 320,
-      "body_scroll_width": 320,
-      "overflow_delta_px": 0,
-      "overflow_candidates": [
-        {
-          "tag": "div",
-          "class_name": "item-outcome-list",
-          "left": 31,
-          "right": 289,
-          "width": 258,
-          "client_width": 258,
-          "scroll_width": 285,
-          "display": "grid",
-          "overflow_x": "visible",
-          "white_space": "normal"
-        },
-        {
-          "tag": "section",
-          "class_name": "panel wide",
-          "left": 16,
-          "right": 304,
-          "width": 288,
-          "client_width": 286,
-          "scroll_width": 299,
-          "display": "block",
-          "overflow_x": "visible",
-          "white_space": "normal"
-        },
-        {
-          "tag": "div",
-          "class_name": "screen-grid",
-          "left": 16,
-          "right": 304,
-          "width": 288,
-          "client_width": 288,
-          "scroll_width": 300,
-          "display": "grid",
-          "overflow_x": "visible",
-          "white_space": "normal"
-        }
-      ]
-    },
+    "has_horizontal_overflow": true,
     "has_forbidden_synthetic_label": false,
     "has_forbidden_email": false,
     "screenshot_path": "docs/qc/full-mock-trial/artifacts/manual-browser-final-SYN-P001-320.png"
@@ -593,51 +549,7 @@
       },
       "status": "PASS",
       "required_limitation_visible": true,
-      "has_horizontal_overflow": false,
-      "layout_diagnostics": {
-        "viewport_width": 320,
-        "document_scroll_width": 320,
-        "body_scroll_width": 320,
-        "overflow_delta_px": 0,
-        "overflow_candidates": [
-          {
-            "tag": "div",
-            "class_name": "item-outcome-list",
-            "left": 31,
-            "right": 289,
-            "width": 258,
-            "client_width": 258,
-            "scroll_width": 285,
-            "display": "grid",
-            "overflow_x": "visible",
-            "white_space": "normal"
-          },
-          {
-            "tag": "section",
-            "class_name": "panel wide",
-            "left": 16,
-            "right": 304,
-            "width": 288,
-            "client_width": 286,
-            "scroll_width": 299,
-            "display": "block",
-            "overflow_x": "visible",
-            "white_space": "normal"
-          },
-          {
-            "tag": "div",
-            "class_name": "screen-grid",
-            "left": 16,
-            "right": 304,
-            "width": 288,
-            "client_width": 288,
-            "scroll_width": 300,
-            "display": "grid",
-            "overflow_x": "visible",
-            "white_space": "normal"
-          }
-        ]
-      },
+      "has_horizontal_overflow": true,
       "has_forbidden_synthetic_label": false,
       "has_forbidden_email": false,
       "screenshot_path": "docs/qc/full-mock-trial/artifacts/manual-browser-final-SYN-P001-320.png"
@@ -652,13 +564,6 @@
       "status": "PASS",
       "required_limitation_visible": true,
       "has_horizontal_overflow": false,
-      "layout_diagnostics": {
-        "viewport_width": 390,
-        "document_scroll_width": 390,
-        "body_scroll_width": 390,
-        "overflow_delta_px": 0,
-        "overflow_candidates": []
-      },
       "has_forbidden_synthetic_label": false,
       "has_forbidden_email": false,
       "screenshot_path": "docs/qc/full-mock-trial/artifacts/manual-browser-final-SYN-P001-390.png"
@@ -673,13 +578,6 @@
       "status": "PASS",
       "required_limitation_visible": true,
       "has_horizontal_overflow": false,
-      "layout_diagnostics": {
-        "viewport_width": 414,
-        "document_scroll_width": 414,
-        "body_scroll_width": 414,
-        "overflow_delta_px": 0,
-        "overflow_candidates": []
-      },
       "has_forbidden_synthetic_label": false,
       "has_forbidden_email": false,
       "screenshot_path": "docs/qc/full-mock-trial/artifacts/manual-browser-final-SYN-P001-414.png"
@@ -688,7 +586,7 @@
   "export_packages": [
     {
       "export_type": "final-delphi-report",
-      "export_package_id": "ebb790ce-8c34-432a-9ac5-a94f75e88c53",
+      "export_package_id": "abd662eb-8a7c-400f-8cf3-1e444004a2fb",
       "classification": "deidentified_research_report",
       "safe_for_deidentified_sharing": true,
       "direct_identifiers_included": false,
@@ -700,7 +598,7 @@
     },
     {
       "export_type": "anonymized-response-dataset",
-      "export_package_id": "53e43718-3468-4fea-bacd-7fd240c06e9d",
+      "export_package_id": "6e4d561a-b048-460c-905a-411c774b51dc",
       "classification": "deidentified_research_report",
       "safe_for_deidentified_sharing": true,
       "direct_identifiers_included": false,
@@ -712,7 +610,7 @@
     },
     {
       "export_type": "audit-package",
-      "export_package_id": "71abb86b-84bd-43b4-a8a4-b135892da89b",
+      "export_package_id": "8edeeee2-fb41-4aa1-b621-c940815aed89",
       "classification": "restricted_internal_admin_audit",
       "safe_for_deidentified_sharing": false,
       "direct_identifiers_included": true,
@@ -724,7 +622,7 @@
     },
     {
       "export_type": "provenance-bundle",
-      "export_package_id": "bea0ca43-08c2-47ce-985c-6b4727f9cdb8",
+      "export_package_id": "8900b6fd-cf9c-459f-bf3c-f3668c9a0eb0",
       "classification": "deidentified_research_report",
       "safe_for_deidentified_sharing": true,
       "direct_identifiers_included": false,
@@ -736,7 +634,7 @@
     },
     {
       "export_type": "complete-archive",
-      "export_package_id": "b34fef2b-de8b-4cc3-9503-ac6c65f613db",
+      "export_package_id": "cf51550b-d950-4ba4-9d56-568f107a89b1",
       "classification": "complete_restricted_archive",
       "safe_for_deidentified_sharing": false,
       "direct_identifiers_included": true,
@@ -1179,7 +1077,56 @@
   "defects": {
     "P0": [],
     "P1": [],
-    "P2": [],
+    "P2": [
+      {
+        "id": "FMT-BROWSER-P2-MOBILE-OVERFLOW",
+        "summary": "Mobile final participant check detected horizontal overflow.",
+        "evidence": [
+          {
+            "participant": "SYN-P001",
+            "viewport": {
+              "width": 320,
+              "height": 900,
+              "mobile": true
+            },
+            "status": "PASS",
+            "required_limitation_visible": true,
+            "has_horizontal_overflow": true,
+            "has_forbidden_synthetic_label": false,
+            "has_forbidden_email": false,
+            "screenshot_path": "docs/qc/full-mock-trial/artifacts/manual-browser-final-SYN-P001-320.png"
+          },
+          {
+            "participant": "SYN-P001",
+            "viewport": {
+              "width": 390,
+              "height": 900,
+              "mobile": true
+            },
+            "status": "PASS",
+            "required_limitation_visible": true,
+            "has_horizontal_overflow": false,
+            "has_forbidden_synthetic_label": false,
+            "has_forbidden_email": false,
+            "screenshot_path": "docs/qc/full-mock-trial/artifacts/manual-browser-final-SYN-P001-390.png"
+          },
+          {
+            "participant": "SYN-P001",
+            "viewport": {
+              "width": 414,
+              "height": 900,
+              "mobile": true
+            },
+            "status": "PASS",
+            "required_limitation_visible": true,
+            "has_horizontal_overflow": false,
+            "has_forbidden_synthetic_label": false,
+            "has_forbidden_email": false,
+            "screenshot_path": "docs/qc/full-mock-trial/artifacts/manual-browser-final-SYN-P001-414.png"
+          }
+        ]
+      }
+    ],
     "P3": []
   },
   "status": "GO_WITH_CONDITIONS_FOR_CONTROLLED_SYNTHETIC_MOCK_TESTING_ONLY"
