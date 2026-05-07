@@ -3,6 +3,7 @@
 Boundary statement: “Delphi Commons is suitable only for controlled mock-trial use with synthetic or low-risk test data in local, development, or staging environments. It is not approved or ready for production deployment or real human-subjects research.”
 
 Status: COMPLETE as a documented procedure. Phase 10 incident drill: NOT RUN. Dedicated incident-record workflow was not found in source.
+Incident-response readiness remains NOT READY until a completed incident drill artifact is recorded.
 
 Use the term "suspected data exposure/security incident" until an authorized human determines legal or institutional classification.
 
@@ -30,7 +31,7 @@ Use the term "suspected data exposure/security incident" until an authorized hum
 
 ## Containment
 
-1. Stop relevant synthetic study activity if needed.
+1. Stop relevant synthetic study activity if needed (pause-study equivalent when no dedicated pause-state flag exists).
 2. Disable affected user/session through admin user controls where appropriate.
 3. Revoke sessions where available.
 4. Stop export sharing and preserve generated packages.
@@ -89,4 +90,3 @@ Record:
 - whether operational runbooks or tests changed.
 
 Phase 10 incident response drill: NOT RUN.
-
