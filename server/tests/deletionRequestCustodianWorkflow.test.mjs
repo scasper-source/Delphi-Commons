@@ -76,6 +76,14 @@ test("deletion request approval/denial/completion require data custodian role", 
   });
   assert.equal(participant.response.statusCode, 201);
 
+  const custodianCreateParticipant = await injectJson(app, {
+    method: "POST",
+    url: `/studies/${studyId}/versions/${versionId}/participants`,
+    headers: { ...custodian.headers, "x-user-role": "data_custodian" },
+    body: { participant_id: `p-custodian-${Date.now()}` },
+  });
+  assert.equal(custodianCreateParticipant.response.statusCode, 403);
+
   const invitation = await injectJson(app, {
     method: "POST",
     url: `/studies/${studyId}/versions/${versionId}/participants/${participant.body.participant_id}/invitations`,
@@ -83,6 +91,15 @@ test("deletion request approval/denial/completion require data custodian role", 
     body: {},
   });
   assert.equal(invitation.response.statusCode, 201);
+
+  const custodianCreateInvitation = await injectJson(app, {
+    method: "POST",
+    url: `/studies/${studyId}/versions/${versionId}/participants/${participant.body.participant_id}/invitations`,
+    headers: { ...custodian.headers, "x-user-role": "data_custodian" },
+    body: {},
+  });
+  assert.equal(custodianCreateInvitation.response.statusCode, 403);
+
   const token = inviteToken(invitation.body.invitation_url);
   assert.ok(token);
 
@@ -95,6 +112,14 @@ test("deletion request approval/denial/completion require data custodian role", 
   assert.equal(reqCreate.response.statusCode, 201);
 
   const requestId = reqCreate.body.deletion_request.deletion_request_id;
+
+  const custodianListRequests = await injectJson(app, {
+    method: "GET",
+    url: `/studies/${studyId}/versions/${versionId}/deletion-requests`,
+    headers: { ...custodian.headers, "x-user-role": "data_custodian" },
+  });
+  assert.equal(custodianListRequests.response.statusCode, 200);
+  assert.equal(custodianListRequests.body.deletion_requests.length, 1);
 
   const ownerUnderReview = await injectJson(app, {
     method: "PATCH",
