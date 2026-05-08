@@ -253,3 +253,8 @@ Release decision:
 - [x] Executed command: `npm --prefix server run test:backup-restore-rehearsal`.
 - [ ] Production-like, operator-observed deployment rehearsal evidence attached (still required).
 
+
+## 2026-05-08 security evidence update
+- Added deployment security verification command: `npm --prefix server run security:verify:deployment`.
+- Added focused backend security deployment test coverage: `server/tests/securityDeploymentChecks.test.mjs`.
+- Independent security review evidence remains required separately; this checklist update does not claim that review is complete.
