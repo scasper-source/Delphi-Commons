@@ -70,6 +70,22 @@ test("incident workflow records creation, pause, notification decisions, remedia
   assert.equal(created.response.statusCode, 201);
   const incidentId = created.body.incident.incident_id;
 
+  const staleVersionIncident = await injectJson(app, {
+    method: "POST", url: "/admin/incidents", headers: { ...custodian.headers, "x-user-role": "data_custodian" },
+    body: {
+      study_id: studyId, study_version_id: "missing-study-version", title: "Synthetic stale study-version event",
+      summary: "Tabletop-only incident with an invalid linked version.", severity: "moderate", severity_rationale: "Verifies pause evidence is not overstated.",
+    }
+  });
+  assert.equal(staleVersionIncident.response.statusCode, 201);
+
+  const stalePause = await injectJson(app, {
+    method: "POST", url: `/admin/incidents/${staleVersionIncident.body.incident.incident_id}/pause-study`, headers: { ...custodian.headers, "x-user-role": "data_custodian" }, body: {}
+  });
+  assert.equal(stalePause.response.statusCode, 409);
+  assert.equal(stalePause.body.error, "study_version_pause_not_applied");
+  assert.equal(stalePause.body.reason, "study_version_not_found");
+
   const paused = await injectJson(app, {
     method: "POST", url: `/admin/incidents/${incidentId}/pause-study`, headers: { ...custodian.headers, "x-user-role": "data_custodian" }, body: {}
   });
@@ -91,6 +107,13 @@ test("incident workflow records creation, pause, notification decisions, remedia
     body: { category: "remediation", note: "Revoked affected credentials and rotated service key in tabletop simulation." }
   });
   assert.equal(remediation.response.statusCode, 200);
+
+  const missingTimeline = await injectJson(app, {
+    method: "POST", url: "/admin/incidents/missing-incident/timeline", headers: { ...custodian.headers, "x-user-role": "data_custodian" },
+    body: { category: "note", note: "This should report a missing incident rather than a server error." }
+  });
+  assert.equal(missingTimeline.response.statusCode, 404);
+  assert.equal(missingTimeline.body.error, "incident_not_found");
 
   const recovery = await injectJson(app, {
     method: "POST", url: `/admin/incidents/${incidentId}/timeline`, headers: { ...custodian.headers, "x-user-role": "data_custodian" },

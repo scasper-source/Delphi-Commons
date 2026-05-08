@@ -270,12 +270,17 @@ export async function adminRoutes(app: FastifyInstance) {
       const { incidentId } = req.params as { incidentId: string };
       const incident = getIncident(incidentId);
       if (!incident) return reply.code(404).send({ error: "incident_not_found" });
-      if (incident.study_version_id) {
-        const version = await getStudyVersion(incident.study_version_id);
-        if (version && version.status !== "Closed") {
-          await updateStudyVersion(version.id, { status: "Paused" });
-        }
+      if (!incident.study_version_id) {
+        return reply.code(409).send({ error: "study_version_pause_not_applied", reason: "missing_study_version" });
       }
+      const version = await getStudyVersion(incident.study_version_id);
+      if (!version) {
+        return reply.code(409).send({ error: "study_version_pause_not_applied", reason: "study_version_not_found" });
+      }
+      if (version.status === "Closed") {
+        return reply.code(409).send({ error: "study_version_pause_not_applied", reason: "study_version_closed" });
+      }
+      await updateStudyVersion(version.id, { status: "Paused" });
       const updated = updateIncident(incidentId, { pause_applied: true, pause_applied_at: new Date().toISOString(), pause_applied_by: actor.userId, status: "contained" });
       await writeAuditEvent({ actor, action: "incident.pause_study", object: { type: "incident", id: incidentId }, details: { study_id: updated.study_id, study_version_id: updated.study_version_id } });
       return { incident: updated };
@@ -319,6 +324,7 @@ export async function adminRoutes(app: FastifyInstance) {
       const actor = getActor(req);
       const { incidentId } = req.params as { incidentId: string };
       const body = (req.body ?? {}) as { category?: "remediation" | "recovery" | "note"; note?: string };
+      if (!getIncident(incidentId)) return reply.code(404).send({ error: "incident_not_found" });
       if (!body.category || !body.note) return reply.code(400).send({ error: "timeline_fields_required" });
       const updated = addIncidentTimelineEntry({ incident_id: incidentId, category: body.category, note: body.note, actor_user_id: actor.userId });
       await writeAuditEvent({ actor, action: "incident.timeline", object: { type: "incident", id: incidentId }, details: { category: body.category } });
