@@ -163,3 +163,9 @@ Use this template for each rehearsal run:
 - Local rehearsal command: `npm --prefix server run test:backup-restore-rehearsal`
 - This command executes a synthetic end-to-end setup, creates a backup, restores from that backup, and asserts post-restore count parity for studies, participants, study assignments, deletion requests, audit events, and export manifests.
 - Migration/rollback note: migrations are auto-applied at open; rollback remains backup-restore based (no standalone rollback CLI).
+
+## 2026-05-08 local automation durability update
+- Added focused durable rehearsal test: `server/tests/backupRestoreRehearsal.test.mjs`.
+- Local command remains: `npm --prefix server run test:backup-restore-rehearsal`.
+- This is explicitly local/disposable-runtime automation evidence and is not a production-like deployment rehearsal claim.
+

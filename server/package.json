@@ -10,7 +10,8 @@
     "test": "npm run build && node ../scripts/run-tests.mjs \"tests/*.test.mjs\"",
     "security:audit": "npm audit --audit-level=high",
     "start": "node dist/index.js",
-    "test:backup-restore-rehearsal": "npm run build && node ../scripts/run-tests.mjs \"tests/roadtest.test.mjs\""
+    "test:backup-restore-rehearsal": "npm run build && node ../scripts/run-tests.mjs \"tests/backupRestoreRehearsal.test.mjs\"",
+    "test:incident-workflow": "npm run build && node ../scripts/run-tests.mjs \"tests/incidentWorkflowPhase1.test.mjs\""
   },
   "dependencies": {
     "fastify": "^5.7.4",

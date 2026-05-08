@@ -106,3 +106,11 @@ Minimum completion criteria:
 - remediation/recovery status progression recorded,
 - post-restore audit-integrity verification recorded if restore involved,
 - residual risks and follow-up owner assigned.
+
+
+## 2026-05-08 implementation update
+- Implemented incident workflow endpoints under `/admin/incidents` for create, update/classify, pause-study-equivalent action, and remediation/recovery timeline entries.
+- Implemented incident-specific audit actions: `incident.create`, `incident.pause_study`, `incident.update`, `incident.timeline`.
+- Pause-study equivalent now sets affected study version status to `Paused` when a linked version is present.
+- Focused automated coverage added in `server/tests/incidentWorkflowPhase1.test.mjs`.
+- This remains synthetic/local evidence and is not a claim of live notification/escalation readiness.
