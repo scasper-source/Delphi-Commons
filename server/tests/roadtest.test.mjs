@@ -2856,6 +2856,15 @@ test("backend road test covers study, consent, AI, reporting, and audit flows", 
   assert.equal(backup.backup.audit_integrity.ok, true);
   assert.equal(backup.backup.data_integrity.ok, true);
   assert.ok(backup.backup.files.some((file) => file.label === "database"));
+  const preRestoreCounts = getDatabase()
+    .prepare(
+      `SELECT
+         (SELECT COUNT(*) FROM documents) AS documents_count,
+         (SELECT COUNT(*) FROM audit_events) AS audit_events_count,
+         (SELECT COUNT(*) FROM export_manifests) AS export_manifests_count,
+         (SELECT COUNT(*) FROM schema_migrations) AS schema_migrations_count`
+    )
+    .get();
 
   const restored = await expectStatus(
     app,
@@ -2869,4 +2878,14 @@ test("backend road test covers study, consent, AI, reporting, and audit flows", 
   );
   assert.equal(restored.audit_integrity.ok, true);
   assert.equal(restored.data_integrity.ok, true);
+  const postRestoreCounts = getDatabase()
+    .prepare(
+      `SELECT
+         (SELECT COUNT(*) FROM documents) AS documents_count,
+         (SELECT COUNT(*) FROM audit_events) AS audit_events_count,
+         (SELECT COUNT(*) FROM export_manifests) AS export_manifests_count,
+         (SELECT COUNT(*) FROM schema_migrations) AS schema_migrations_count`
+    )
+    .get();
+  assert.deepEqual(postRestoreCounts, preRestoreCounts);
 });

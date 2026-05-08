@@ -241,3 +241,9 @@ Release decision:
 - Added data-custodian-only deletion execution endpoint to move approved requests to Completed and apply participant suppression markers for future exports.
 - Added audit action `participant.deletion_request.execute` and test coverage for unauthorized execution blocking and execution ledger evidence.
 - This update materially reduces HSB-P0-002, but **does not claim production readiness or human-subjects readiness**. A human-observed production deployment/restore rehearsal remains required before closure.
+
+
+## 2026-05-08 local backup/restore rehearsal evidence
+- [x] Local automated backup/restore rehearsal command exists and is runnable: `npm --prefix server run test:backup-restore-rehearsal`.
+- [x] Local automated rehearsal verifies post-restore data integrity across study, participant, assignment, deletion-request, audit, and export-manifest domains.
+- [ ] Production-like, operator-observed deployment rehearsal evidence attached (still required).

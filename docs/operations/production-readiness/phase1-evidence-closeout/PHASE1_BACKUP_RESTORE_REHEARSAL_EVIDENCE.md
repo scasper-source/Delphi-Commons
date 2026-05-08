@@ -1,26 +1,16 @@
 # Phase 1 Backup/Restore Rehearsal Evidence
 
-- Evidence type: Template-driven closeout record
-- Rehearsal status: **NOT RUN (production-like rehearsal unavailable in this Codex run)**
+- Evidence type: Closeout record + executed local automation evidence.
+- Rehearsal status:
+  - **LOCAL AUTOMATION: RUN (2026-05-08)**
+  - **PRODUCTION-LIKE DEPLOYMENT REHEARSAL: NOT RUN**
 
-## Local feasibility check
-- Reviewed workflow and artifact template:
-  - `docs/operations/production-readiness/PHASE1_BACKUP_RESTORE_MIGRATION_ROLLBACK_REHEARSAL_WORKFLOW.md`
-  - `docs/operations/production-readiness/templates/PHASE1_BACKUP_RESTORE_REHEARSAL_ARTIFACT_TEMPLATE.md`
-- No authoritative deployment-bound backup target or restore environment was available.
+## Linked evidence
+- `docs/operations/production-readiness/phase1-evidence-closeout/PHASE1_BACKUP_RESTORE_REHEARSAL_EXECUTED_EVIDENCE.md`
+- `server/tests/roadtest.test.mjs`
+- `server/package.json` (`test:backup-restore-rehearsal`)
 
-## Evidence captured this run
-- Workflow/template review completed.
-- No valid backup ID, restore manifest, migration rehearsal log, or rollback execution log generated.
-
-## Required next steps (HUMAN_REQUIRED / DEPLOYMENT_REQUIRED)
-1. Assign named environment and operator role.
-2. Execute real backup command and capture backup ID/manifest.
-3. Perform restore into clean target and capture health/audit/data integrity checks.
-4. Execute migration checks on empty-db and prior-release snapshots.
-5. Attempt documented rollback path and capture limitations.
-6. Attach full command transcript and artifact checksums.
-
-## Non-claims
-- Backup/restore rehearsal evidence is incomplete.
-- No production readiness claim.
+## Closure interpretation
+- This closes the local-repo automation evidence gap for backup/restore rehearsal integrity checks.
+- This does **not** close production-like deployment rehearsal requirements.
+- P0 readiness blockers depending on production-like rehearsal remain open until human-observed deployment-bound evidence is attached.

@@ -66,3 +66,9 @@ A supervised internal dry run may proceed with P0 blockers only if:
 - Added data-custodian-only deletion execution endpoint to move approved requests to Completed and apply participant suppression markers for future exports.
 - Added audit action `participant.deletion_request.execute` and test coverage for unauthorized execution blocking and execution ledger evidence.
 - This update materially reduces HSB-P0-002, but **does not claim production readiness or human-subjects readiness**. A human-observed production deployment/restore rehearsal remains required before closure.
+
+
+### 2026-05-08 update (HSB-P0-002)
+- Added executed local automation evidence for backup/restore/migration/rollback rehearsal path.
+- Linked evidence: `docs/operations/production-readiness/phase1-evidence-closeout/PHASE1_BACKUP_RESTORE_REHEARSAL_EXECUTED_EVIDENCE.md`.
+- Blocker status remains OPEN pending production-like, human-observed deployment rehearsal evidence.
