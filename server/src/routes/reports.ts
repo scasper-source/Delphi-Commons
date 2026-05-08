@@ -167,6 +167,14 @@ function excludeDeletionCompletedResponses(input: {
   return input.responses.filter((response) => !blocked.has(response.participant_id));
 }
 
+function listExportableResponses(input: { studyId: string; versionId: string }): ResponseRecord[] {
+  return sortResponses(excludeDeletionCompletedResponses({
+    studyId: input.studyId,
+    versionId: input.versionId,
+    responses: listResponses({ study_id: input.studyId, version_id: input.versionId }),
+  }));
+}
+
 function getAgreementMinRating(rule: unknown): number {
   if (!rule || typeof rule !== "object") return 7;
 
@@ -814,12 +822,7 @@ export async function reportsRoutes(app: FastifyInstance) {
         (item) => item.round_number === roundNumber && item.status === "Published"
       );
 
-      const allResponses = sortResponses(
-        listResponses({
-          study_id: studyId,
-          version_id: versionId,
-        })
-      );
+      const allResponses = listExportableResponses({ studyId, versionId });
       const summaryAttrition = buildAttritionSummary({
         enrollments: listParticipantEnrollments({ study_id: studyId, version_id: versionId }),
         escalations: listNonResponseEscalations({ study_id: studyId, version_id: versionId }),
@@ -933,12 +936,7 @@ export async function reportsRoutes(app: FastifyInstance) {
         (item) => item.round_number === roundNumber && item.status === "Published"
       );
 
-      const allResponses = sortResponses(
-        listResponses({
-          study_id: studyId,
-          version_id: versionId,
-        })
-      );
+      const allResponses = listExportableResponses({ studyId, versionId });
       const attritionSummary = buildAttritionSummary({
         enrollments: listParticipantEnrollments({ study_id: studyId, version_id: versionId }),
         escalations: listNonResponseEscalations({ study_id: studyId, version_id: versionId }),
@@ -1108,12 +1106,7 @@ export async function reportsRoutes(app: FastifyInstance) {
         (item) => item.round_number === finalRoundNumber && item.status === "Published"
       );
 
-      const allResponses = sortResponses(
-        listResponses({
-          study_id: studyId,
-          version_id: versionId,
-        })
-      );
+      const allResponses = listExportableResponses({ studyId, versionId });
       const finalAttritionSummary = buildAttritionSummary({
         enrollments: listParticipantEnrollments({ study_id: studyId, version_id: versionId }),
         escalations: listNonResponseEscalations({ study_id: studyId, version_id: versionId }),
@@ -1524,11 +1517,7 @@ export async function reportsRoutes(app: FastifyInstance) {
       );
       const rounds = listRoundConfigs({ study_id: studyId, version_id: versionId });
       const items = sortItems(listItems({ study_id: studyId, version_id: versionId }));
-      const responses = sortResponses(excludeDeletionCompletedResponses({
-        studyId,
-        versionId,
-        responses: listResponses({ study_id: studyId, version_id: versionId }),
-      }));
+      const responses = listExportableResponses({ studyId, versionId });
       const participantStatuses = listParticipantEnrollments({ study_id: studyId, version_id: versionId });
       const attritionSummary = buildAttritionSummary({
         enrollments: participantStatuses,

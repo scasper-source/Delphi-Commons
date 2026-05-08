@@ -18,7 +18,11 @@ const { registerSecurity, resetRateLimitsForTests, PARTICIPANT_INVITATION_HEADER
 const { authRoutes } = await import("../dist/routes/auth.js");
 const { studiesRoutes } = await import("../dist/studies/routes.js");
 const { participantsRoutes } = await import("../dist/routes/participants.js");
+const { reportsRoutes } = await import("../dist/routes/reports.js");
 const { listAuditEvents } = await import("../dist/core/audit.js");
+const { createItem, updateItem } = await import("../dist/stores/itemStore.js");
+const { createResponse } = await import("../dist/stores/responseStore.js");
+const { updateStudyVersion } = await import("../dist/studies/store.js");
 
 async function buildApp() {
   resetRateLimitsForTests();
@@ -27,6 +31,7 @@ async function buildApp() {
   await app.register(authRoutes);
   await studiesRoutes(app);
   await app.register(participantsRoutes);
+  await app.register(reportsRoutes);
   return app;
 }
 
@@ -76,6 +81,14 @@ test("deletion request approval/denial/completion require data custodian role", 
     body: { participant_id: `p-${Date.now()}` },
   });
   assert.equal(participant.response.statusCode, 201);
+
+  const retainedParticipant = await injectJson(app, {
+    method: "POST",
+    url: `/studies/${studyId}/versions/${versionId}/participants`,
+    headers: owner.headers,
+    body: { participant_id: `p-retained-${Date.now()}` },
+  });
+  assert.equal(retainedParticipant.response.statusCode, 201);
 
   const custodianCreateParticipant = await injectJson(app, {
     method: "POST",
@@ -147,6 +160,42 @@ test("deletion request approval/denial/completion require data custodian role", 
   assert.equal(custodianApprove.response.statusCode, 200);
   assert.equal(custodianApprove.body.deletion_request.status, "Approved");
 
+  await updateStudyVersion(versionId, {
+    study_format: "ModifiedDelphi",
+    planned_round_count: 3,
+    terminal_round_number: 3,
+    consensus_rule_json: {
+      type: "percent_agreement",
+      threshold: 80,
+      agreement_min_rating: 7,
+      source: "pi_defined",
+      setting_process: "Synthetic test rule configured before final export.",
+    },
+    config_hash: "phase1-deletion-export-suppression-test",
+  });
+  const finalItem = createItem({
+    study_id: studyId,
+    version_id: versionId,
+    round_number: 3,
+    text: "Final synthetic item for deletion suppression export-report regression.",
+    provenance_type: "PanelDerived",
+    created_from: "manual",
+    created_by_user_id: owner.user.user_id,
+  });
+  updateItem(finalItem.item_id, { status: "Published" });
+  createResponse({
+    study_id: studyId,
+    version_id: versionId,
+    participant_id: participant.body.participant_id,
+    response_json: { round_number: 3, item_id: finalItem.item_id, rating: 9, action: "keep" },
+  });
+  createResponse({
+    study_id: studyId,
+    version_id: versionId,
+    participant_id: retainedParticipant.body.participant_id,
+    response_json: { round_number: 3, item_id: finalItem.item_id, rating: 1, action: "keep" },
+  });
+
   const ownerExecuteDenied = await injectJson(app, {
     method: "POST",
     url: `/studies/${studyId}/versions/${versionId}/deletion-requests/${requestId}/execute`,
@@ -165,6 +214,19 @@ test("deletion request approval/denial/completion require data custodian role", 
   assert.equal(custodianExecute.body.deletion_request.status, "Completed");
   assert.equal(custodianExecute.body.enrollment.status, "WITHDRAWN_PARTICIPANT");
   assert.equal(custodianExecute.body.participant.name, "[DELETED_PARTICIPANT]");
+
+  const exportReport = await injectJson(app, {
+    method: "GET",
+    url: `/studies/${studyId}/versions/${versionId}/export-report`,
+    headers: owner.headers,
+  });
+  assert.equal(exportReport.response.statusCode, 200);
+  assert.equal(exportReport.body.report.summary.final_round_submission_count, 1);
+  assert.equal(exportReport.body.report.items.length, 1);
+  assert.equal(exportReport.body.report.items[0].rating_summary.response_count, 1);
+  assert.equal(exportReport.body.report.items[0].rating_summary.median, 1);
+  assert.equal(exportReport.body.report.items[0].rating_summary.dispersion.max, 1);
+  assert.equal(exportReport.body.export_package.export_type, "final-delphi-report");
 
   const executionAudit = listAuditEvents().filter((event) => event.action === "participant.deletion_request.execute");
   assert.equal(executionAudit.length, 1);

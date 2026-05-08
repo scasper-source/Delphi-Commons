@@ -77,4 +77,5 @@ This document does **not** claim human-subjects readiness, pilot readiness, or p
 ## 2026-05-08 retention/deletion execution update
 - Added data-custodian-only deletion execution endpoint to move approved requests to Completed and apply participant suppression markers for future exports.
 - Added audit action `participant.deletion_request.execute` and test coverage for unauthorized execution blocking and execution ledger evidence.
+- Added follow-up coverage ensuring completed-deletion suppression is used by the final `export-report` flow, not only generated export packages.
 - This update materially reduces HSB-P0-002, but **does not claim production readiness or human-subjects readiness**. A human-observed production deployment/restore rehearsal remains required before closure.
