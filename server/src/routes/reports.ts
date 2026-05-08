@@ -489,6 +489,58 @@ function exportManifestFile(input: {
   }, null, 2);
 }
 
+function reviewerExportProvenanceFile(input: {
+  export_type: ExportPackageType;
+  studyId: string;
+  versionId: string;
+  exportTimestamp: string;
+  privacyMetadata: ReturnType<typeof privacyMetadataForExportType>;
+  recordCounts: Record<string, number>;
+}) {
+  const deidentified = input.privacyMetadata.data_classification === "deidentified_research_report";
+  return JSON.stringify({
+    schema_name: "edelphi_reviewer_export_provenance",
+    schema_version: "1.0.0",
+    source: {
+      study_id: input.studyId,
+      study_version_id: input.versionId,
+    },
+    export: {
+      export_type: input.export_type,
+      export_timestamp: input.exportTimestamp,
+      record_counts: input.recordCounts,
+    },
+    deidentification: {
+      mode: deidentified ? "controlled_deidentified_export" : "restricted_internal_not_deidentified",
+      data_classification: input.privacyMetadata.data_classification,
+      direct_identifiers_included: input.privacyMetadata.direct_identifiers_included,
+      participant_response_mapping_included: input.privacyMetadata.participant_response_mapping_included,
+      safe_for_deidentified_research_report_sharing: input.privacyMetadata.safe_for_deidentified_research_report_sharing,
+      excluded_fields: deidentified
+        ? ["participant_id", "participant_name", "email", "phone", "identity_response_mapping"]
+        : [],
+      restricted_internal_only: input.privacyMetadata.restricted_internal_only,
+    },
+    audit_and_provenance_references: {
+      package_creation_audit_action: `export.${input.export_type}.create`,
+      export_manifest_path: `${input.export_type}/export_manifest.json`,
+      privacy_classification_path: `${input.export_type}/privacy_classification.json`,
+      reviewer_provenance_path: `${input.export_type}/reviewer_export_provenance.json`,
+      related_reviewer_packages: ["audit-package", "provenance-bundle"],
+    },
+    known_residual_risks: [
+      "Free-text de-identification uses automated redaction for obvious direct identifiers and still requires human review before release.",
+      "Small-panel Delphi exports may carry re-identification risk through rare opinions, role context, or external knowledge.",
+      "Restricted internal packages may include raw internal identifiers needed for audit or preservation and are not safe for de-identified sharing.",
+    ],
+    non_claims: [
+      "This metadata is evidence for controlled mock-trial or named pilot review only.",
+      "This package does not claim legal anonymization.",
+      "This package does not claim production readiness, human-subjects readiness, IRB approval, legal approval, or security certification.",
+    ],
+  }, null, 2);
+}
+
 function extractOpenResponseText(responseJson: unknown, researchQuestions: ResearchQuestionConfig[] = []): string {
   const entries = roundOneResponseEntries(responseJson, researchQuestions);
   if (entries.length > 0) return entries.map((entry) => entry.text).join("\n\n");
@@ -1746,6 +1798,24 @@ export async function reportsRoutes(app: FastifyInstance) {
           record_count: null,
           contains_identifiable_data: privacyMetadata.direct_identifiers_included,
           redaction_profile: { privacy_metadata: "package classification" },
+        },
+        {
+          path: `${exportType}/reviewer_export_provenance.json`,
+          content: reviewerExportProvenanceFile({
+            export_type: exportType,
+            studyId,
+            versionId,
+            exportTimestamp: dataCutoffAt,
+            privacyMetadata,
+            recordCounts,
+          }),
+          format: ".json" as const,
+          record_count: null,
+          contains_identifiable_data: false,
+          redaction_profile: {
+            reviewer_provenance: "source, de-identification, residual-risk, and audit/provenance references",
+            legal_anonymization_claim: "not_claimed",
+          },
         },
         ...finalSnapshotFiles,
       ];

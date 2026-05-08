@@ -11,6 +11,7 @@
 - External collaborator build/start smoke validation captured for client and server.
 - Security/deployment control mapping completed for repo-verifiable vs deployment-specific controls.
 - Incident drill documented as tabletop/synthetic evidence only.
+- Export provenance evidence added for reviewer-facing metadata and focused privacy/provenance assertions.
 
 ## Pending human-required or deployment-required evidence
 - External business-logic and workflow validation after successful collaborator build/start.
@@ -18,6 +19,7 @@
 - Accessibility manual evidence: keyboard, NVDA/VoiceOver, real-device mobile, checklist completion, defect retests.
 - Backup/restore/migration/rollback rehearsal in named environment with artifact continuity.
 - Deployment-bound controls (live infra hardening, incident routing, runtime security posture checks).
+- Data Custodian or authorized reviewer signoff/acceptance for export package residual risks.
 - External governance/approval pathways (institutional, legal, IRB, security governance).
 
 ## Explicit non-claims

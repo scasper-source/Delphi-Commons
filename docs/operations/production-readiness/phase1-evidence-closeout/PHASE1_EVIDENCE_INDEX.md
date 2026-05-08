@@ -38,6 +38,9 @@
 ## Additional external collaborator evidence
 - `docs/operations/production-readiness/phase1-evidence-closeout/PHASE1_EXTERNAL_COLLABORATOR_BUILD_START_VALIDATION.md` - external collaborator reported successful client/server build and start, with interface loaded successfully. This is build/start smoke evidence only; business-logic and workflow validation remain pending.
 
+## Additional export provenance evidence
+- `docs/operations/production-readiness/phase1-evidence-closeout/PHASE1_EXPORT_PROVENANCE_EVIDENCE.md` - reviewer-facing export provenance metadata and privacy/provenance test evidence. This materially reduces HSB-P0-006 but does not close it without Data Custodian or authorized reviewer signoff/acceptance.
+
 ## Evidence still pending
 - Human-observed dry-run execution package artifacts (operator/observer/screenshots/defects/release decision).
 - Manual accessibility evidence (keyboard, NVDA/VoiceOver, mobile real-device, checklists, defect retest).

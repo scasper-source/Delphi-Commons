@@ -353,6 +353,16 @@ test("standard export packages redact participant-linkable identifiers and class
   for (const { exportType, created, files } of createdPackages) {
     assert.ok(created.export_package.privacy_metadata, `${exportType} missing privacy metadata`);
     assert.equal(files.export_package.privacy_metadata.export_name, created.export_package.privacy_metadata.export_name);
+
+    const reviewerProvenanceFile = files.files.find((file) => file.path === `${exportType}/reviewer_export_provenance.json`);
+    assert.ok(reviewerProvenanceFile, `${exportType} missing reviewer export provenance metadata`);
+    const reviewerProvenance = JSON.parse(reviewerProvenanceFile.content_text);
+    assert.equal(reviewerProvenance.source.study_id, studyId);
+    assert.equal(reviewerProvenance.source.study_version_id, versionId);
+    assert.equal(reviewerProvenance.export.export_type, exportType);
+    assert.equal(reviewerProvenance.deidentification.data_classification, created.export_package.privacy_metadata.data_classification);
+    assert.ok(Array.isArray(reviewerProvenance.known_residual_risks), `${exportType} should document residual risks`);
+    assert.match(reviewerProvenance.non_claims.join("\n"), /does not claim legal anonymization/i);
   }
 
   const anonymizedDataset = createdPackages.find((entry) => entry.exportType === "anonymized-response-dataset");
@@ -360,11 +370,20 @@ test("standard export packages redact participant-linkable identifiers and class
   const researchQuestionFile = anonymizedDataset.files.files.find((file) => file.path.endsWith("research_questions.csv"));
   const responseCountFile = anonymizedDataset.files.files.find((file) => file.path.endsWith("round1_response_counts_by_question.csv"));
   const responsesFile = anonymizedDataset.files.files.find((file) => file.path.endsWith("responses.csv"));
+  const participantsFile = anonymizedDataset.files.files.find((file) => file.path.endsWith("participants_anonymized.csv"));
   assert.ok(researchQuestionFile, "anonymized dataset should include ordered research questions");
   assert.ok(responseCountFile, "anonymized dataset should include Round 1 response counts by question");
+  assert.ok(participantsFile, "anonymized dataset should include anonymized participant status file");
   assert.ok(responsesFile.content_text.includes("research_question_id"), "responses.csv should preserve researchQuestionId grouping");
   assert.ok(responseCountFile.content_text.includes("rq-fixtures-access"), "response counts should include the first research question");
   assert.ok(responseCountFile.content_text.includes("rq-fixtures-reminders"), "response counts should include the second research question");
+  assert.doesNotMatch(participantsFile.content_text, /(^|,)participant_id(,|$)/im);
+  for (const participantId of participantIds) {
+    assert.equal(participantsFile.content_text.includes(participantId), false, "anonymized participant file must not contain raw participant IDs");
+  }
+  for (const email of syntheticEmails) {
+    assert.equal(participantsFile.content_text.includes(email), false, "anonymized participant file must not contain emails");
+  }
 
   const finalScan = scanResults.find((scan) => scan.package_type === "final-delphi-report");
   assert.equal(finalScan.data_classification, "deidentified_research_report");
@@ -372,6 +391,14 @@ test("standard export packages redact participant-linkable identifiers and class
   const auditScan = scanResults.find((scan) => scan.package_type === "audit-package");
   assert.equal(auditScan.data_classification, "restricted_internal_admin_audit");
   assert.ok(auditScan.warnings.length > 0, "restricted audit package should warn, not fail, when raw IDs are clearly labeled");
+  const auditPackage = createdPackages.find((entry) => entry.exportType === "audit-package");
+  assert.ok(auditPackage, "audit package export should be generated");
+  const auditReviewerProvenanceFile = auditPackage.files.files.find((file) => file.path.endsWith("reviewer_export_provenance.json"));
+  assert.ok(auditReviewerProvenanceFile, "audit package should include reviewer provenance metadata");
+  const auditReviewerProvenance = JSON.parse(auditReviewerProvenanceFile.content_text);
+  assert.equal(auditReviewerProvenance.deidentification.mode, "restricted_internal_not_deidentified");
+  assert.equal(auditReviewerProvenance.deidentification.direct_identifiers_included, true);
+  assert.equal(auditReviewerProvenance.deidentification.participant_response_mapping_included, true);
 
   const archiveScan = scanResults.find((scan) => scan.package_type === "complete-archive");
   assert.equal(archiveScan.data_classification, "complete_restricted_archive");

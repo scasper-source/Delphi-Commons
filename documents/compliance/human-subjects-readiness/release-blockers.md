@@ -86,3 +86,8 @@ A supervised internal dry run may proceed with P0 blockers only if:
 ## 2026-05-08 deployment security evidence delta
 - **HSB-P0-001**: materially reduced by executable controls and evidence artifact (`server/tests/securityDeploymentChecks.test.mjs`, `scripts/verify-deployment-security.mjs`, and `PHASE1_DEPLOYMENT_SECURITY_EXECUTED_EVIDENCE.md`), but still open pending named-deployment TLS/proxy/secrets/monitoring evidence.
 - **HSB-P0-004**: remains open; no independent reviewer signoff artifact is present in-repo.
+
+## 2026-05-08 export provenance evidence delta
+- **HSB-P0-006**: materially reduced by reviewer-facing export provenance metadata (`<exportType>/reviewer_export_provenance.json`), anonymized participant-file boundary assertions, and restricted/internal audit package classification checks.
+- Linked evidence: `docs/operations/production-readiness/phase1-evidence-closeout/PHASE1_EXPORT_PROVENANCE_EVIDENCE.md` and `server/tests/zzExportPrivacy.test.mjs`.
+- Blocker remains OPEN until Data Custodian or authorized reviewer signoff/acceptance is attached for the anonymized dataset, audit package, provenance bundle, and residual-risk interpretation.

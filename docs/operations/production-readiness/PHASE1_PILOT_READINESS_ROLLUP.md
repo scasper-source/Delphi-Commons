@@ -182,3 +182,9 @@ Current state against this gate: **NOT MET**.
 ## 2026-05-08 deployment security evidence update
 - New deployment-security executed evidence artifact added: `docs/operations/production-readiness/phase1-evidence-closeout/PHASE1_DEPLOYMENT_SECURITY_EXECUTED_EVIDENCE.md`.
 - Added new test and script evidence to materially reduce HSB-P0-001 and HSB-P0-004 scope, but these blockers remain open until named-deployment and independent-review artifacts are attached.
+
+## 2026-05-08 export provenance evidence update
+- Added reviewer-facing export provenance metadata file to governed export packages: `<exportType>/reviewer_export_provenance.json`.
+- Added focused export privacy/provenance assertions in `server/tests/zzExportPrivacy.test.mjs`.
+- Evidence artifact: `docs/operations/production-readiness/phase1-evidence-closeout/PHASE1_EXPORT_PROVENANCE_EVIDENCE.md`.
+- HSB-P0-006 is materially reduced but remains OPEN pending Data Custodian or authorized reviewer signoff/acceptance for the dataset, audit, provenance, and residual-risk package.
