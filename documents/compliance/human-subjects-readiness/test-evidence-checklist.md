@@ -262,3 +262,10 @@ Release decision:
 - Added deployment security verification command: `npm --prefix server run security:verify:deployment`.
 - Added focused backend security deployment test coverage: `server/tests/securityDeploymentChecks.test.mjs`.
 - Independent security review evidence remains required separately; this checklist update does not claim that review is complete.
+
+## 2026-05-08 export provenance evidence update
+- [x] Governed export packages include reviewer-facing provenance metadata: `<exportType>/reviewer_export_provenance.json`.
+- [x] Focused export privacy/provenance assertions added in `server/tests/zzExportPrivacy.test.mjs`.
+- [x] Anonymized participant file assertions exclude raw participant IDs and emails.
+- [x] Restricted/internal audit package de-identification mode is explicitly asserted.
+- [ ] Data Custodian or authorized reviewer signoff/acceptance for export package residual risks is attached (still required).

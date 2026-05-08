@@ -65,3 +65,8 @@ This matrix maps human-subjects readiness requirements to current implementation
 ## 2026-05-08 security deployment evidence refinement
 - HSR-018 evidence expanded with executable checks (`server/tests/securityDeploymentChecks.test.mjs`) and deployment verification script (`scripts/verify-deployment-security.mjs`) plus executed evidence artifact.
 - Status remains **Partial** until named-environment TLS/proxy and independent reviewer evidence are linked.
+
+## 2026-05-08 export provenance evidence refinement
+- HSR-023 and HSR-024 evidence expanded with reviewer-facing export provenance metadata in governed export packages and focused assertions in `server/tests/zzExportPrivacy.test.mjs`.
+- New evidence artifact: `docs/operations/production-readiness/phase1-evidence-closeout/PHASE1_EXPORT_PROVENANCE_EVIDENCE.md`.
+- Status remains **Partial** until Data Custodian or authorized reviewer signoff/acceptance is linked for the dataset, audit, provenance, and residual-risk package.
