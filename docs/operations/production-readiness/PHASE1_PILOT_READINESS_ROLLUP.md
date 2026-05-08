@@ -168,3 +168,9 @@ Current state against this gate: **NOT MET**.
 - Local automated rehearsal evidence added and executed via `npm --prefix server run test:backup-restore-rehearsal`.
 - Evidence artifact: `docs/operations/production-readiness/phase1-evidence-closeout/PHASE1_BACKUP_RESTORE_REHEARSAL_EXECUTED_EVIDENCE.md`.
 - This improves HSB-P0-002 evidence quality for local automation but does **not** satisfy production-like deployment rehearsal requirements by itself.
+
+## 2026-05-08 backup/restore rehearsal evidence refinement
+- Added and executed focused local rehearsal suite: `server/tests/backupRestoreRehearsal.test.mjs` via `npm --prefix server run test:backup-restore-rehearsal`.
+- Coverage explicitly includes study, participant, role-assignment, deletion-request, audit, export-manifest, migration-state, and restore-rollback-path checks in disposable runtime.
+- P0 blocker HSB-P0-002 remains OPEN pending production-like, operator-observed deployment rehearsal evidence.
+

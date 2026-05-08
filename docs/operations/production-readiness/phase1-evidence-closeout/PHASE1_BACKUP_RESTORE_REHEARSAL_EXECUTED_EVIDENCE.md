@@ -10,18 +10,12 @@ This evidence demonstrates a local repository automation rehearsal. It does **no
 - `npm --prefix server run test:backup-restore-rehearsal`
 
 ## Coverage proven by the rehearsal
-- Representative study flow data created by the road test prior to backup.
-- Backup created via admin API and validated as integrity-OK.
-- Restore executed from generated backup ID into clean runtime target.
-- Post-restore integrity verified for:
-  - studies,
-  - participants,
-  - study role assignments,
-  - deletion requests,
-  - audit events,
-  - export manifests.
-- Migration behavior exercised as automatic migration-on-open in disposable runtime.
-- Rollback behavior exercised via restore-path (documented current method; no standalone rollback CLI exists).
+- Creates representative synthetic study data.
+- Creates a backup via admin API and records manifest integrity checks.
+- Restores the backup into the same disposable runtime target after post-backup mutation.
+- Verifies post-restore integrity for study, participant, role-assignment, deletion-request, audit-event, and export-manifest domains.
+- Exercises migration behavior through clean runtime bootstrap (`schema_migrations` populated and preserved across restore).
+- Exercises rollback behavior through backup-restore rollback path (current supported rollback approach; no standalone migration rollback CLI).
 
 ## Result
 - Local automated rehearsal: PASS.

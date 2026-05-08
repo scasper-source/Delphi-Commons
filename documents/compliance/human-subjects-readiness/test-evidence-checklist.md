@@ -247,3 +247,9 @@ Release decision:
 - [x] Local automated backup/restore rehearsal command exists and is runnable: `npm --prefix server run test:backup-restore-rehearsal`.
 - [x] Local automated rehearsal verifies post-restore data integrity across study, participant, assignment, deletion-request, audit, and export-manifest domains.
 - [ ] Production-like, operator-observed deployment rehearsal evidence attached (still required).
+
+## 2026-05-08 focused local rehearsal update
+- [x] Added dedicated local rehearsal test: `server/tests/backupRestoreRehearsal.test.mjs`.
+- [x] Executed command: `npm --prefix server run test:backup-restore-rehearsal`.
+- [ ] Production-like, operator-observed deployment rehearsal evidence attached (still required).
+
