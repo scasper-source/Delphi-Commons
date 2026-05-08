@@ -42,3 +42,9 @@ This matrix maps human-subjects readiness requirements to current implementation
 - Every P0 release blocker must map to at least one HSR row.
 
 | Phase 1 closeout package generated | partial | docs/operations/production-readiness/phase1-evidence-closeout/PHASE1_EVIDENCE_CLOSEOUT_SUMMARY.md | Human-observed, accessibility manual, backup/restore rehearsal, deployment-specific controls, and external approvals remain pending |
+
+
+## 2026-05-08 retention/deletion execution update
+- Added data-custodian-only deletion execution endpoint to move approved requests to Completed and apply participant suppression markers for future exports.
+- Added audit action `participant.deletion_request.execute` and test coverage for unauthorized execution blocking and execution ledger evidence.
+- This update materially reduces HSB-P0-002, but **does not claim production readiness or human-subjects readiness**. A human-observed production deployment/restore rehearsal remains required before closure.

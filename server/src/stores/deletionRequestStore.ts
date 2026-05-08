@@ -78,3 +78,13 @@ export function updateDeletionRequest(input: {
     review_note: input.review_note.trim(),
   }));
 }
+
+export function listDeletionRequestsByStatus(filter: {
+  study_id: string;
+  version_id: string;
+  statuses: DeletionRequestStatus[];
+}): DeletionRequest[] {
+  const allowed = new Set(filter.statuses);
+  return listDeletionRequests({ study_id: filter.study_id, version_id: filter.version_id })
+    .filter((request) => allowed.has(request.status));
+}

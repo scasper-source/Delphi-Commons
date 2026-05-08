@@ -39,6 +39,7 @@ import {
 import {
   createDeletionRequest,
   listDeletionRequests,
+  listDeletionRequestsByStatus,
   updateDeletionRequest,
   type DeletionRequestStatus,
 } from "../stores/deletionRequestStore.js";
@@ -312,6 +313,50 @@ export async function participantsRoutes(app: FastifyInstance) {
       });
 
       return reply.send({ issue });
+    },
+  );
+
+  app.post(
+    "/studies/:studyId/versions/:versionId/deletion-requests/:requestId/execute",
+    { preHandler: allowDeletionRequestReview },
+    async (req, reply) => {
+      const { studyId, versionId, requestId } = req.params as any;
+      const actor = getActor(req);
+      if (actor.role !== "data_custodian") {
+        return reply.code(403).send({ error: "data_custodian_execution_required" });
+      }
+      const approved = listDeletionRequestsByStatus({
+        study_id: studyId,
+        version_id: versionId,
+        statuses: ["Approved"],
+      }).find((request) => request.deletion_request_id === requestId);
+      if (!approved) return reply.code(409).send({ error: "approved_deletion_request_required" });
+      const completed = updateDeletionRequest({
+        deletion_request_id: requestId,
+        reviewed_by_user_id: actor.userId,
+        status: "Completed",
+        review_note: "Deletion execution completed and export suppression enabled for future reports.",
+      });
+      if (!completed) return reply.code(404).send({ error: "deletion_request_not_found" });
+      const enrollment = updateParticipantStatus({
+        study_id: studyId,
+        version_id: versionId,
+        participant_id: completed.participant_id,
+        status: "WITHDRAWN_PARTICIPANT",
+        actor_user_id: actor.userId,
+        reason: "approved deletion request executed by data custodian",
+      });
+      const participant = updateParticipantMaster(completed.participant_id, {
+        name: "[DELETED_PARTICIPANT]",
+        email: "[DELETED_PARTICIPANT]@deleted.local",
+      });
+      await writeAuditEvent({
+        actor,
+        action: "participant.deletion_request.execute",
+        object: { type: "deletion_request", id: requestId },
+        details: { studyId, versionId, participant_id: completed.participant_id, status: completed.status },
+      });
+      return reply.send({ deletion_request: completed, enrollment, participant });
     },
   );
 

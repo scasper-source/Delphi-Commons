@@ -72,3 +72,9 @@ This document does **not** claim human-subjects readiness, pilot readiness, or p
 - **P1-RET-WP2:** Add deletion execution ledger linking request ID -> actions taken -> affected record classes.
 - **P1-RET-WP3:** Add export verification test proving post-execution packages/reports honor approved deletion/restriction outcomes.
 - **P1-RET-WP4:** Produce pilot evidence bundle from template (see compliance template file).
+
+
+## 2026-05-08 retention/deletion execution update
+- Added data-custodian-only deletion execution endpoint to move approved requests to Completed and apply participant suppression markers for future exports.
+- Added audit action `participant.deletion_request.execute` and test coverage for unauthorized execution blocking and execution ledger evidence.
+- This update materially reduces HSB-P0-002, but **does not claim production readiness or human-subjects readiness**. A human-observed production deployment/restore rehearsal remains required before closure.

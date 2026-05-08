@@ -60,3 +60,9 @@ A supervised internal dry run may proceed with P0 blockers only if:
 
 ## 2026-05-07 status note
 - Phase 1 evidence closeout package added; blockers requiring human-observed, deployment-specific, and external approvals remain active.
+
+
+## 2026-05-08 retention/deletion execution update
+- Added data-custodian-only deletion execution endpoint to move approved requests to Completed and apply participant suppression markers for future exports.
+- Added audit action `participant.deletion_request.execute` and test coverage for unauthorized execution blocking and execution ledger evidence.
+- This update materially reduces HSB-P0-002, but **does not claim production readiness or human-subjects readiness**. A human-observed production deployment/restore rehearsal remains required before closure.
