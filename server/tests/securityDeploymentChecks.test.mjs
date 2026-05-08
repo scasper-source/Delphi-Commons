@@ -8,7 +8,7 @@ import {
   registerSecurity,
   sessionCookie,
 } from "../dist/core/security.js";
-import { validateAllowedOrigins } from "../../scripts/verify-deployment-security.mjs";
+import { runDeploymentSecurityVerification, validateAllowedOrigins } from "../../scripts/verify-deployment-security.mjs";
 
 function makeApp(config) {
   const app = Fastify({ logger: false, bodyLimit: config.bodyLimitBytes });
@@ -50,6 +50,42 @@ test("deployment verifier rejects comma-separated wildcard origins", () => {
 
   const allowed = validateAllowedOrigins("https://app.example.org, https://admin.example.org");
   assert.equal(allowed.ok, true);
+});
+
+test("deployment verifier fails when npm audit cannot launch", () => {
+  const exitCode = runDeploymentSecurityVerification(
+    {
+      NODE_ENV: "production",
+      EDELPHI_ALLOWED_ORIGINS: "https://app.example.org",
+      EDELPHI_AI_KEY_ENCRYPTION_SECRET: "abcdefghijklmnopqrstuvwxyz",
+      EDELPHI_AUTH_REQUIRE_SESSION: "true",
+    },
+    ["node", "verify-deployment-security.mjs", "test"],
+    {
+      spawnSync: () => ({ stdout: "", stderr: "", error: new Error("spawn npm ENOENT") }),
+      auditCwd: process.cwd(),
+    },
+  );
+
+  assert.equal(exitCode, 1);
+});
+
+test("deployment verifier warns when audit endpoint is unreachable after audit starts", () => {
+  const exitCode = runDeploymentSecurityVerification(
+    {
+      NODE_ENV: "production",
+      EDELPHI_ALLOWED_ORIGINS: "https://app.example.org",
+      EDELPHI_AI_KEY_ENCRYPTION_SECRET: "abcdefghijklmnopqrstuvwxyz",
+      EDELPHI_AUTH_REQUIRE_SESSION: "true",
+    },
+    ["node", "verify-deployment-security.mjs", "test"],
+    {
+      spawnSync: () => ({ stdout: "", stderr: "403 Forbidden - advisory endpoint", status: 1 }),
+      auditCwd: process.cwd(),
+    },
+  );
+
+  assert.equal(exitCode, 0);
 });
 
 test("csrf required for cookie-authenticated mutations", async () => {

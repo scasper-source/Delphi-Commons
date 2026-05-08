@@ -38,7 +38,9 @@ export function auditEndpointUnavailable(output) {
   return /(?:403|forbidden|advisory|audit endpoint|registry|ENOTFOUND|EAI_AGAIN|ETIMEDOUT|ECONNRESET)/i.test(output);
 }
 
-export function runDeploymentSecurityVerification(env = process.env, argv = process.argv) {
+export function runDeploymentSecurityVerification(env = process.env, argv = process.argv, options = {}) {
+  const spawnCommand = options.spawnSync ?? spawnSync;
+  const auditCwd = options.auditCwd ?? new URL("../server", import.meta.url);
   const envName = argv[2] ?? "unset-environment";
   let warningCount = 0;
 
@@ -72,8 +74,8 @@ export function runDeploymentSecurityVerification(env = process.env, argv = proc
 
   if (allOk) {
     console.log("\n# Running npm security audit (high)");
-    const audit = spawnSync("npm", ["run", "security:audit"], {
-      cwd: new URL("../server", import.meta.url),
+    const audit = spawnCommand("npm", ["run", "security:audit"], {
+      cwd: auditCwd,
       encoding: "utf8",
       shell: process.platform === "win32",
     });
@@ -82,7 +84,8 @@ export function runDeploymentSecurityVerification(env = process.env, argv = proc
     if (audit.stderr) process.stderr.write(audit.stderr);
 
     if (audit.error) {
-      warning(`npm security audit could not be started: ${audit.error.message}`);
+      allOk = false;
+      result(false, `npm security audit could not be started: ${audit.error.message}`);
     } else if (audit.status !== 0) {
       if (auditEndpointUnavailable(auditOutput)) {
         warning("npm security audit inconclusive due advisory/registry endpoint reachability; rerun in CI or a network-permitted environment");
