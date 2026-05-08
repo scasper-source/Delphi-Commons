@@ -61,4 +61,3 @@ This matrix maps human-subjects readiness requirements to current implementation
 ## 2026-05-08 incident control delta
 - HSR-020 moved from `Not Started` to `Partial` based on implemented incident record, severity classification, pause-study-equivalent state change, notification decision recording, remediation/recovery timeline, and audit-event coverage in local automation.
 - Remaining launch gap: human-led deployment-connected notification/escalation and drill evidence continuity.
-

@@ -178,4 +178,3 @@ Current state against this gate: **NOT MET**.
 - Added incident workflow implementation and focused test coverage (`server/tests/incidentWorkflowPhase1.test.mjs`) for incident creation, authorization boundary, pause-study-equivalent state change, notification decision recording, remediation/recovery timeline, and audit integrity.
 - Added updated synthetic/tabletop incident drill artifact: `docs/operations/production-readiness/phase1-evidence-closeout/PHASE1_INCIDENT_DRILL_EVIDENCE.md`.
 - HSB-P0-005 is materially reduced but remains OPEN pending live/human-operated notification escalation evidence in deployment-like environment.
-

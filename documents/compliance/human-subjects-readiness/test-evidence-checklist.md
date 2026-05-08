@@ -257,4 +257,3 @@ Release decision:
 - [x] Focused incident workflow test added and executed: `npm --prefix server run test:incident-workflow` (`server/tests/incidentWorkflowPhase1.test.mjs`).
 - [x] Coverage includes authorized incident creation, unauthorized action blocked, pause-study-equivalent state change, remediation/recovery timeline record, and audit integrity.
 - [ ] Live notification/escalation drill evidence in deployment-like environment (still required).
-

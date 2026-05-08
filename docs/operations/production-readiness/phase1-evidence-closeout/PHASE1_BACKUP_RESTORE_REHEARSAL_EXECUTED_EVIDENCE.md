@@ -12,7 +12,8 @@ This evidence demonstrates a local repository automation rehearsal. It does **no
 ## Coverage proven by the rehearsal
 - Creates representative synthetic study data.
 - Creates a backup via admin API and records manifest integrity checks.
-- Restores the backup into the same disposable runtime target after post-backup mutation.
+- Asserts the post-backup mutation succeeds and changes persisted state before restore.
+- Restores the backup into the same disposable runtime target after verified post-backup mutation.
 - Verifies post-restore integrity for study, participant, role-assignment, deletion-request, audit-event, and export-manifest domains.
 - Exercises migration behavior through clean runtime bootstrap (`schema_migrations` populated and preserved across restore).
 - Exercises rollback behavior through backup-restore rollback path (current supported rollback approach; no standalone migration rollback CLI).

@@ -82,4 +82,3 @@ A supervised internal dry run may proceed with P0 blockers only if:
 - Incident workflow routes and focused automated tests were added for create/classify/contain/pause/timeline/audit-integrity paths.
 - Synthetic/tabletop incident drill evidence was updated and linked.
 - Blocker remains OPEN until deployment-connected, human-operated notification/escalation drill evidence is attached.
-

@@ -139,7 +139,19 @@ test("local backup/restore rehearsal preserves phase1-sensitive data and migrati
   assert.equal(backup.body.backup.audit_integrity.ok, true);
   assert.equal(backup.body.backup.data_integrity.ok, true);
 
-  await injectJson(app, { method: "POST", url: "/studies", headers: owner.headers, body: { title: "Mutation after backup" } });
+  const postBackupMutation = await injectJson(app, {
+    method: "POST",
+    url: "/studies",
+    headers: owner.headers,
+    body: { title: "Mutation after backup" },
+  });
+  assert.equal(postBackupMutation.response.statusCode, 201);
+  assert.equal(postBackupMutation.body.study.title, "Mutation after backup");
+
+  const postMutationCounts = getDatabase()
+    .prepare("SELECT COUNT(*) AS studies_count FROM documents WHERE collection = 'studies'")
+    .get();
+  assert.equal(postMutationCounts.studies_count, preBackupCounts.studies_count + 1);
 
   const restore = await injectJson(app, {
     method: "POST",
