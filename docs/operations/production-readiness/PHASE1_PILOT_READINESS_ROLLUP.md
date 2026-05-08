@@ -174,6 +174,10 @@ Current state against this gate: **NOT MET**.
 - Coverage explicitly includes study, participant, role-assignment, deletion-request, audit, export-manifest, migration-state, and restore-rollback-path checks in disposable runtime.
 - P0 blocker HSB-P0-002 remains OPEN pending production-like, operator-observed deployment rehearsal evidence.
 
+## 2026-05-08 incident workflow/drill update
+- Added incident workflow implementation and focused test coverage (`server/tests/incidentWorkflowPhase1.test.mjs`) for incident creation, authorization boundary, pause-study-equivalent state change, notification decision recording, remediation/recovery timeline, and audit integrity.
+- Added updated synthetic/tabletop incident drill artifact: `docs/operations/production-readiness/phase1-evidence-closeout/PHASE1_INCIDENT_DRILL_EVIDENCE.md`.
+- HSB-P0-005 is materially reduced but remains OPEN pending live/human-operated notification escalation evidence in deployment-like environment.
 
 ## 2026-05-08 deployment security evidence update
 - New deployment-security executed evidence artifact added: `docs/operations/production-readiness/phase1-evidence-closeout/PHASE1_DEPLOYMENT_SECURITY_EXECUTED_EVIDENCE.md`.

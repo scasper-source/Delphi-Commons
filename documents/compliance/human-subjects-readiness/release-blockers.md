@@ -78,6 +78,10 @@ A supervised internal dry run may proceed with P0 blockers only if:
 - Linked evidence: `server/tests/backupRestoreRehearsal.test.mjs` and `docs/operations/production-readiness/phase1-evidence-closeout/PHASE1_BACKUP_RESTORE_REHEARSAL_EXECUTED_EVIDENCE.md`.
 - Blocker remains OPEN until production-like deployment rehearsal evidence is attached.
 
+### 2026-05-08 update (HSB-P0-005)
+- Incident workflow routes and focused automated tests were added for create/classify/contain/pause/timeline/audit-integrity paths.
+- Synthetic/tabletop incident drill evidence was updated and linked.
+- Blocker remains OPEN until deployment-connected, human-operated notification/escalation drill evidence is attached.
 
 ## 2026-05-08 deployment security evidence delta
 - **HSB-P0-001**: materially reduced by executable controls and evidence artifact (`server/tests/securityDeploymentChecks.test.mjs`, `scripts/verify-deployment-security.mjs`, and `PHASE1_DEPLOYMENT_SECURITY_EXECUTED_EVIDENCE.md`), but still open pending named-deployment TLS/proxy/secrets/monitoring evidence.

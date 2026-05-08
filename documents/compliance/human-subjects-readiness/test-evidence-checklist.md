@@ -253,6 +253,10 @@ Release decision:
 - [x] Executed command: `npm --prefix server run test:backup-restore-rehearsal`.
 - [ ] Production-like, operator-observed deployment rehearsal evidence attached (still required).
 
+## 2026-05-08 incident workflow evidence update
+- [x] Focused incident workflow test added and executed: `npm --prefix server run test:incident-workflow` (`server/tests/incidentWorkflowPhase1.test.mjs`).
+- [x] Coverage includes authorized incident creation, unauthorized action blocked, pause-study-equivalent state change, remediation/recovery timeline record, and audit integrity.
+- [ ] Live notification/escalation drill evidence in deployment-like environment (still required).
 
 ## 2026-05-08 security evidence update
 - Added deployment security verification command: `npm --prefix server run security:verify:deployment`.

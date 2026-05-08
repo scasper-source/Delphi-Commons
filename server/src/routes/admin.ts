@@ -9,6 +9,8 @@ import { listAuditEvents, verifyAuditIntegrity, writeAuditEvent } from "../core/
 import { getStorageStatus, listAppliedMigrations } from "../core/database.js";
 import { inspectDataIntegrity } from "../core/dataIntegrity.js";
 import { createBackup, listBackups, restoreBackup } from "../core/backup.js";
+import { createIncident, listIncidents, getIncident, updateIncident, addIncidentTimelineEntry } from "../stores/incidentStore.js";
+import { getStudyVersion, updateStudyVersion } from "../studies/store.js";
 import { listExportManifests } from "../stores/exportManifestStore.js";
 import { createUser, listUsers, revokeUserSessions, sanitizeUser, updateUser } from "../auth/userStore.js";
 import type { AuthRole } from "../auth/types.js";
@@ -23,6 +25,15 @@ function isAuthRole(value: unknown): value is AuthRole {
     value === "admin" ||
     value === "participant"
   );
+}
+
+
+function isIncidentSeverity(value: unknown): value is "low" | "moderate" | "high" | "critical" {
+  return value === "low" || value === "moderate" || value === "high" || value === "critical";
+}
+
+function isIncidentStatus(value: unknown): value is "open" | "contained" | "monitoring" | "resolved" {
+  return value === "open" || value === "contained" || value === "monitoring" || value === "resolved";
 }
 
 export async function adminRoutes(app: FastifyInstance) {
@@ -219,6 +230,105 @@ export async function adminRoutes(app: FastifyInstance) {
         }
         throw error;
       }
+    }
+  );
+
+  app.get(
+    "/admin/incidents",
+    { preHandler: requireRole(["privacy_lead", "data_custodian", "maintainer", "admin"]) },
+    async () => ({ incidents: listIncidents() })
+  );
+
+  app.post(
+    "/admin/incidents",
+    { preHandler: requireRole(["privacy_lead", "data_custodian", "maintainer", "admin"]) },
+    async (req, reply) => {
+      const actor = getActor(req);
+      const body = (req.body ?? {}) as { study_id?: string; study_version_id?: string; title?: string; summary?: string; severity?: unknown; severity_rationale?: string; };
+      if (!body.study_id || !body.title || !body.summary || !isIncidentSeverity(body.severity) || !body.severity_rationale) {
+        return reply.code(400).send({ error: "incident_fields_required" });
+      }
+      const incident = createIncident({
+        study_id: body.study_id,
+        study_version_id: body.study_version_id ?? null,
+        title: body.title,
+        summary: body.summary,
+        severity: body.severity,
+        severity_rationale: body.severity_rationale,
+        created_by: actor.userId,
+      });
+      await writeAuditEvent({ actor, action: "incident.create", object: { type: "incident", id: incident.incident_id }, details: { study_id: incident.study_id, severity: incident.severity } });
+      return reply.code(201).send({ incident });
+    }
+  );
+
+  app.post(
+    "/admin/incidents/:incidentId/pause-study",
+    { preHandler: requireRole(["privacy_lead", "data_custodian", "maintainer", "admin"]) },
+    async (req, reply) => {
+      const actor = getActor(req);
+      const { incidentId } = req.params as { incidentId: string };
+      const incident = getIncident(incidentId);
+      if (!incident) return reply.code(404).send({ error: "incident_not_found" });
+      if (!incident.study_version_id) {
+        return reply.code(409).send({ error: "study_version_pause_not_applied", reason: "missing_study_version" });
+      }
+      const version = await getStudyVersion(incident.study_version_id);
+      if (!version) {
+        return reply.code(409).send({ error: "study_version_pause_not_applied", reason: "study_version_not_found" });
+      }
+      if (version.status === "Closed") {
+        return reply.code(409).send({ error: "study_version_pause_not_applied", reason: "study_version_closed" });
+      }
+      await updateStudyVersion(version.id, { status: "Paused" });
+      const updated = updateIncident(incidentId, { pause_applied: true, pause_applied_at: new Date().toISOString(), pause_applied_by: actor.userId, status: "contained" });
+      await writeAuditEvent({ actor, action: "incident.pause_study", object: { type: "incident", id: incidentId }, details: { study_id: updated.study_id, study_version_id: updated.study_version_id } });
+      return { incident: updated };
+    }
+  );
+
+  app.patch(
+    "/admin/incidents/:incidentId",
+    { preHandler: requireRole(["privacy_lead", "data_custodian", "maintainer", "admin"]) },
+    async (req, reply) => {
+      const actor = getActor(req);
+      const { incidentId } = req.params as { incidentId: string };
+      const body = (req.body ?? {}) as { status?: unknown; notification_decision?: "pending" | "not_required" | "required"; notification_rationale?: string; notification_channels?: unknown[]; };
+      const incident = getIncident(incidentId);
+      if (!incident) return reply.code(404).send({ error: "incident_not_found" });
+      const next: any = {};
+      if (body.status !== undefined) {
+        if (!isIncidentStatus(body.status)) return reply.code(400).send({ error: "invalid_incident_status" });
+        next.status = body.status;
+      }
+      if (body.notification_decision !== undefined) {
+        if (!["pending", "not_required", "required"].includes(body.notification_decision)) return reply.code(400).send({ error: "invalid_notification_decision" });
+        next.notification = {
+          decision: body.notification_decision,
+          rationale: body.notification_rationale ?? incident.notification.rationale,
+          channels: Array.isArray(body.notification_channels) ? body.notification_channels.filter((x): x is string => typeof x === 'string') : incident.notification.channels,
+          decided_by: actor.userId,
+          decided_at: new Date().toISOString(),
+        };
+      }
+      const updated = updateIncident(incidentId, next);
+      await writeAuditEvent({ actor, action: "incident.update", object: { type: "incident", id: incidentId }, details: { status: updated.status, notification_decision: updated.notification.decision } });
+      return { incident: updated };
+    }
+  );
+
+  app.post(
+    "/admin/incidents/:incidentId/timeline",
+    { preHandler: requireRole(["privacy_lead", "data_custodian", "maintainer", "admin"]) },
+    async (req, reply) => {
+      const actor = getActor(req);
+      const { incidentId } = req.params as { incidentId: string };
+      const body = (req.body ?? {}) as { category?: "remediation" | "recovery" | "note"; note?: string };
+      if (!getIncident(incidentId)) return reply.code(404).send({ error: "incident_not_found" });
+      if (!body.category || !body.note) return reply.code(400).send({ error: "timeline_fields_required" });
+      const updated = addIncidentTimelineEntry({ incident_id: incidentId, category: body.category, note: body.note, actor_user_id: actor.userId });
+      await writeAuditEvent({ actor, action: "incident.timeline", object: { type: "incident", id: incidentId }, details: { category: body.category } });
+      return { incident: updated };
     }
   );
 
