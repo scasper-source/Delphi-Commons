@@ -494,6 +494,7 @@ function reviewerExportProvenanceFile(input: {
   studyId: string;
   versionId: string;
   exportTimestamp: string;
+  dataCutoffAt: string;
   privacyMetadata: ReturnType<typeof privacyMetadataForExportType>;
   recordCounts: Record<string, number>;
 }) {
@@ -508,6 +509,7 @@ function reviewerExportProvenanceFile(input: {
     export: {
       export_type: input.export_type,
       export_timestamp: input.exportTimestamp,
+      data_cutoff_at: input.dataCutoffAt,
       record_counts: input.recordCounts,
     },
     deidentification: {
@@ -1615,6 +1617,7 @@ export async function reportsRoutes(app: FastifyInstance) {
         ...rounds.map((round) => round.updated_at),
         ...suggestions.map((suggestion) => suggestion.created_at),
       ].sort().at(-1) ?? new Date().toISOString();
+      const exportGeneratedAt = new Date().toISOString();
       const dataset = buildExportDataset({ studyId, versionId, items, responses, finalRoundNumber, participantStatuses, researchQuestions });
       const edgeRows = provenanceEdges({ studyId, items });
       const transformRows = transformationRows({ items, merges, splits });
@@ -1805,7 +1808,8 @@ export async function reportsRoutes(app: FastifyInstance) {
             export_type: exportType,
             studyId,
             versionId,
-            exportTimestamp: dataCutoffAt,
+            exportTimestamp: exportGeneratedAt,
+            dataCutoffAt,
             privacyMetadata,
             recordCounts,
           }),

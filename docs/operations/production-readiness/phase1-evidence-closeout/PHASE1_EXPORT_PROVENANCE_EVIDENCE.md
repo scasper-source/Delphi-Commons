@@ -14,7 +14,7 @@ The governed export package builder now includes a reviewer-facing provenance me
 The file records:
 
 - source study ID and study version ID;
-- export type and export timestamp;
+- export type, export generation timestamp, and source data cutoff timestamp;
 - de-identification mode and data classification;
 - excluded direct identifier fields for controlled de-identified packages;
 - restricted/internal status for audit and complete archive packages;
