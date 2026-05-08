@@ -174,3 +174,7 @@ Current state against this gate: **NOT MET**.
 - Coverage explicitly includes study, participant, role-assignment, deletion-request, audit, export-manifest, migration-state, and restore-rollback-path checks in disposable runtime.
 - P0 blocker HSB-P0-002 remains OPEN pending production-like, operator-observed deployment rehearsal evidence.
 
+
+## 2026-05-08 deployment security evidence update
+- New deployment-security executed evidence artifact added: `docs/operations/production-readiness/phase1-evidence-closeout/PHASE1_DEPLOYMENT_SECURITY_EXECUTED_EVIDENCE.md`.
+- Added new test and script evidence to materially reduce HSB-P0-001 and HSB-P0-004 scope, but these blockers remain open until named-deployment and independent-review artifacts are attached.

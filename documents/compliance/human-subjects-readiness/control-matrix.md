@@ -58,3 +58,7 @@ This matrix maps human-subjects readiness requirements to current implementation
 - HSR-019 local automated evidence now includes focused rehearsal test `server/tests/backupRestoreRehearsal.test.mjs` (in addition to broad lifecycle road test).
 - Status remains **Partial** because production-like deployment rehearsal evidence is still required.
 
+
+## 2026-05-08 security deployment evidence refinement
+- HSR-018 evidence expanded with executable checks (`server/tests/securityDeploymentChecks.test.mjs`) and deployment verification script (`scripts/verify-deployment-security.mjs`) plus executed evidence artifact.
+- Status remains **Partial** until named-environment TLS/proxy and independent reviewer evidence are linked.
