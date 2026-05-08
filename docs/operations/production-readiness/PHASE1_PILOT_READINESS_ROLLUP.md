@@ -162,3 +162,9 @@ Current state against this gate: **NOT MET**.
 - Added data-custodian-only deletion execution endpoint to move approved requests to Completed and apply participant suppression markers for future exports.
 - Added audit action `participant.deletion_request.execute` and test coverage for unauthorized execution blocking and execution ledger evidence.
 - This update materially reduces HSB-P0-002, but **does not claim production readiness or human-subjects readiness**. A human-observed production deployment/restore rehearsal remains required before closure.
+
+
+## 2026-05-08 backup/restore rehearsal execution update
+- Local automated rehearsal evidence added and executed via `npm --prefix server run test:backup-restore-rehearsal`.
+- Evidence artifact: `docs/operations/production-readiness/phase1-evidence-closeout/PHASE1_BACKUP_RESTORE_REHEARSAL_EXECUTED_EVIDENCE.md`.
+- This improves HSB-P0-002 evidence quality for local automation but does **not** satisfy production-like deployment rehearsal requirements by itself.

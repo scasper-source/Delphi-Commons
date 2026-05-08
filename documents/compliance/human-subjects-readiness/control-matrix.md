@@ -48,3 +48,8 @@ This matrix maps human-subjects readiness requirements to current implementation
 - Added data-custodian-only deletion execution endpoint to move approved requests to Completed and apply participant suppression markers for future exports.
 - Added audit action `participant.deletion_request.execute` and test coverage for unauthorized execution blocking and execution ledger evidence.
 - This update materially reduces HSB-P0-002, but **does not claim production readiness or human-subjects readiness**. A human-observed production deployment/restore rehearsal remains required before closure.
+
+
+## 2026-05-08 evidence delta
+- Backup/restore rehearsal control now has executed local automation evidence (`npm --prefix server run test:backup-restore-rehearsal`) linked in Phase 1 evidence closeout.
+- Production-like rehearsal evidence remains required before marking that control fully closed for pilot launch gating.
