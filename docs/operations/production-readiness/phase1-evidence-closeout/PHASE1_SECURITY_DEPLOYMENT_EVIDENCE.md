@@ -22,3 +22,11 @@ This review maps Phase 1 security/deployment controls to evidence that exists in
 - Not claiming production readiness.
 - Not claiming security certification.
 - Not claiming legal or IRB approval.
+
+## 2026-05-08 update
+- Added executable deployment security verification assets:
+  - `server/tests/securityDeploymentChecks.test.mjs`
+  - `scripts/verify-deployment-security.mjs`
+  - `server/package.json` script `security:verify:deployment`
+- Added executed evidence artifact: `PHASE1_DEPLOYMENT_SECURITY_EXECUTED_EVIDENCE.md`.
+- Repo-verifiable control evidence improved; named-deployment and independent-review evidence remain required for full blocker closure.

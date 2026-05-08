@@ -83,3 +83,12 @@ This checklist is an engineering evidence organizer for `mock_trial` hardening. 
 - security certification,
 - legal or regulatory certification,
 - real human-subjects operational authorization.
+
+## 2026-05-08 execution update
+
+- Added repo-verifiable deployment security checks:
+  - `server/tests/securityDeploymentChecks.test.mjs` for production HSTS behavior, CSRF enforcement, and CORS allow/deny behavior.
+  - `scripts/verify-deployment-security.mjs` for named-environment checklist execution without secret disclosure.
+- Added executed evidence artifact: `docs/operations/production-readiness/phase1-evidence-closeout/PHASE1_DEPLOYMENT_SECURITY_EXECUTED_EVIDENCE.md`.
+- HSB-P0-001 is materially reduced via executable checks and evidence structure, but still needs named-deployment TLS/proxy/monitoring artifacts for closure.
+- HSB-P0-004 remains open pending independent reviewer evidence.
