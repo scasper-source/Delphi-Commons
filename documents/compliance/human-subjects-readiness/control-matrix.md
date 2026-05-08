@@ -53,3 +53,8 @@ This matrix maps human-subjects readiness requirements to current implementation
 ## 2026-05-08 evidence delta
 - Backup/restore rehearsal control now has executed local automation evidence (`npm --prefix server run test:backup-restore-rehearsal`) linked in Phase 1 evidence closeout.
 - Production-like rehearsal evidence remains required before marking that control fully closed for pilot launch gating.
+
+## 2026-05-08 backup/restore evidence refinement
+- HSR-019 local automated evidence now includes focused rehearsal test `server/tests/backupRestoreRehearsal.test.mjs` (in addition to broad lifecycle road test).
+- Status remains **Partial** because production-like deployment rehearsal evidence is still required.
+

@@ -7,7 +7,7 @@
 
 ## Linked evidence
 - `docs/operations/production-readiness/phase1-evidence-closeout/PHASE1_BACKUP_RESTORE_REHEARSAL_EXECUTED_EVIDENCE.md`
-- `server/tests/roadtest.test.mjs`
+- `server/tests/backupRestoreRehearsal.test.mjs`
 - `server/package.json` (`test:backup-restore-rehearsal`)
 
 ## Closure interpretation
