@@ -18,6 +18,7 @@ const { registerSecurity, resetRateLimitsForTests, PARTICIPANT_INVITATION_HEADER
 const { authRoutes } = await import("../dist/routes/auth.js");
 const { studiesRoutes } = await import("../dist/studies/routes.js");
 const { participantsRoutes } = await import("../dist/routes/participants.js");
+const { listAuditEvents } = await import("../dist/core/audit.js");
 
 async function buildApp() {
   resetRateLimitsForTests();
@@ -145,4 +146,26 @@ test("deletion request approval/denial/completion require data custodian role", 
   });
   assert.equal(custodianApprove.response.statusCode, 200);
   assert.equal(custodianApprove.body.deletion_request.status, "Approved");
+
+  const ownerExecuteDenied = await injectJson(app, {
+    method: "POST",
+    url: `/studies/${studyId}/versions/${versionId}/deletion-requests/${requestId}/execute`,
+    headers: owner.headers,
+    body: {},
+  });
+  assert.equal(ownerExecuteDenied.response.statusCode, 403);
+
+  const custodianExecute = await injectJson(app, {
+    method: "POST",
+    url: `/studies/${studyId}/versions/${versionId}/deletion-requests/${requestId}/execute`,
+    headers: { ...custodian.headers, "x-user-role": "data_custodian" },
+    body: {},
+  });
+  assert.equal(custodianExecute.response.statusCode, 200);
+  assert.equal(custodianExecute.body.deletion_request.status, "Completed");
+  assert.equal(custodianExecute.body.enrollment.status, "WITHDRAWN_PARTICIPANT");
+  assert.equal(custodianExecute.body.participant.name, "[DELETED_PARTICIPANT]");
+
+  const executionAudit = listAuditEvents().filter((event) => event.action === "participant.deletion_request.execute");
+  assert.equal(executionAudit.length, 1);
 });

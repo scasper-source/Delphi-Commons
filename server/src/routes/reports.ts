@@ -6,6 +6,7 @@
 import type { FastifyInstance } from "fastify";
 import { listItems, type ItemRecord } from "../stores/itemStore.js";
 import { listResponses, type ResponseRecord } from "../stores/responseStore.js";
+import { listDeletionRequestsByStatus } from "../stores/deletionRequestStore.js";
 import { getStudy, getStudyVersion, listSignoffs } from "../studies/store.js";
 import { listConsentVersions } from "../stores/consentStore.js";
 import { listRoundConfigs } from "../stores/roundConfigStore.js";
@@ -148,6 +149,22 @@ function sortResponses(responses: ResponseRecord[]): ResponseRecord[] {
     if (byCreated !== 0) return byCreated;
     return a.response_id.localeCompare(b.response_id);
   });
+}
+
+function excludeDeletionCompletedResponses(input: {
+  studyId: string;
+  versionId: string;
+  responses: ResponseRecord[];
+}): ResponseRecord[] {
+  const blocked = new Set(
+    listDeletionRequestsByStatus({
+      study_id: input.studyId,
+      version_id: input.versionId,
+      statuses: ["Completed"],
+    }).map((request) => request.participant_id),
+  );
+  if (blocked.size === 0) return input.responses;
+  return input.responses.filter((response) => !blocked.has(response.participant_id));
 }
 
 function getAgreementMinRating(rule: unknown): number {
@@ -1507,7 +1524,11 @@ export async function reportsRoutes(app: FastifyInstance) {
       );
       const rounds = listRoundConfigs({ study_id: studyId, version_id: versionId });
       const items = sortItems(listItems({ study_id: studyId, version_id: versionId }));
-      const responses = sortResponses(listResponses({ study_id: studyId, version_id: versionId }));
+      const responses = sortResponses(excludeDeletionCompletedResponses({
+        studyId,
+        versionId,
+        responses: listResponses({ study_id: studyId, version_id: versionId }),
+      }));
       const participantStatuses = listParticipantEnrollments({ study_id: studyId, version_id: versionId });
       const attritionSummary = buildAttritionSummary({
         enrollments: participantStatuses,
@@ -2063,5 +2084,3 @@ export async function reportsRoutes(app: FastifyInstance) {
     }
   );
 }
-
-

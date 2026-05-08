@@ -235,3 +235,9 @@ Release decision:
 ## 2026-05-07 Phase 1 evidence closeout update
 - Added closeout package: `docs/operations/production-readiness/phase1-evidence-closeout/`.
 - Decision remains `PARTIAL / EVIDENCE INCOMPLETE` pending human-required and deployment-specific evidence.
+
+
+## 2026-05-08 retention/deletion execution update
+- Added data-custodian-only deletion execution endpoint to move approved requests to Completed and apply participant suppression markers for future exports.
+- Added audit action `participant.deletion_request.execute` and test coverage for unauthorized execution blocking and execution ledger evidence.
+- This update materially reduces HSB-P0-002, but **does not claim production readiness or human-subjects readiness**. A human-observed production deployment/restore rehearsal remains required before closure.

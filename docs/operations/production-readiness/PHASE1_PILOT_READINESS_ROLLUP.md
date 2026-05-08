@@ -156,3 +156,9 @@ Do **not** mark Phase 1 pilot readiness achieved unless:
 2. the rollup document links the supporting evidence artifacts for each closed/accepted item.
 
 Current state against this gate: **NOT MET**.
+
+
+## 2026-05-08 retention/deletion execution update
+- Added data-custodian-only deletion execution endpoint to move approved requests to Completed and apply participant suppression markers for future exports.
+- Added audit action `participant.deletion_request.execute` and test coverage for unauthorized execution blocking and execution ledger evidence.
+- This update materially reduces HSB-P0-002, but **does not claim production readiness or human-subjects readiness**. A human-observed production deployment/restore rehearsal remains required before closure.
