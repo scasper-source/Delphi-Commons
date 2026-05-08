@@ -360,6 +360,14 @@ test("standard export packages redact participant-linkable identifiers and class
     assert.equal(reviewerProvenance.source.study_id, studyId);
     assert.equal(reviewerProvenance.source.study_version_id, versionId);
     assert.equal(reviewerProvenance.export.export_type, exportType);
+    assert.equal(typeof reviewerProvenance.export.export_timestamp, "string");
+    assert.equal(typeof reviewerProvenance.export.data_cutoff_at, "string");
+    assert.equal(
+      new Date(reviewerProvenance.export.export_timestamp).getTime() >=
+        new Date(reviewerProvenance.export.data_cutoff_at).getTime(),
+      true,
+      `${exportType} export_timestamp should represent package generation chronology, not an older data cutoff`,
+    );
     assert.equal(reviewerProvenance.deidentification.data_classification, created.export_package.privacy_metadata.data_classification);
     assert.ok(Array.isArray(reviewerProvenance.known_residual_risks), `${exportType} should document residual risks`);
     assert.match(reviewerProvenance.non_claims.join("\n"), /does not claim legal anonymization/i);
