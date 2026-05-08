@@ -27,8 +27,14 @@ This artifact records **repo-verifiable** security controls and local execution 
 ## Result summary
 - Build: pass
 - Full server tests: pass
-- Security audit: pass (high-level threshold)
-- Deployment verification script: fail in local environment until deployment-required env vars are set (`EDELPHI_AI_KEY_ENCRYPTION_SECRET`, `EDELPHI_AUTH_REQUIRE_SESSION`).
+- Security audit: inconclusive warning in this local environment when the npm advisory endpoint returned `403 Forbidden`; rerun in CI or a network-permitted environment.
+- Deployment verification script: pass with warnings when required controls are configured and the npm advisory endpoint is unreachable.
+
+## 2026-05-08 follow-up verification fix
+- Updated `scripts/verify-deployment-security.mjs` so required controls remain hard failures while recommended production controls are warnings.
+- Updated wildcard CORS verification to reject comma-separated origin lists containing `*`, matching `server/src/core/config.ts`.
+- Added regression coverage proving the verifier rejects `EDELPHI_ALLOWED_ORIGINS=https://app.example.org,*` before running audit.
+- Added explicit production cookie flag assertions for `HttpOnly`, `SameSite=Strict`, and `Secure`.
 
 ## Named-deployment controls still required
 The following require operator evidence for each environment (dev/staging/prod), and are not claimed complete by repo-only checks:
