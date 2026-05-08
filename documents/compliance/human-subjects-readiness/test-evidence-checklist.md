@@ -262,3 +262,8 @@ Release decision:
 - Added deployment security verification command: `npm --prefix server run security:verify:deployment`.
 - Added focused backend security deployment test coverage: `server/tests/securityDeploymentChecks.test.mjs`.
 - Independent security review evidence remains required separately; this checklist update does not claim that review is complete.
+
+## 2026-05-08 export/privacy evidence delta
+- Added focused automated coverage for reviewer-facing provenance metadata presence and de-identification mode labelling.
+- Added focused automated checks that anonymized participant exports exclude direct participant IDs and email identifiers.
+- Linked evidence artifact: `docs/operations/production-readiness/phase1-evidence-closeout/PHASE1_EXPORT_PROVENANCE_EVIDENCE.md`.

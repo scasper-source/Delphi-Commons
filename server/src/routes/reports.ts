@@ -1747,6 +1747,44 @@ export async function reportsRoutes(app: FastifyInstance) {
           contains_identifiable_data: privacyMetadata.direct_identifiers_included,
           redaction_profile: { privacy_metadata: "package classification" },
         },
+        {
+          path: `${exportType}/reviewer_export_provenance.json`,
+          content: JSON.stringify({
+            scope: "de-identified for controlled mock/pilot evidence; not legal anonymization determination",
+            source_study: {
+              study_id: studyId,
+              study_version_id: versionId,
+              config_hash: studyVersion.config_hash,
+            },
+            export_timestamp: dataCutoffAt,
+            de_identification_mode: privacyMetadata.data_classification === "deidentified_research_report"
+              ? "deidentified_research_report"
+              : "restricted_internal_package",
+            excluded_fields: [
+              "participant_name",
+              "participant_email",
+              "phone",
+              "direct identity-response mapping columns",
+              "consent contact channels",
+            ],
+            known_residual_risks: [
+              "Pseudonymized participant IDs may still permit re-identification when combined with external information.",
+              "Free-text response excerpts can retain contextual uniqueness even after redaction/anonymization.",
+              "Restricted/internal packages can contain linkable identifiers and must remain access-controlled.",
+            ],
+            audit_provenance_references: {
+              export_manifest_audit_event_id: "available_in_export_manifest_record",
+              export_manifest_dataset_hash: datasetHash,
+              package_builder: "governed_package_v1",
+              privacy_classification_file: `${exportType}/privacy_classification.json`,
+              export_manifest_file: `${exportType}/export_manifest.json`,
+            },
+          }, null, 2),
+          format: ".json" as const,
+          record_count: null,
+          contains_identifiable_data: false,
+          redaction_profile: { reviewer_metadata: "provenance_and_risk_summary" },
+        },
         ...finalSnapshotFiles,
       ];
 

@@ -182,3 +182,9 @@ Current state against this gate: **NOT MET**.
 ## 2026-05-08 deployment security evidence update
 - New deployment-security executed evidence artifact added: `docs/operations/production-readiness/phase1-evidence-closeout/PHASE1_DEPLOYMENT_SECURITY_EXECUTED_EVIDENCE.md`.
 - Added new test and script evidence to materially reduce HSB-P0-001 and HSB-P0-004 scope, but these blockers remain open until named-deployment and independent-review artifacts are attached.
+
+## 2026-05-08 export provenance evidence update
+- Added reviewer-facing export provenance metadata (`reviewer_export_provenance.json`) for governed export packages with study/version source, export timestamp, de-identification mode, excluded fields, known residual risks, and audit/provenance references.
+- Added focused export privacy tests proving anonymized dataset artifacts exclude direct participant IDs/email identifiers and restricted/internal packages retain explicit restricted-mode metadata.
+- Evidence artifact: `docs/operations/production-readiness/phase1-evidence-closeout/PHASE1_EXPORT_PROVENANCE_EVIDENCE.md`.
+- **HSB-P0-006 is materially reduced but remains OPEN** pending required human reviewer signoff and full closeout acceptance.

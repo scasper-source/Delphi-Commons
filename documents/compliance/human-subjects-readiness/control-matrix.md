@@ -65,3 +65,7 @@ This matrix maps human-subjects readiness requirements to current implementation
 ## 2026-05-08 security deployment evidence refinement
 - HSR-018 evidence expanded with executable checks (`server/tests/securityDeploymentChecks.test.mjs`) and deployment verification script (`scripts/verify-deployment-security.mjs`) plus executed evidence artifact.
 - Status remains **Partial** until named-environment TLS/proxy and independent reviewer evidence are linked.
+
+## 2026-05-08 export provenance delta
+- HSR-023/HSR-024 evidence depth increased with reviewer-facing export provenance metadata (`reviewer_export_provenance.json`) and focused export privacy assertions for identifier/mapping exclusion.
+- Status remains **Partial** pending human reviewer acceptance and production-context evidence continuity.
