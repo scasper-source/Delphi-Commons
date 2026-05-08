@@ -8,10 +8,12 @@
 - Automated server build and full server test pass results captured.
 - Targeted auth/session hardening test pass captured.
 - Targeted deletion/Data Custodian workflow test pass captured.
+- External collaborator build/start smoke validation captured for client and server.
 - Security/deployment control mapping completed for repo-verifiable vs deployment-specific controls.
 - Incident drill documented as tabletop/synthetic evidence only.
 
 ## Pending human-required or deployment-required evidence
+- External business-logic and workflow validation after successful collaborator build/start.
 - Human-observed pilot dry run package execution and artifacts.
 - Accessibility manual evidence: keyboard, NVDA/VoiceOver, real-device mobile, checklist completion, defect retests.
 - Backup/restore/migration/rollback rehearsal in named environment with artifact continuity.

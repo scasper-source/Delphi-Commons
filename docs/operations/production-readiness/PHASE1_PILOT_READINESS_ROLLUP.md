@@ -56,6 +56,10 @@ These areas have meaningful implementation evidence and work-packet confirmation
   - `docs/operations/production-readiness/phase1-pilot-dry-run/PHASE1_HUMAN_OBSERVED_PILOT_DRY_RUN_PACKAGE.md`
   - `docs/operations/production-readiness/phase1-accessibility-closeout/PHASE1_ACCESSIBILITY_CLOSEOUT_PACKAGE.md`
 
+- **External collaborator build/start smoke validation exists** for client and server startup outside the main local automation context. The collaborator also identified business-logic and workflow validation as the next step.
+  Evidence links:
+  - `docs/operations/production-readiness/phase1-evidence-closeout/PHASE1_EXTERNAL_COLLABORATOR_BUILD_START_VALIDATION.md`
+
 ---
 
 ## 2) Partial evidence (implemented foundations, launch-grade evidence incomplete)

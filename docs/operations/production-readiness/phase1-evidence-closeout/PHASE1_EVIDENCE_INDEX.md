@@ -35,6 +35,9 @@
 - `docs/operations/production-readiness/phase1-evidence-closeout/PHASE1_HUMAN_OBSERVED_DRY_RUN_EVIDENCE.md`
 - `docs/operations/production-readiness/phase1-evidence-closeout/PHASE1_ACCESSIBILITY_CLOSEOUT_EVIDENCE.md`
 
+## Additional external collaborator evidence
+- `docs/operations/production-readiness/phase1-evidence-closeout/PHASE1_EXTERNAL_COLLABORATOR_BUILD_START_VALIDATION.md` - external collaborator reported successful client/server build and start, with interface loaded successfully. This is build/start smoke evidence only; business-logic and workflow validation remain pending.
+
 ## Evidence still pending
 - Human-observed dry-run execution package artifacts (operator/observer/screenshots/defects/release decision).
 - Manual accessibility evidence (keyboard, NVDA/VoiceOver, mobile real-device, checklists, defect retest).
