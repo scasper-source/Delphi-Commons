@@ -269,3 +269,8 @@ Release decision:
 - [x] Anonymized participant file assertions exclude raw participant IDs and emails.
 - [x] Restricted/internal audit package de-identification mode is explicitly asserted.
 - [ ] Data Custodian or authorized reviewer signoff/acceptance for export package residual risks is attached (still required).
+
+## 2026-05-11 human/deployment evidence checklist update
+- Added explicit closeout binder for remaining human/deployment evidence: `docs/operations/production-readiness/phase1-human-deployment-closeout/`.
+- Missing items are explicitly tracked as `NOT PROVIDED`, `NOT RUN`, `HUMAN_REQUIRED`, `DEPLOYMENT_REQUIRED`, or `SIGNOFF_REQUIRED`.
+- Checklist interpretation remains unchanged: do not claim pilot-readiness while P0 blocker evidence/signoff remains incomplete.

@@ -188,3 +188,9 @@ Current state against this gate: **NOT MET**.
 - Added focused export privacy/provenance assertions in `server/tests/zzExportPrivacy.test.mjs`.
 - Evidence artifact: `docs/operations/production-readiness/phase1-evidence-closeout/PHASE1_EXPORT_PROVENANCE_EVIDENCE.md`.
 - HSB-P0-006 is materially reduced but remains OPEN pending Data Custodian or authorized reviewer signoff/acceptance for the dataset, audit, provenance, and residual-risk package.
+
+## 2026-05-11 human/deployment evidence closeout binder update
+- Added binder directory: `docs/operations/production-readiness/phase1-human-deployment-closeout/`.
+- This binder captures remaining Phase 1 human/deployment evidence streams with explicit gap labels (`NOT PROVIDED`, `NOT RUN`, `HUMAN_REQUIRED`, `DEPLOYMENT_REQUIRED`, `SIGNOFF_REQUIRED`).
+- P0 blockers HSB-P0-001 through HSB-P0-007 remain OPEN in the binder closeout table because required owner-role evidence/signoff is not fully attached.
+- Pilot readiness gate remains **NOT MET**.
