@@ -79,9 +79,8 @@ Environment constraint: this host does not provide `pwsh`/Windows PowerShell, so
 
 ## Remaining blockers to decision upgrade
 
-- Run this same closeout on an actual Windows environment with PowerShell and execute the script commands directly (`start`, `smoke`, `status`, `backup`, `reset`, `stop`, `restart`) with captured logs.
-- Produce explicit Windows evidence for reset snapshot and backup manifest outcomes from the script paths.
-- Produce explicit Windows evidence for runtime path materialization under `%LOCALAPPDATA%`.
+- Local Windows PowerShell supervisor evidence has now been recorded separately in [WINDOWS_OPERATOR_CANDIDATE_LOCAL_SUPERVISOR_EVIDENCE.md](./WINDOWS_OPERATOR_CANDIDATE_LOCAL_SUPERVISOR_EVIDENCE.md).
+- Remaining decision-upgrade blockers include producing a reproducible downloadable/internal package, replacing the local Node/npm assumption with a packaged runtime strategy, and completing human-observed candidate walkthrough evidence.
 
 ## Explicit non-claims
 
