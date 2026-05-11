@@ -103,3 +103,7 @@ powershell -ExecutionPolicy Bypass -File .\scripts\windows\operator-candidate.ps
 ## What this does not claim
 
 This prototype does **not** claim production readiness, pilot readiness, real human-subjects readiness, IRB/legal/security/accessibility certification, installer readiness, Windows support readiness, macOS support readiness, real SMS readiness, PWA readiness, native mobile readiness, or external AI readiness.
+
+## Evidence closeout
+
+- Windows candidate evidence closeout: [WINDOWS_OPERATOR_CANDIDATE_EVIDENCE_CLOSEOUT.md](./WINDOWS_OPERATOR_CANDIDATE_EVIDENCE_CLOSEOUT.md).

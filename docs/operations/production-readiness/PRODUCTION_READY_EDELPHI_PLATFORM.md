@@ -121,6 +121,7 @@ Goal: decide exactly what the human testing candidate will include.
 Reference closeout note: [PHASE1_PRODUCT_SURFACE_LOCK_CLOSEOUT.md](./PHASE1_PRODUCT_SURFACE_LOCK_CLOSEOUT.md).
 Architecture ADR required before implementation: [BACKEND_PACKAGING_PROCESS_SUPERVISION_ADR.md](./BACKEND_PACKAGING_PROCESS_SUPERVISION_ADR.md).
 Stage 1 Windows prototype implementation note: [WINDOWS_OPERATOR_CANDIDATE_PROTOTYPE.md](./WINDOWS_OPERATOR_CANDIDATE_PROTOTYPE.md).
+Stage 1 Windows evidence closeout note: [WINDOWS_OPERATOR_CANDIDATE_EVIDENCE_CLOSEOUT.md](./WINDOWS_OPERATOR_CANDIDATE_EVIDENCE_CLOSEOUT.md).
 
 Required decisions:
 
