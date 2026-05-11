@@ -47,3 +47,16 @@
 - Backup/restore/migration/rollback rehearsal artifacts in named environment.
 - Deployment-specific security hardening and live incident notification integration evidence.
 - External institutional/legal/IRB/security governance approvals.
+
+## 2026-05-11 Phase 1 human/deployment closeout binder
+- Added binder directory: `docs/operations/production-readiness/phase1-human-deployment-closeout/`.
+- Added summary and seven workstream artifacts plus P0 closeout table:
+  - `PHASE1_HUMAN_DEPLOYMENT_CLOSEOUT_SUMMARY.md`
+  - `NAMED_DEPLOYMENT_SECURITY_EVIDENCE.md`
+  - `PRODUCTION_LIKE_BACKUP_RESTORE_RETENTION_REHEARSAL.md`
+  - `HUMAN_ACCESSIBILITY_EVIDENCE.md`
+  - `INDEPENDENT_SECURITY_HARDENING_SIGNOFF.md`
+  - `DEPLOYMENT_CONNECTED_INCIDENT_DRILL_EVIDENCE.md`
+  - `DATA_CUSTODIAN_EXPORT_REVIEW_SIGNOFF.md`
+  - `PHASE1_P0_BLOCKER_CLOSEOUT_TABLE.md`
+- Current binder status is evidence-gap focused: multiple items remain `NOT PROVIDED`, `NOT RUN`, `HUMAN_REQUIRED`, `DEPLOYMENT_REQUIRED`, or `SIGNOFF_REQUIRED`.

@@ -31,3 +31,8 @@ This closeout package does **not** approve or claim:
 - legal approval,
 - security certification,
 - accessibility certification.
+
+## 2026-05-11 human/deployment closeout package update
+- Added dedicated binder: `docs/operations/production-readiness/phase1-human-deployment-closeout/`.
+- Decision remains **NOT READY** for Phase 1 pilot-readiness claim.
+- Newly documented missing evidence now explicitly labeled as `NOT PROVIDED`, `NOT RUN`, `HUMAN_REQUIRED`, `DEPLOYMENT_REQUIRED`, or `SIGNOFF_REQUIRED` across deployment security, production-like operations rehearsal, human accessibility, independent security review, incident escalation drill, and Data Custodian export review.

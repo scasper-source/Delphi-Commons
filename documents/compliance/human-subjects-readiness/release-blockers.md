@@ -91,3 +91,8 @@ A supervised internal dry run may proceed with P0 blockers only if:
 - **HSB-P0-006**: materially reduced by reviewer-facing export provenance metadata (`<exportType>/reviewer_export_provenance.json`), anonymized participant-file boundary assertions, and restricted/internal audit package classification checks.
 - Linked evidence: `docs/operations/production-readiness/phase1-evidence-closeout/PHASE1_EXPORT_PROVENANCE_EVIDENCE.md` and `server/tests/zzExportPrivacy.test.mjs`.
 - Blocker remains OPEN until Data Custodian or authorized reviewer signoff/acceptance is attached for the anonymized dataset, audit package, provenance bundle, and residual-risk interpretation.
+
+## 2026-05-11 human/deployment closeout package update
+- Added dedicated closeout binder: `docs/operations/production-readiness/phase1-human-deployment-closeout/`.
+- HSB-P0-001 through HSB-P0-006 remain OPEN because named deployment artifacts and/or required role signoffs are not yet provided.
+- HSB-P0-007 remains OPEN pending a full human-observed end-to-end dry run artifact set.

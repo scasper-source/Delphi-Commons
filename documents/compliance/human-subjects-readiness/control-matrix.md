@@ -70,3 +70,7 @@ This matrix maps human-subjects readiness requirements to current implementation
 - HSR-023 and HSR-024 evidence expanded with reviewer-facing export provenance metadata in governed export packages and focused assertions in `server/tests/zzExportPrivacy.test.mjs`.
 - New evidence artifact: `docs/operations/production-readiness/phase1-evidence-closeout/PHASE1_EXPORT_PROVENANCE_EVIDENCE.md`.
 - Status remains **Partial** until Data Custodian or authorized reviewer signoff/acceptance is linked for the dataset, audit, provenance, and residual-risk package.
+
+## 2026-05-11 evidence mapping update (human/deployment closeout binder)
+- Added evidence-gap binder: `docs/operations/production-readiness/phase1-human-deployment-closeout/`.
+- HSR-017, HSR-018, HSR-019, HSR-020, HSR-023, HSR-024, and HSR-025 remain **Partial** until corresponding human/deployment evidence and owner-role signoffs in the new binder move from missing to complete.
