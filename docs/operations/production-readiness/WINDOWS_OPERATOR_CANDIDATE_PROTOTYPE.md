@@ -21,8 +21,8 @@ powershell -ExecutionPolicy Bypass -File .\scripts\windows\operator-candidate.ps
 
 `start` behavior:
 
-- Builds frontend (`npm --prefix app run build`).
-- Builds backend (`npm --prefix server run build`).
+- Builds frontend (`npm.cmd --prefix app run build` internally).
+- Builds backend (`npm.cmd --prefix server run build` internally).
 - Starts backend at `http://127.0.0.1:3001`.
 - Starts frontend preview at `http://127.0.0.1:4173`.
 - Waits for `/health` readiness before opening/printing operator UI URL.
@@ -107,3 +107,4 @@ This prototype does **not** claim production readiness, pilot readiness, real hu
 ## Evidence closeout
 
 - Windows candidate evidence closeout: [WINDOWS_OPERATOR_CANDIDATE_EVIDENCE_CLOSEOUT.md](./WINDOWS_OPERATOR_CANDIDATE_EVIDENCE_CLOSEOUT.md).
+- Local Windows PowerShell supervisor evidence: [WINDOWS_OPERATOR_CANDIDATE_LOCAL_SUPERVISOR_EVIDENCE.md](./WINDOWS_OPERATOR_CANDIDATE_LOCAL_SUPERVISOR_EVIDENCE.md).

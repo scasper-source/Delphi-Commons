@@ -21,6 +21,7 @@ $ApiHost = '127.0.0.1'
 $UiUrl = "http://127.0.0.1:$UiPort"
 $HealthUrl = "http://127.0.0.1:$ApiPort/health"
 $LockFile = Join-Path $StateDir 'instance.lock.json'
+$NpmCommand = 'npm.cmd'
 
 function Ensure-Dirs {
   foreach ($path in @($RuntimeRoot,$StateDir,$LogsDir,$EvidenceDir,$DbDir,$AuditDir,$ExportsDir,$BackupsDir)) {
@@ -41,6 +42,13 @@ function Write-Evidence([string]$message) {
   Add-Content -Path (Join-Path $EvidenceDir 'operator-events.log') -Value "[$stamp] $message"
 }
 
+function Invoke-Checked([string]$filePath, [string[]]$arguments) {
+  & $filePath @arguments
+  if ($LASTEXITCODE -ne 0) {
+    throw "Command failed with exit code ${LASTEXITCODE}: $filePath $($arguments -join ' ')"
+  }
+}
+
 function Read-State {
   if (Test-Path -LiteralPath $LockFile) {
     return Get-Content -LiteralPath $LockFile -Raw | ConvertFrom-Json
@@ -52,33 +60,64 @@ function Save-State($state) {
   $state | ConvertTo-Json | Set-Content -LiteralPath $LockFile -Encoding UTF8
 }
 
-function Is-Running([int]$pid) {
-  try { Get-Process -Id $pid -ErrorAction Stop | Out-Null; return $true } catch { return $false }
+function Is-Running([int]$processId) {
+  try { Get-Process -Id $processId -ErrorAction Stop | Out-Null; return $true } catch { return $false }
 }
 
-function Stop-ProcessTree([int]$pid, [string]$name) {
-  if (!(Is-Running $pid)) { return }
+function Stop-ProcessTree([int]$processId, [string]$name) {
+  if (!(Is-Running $processId)) { return }
+  $children = Get-CimInstance Win32_Process -Filter "ParentProcessId=$processId" -ErrorAction SilentlyContinue
+  foreach ($child in $children) {
+    Stop-ProcessTree -processId $child.ProcessId -name "$name-child"
+  }
   try {
-    Stop-Process -Id $pid -ErrorAction Stop
+    Stop-Process -Id $processId -ErrorAction Stop
     Start-Sleep -Seconds 2
   } catch {}
-  if (Is-Running $pid) {
-    Stop-Process -Id $pid -Force -ErrorAction SilentlyContinue
+  if (Is-Running $processId) {
+    Stop-Process -Id $processId -Force -ErrorAction SilentlyContinue
   }
-  Write-Evidence "Stopped $name pid=$pid"
+  Write-Evidence "Stopped $name pid=$processId"
 }
 
 function Stop-IfRunning {
   $state = Read-State
   if ($null -eq $state) { return }
-  Stop-ProcessTree -pid $state.backendPid -name 'backend'
-  Stop-ProcessTree -pid $state.uiPid -name 'ui-preview'
+  Stop-ProcessTree -processId $state.backendPid -name 'backend'
+  Stop-ProcessTree -processId $state.uiPid -name 'ui-preview'
   Remove-Item -LiteralPath $LockFile -Force -ErrorAction SilentlyContinue
 }
 
 function Assert-PortFree([int]$port) {
   $taken = Get-NetTCPConnection -LocalPort $port -State Listen -ErrorAction SilentlyContinue
   if ($taken) { throw "Port $port already in use. Stop conflicting process and retry." }
+}
+
+function Start-BackendProcess([string]$stdoutLog, [string]$stderrLog) {
+  $backendEnv = @{
+    HOST = $ApiHost
+    PORT = "$ApiPort"
+    EDELPHI_DATA_DIR = $DbDir
+    EDELPHI_AUDIT_DIR = $AuditDir
+    EDELPHI_BACKUP_DIR = $BackupsDir
+    EDELPHI_ALLOWED_ORIGINS = $UiUrl
+    NODE_ENV = 'production'
+  }
+
+  $previous = @{}
+  foreach ($key in $backendEnv.Keys) {
+    $previous[$key] = [Environment]::GetEnvironmentVariable($key, 'Process')
+    [Environment]::SetEnvironmentVariable($key, $backendEnv[$key], 'Process')
+  }
+
+  try {
+    return Start-Process -FilePath 'node' -ArgumentList @('server/dist/index.js') -PassThru -NoNewWindow -RedirectStandardOutput $stdoutLog -RedirectStandardError $stderrLog -WorkingDirectory $RepoRoot
+  }
+  finally {
+    foreach ($key in $backendEnv.Keys) {
+      [Environment]::SetEnvironmentVariable($key, $previous[$key], 'Process')
+    }
+  }
 }
 
 function Start-Prototype {
@@ -97,24 +136,17 @@ function Start-Prototype {
 
   Push-Location $RepoRoot
   try {
-    npm --prefix app run build
-    npm --prefix server run build
+    Invoke-Checked $NpmCommand @('--prefix','app','run','build')
+    Invoke-Checked $NpmCommand @('--prefix','server','run','build')
 
-    $backendLog = Join-Path $LogsDir ('backend-' + (Get-Date -Format 'yyyyMMdd-HHmmss') + '.log')
-    $uiLog = Join-Path $LogsDir ('ui-preview-' + (Get-Date -Format 'yyyyMMdd-HHmmss') + '.log')
+    $logStamp = Get-Date -Format 'yyyyMMdd-HHmmss'
+    $backendOutLog = Join-Path $LogsDir ('backend-' + $logStamp + '-out.log')
+    $backendErrLog = Join-Path $LogsDir ('backend-' + $logStamp + '-err.log')
+    $uiOutLog = Join-Path $LogsDir ('ui-preview-' + $logStamp + '-out.log')
+    $uiErrLog = Join-Path $LogsDir ('ui-preview-' + $logStamp + '-err.log')
 
-    $backendEnv = @{
-      HOST = $ApiHost
-      PORT = "$ApiPort"
-      EDELPHI_DATA_DIR = $DbDir
-      EDELPHI_AUDIT_DIR = $AuditDir
-      EDELPHI_BACKUP_DIR = $BackupsDir
-      EDELPHI_ALLOWED_ORIGINS = $UiUrl
-      NODE_ENV = 'production'
-    }
-
-    $backend = Start-Process -FilePath 'node' -ArgumentList @('server/dist/index.js') -PassThru -NoNewWindow -RedirectStandardOutput $backendLog -RedirectStandardError $backendLog -WorkingDirectory $RepoRoot -Environment $backendEnv
-    $ui = Start-Process -FilePath 'npm' -ArgumentList @('--prefix','app','run','preview','--','--host','127.0.0.1','--port',"$UiPort",'--strictPort') -PassThru -NoNewWindow -RedirectStandardOutput $uiLog -RedirectStandardError $uiLog -WorkingDirectory $RepoRoot
+    $backend = Start-BackendProcess -stdoutLog $backendOutLog -stderrLog $backendErrLog
+    $ui = Start-Process -FilePath $NpmCommand -ArgumentList @('--prefix','app','run','preview','--','--host','127.0.0.1','--port',"$UiPort",'--strictPort') -PassThru -NoNewWindow -RedirectStandardOutput $uiOutLog -RedirectStandardError $uiErrLog -WorkingDirectory $RepoRoot
 
     $deadline = (Get-Date).AddSeconds(45)
     $ready = $false
@@ -127,8 +159,8 @@ function Start-Prototype {
     }
 
     if (!$ready) {
-      Stop-ProcessTree -pid $backend.Id -name 'backend'
-      Stop-ProcessTree -pid $ui.Id -name 'ui-preview'
+      Stop-ProcessTree -processId $backend.Id -name 'backend'
+      Stop-ProcessTree -processId $ui.Id -name 'ui-preview'
       throw "Backend did not become healthy at $HealthUrl"
     }
 
