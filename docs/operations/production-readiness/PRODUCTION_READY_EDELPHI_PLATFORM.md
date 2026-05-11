@@ -1,558 +1,396 @@
-# Production-Ready eDelphi Platform: Phased Implementation, Evidence, and Release Workflow
+# Product Readiness Plan for eDelphi: Downloadable Laptop and Phone Human Testing Candidate
 
 Status: planning document. This is not a production-readiness claim.
 
-This document defines the workflow for moving the eDelphi MVP from controlled mock-trial readiness toward controlled pilot readiness, production-candidate readiness, and eventual public open-source release. It is implementation-oriented and evidence-driven. A release track can advance only when its required evidence exists and its blockers are closed or explicitly accepted by the authorized roles.
+Date basis: 2026-05-11.
+
+This document resets the near-term readiness plan around the project's actual next goal:
+
+**Build a downloadable/operator-ready eDelphi candidate that can run on laptops and be opened on phones through SMS-linked participant access, then use that candidate for final human testing.**
+
+The final stage of this plan is human testing. A controlled pilot, production deployment, and public open-source release remain later decisions and require separate approvals.
 
 ## Governing Documents
 
-This workflow is subordinate to:
+This plan is subordinate to:
 
 - [Ethical Governance Charter for Delphi Commons](../../../documents/governance/ethical-governance-charter.md)
 - [AI Governance & Human-in-the-Loop Thin Spec](../../../documents/governance/ai-assistance-thin-spec.md)
+- [Human Subjects Readiness Plan](../../../documents/compliance/human-subjects-readiness/HUMAN_SUBJECTS_READINESS.md)
 
-Where this document is silent, the Ethical Governance Charter governs. Where this document conflicts with either governing document, the stricter human-protection, privacy, methodological-integrity, or AI-HITL requirement governs.
+Where documents conflict, the stricter human-protection, privacy, methodological-integrity, accessibility, security, or AI-HITL requirement governs.
 
 ## Non-Claim Boundary
 
-Current merged evidence supports controlled synthetic/mock testing only. It does not authorize:
+Current merged evidence supports controlled synthetic/mock testing and engineering readiness only. This plan does not authorize or claim:
 
 - production deployment,
-- real human-subjects research,
-- IRB launch,
-- use of sensitive participant data,
-- legal compliance claims,
+- pilot readiness,
+- real human-subjects research readiness,
+- IRB/ethics approval,
+- legal approval,
 - security certification,
-- accessibility conformance claims,
-- unrestricted public release claims.
+- accessibility certification,
+- unrestricted public release,
+- native app-store distribution.
 
-## Definition Of Production Readiness
+Human-required evidence must be observed, recorded, and signed by the relevant human role. Codex may prepare tooling, templates, documentation, scripts, and evidence binders, but must not invent human observations, phone results, reviewer decisions, deployment facts, notification outcomes, or signoffs.
 
-The platform is production-ready only when all of the following are true for a named release candidate:
+## Immediate Product Objective
 
-- Product workflows support complete study setup, consent, invitation, participant rounds, curation, feedback, final release, export review, support, withdrawal, retention, and incident handling without relying on ad hoc local scripts for ordinary operations.
-- Governance controls enforce Study Owner, Ethics & Methods Steward, Security & Privacy Lead, Data Custodian, and maintainer decision rights.
-- Human-subjects controls are implemented, documented, tested, and externally reviewed where applicable.
-- Identity data, response data, audit logs, consent records, exports, and support notes are protected by production-grade authentication, authorization, encryption, retention, backup, restore, logging, and incident response.
-- AI cannot decide, publish, persuade, erase dissent, silently transform study content, or use external processing without explicit enablement, disclosure, minimization, and human approval.
-- Accessibility evidence supports WCAG 2.2 AA readiness for participant and staff workflows, including manual assistive-technology review.
-- Deployment, upgrade, rollback, monitoring, backup, restore, and incident-response procedures have been rehearsed in production-like conditions.
-- Release artifacts are reproducible from a clean checkout, signed or checksummed where appropriate, and linked to evidence.
-- Supported client/install targets are named, tested, and documented; unsupported desktop or phone applications are explicitly marked not shipped.
-- Remaining residual risks are documented and accepted by the authorized roles.
+The next target is not a pilot. The next target is:
 
-Production readiness is release-specific. Passing one release candidate does not automatically certify later code, later deployments, external AI connectors, new study designs, or new data classes.
+**HUMAN TESTING CANDIDATE READY**
 
-## Release Tracks
+That means a named commit produces an operator-ready package that:
 
-| Track | Intended use | Data allowed | Required decision |
-| --- | --- | --- | --- |
-| `mock_trial` | Controlled synthetic or low-risk local/dev/staging rehearsal. | Synthetic or low-risk test data only. | GO / GO WITH CONDITIONS for mock testing only. |
-| `pilot` | Controlled pilot under named institutional, legal, ethical, and operational constraints. | Real participant data only if all required approvals and P0 gates are closed. | Pilot authorization by Study Owner, Ethics & Methods Steward, Security & Privacy Lead, and Data Custodian. |
-| `production_candidate` | Release candidate for production deployment by a controlled operator. | Deployment-specific real data only after pilot evidence and production gates pass. | Production-candidate approval with signed evidence bundle and residual-risk acceptance. |
-| `public_open_source` | Public repository and tagged open-source release. | No real study data, secrets, identity mappings, or sensitive exports in the repository. | Public-release approval by maintainers after security/privacy/license/release gates pass. |
-
-## Client Distribution Targets
-
-Production readiness must name the client distribution targets that are supported by the release. Web deployment should be treated as the primary pilot path unless desktop or mobile packaging has its own evidence.
-
-| Target | Intended role | Minimum release evidence |
-| --- | --- | --- |
-| Hosted web app | Default staff and participant client for pilot and production-candidate deployments. | Browser support matrix, TLS/session evidence, responsive/mobile checks, accessibility evidence, cache/storage privacy review. |
-| Windows desktop install | Optional packaged staff/operator client or local controlled deployment shell. | Signed installer or documented unsigned-dev limitation, install/uninstall test, Windows compatibility matrix, update strategy, local data directory policy, SmartScreen/Defender notes, accessibility smoke. |
-| macOS desktop install | Optional packaged staff/operator client or local controlled deployment shell. | Signed and notarized package for release candidates, Intel/Apple Silicon support statement, install/uninstall test, Gatekeeper notes, update strategy, local data directory policy, accessibility smoke. |
-| Mobile web / PWA | Preferred phone path before native apps unless native capabilities are required. | iOS Safari and Android Chrome evidence, install-to-home-screen behavior if enabled, offline/cache privacy review, small-screen accessibility, no sensitive data in unsafe browser storage. |
-| Native iOS app | Optional later distribution path for approved deployments. | App Store/TestFlight plan, privacy labels, permission inventory, secure storage/keychain review, session revocation, push-notification governance if used, mobile accessibility evidence. |
-| Native Android app | Optional later distribution path for approved deployments. | Play/internal testing plan, Data Safety form inputs, permission inventory, secure storage/Keystore review, session revocation, push-notification governance if used, mobile accessibility evidence. |
-
-Desktop and phone applications must not broaden data or readiness claims. A native app release is blocked if it introduces offline storage, push notifications, device identifiers, crash analytics, third-party SDKs, or app-store telemetry without privacy review, participant disclosure, and Data Custodian approval.
-
-## Human Closeout Sequencing Rule
-
-Human-required Phase 1 evidence should be collected against a pinned closeout candidate, not against a moving development branch. The next planning target is therefore an operator-ready build that a Study Owner can install, start, and walk through with Codex and human reviewers in real time.
-
-Until that closeout candidate exists, human-required P0 evidence remains intentionally deferred, not closed:
-
-- manual accessibility review,
-- named deployment security signoff,
-- production-like backup/restore and retention/deletion rehearsal,
-- deployment-connected incident drill,
-- Data Custodian export/residual-risk signoff,
-- full human-observed end-to-end dry run.
-
-Codex may prepare scripts, templates, checklists, seeded synthetic data, package docs, and evidence binders before that point. Codex must not invent human observations, device results, reviewer decisions, deployment facts, notification outcomes, or signoffs.
-
-The closeout candidate must be tied to a commit hash and must identify exactly which operator path is in scope:
-
-| Operator path | Use in Phase 1 human closeout | Required before human closeout |
-| --- | --- | --- |
-| Local web/operator package on Windows | Preferred first laptop walkthrough path if no hosted staging environment exists. | Documented install/start/stop/reset/uninstall steps, synthetic seed data, no secrets in repo, local data directory policy, browser URL, smoke-test command, known limitations. |
-| Local web/operator package on macOS | Required before claiming macOS operator support. | Same evidence as Windows, plus Intel/Apple Silicon and Gatekeeper/signing limitation notes. |
-| Hosted staging web deployment | Preferred named deployment path for pilot-like security and operations evidence. | URL/environment label, TLS/reverse-proxy proof, session/CORS/CSRF/header checks, monitoring/logging notes, backup/restore target, residual-risk record. |
-| Mobile web / PWA | Preferred phone review path before native apps. | iOS Safari and Android Chrome real-device walkthrough, cache/storage privacy check, small-screen accessibility review. |
-| Native iOS/Android app | Out of Phase 1 scope unless explicitly added. | App-store/test-channel, permissions, secure storage, privacy labels, session revocation, push notification governance, mobile accessibility evidence. |
-
-The first successful result of this stage is not "pilot ready." It is:
-
-**PHASE 1 CLOSEOUT CANDIDATE READY FOR HUMAN REVIEW**
-
-That decision means the system is ready for a structured human walkthrough using synthetic/internal data. It does not authorize real participants or production deployment.
+- can be downloaded or checked out cleanly on a laptop,
+- can be started, stopped, reset, backed up, restored, and inspected from documented operator steps,
+- exposes a mobile participant experience that can be opened on phones,
+- supports SMS-linked participant entry in a governed, neutral, auditable way,
+- includes synthetic demo data or a repeatable synthetic study setup,
+- includes a human testing binder with checklists, observer transcript, screenshot/log index, defect rubric, and signoff forms,
+- preserves all non-claims until human testing is actually completed and reviewed.
 
 ## Current State Summary
 
-Use existing evidence instead of repeating completed mock-trial work. The current state should be interpreted as a strong baseline for the `mock_trial` track and an input to later tracks.
+Use existing evidence as baseline. Do not rerun mock-trial work unless a change could invalidate it.
 
-| Area | Current status | Reuse rule |
+| Area | Current status | Readiness interpretation |
 | --- | --- | --- |
-| Controlled full mock trial | Evidence exists for 8 synthetic participants x 4 Classical Delphi rounds through local browser automation. Latest documented result: P0=0, P1=0, P2=0, P3=0. | Reuse as mock-trial baseline evidence. Do not treat as pilot or production evidence. |
-| Mobile final closeout | 320px, 390px, and 414px evidence passes with no page-level horizontal overflow after remediation. | Reuse as regression baseline. Add real-device and assistive-technology evidence before accessibility claims. |
-| Export privacy and provenance | De-identified exports passed with 0 failures; restricted warnings remain limited to restricted/internal packages. Reviewer-facing export provenance metadata now exists for governed packages. | Reuse as export privacy/provenance regression baseline. Human Data Custodian review and residual-risk signoff remain required. |
-| AI/HITL governance | Local/test AI governance checks passed with no live external AI calls. | Reuse for No External AI mode. External AI connectors require separate policy, tests, disclosure, and minimization evidence. |
-| Phase 10 operations | Documentation exists; some synthetic/dev rehearsals passed; incident response, production-like staging, independent security review, and human accessibility review remain incomplete. | Reuse documentation and partial rehearsal evidence. Complete missing drills before pilot or production-candidate claims. |
-| Human-subjects readiness package | Human-subjects readiness plan, blockers, control matrix, and evidence checklist exist. | Use as the detailed control baseline. Update statuses as implementation lands. |
-| Open-source readiness | Clean GitHub import exists; governance, security policy, contribution files, and release checklist exist. | Use as repository baseline. Public release still needs dependency/license/security/release evidence. |
-| Install packaging | Web/local developer operation exists as the practical baseline. Windows, macOS, PWA, and native mobile packaging are not yet release-supported unless separately evidenced. | Treat installers and phone apps as future distribution work, not implied current capability. |
-| Human closeout sequencing | Phase 1 human-required evidence remains open by design until a pinned closeout candidate exists. | Build an operator-ready install/start/walkthrough path first; then run the human closeout live against that candidate. |
+| Mock-trial flow | Full synthetic browser automation evidence exists for 8 participants x 4 Classical Delphi rounds with P0=0, P1=0, P2=0, P3=0. | Strong mock-trial baseline only. |
+| Mobile layout | 320px, 390px, and 414px final closeout evidence passed after the 320px overflow fix. | Useful regression baseline. Real-device and assistive-technology checks still required. |
+| Auth/session/roles | Session-required auth hardening, membership enforcement, role downgrade behavior, and audit evidence exist. | Materially reduces pilot blocker risk. |
+| Retention/deletion | Data Custodian review and deletion execution paths exist, with export suppression evidence. | Local synthetic evidence only; production-like rehearsal and signoff still required. |
+| Backup/restore | Local automated backup/restore rehearsal exists with audit/data integrity checks. | Local engineering evidence only; production-like operator rehearsal still required. |
+| Incident workflow | Incident records, pause-study-equivalent action, severity, notification decision, timeline, and audit checks exist. | Synthetic/tabletop evidence only; deployment-connected human drill still required. |
+| Deployment security checks | Repo-verifiable security tests and deployment verification script exist. | Named environment evidence and independent/security lead acceptance still required. |
+| Export privacy/provenance | Governed packages include reviewer provenance metadata; focused export privacy/provenance tests exist. | Data Custodian/reviewer signoff still required. |
+| External collaborator smoke | External collaborator reported successful client/server build and start. | Build/start smoke only; not workflow validation. |
+| Human/deployment closeout | Evidence-gap binders/templates exist or are being prepared. | Gaps remain open until human testing is performed against a candidate. |
+
+## Product Tracks
+
+| Track | Intended use | Data allowed | Decision label |
+| --- | --- | --- | --- |
+| `mock_trial` | Synthetic controlled engineering rehearsal. | Synthetic or low-risk test data only. | GO / GO WITH CONDITIONS for mock testing only. |
+| `human_testing_candidate` | Downloadable laptop and phone-accessible candidate for internal human testing. | Synthetic/internal test data only unless separately approved. | READY FOR HUMAN TESTING / NOT READY. |
+| `controlled_pilot` | Future named pilot under institutional/legal/ethical approval. | Real participant data only after all required approvals and P0 gates. | PILOT AUTHORIZED / NOT AUTHORIZED. |
+| `production_candidate` | Future production release candidate. | Deployment-specific data only after pilot and production gates. | PRODUCTION CANDIDATE APPROVED / NOT APPROVED. |
+| `public_open_source` | Future public source release. | No real data, secrets, identity mappings, or sensitive exports in repo. | PUBLIC RELEASE APPROVED / NOT APPROVED. |
+
+This plan focuses on `human_testing_candidate`.
+
+## Supported Product Surfaces For Human Testing
+
+| Surface | Near-term status | Product intent | Evidence required before human testing |
+| --- | --- | --- | --- |
+| Windows laptop operator package | In scope now. | Primary first human testing path. | Clean install/start/stop/reset, local data directory policy, backup/export paths, smoke test, uninstall/reset notes, Defender/SmartScreen limitation notes if unsigned. |
+| macOS laptop operator package | In scope now if a Mac tester is available. | Secondary laptop support path. | Clean install/start/stop/reset, Intel/Apple Silicon statement, Gatekeeper/signing limitation notes, local data directory policy, smoke test. |
+| Phone participant mobile web | In scope now. | Primary phone experience for participants. | iOS Safari and Android Chrome open-link evidence, responsive active task checks, consent/Round 1/later round/support/withdrawal checks, real-device accessibility notes. |
+| SMS magic-link entry | In scope now. | Primary invitation/reminder entry path for phone testing. | Neutral SMS copy, opt-in/verification rules, opaque expiring links, rate limits, audit events, no sensitive content in SMS, STOP/HELP or documented simulated equivalent. |
+| PWA install-to-home-screen | Design now; ship only if privacy-reviewed. | Optional phone convenience path. | Manifest/service-worker review, cache/storage privacy proof, logout/session revocation, iOS/Android behavior notes. |
+| Native iOS app | Deferred unless explicitly approved. | Later distribution path only if mobile web/PWA is insufficient. | TestFlight/App Store plan, permissions, secure storage, privacy labels, SDK review, push notification governance. |
+| Native Android app | Deferred unless explicitly approved. | Later distribution path only if mobile web/PWA is insufficient. | Internal testing/Play plan, permissions, secure storage, Data Safety inputs, SDK review, push notification governance. |
 
 ## Phase Roadmap
 
-### Phase 0: Mock-Trial Baseline Stabilization
+### Phase 0: Baseline Preservation
 
-Goal: preserve the current controlled synthetic evidence as a repeatable baseline.
+Goal: preserve current mock-trial and Phase 1 engineering evidence as a regression baseline.
+
+Required work:
+
+- Keep latest mock-trial artifacts and pointers.
+- Keep mobile width evidence at 320px, 390px, and 414px.
+- Keep export privacy/provenance evidence and restricted-warning interpretation.
+- Keep Phase 1 hardening, backup/restore, incident, deletion, deployment-security, and export-provenance evidence linked.
+- Keep all non-claims visible.
+
+Exit gate:
+
+- `mock_trial` remains GO WITH CONDITIONS only.
+- No production, pilot, IRB, legal, security, accessibility, or human-subjects readiness claim.
+
+### Phase 1: Product Surface Lock
+
+Goal: decide exactly what the human testing candidate will include.
+
+Required decisions:
+
+- Windows laptop operator path: included / excluded / deferred.
+- macOS laptop operator path: included / excluded / deferred.
+- Phone participant path: mobile web required.
+- SMS path: mock provider only / real provider sandbox / real provider production credentials deferred.
+- PWA path: included / excluded / deferred.
+- Native iOS/Android: excluded unless separately approved.
+- External AI mode: No External AI unless a named connector is separately approved.
 
 Required evidence:
 
-- Latest full mock-trial artifact and pointer retained.
-- Mobile final closeout screenshots retained for 320px, 390px, and 414px.
-- Export privacy scan retained with 0 failures and restricted-warning interpretation.
-- Build/test commands documented with commit hash.
-- Known limits remain visible in docs.
+- Product surface matrix with included/deferred/not-shipped status.
+- Runtime architecture diagram for laptop operator package and phone/SMS participant entry.
+- Data storage and secret handling statement for laptop and phone paths.
+- Explicit unsupported-target statements.
 
 Exit gate:
 
-- `mock_trial` track remains GO WITH CONDITIONS only.
-- No language claims production, IRB, legal, security, or accessibility certification.
+- Human testing scope is locked for the candidate.
+- No surface is implied supported unless it has an evidence plan.
 
-### Phase 1: Pilot-Readiness Hardening And Human Closeout Preparation
+### Phase 2: Downloadable Laptop Operator Candidate
 
-Goal: close implementation blockers where possible, then produce a pinned operator-ready closeout candidate so human-required evidence can be collected in a realistic walkthrough.
-
-Phase 1 is split into two sub-stages:
-
-- **Phase 1A: Operator-ready closeout preparation.** Build the install/start/run/reset evidence path, package docs, seeded synthetic study, smoke tests, and walkthrough binder needed before formal human evidence collection.
-- **Phase 1B: Human-observed closeout.** Run the structured human checks against the pinned closeout candidate and attach the resulting observations, screenshots, logs, defects, residual-risk decisions, and signoffs.
-
-Phase 1A can be completed without closing human-required P0 blockers. Phase 1B cannot be completed without actual human/deployment evidence.
+Goal: make the app runnable by a human operator on a laptop without source-code editing.
 
 Required implementation:
 
-- Production authentication, session, membership, and role review.
-- Deployment-specific secrets, TLS/reverse-proxy, CORS, CSRF, rate-limit, and security-header configuration.
-- Retention/deletion workflow with Data Custodian review and evidence.
-- Production-like backup, restore, migration, rollback, and audit-integrity rehearsal.
-- Incident workflow: pause study, record incident, classify severity, notify, remediate, recover.
-- Human-observed dry run covering staff and participant workflows.
-- Accessibility review for consent and active round tasks with NVDA and/or VoiceOver.
-- Pilot package templates for participant information, consent, confidentiality, withdrawal, retention, AI disclosure, and support.
-- Operator-ready install/start/stop/reset documentation for the chosen closeout path.
-- Synthetic seed/demo study suitable for repeatable human walkthroughs.
-- Windows and macOS local operator paths documented if desktop/laptop closeout is in scope.
-- Mobile web/PWA real-device review path documented if phone closeout is in scope.
-- Human closeout binder that can be filled in live during the walkthrough.
-
-Required Phase 1A evidence:
-
-- Clean checkout install/start command set for the selected operator path.
-- Commit hash and environment label for the closeout candidate.
-- Synthetic seed/demo data instructions.
-- Smoke-test command and expected result.
-- Operator walkthrough checklist covering staff, participant, export, incident, deletion, backup/restore, and support flows.
-- Windows evidence if Windows operator path is in scope.
-- macOS evidence if macOS operator path is in scope.
-- Mobile web/PWA preflight evidence if phone review is in scope.
-- Explicit list of human-required evidence still deferred.
-
-Required Phase 1B evidence:
-
-- Updated human-subjects control matrix.
-- Closed or accepted P0 blocker list.
-- Pilot dry-run transcript with screenshots or logs.
-- Accessibility report with defects and remediations.
-- Accessibility closeout package output (keyboard walkthrough, NVDA/VoiceOver template output, mobile real-device template output, error/input-association checklist, focus/labels/contrast/time-limit/copy checklist, and defect remediation evidence).
-- Security/deployment checklist with residual risks.
-- Backup/restore artifact and audit verification result.
-- Incident drill artifact.
-- Incident workflow record using the Phase 1 incident drill template, including pause-study equivalent actions, severity rationale, notification decisions, and remediation/recovery timeline.
-- Human-observed pilot dry-run package (operator checklist, observer transcript, screenshot/log evidence index, defect rubric output, and release decision template output).
-
-Exit gate:
-
-- Phase 1A exit gate: closeout candidate is ready for human review only if install/start/reset docs, synthetic data, smoke tests, and walkthrough binder are complete for the selected operator path.
-- Phase 1A exit does not close pilot readiness, production readiness, real human-subjects readiness, or human-required P0 blockers.
-- Phase 1B exit gate: every P0 blocker is closed with linked evidence or formally accepted with dated owner rationale and residual-risk statement.
-- Pilot approval is possible only for a named deployment, study protocol, data class, and approval context.
-- Any real participant pilot still requires applicable institutional, IRB, legal, or ethics authorization outside the software.
-
-### Phase 2: Controlled Pilot Execution
-
-Goal: operate one or more approved controlled pilots and collect operational evidence without expanding claims beyond the approved context.
-
-Required implementation:
-
-- Pilot-specific study configuration lock.
-- Deployment monitoring and alerting.
-- Staff onboarding and support workflow.
-- Export review workflow with Data Custodian approval.
-- Participant support, withdrawal, and incident paths verified during the pilot.
-- Release-note and defect-triage process for pilot builds.
+- Documented install/start/stop/reset path for Windows.
+- Documented install/start/stop/reset path for macOS if in scope.
+- Local runtime directory policy for database, audit logs, exports, backups, and evidence artifacts.
+- Safe environment setup for development/testing secrets.
+- One-command or clearly sequenced smoke test.
+- Synthetic demo study seed or repeatable setup workflow.
+- Operator checklist that covers study setup, roles, consent, invitations, rounds, curation, closeout, export, deletion, incident, backup, restore, and support.
+- Packaging decision: script-based local package, bundled runtime, installer, or documented temporary dev package.
 
 Required evidence:
 
-- Pilot authorization record.
-- Deployment bill of materials, commit hash, environment, and configuration summary.
-- Pilot run log: dates, operators, participant counts, round states, support issues, withdrawals, incidents, exports.
-- Security/privacy event review.
-- Accessibility issue log from actual pilot use.
-- Export package review evidence.
-- Post-pilot retrospective and blocker update.
+- Clean checkout or downloaded package run result on Windows.
+- Clean checkout or downloaded package run result on macOS if in scope.
+- Commit hash and package/version identifier.
+- Smoke test output.
+- Known limitations.
+- No secrets in repo or package.
 
 Exit gate:
 
-- Pilot can advance only if no unresolved P0/P1 defects affect participant rights, confidentiality, identity/response separation, auditability, AI-HITL, or methodological integrity.
+- Study Owner can launch the operator path from docs on a laptop.
+- The candidate is ready for controlled synthetic walkthrough, not pilot or production.
 
-### Phase 3: Production-Candidate Release
+### Phase 3: Phone Participant And SMS Candidate
 
-Goal: prepare a production-candidate release with reproducible artifacts and production-like operations.
+Goal: make the participant experience openable on phones, with SMS-linked entry ready for human testing.
 
 Required implementation:
 
-- CI release workflow for frontend, backend, tests, security audit, dependency review, accessibility checks, artifact integrity, and documentation checks.
-- Versioned migrations with tested upgrade and rollback paths.
-- Production deployment guide for supported target environments.
-- Signed or checksummed release artifacts.
-- SBOM and dependency license review.
-- Independent security review or documented ASVS review at the selected assurance level.
-- Formal release notes, known limitations, and residual-risk record.
+- Mobile participant entry route works from an opaque link.
+- SMS copy remains neutral and does not reveal study-sensitive content.
+- SMS is optional and opt-in.
+- Phone verification or clearly documented mock/sandbox equivalent exists.
+- Magic links are opaque, expiring, single-use or otherwise risk-controlled, and do not include participant ID, study ID, email, phone, or role in the URL.
+- SMS send/reminder attempts are audited without raw token, OTP, full phone number, or sensitive message content.
+- STOP/HELP handling is implemented or explicitly simulated for the human testing candidate.
+- Staff controls for resend/reminder are rate-limited and permission-gated.
+- Mobile web task flow covers consent, Round 1, later round, no-active-task, closeout, support, and withdrawal.
+- PWA cache/storage policy is documented if PWA is in scope.
 
 Required evidence:
 
-- Release candidate tag and immutable evidence folder.
-- CI pass record.
-- Clean checkout install/build/test result.
-- Production-like deploy/upgrade/rollback rehearsal.
-- Restore rehearsal from production-like backup.
-- ASVS/security review evidence.
-- WCAG evidence package.
-- Data governance and export package evidence.
+- iPhone/Safari real-device or simulator evidence.
+- Android/Chrome real-device or emulator evidence.
+- SMS mock/sandbox outbox evidence or provider sandbox evidence.
+- Copy review for SMS messages.
+- Privacy review of link/token behavior.
+- Mobile screenshots or screen recordings for active tasks.
 
 Exit gate:
 
-- `production_candidate` can be approved only with a complete evidence bundle and named owner acceptance.
-- Production-candidate approval does not permit public open-source release if repository hygiene, license, vulnerability, or sensitive-data scans are incomplete.
+- A participant tester can receive or simulate an SMS, open the phone link, consent, complete tasks, and access support/withdrawal paths using synthetic data.
 
-### Phase 4: Public Open-Source Release
+### Phase 4: Human Testing Binder And Release Hygiene
 
-Goal: release source publicly without exposing study data, secrets, identity mappings, private operational records, or unsupported readiness claims.
+Goal: assemble everything needed for final human testing.
 
 Required implementation:
 
-- Final public repository scan for secrets, real participant data, identity mappings, consent records, sensitive exports, local paths, and private deployment configuration.
-- Public-safe sample data and synthetic fixtures only.
-- Public issue templates, security policy, contribution guide, governance guide, license, notice, citation metadata, release notes, and known limitations.
-- Dependency license review and third-party notice review.
-- Maintainer response process for security reports and governance issues.
-- Public docs that clearly separate software capabilities from institutional approval or study authorization.
-- Public install matrix showing which targets are supported, experimental, or not shipped.
-- Public-safe packaging docs for Windows, macOS, mobile web/PWA, and any native app only after those packages pass their evidence gates.
+- Human testing binder with:
+  - operator checklist,
+  - observer transcript,
+  - screenshot/log evidence index,
+  - defect severity rubric,
+  - accessibility checklist,
+  - backup/restore rehearsal sheet,
+  - retention/deletion rehearsal sheet,
+  - incident drill sheet,
+  - Data Custodian export review sheet,
+  - security review/signoff sheet,
+  - final P0 blocker table.
+- Versioned candidate record:
+  - commit hash,
+  - branch/tag/package identifier,
+  - supported surfaces,
+  - unsupported surfaces,
+  - test commands,
+  - known limitations.
+- Repository hygiene:
+  - no secrets,
+  - no real participant data,
+  - no sensitive exports,
+  - public/private boundary notes,
+  - dependency/security audit result or documented endpoint limitation.
 
 Required evidence:
 
-- Public-release checklist.
-- Secret/data scan results.
-- Dependency license and vulnerability scan results.
-- Tagged release and checksums.
-- Installer/app checksums or store build identifiers for supported packaged clients.
-- Public documentation review.
-- Maintainer approval record.
+- Binder committed or attached.
+- Candidate checklist marked ready for human testing.
+- All remaining human-required evidence marked NOT RUN / HUMAN_REQUIRED until testing occurs.
 
 Exit gate:
 
-- Public source release is allowed only if no real study data or sensitive operational material is present and the docs do not imply unrestricted human-subjects or production readiness.
+- Decision may be **READY FOR HUMAN TESTING** only if the laptop and phone candidate can be run and the binder is ready.
+- This does not close Phase 1 human evidence and does not authorize a pilot.
 
-## Evidence Requirements By Track
+### Phase 5: Final Human Testing
 
-| Evidence category | `mock_trial` | `pilot` | `production_candidate` | `public_open_source` |
-| --- | --- | --- | --- | --- |
-| Build/test | Local app/server build and tests. | Clean checkout plus deployment-specific smoke tests. | CI, clean checkout, install, build, tests, release artifact checks. | CI, clean checkout, public docs checks. |
-| Browser flow | Synthetic full lifecycle. | Human-observed or approved operator dry run plus pilot logs. | Production-like E2E and upgrade/rollback. | Public-safe demo or synthetic walkthrough only. |
-| Security | Local negative tests and policy gates. | Deployment checklist, secrets/TLS/session evidence, dependency scan. | ASVS/security review, vulnerability triage, monitoring, incident evidence. | Secret scan, vulnerability scan, SECURITY.md, responsible disclosure. |
-| Privacy | Export scan with synthetic data. | Real-data handling plan, retention/deletion evidence, export review. | Data classification, redaction, audit, backup/restore, retention evidence. | Repository must contain no real data or private operational records. |
-| Human subjects | Boundary language and synthetic-only decision. | Institutional/IRB/legal/ethics approvals where applicable. | Approved production protocol support and residual-risk acceptance. | Clear no-approval/no-certification disclaimers. |
-| AI governance | No External AI mode and local AI-HITL tests. | Study-specific AI disclosure and no external AI unless approved. | AI provenance, audit, minimization, connector controls. | Public docs for AI boundaries and safe configuration. |
-| Accessibility | Automated/mobile baseline. | Human assistive-technology evidence for active tasks. | WCAG 2.2 AA evidence package and remediation log. | Public docs disclose status accurately. |
-| Operations | Local/dev runbooks and partial rehearsals. | Incident, backup/restore, support, monitoring rehearsal. | Production-like deploy, upgrade, rollback, restore, incident drill. | Public install and maintainer processes. |
-| Client packaging | No packaged clients required. | Hosted web client unless a named desktop/mobile pilot package is approved. | Supported Windows, macOS, PWA, iOS, or Android targets each need install, update, security, privacy, and accessibility evidence. | Public release page clearly marks shipped, experimental, and unsupported client targets. |
+Goal: conduct the actual human testing walkthrough against the pinned candidate.
 
-## Testing Requirements
+Required human tests:
 
-Minimum closeout-candidate checks before human walkthrough:
+- Operator install/start/stop/reset on laptop.
+- Staff workflow: study setup, role assignment, signoff, round launch, curation, feedback, closeout.
+- Participant phone workflow: SMS link, consent, Round 1, later round, support, withdrawal/no-active-task.
+- Keyboard-only walkthrough.
+- NVDA and/or VoiceOver walkthrough.
+- Real-device iOS and Android mobile review.
+- Named deployment or local operator security review.
+- Backup/restore and audit-integrity rehearsal.
+- Retention/deletion execution and export suppression rehearsal.
+- Incident drill with pause-study-equivalent action, severity rationale, notification/escalation decision, remediation, and recovery.
+- Data Custodian review of anonymized dataset, audit package, provenance bundle, and residual re-identification risk.
+- Final blocker review.
 
-- clean checkout setup on the selected operator machine,
-- documented start/stop/reset path,
-- seeded synthetic demo study creation or import,
-- server build and test pass,
-- app build and smoke pass if the app is part of the selected operator path,
-- browser smoke of staff and participant entry points,
-- backup/restore rehearsal command or operator script dry run with synthetic data,
-- export package generation and privacy/provenance scan,
-- incident/deletion workflow smoke where supported by the operator path,
-- screenshot/log evidence index template ready for the human observer,
-- `git diff --check`.
+Required evidence:
 
-Minimum release-candidate commands must include:
+- Observer transcript.
+- Screenshots/logs.
+- Command outputs.
+- Defect log and disposition.
+- Accessibility findings and remediations.
+- Security/privacy residual-risk statements.
+- Data Custodian export signoff or rejection.
+- Final P0 blocker table.
 
-- frontend install/build/test,
-- backend install/build/test,
-- security audit or equivalent dependency vulnerability check,
-- policy/gate tests for governance, AI-HITL, export privacy, and forbidden language,
-- browser E2E for participant and staff flows,
-- backup/restore and audit-integrity test,
-- accessibility automated checks,
-- documentation link and readiness-claim scan,
-- installer/package smoke tests for every supported desktop or mobile target,
-- `git diff --check`.
+Exit gate:
 
-Manual testing is required before pilot and production-candidate gates:
+- **HUMAN TESTING COMPLETE** only if the walkthrough was actually performed and evidence is attached.
+- If any P0 blocker remains open, the product remains not pilot-ready.
+- If all P0 blockers are closed or accepted with authorized rationale, the project may consider a separate controlled-pilot authorization process.
 
-- Study Owner workflow.
-- Ethics & Methods Steward workflow.
-- Security & Privacy Lead or admin workflow.
-- Data Custodian export and retention workflow.
-- Participant consent, Round 1, later-round response, closeout, support, and withdrawal workflow.
-- Keyboard-only workflow.
-- Screen reader workflow.
-- Mobile viewport and real-device checks.
-- Windows install/uninstall and update checks if Windows packaging is in scope.
-- macOS install/uninstall, signing/notarization, and update checks if macOS packaging is in scope.
-- PWA install/cache/storage checks if mobile web/PWA packaging is in scope.
-- iOS/Android app install, permission, secure storage, session revocation, and accessibility checks if native phone applications are in scope.
+## SMS And Phone Governance Rules
 
-## Security And Privacy Requirements
+SMS and phone access are participant-facing governance features, not mere notification plumbing.
 
-Before `pilot`:
+Rules:
 
-- Production authentication/session model documented and tested.
-- Role membership is backend-enforced and auditable.
-- Secrets are outside repo and outside client bundles.
-- TLS/reverse-proxy and secure-cookie configuration are documented.
-- CORS, CSRF, rate limits, and security headers are deployment-verified.
-- Identity and response data remain separated.
-- Invitation tokens are scoped, expiring, revocable, and absent from ordinary logs.
-- Export packages have classification, manifest, hashes, review state, and access logging.
-- Retention and deletion requests are auditable.
+- SMS must be optional and consented.
+- SMS copy must be neutral.
+- SMS must not include study-sensitive content, diagnoses, allegations, legal strategy, participant responses, consensus status, or identity-response hints.
+- SMS links must be opaque and expiring.
+- Raw SMS tokens, OTPs, and full phone numbers must not appear in audit logs or export packages.
+- Phone numbers must be masked in UI and audit details.
+- Reminder frequency must be rate-limited and documented.
+- STOP/HELP handling must be implemented before real SMS use, or clearly simulated/disabled in the human testing candidate.
+- Real SMS provider credentials must not be committed.
+- Real SMS provider use requires Security & Privacy Lead and Data Custodian review before any real participant use.
 
-Before `production_candidate`:
+## Evidence Requirements By Candidate Surface
 
-- ASVS or equivalent security review is complete.
-- Dependency and license scans are clean or risk-accepted.
-- Backup/restore is rehearsed from production-like storage.
-- Monitoring and incident response are rehearsed.
-- Data classification and residual-risk record are approved.
+| Evidence | Windows laptop | macOS laptop | Phone mobile web | SMS | PWA | Native mobile |
+| --- | --- | --- | --- | --- | --- | --- |
+| Install/start | Required if included | Required if included | Browser open-link required | Provider/mock setup required | Required if included | Deferred |
+| Stop/reset/uninstall | Required | Required | Logout/session reset | Opt-out/reset | Cache reset | Deferred |
+| Data directory policy | Required | Required | Browser storage policy | Phone storage/audit policy | Cache/storage policy | Secure storage policy |
+| Accessibility | Keyboard and screen reader | Keyboard and VoiceOver | Real-device mobile | SMS copy clarity | Mobile a11y | Native a11y |
+| Security/privacy | Local secrets, logs, exports | Local secrets, logs, exports | Link/session privacy | Token/provider privacy | Cache privacy | Permissions/SDK review |
+| Human testing evidence | Required | Required if in scope | Required | Required if in scope | Required if in scope | Not in scope unless approved |
 
-## Human-Subjects Readiness Requirements
+## Testing Requirements Before Human Testing
 
-The [Human Subjects Readiness Plan](../../../documents/compliance/human-subjects-readiness/HUMAN_SUBJECTS_READINESS.md) remains the detailed control baseline.
+Minimum repo-verifiable checks:
 
-Before any real participant use:
+- `npm --prefix server run build`
+- `npm --prefix server test`
+- frontend install/build/test where applicable
+- export privacy/provenance focused test
+- backup/restore rehearsal test
+- incident workflow test
+- deployment security verifier, if safe environment variables are supplied
+- app smoke test for operator and participant entry paths
+- mobile viewport checks at 320px, 390px, and 414px
+- documentation claim scan for overstatements
+- `git diff --check`
 
-- Applicable institutional, IRB, ethics, legal, or sponsor approvals are documented.
-- Participant information, consent, withdrawal, confidentiality, retention, and support language are reviewed.
-- The system truthfully states confidentiality and linkage limits; it does not promise complete anonymity where round linkage exists.
-- Participants can decline, withdraw, and seek support without penalty.
-- Study configuration, consensus rule, feedback format, and governance signoffs are locked before launch.
-- Reports preserve consensus, near-consensus, non-consensus, attrition, limitations, and the required consensus-not-correctness statement.
+Minimum manual preflight checks:
 
-## AI Governance Readiness Requirements
+- launch candidate on selected laptop path,
+- open staff URL,
+- open participant phone URL,
+- simulate or send SMS with neutral copy,
+- create synthetic study,
+- confirm synthetic participant can complete at least one active task,
+- confirm export package generation,
+- confirm backup can be created,
+- confirm reset/uninstall path is documented.
 
-Before `pilot`:
+## Human Testing Decision Labels
 
-- AI is disabled by default or operating only in approved No External AI mode.
-- AI suggestions are labeled "AI Suggestion (Not Final)".
-- Participant-facing AI-influenced content requires human Accept/Edit/Reject and configured signoff.
-- AI cannot modify consensus thresholds, decide item inclusion, drop dissent, publish content, personalize pressure, or claim correctness.
-- AI operations are audited with model/template/version/output hash and human action.
+| Label | Meaning |
+| --- | --- |
+| `NOT READY FOR HUMAN TESTING` | Candidate cannot yet be installed/run/walked through. |
+| `READY FOR HUMAN TESTING WITH CONDITIONS` | Candidate can be walked through, but limitations are explicit. |
+| `READY FOR HUMAN TESTING` | Candidate is installable/runnable on selected surfaces and binder is complete. |
+| `HUMAN TESTING COMPLETE WITH OPEN BLOCKERS` | Human walkthrough happened, but some P0 blockers remain open. |
+| `HUMAN TESTING COMPLETE; PILOT REVIEW MAY BEGIN` | Human walkthrough happened and P0 blockers are closed or accepted by authorized roles. |
 
-Before any external AI connector:
+None of these labels equals production readiness.
 
-- External AI is explicitly enabled by an administrator.
-- Study-level disclosure and participant-facing consent language are reviewed.
-- Data minimization rules exclude direct identifiers and identity-response mappings.
-- Connector logs and outputs are auditable.
-- The Ethics & Methods Steward and Security & Privacy Lead approve the connector for the named study or deployment.
+## Blockers That Remain Human-Required
 
-## Accessibility Requirements
+These blockers cannot be closed by Codex alone:
 
-Before `pilot`:
-
-- Participant consent and round tasks pass keyboard-only review.
-- Participant consent and round tasks pass screen reader review with NVDA and/or VoiceOver.
-- Mobile participant flows pass at common widths and at least one real-device review.
-- Error messages are associated with inputs.
-- Focus order, labels, contrast, time limits, and copy clarity are reviewed.
-
-Before `production_candidate`:
-
-- WCAG 2.2 AA evidence package exists for participant and staff workflows.
-- P0/P1 accessibility defects are resolved or have approved mitigations.
-- Accessibility status is documented without overclaiming certification.
-
-## Deployment And Install Packaging Requirements
-
-Before Phase 1B human closeout:
-
-- A closeout candidate commit is selected and recorded.
-- The selected operator path is named: Windows local web/operator package, macOS local web/operator package, hosted staging web deployment, mobile web/PWA review path, or another explicitly documented path.
-- Install/start/stop/reset instructions are complete enough for the Study Owner to run them without editing source code.
-- Runtime data directories, logs, exports, backups, and local secrets policy are documented.
-- A synthetic demo study can be loaded or created repeatably.
-- The observer has a checklist, transcript template, screenshot/log index, and defect rubric.
-- Unsupported targets are explicitly marked not shipped for this closeout.
-
-Before `pilot`:
-
-- Environment variables are documented with safe defaults.
-- Production-like install path is documented.
-- Supported client targets are explicitly named; unsupported targets are marked not shipped.
-- Database initialization, migration, backup, restore, and rollback are rehearsed.
-- Operator can start, stop, monitor, and recover services from docs.
-- Secrets and runtime data directories are outside version control.
-- Hosted web deployment has the first complete support path unless a desktop or mobile client has its own pilot evidence.
-- Any Windows/macOS installer or phone app used in pilot has a documented installation, update, uninstall, and data-removal path.
-
-Before `production_candidate`:
-
-- Release artifacts are versioned, checksummed, and reproducible.
-- Supported deployment targets are named.
-- Windows installers, macOS packages, PWA manifests/service workers, and native mobile app builds are each versioned, checksummed or store-identified, and tied to the release commit if shipped.
-- Upgrade and rollback from the prior release are tested.
-- SBOM and dependency license review exist.
-- Operational runbooks are linked from release notes.
-- Code signing, notarization, app-store review status, privacy labels, permission inventories, and third-party SDK inventories are documented for packaged clients where applicable.
-
-Client packaging-specific gates:
-
-- Windows: installer format selected, package signed for production candidates or explicitly marked unsigned development build, install/uninstall tested on supported Windows versions, update strategy documented, local data and log directories documented, no secrets stored in application files.
-- macOS: package format selected, release-candidate package signed and notarized, Intel/Apple Silicon support documented, install/uninstall tested, update strategy documented, local data and log directories documented, no secrets stored in application bundle.
-- Mobile web/PWA: manifest and service worker reviewed, cache does not retain sensitive study data beyond approved policy, iOS Safari and Android Chrome tested, home-screen install behavior documented, mobile accessibility evidence recorded.
-- Native iOS/Android: app permissions minimized, secure storage used for tokens, logout and remote revocation tested, crash/analytics SDKs reviewed or disabled, push notifications do not reveal study participation or sensitive content, store privacy disclosures prepared.
-
-## Documentation Requirements
-
-Each release track must include:
-
-- release scope and non-scope,
-- allowed data class,
-- readiness claim and explicit non-claims,
-- installation and deployment instructions,
-- test commands and evidence links,
-- security/privacy notes,
-- AI mode and connector status,
-- accessibility status,
-- known limitations,
-- incident/contact/support path,
-- release decision and approver roles.
-
-## Release Gates
-
-| Gate | Applies to | Required approvers |
-| --- | --- | --- |
-| Mock-trial GO / GO WITH CONDITIONS | `mock_trial` | Maintainer or Study Owner. |
-| Pilot authorization | `pilot` | Study Owner, Ethics & Methods Steward, Security & Privacy Lead, Data Custodian. |
-| Production-candidate approval | `production_candidate` | Study Owner, Ethics & Methods Steward, Security & Privacy Lead, Data Custodian, Open Source Maintainer. |
-| Public open-source release approval | `public_open_source` | Open Source Maintainers, Security & Privacy Lead, Data Custodian, Ethics & Methods Steward. |
-
-Release gates fail automatically if:
-
-- any P0 blocker remains open for the target track,
-- evidence is missing, stale, or not tied to a commit,
-- the release includes real data, secrets, identity mappings, or sensitive exports outside approved storage,
-- AI governance boundaries are weakened,
-- consensus is framed as truth or correctness,
-- participant rights, confidentiality, withdrawal, or retention controls are bypassed,
-- accessibility or security status is overstated.
-
-## Explicit Blockers Before Unrestricted Real-World Use
-
-Unrestricted real-world use is blocked until all of the following are true:
-
-- No P0 human-subjects, security, privacy, accessibility, operational, or AI-governance blockers remain.
-- Independent or appropriately scoped security review is complete.
-- WCAG evidence is complete for participant and staff workflows.
-- Production deployment, monitoring, backup, restore, migration, rollback, and incident drills are complete.
-- Real-data retention, deletion, export, and access-review workflows are tested.
-- External approvals required by the deployment context are complete.
-- Public docs accurately state limits and do not imply universal suitability, certification, or approval.
+- named deployment or laptop package security acceptance,
+- production-like or operator-observed backup/restore acceptance,
+- human accessibility review,
+- independent/security lead hardening signoff,
+- deployment-connected incident drill acceptance,
+- Data Custodian export/residual-risk signoff,
+- final human-observed end-to-end dry run acceptance.
 
 ## Codex-Ready Work Packets
 
-### Phase 0 Work Packets
+| Packet | Objective | Done evidence |
+| --- | --- | --- |
+| HTC-WP1 | Define supported candidate surfaces. | Matrix marks Windows, macOS, phone web, SMS, PWA, native apps as included/deferred/not shipped. |
+| HTC-WP2 | Build Windows operator run path. | Windows install/start/stop/reset docs and smoke evidence. |
+| HTC-WP3 | Build macOS operator run path. | macOS install/start/stop/reset docs and smoke evidence, if in scope. |
+| HTC-WP4 | Build synthetic demo study setup. | One documented setup path creates a repeatable human testing study. |
+| HTC-WP5 | Harden phone participant flow. | Phone URL flow covers consent, active rounds, support, withdrawal, and closeout on mobile. |
+| HTC-WP6 | Harden SMS magic-link path. | Neutral SMS, opaque link, opt-in, mock/sandbox evidence, audit/privacy checks. |
+| HTC-WP7 | Decide PWA scope. | PWA is shipped, deferred, or not shipped with cache/storage rationale. |
+| HTC-WP8 | Assemble human testing binder. | Binder contains checklists, transcript, screenshot/log index, defect rubric, signoffs, and blocker table. |
+| HTC-WP9 | Run candidate smoke evidence. | Build/tests/smoke/mobile/export/backup/security checks are recorded. |
+| HTC-WP10 | Execute final human testing. | Human evidence is attached and final blocker status is updated. |
 
-| Packet | Objective | Inputs | Done evidence |
-| --- | --- | --- | --- |
-| P0-WP1 | Add release-track labels and claim vocabulary to docs. | This document, existing QC docs. | Docs scan shows consistent `mock_trial`, `pilot`, `production_candidate`, `public_open_source` wording. |
-| P0-WP2 | Create a repeatable mock-trial evidence index. | Latest full mock-trial artifacts and screenshots. | Index links commit, commands, artifacts, results, limits. |
-| P0-WP3 | Add readiness-claim lint checks. | Existing policy gate tests. | Test fails on production/IRB/security/accessibility overclaims in docs. |
+## Later Work After Human Testing
 
-### Phase 1 Work Packets
+If human testing succeeds, create a separate controlled-pilot readiness decision. That later process must still address:
 
-| Packet | Objective | Inputs | Done evidence |
-| --- | --- | --- | --- |
-| P1-WP1 | Implement production membership and role review workflow. | Human-subjects controls, current role gates. | Backend tests prove assignment, removal, downgrade, and audit behavior. |
-| P1-WP2 | Convert remaining ordinary operations from local API/script assumptions into staff UI or operator commands. | Full mock-trial runner, staff workflows. | Human-observed dry run uses approved UI/operator paths. |
-| P1-WP3 | Implement incident workflow. | Phase 10 incident runbook. | Pause-study state, incident record, severity, notification template, recovery, and drill artifact. |
-| P1-WP4 | Implement retention/deletion execution evidence. | Human-subjects readiness plan. | Data Custodian review, deletion/restriction rules, audit events, export evidence. |
-| P1-WP5 | Run pilot accessibility closeout. | Accessibility docs and mobile evidence. | NVDA/VoiceOver notes, keyboard transcript, mobile screenshots, defect log. |
-| P1-WP6 | Produce deployment-specific security checklist and smoke test. | Environment guide, security tests. | TLS/secrets/session/CORS/CSRF/rate-limit/security-header evidence tied to commit. |
-| P1A-WP7 | Build operator-ready closeout path. | Current app/server start docs and Phase 1 evidence. | Study Owner can install/start/stop/reset the selected path from docs on the closeout machine. |
-| P1A-WP8 | Create synthetic closeout demo package. | Mock-trial fixtures and export/privacy evidence. | Repeatable synthetic study seed/import plus expected workflow checkpoints. |
-| P1A-WP9 | Create real-time human closeout binder. | Phase 1 P0 blockers and evidence templates. | One binder covers operator checklist, observer transcript, screenshot/log index, defect rubric, signoff forms, and final blocker table. |
-| P1A-WP10 | Define laptop and phone support scope for closeout. | Client distribution target matrix. | Windows, macOS, mobile web/PWA, and native app statuses are explicitly supported, experimental, deferred, or not shipped. |
-| P1B-WP11 | Execute human closeout walkthrough. | Pinned closeout candidate and binder. | Human-observed evidence is attached for accessibility, deployment/security, backup/restore, deletion, incident, export review, and full dry run. |
+- institutional/IRB/legal/ethics approvals where applicable,
+- real-data deployment security,
+- production monitoring,
+- provider contracts for SMS or external services,
+- final accessibility remediation,
+- independent security review,
+- production backup/restore and incident procedures,
+- release notes and residual-risk acceptance.
 
-### Phase 2 Work Packets
-
-| Packet | Objective | Inputs | Done evidence |
-| --- | --- | --- | --- |
-| P2-WP1 | Build pilot run log template and operator checklist. | Full mock-trial and Phase 10 runbooks. | Pilot log captures operators, dates, round states, support, withdrawals, incidents, exports. |
-| P2-WP2 | Add export review closeout for real-study packages. | Export package code and privacy scan. | Data Custodian approval/rejection path, package manifest, redaction evidence. |
-| P2-WP3 | Add monitoring and alert review for pilot deployment. | Deployment docs. | Health checks, alert paths, operational event review. |
-| P2-WP4 | Update blockers after pilot. | Release blockers and pilot log. | Blocker file records closed, new, downgraded, or accepted risks with approvers. |
-
-### Phase 3 Work Packets
-
-| Packet | Objective | Inputs | Done evidence |
-| --- | --- | --- | --- |
-| P3-WP1 | Create release-candidate CI workflow. | App/server test commands, policy gates. | CI runs build, tests, security audit, accessibility checks, docs checks, artifact checks. |
-| P3-WP2 | Add migration upgrade/rollback rehearsal. | Database migration procedure. | Empty-db, prior-release upgrade, rollback, restore, and audit-integrity evidence. |
-| P3-WP3 | Produce SBOM and dependency/license review. | Package manifests. | SBOM, license table, unresolved risk log. |
-| P3-WP4 | Assemble production-candidate evidence bundle. | Pilot and CI evidence. | Immutable evidence folder linked from release notes. |
-| P3-WP5 | Define desktop installer packaging plan. | Deployment docs, supported platform decision. | Windows and macOS package format, signing/notarization, update, uninstall, data-directory, and evidence requirements documented. |
-| P3-WP6 | Define mobile distribution plan. | Mobile/PWA requirements, privacy requirements. | PWA vs native app decision, iOS/Android support matrix, privacy labels, permission inventory, secure storage, app-store/testing path documented. |
-
-### Phase 4 Work Packets
-
-| Packet | Objective | Inputs | Done evidence |
-| --- | --- | --- | --- |
-| P4-WP1 | Run public repository hygiene scan. | Release checklist. | No secrets, real data, identity mappings, consent records, sensitive exports, or private paths. |
-| P4-WP2 | Finalize public docs and release notes. | Docs index, README, known limitations. | Public docs state scope, setup, governance, AI limits, data boundaries, accessibility status, support path. |
-| P4-WP3 | Finalize public release metadata. | LICENSE, NOTICE, CITATION.cff, SECURITY.md. | Tagged release, checksums, citation URL, maintainer approval. |
-| P4-WP4 | Create post-release maintenance workflow. | Governance and contribution docs. | Issue labels, security triage, release cadence, vulnerability response process. |
-| P4-WP5 | Publish supported client install matrix. | Packaging evidence. | Public release page identifies Windows, macOS, PWA, iOS, and Android status as supported, experimental, or not shipped. |
+Public open-source release remains separate and requires repository hygiene, license/dependency review, public docs, security policy, and removal of any sensitive material.
 
 ## Maintenance Rules
 
-- Update this document when release gates change.
-- Update blocker and control-matrix documents when work packets close.
+- Update this plan whenever the supported surfaces change.
+- Do not call a laptop or phone target supported until its evidence exists.
+- Mark native phone apps deferred unless explicitly approved.
+- Keep SMS and phone governance visible in every release decision.
 - Link every readiness claim to commit-specific evidence.
-- Prefer downgrading claims over accepting ambiguous evidence.
-- Keep public docs stricter than marketing language.
+- Prefer "not ready" over ambiguous evidence.
