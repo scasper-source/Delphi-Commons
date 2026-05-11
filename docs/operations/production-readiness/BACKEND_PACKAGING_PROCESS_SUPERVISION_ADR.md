@@ -1,7 +1,7 @@
 # Backend Packaging and Process Supervision ADR
 
 - Status: **ACCEPTED FOR PHASE 2 PLANNING**.
-- Implementation status: **NOT STARTED IN THIS ADR**.
+- Implementation status: **STAGE 1 PROTOTYPE IMPLEMENTED (scripts/documentation baseline)**.
 - Date basis: **2026-05-11**.
 - Track: **`human_testing_candidate`**.
 
@@ -139,3 +139,9 @@ Keep deferred unless separately decided:
 - [Phase 1 Product Surface Lock closeout](./PHASE1_PRODUCT_SURFACE_LOCK_CLOSEOUT.md)
 - [Install Architecture Decision Record](./INSTALL_ARCHITECTURE_DECISION_RECORD.md)
 - [Product Readiness Plan for eDelphi](./PRODUCTION_READY_EDELPHI_PLATFORM.md)
+
+
+## Implementation Note (2026-05-11)
+
+- Stage 1 script/documentation prototype reference: [WINDOWS_OPERATOR_CANDIDATE_PROTOTYPE.md](./WINDOWS_OPERATOR_CANDIDATE_PROTOTYPE.md).
+- Current implementation remains local-script based and internal; portable Node bundling, Tauri Stage 2, and installer/signing stay deferred.
