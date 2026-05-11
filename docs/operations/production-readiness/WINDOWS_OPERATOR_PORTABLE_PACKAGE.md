@@ -82,7 +82,6 @@ This prototype does **not** claim production readiness, pilot readiness, real hu
 
 ## Next evidence required
 
-- Run from a clean extracted zip directory, separate from the build staging directory.
 - Verify on a second Windows machine or clean Windows user profile.
 - Decide whether to bundle a portable Node runtime or keep local Node/npm as a documented prerequisite.
 - Verify package manifest integrity and included-file inventory for every candidate build.
