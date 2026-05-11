@@ -27,26 +27,30 @@ The builder runs frontend and backend builds, stages only selected files, emits 
 
 ## Run the packaged operator flow
 
-From repository root in PowerShell:
+From the unzipped package root in PowerShell:
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File .\scripts\windows\operator-candidate.ps1 start
+powershell -ExecutionPolicy Bypass -File .\scripts\windows\portable-operator-candidate.ps1 start
 ```
 
 ## Runtime data path
 
-- `%LOCALAPPDATA%\DelphiCommons\windows-operator-candidate`
+- `%LOCALAPPDATA%\DelphiCommons\windows-operator-portable-candidate`
 
 ## Logs/evidence path
 
-- Logs: `%LOCALAPPDATA%\DelphiCommons\windows-operator-candidate\logs`
-- Evidence: `%LOCALAPPDATA%\DelphiCommons\windows-operator-candidate\evidence`
+- Logs: `%LOCALAPPDATA%\DelphiCommons\windows-operator-portable-candidate\logs`
+- Evidence: `%LOCALAPPDATA%\DelphiCommons\windows-operator-portable-candidate\evidence`
+- Runtime backend staging: `%LOCALAPPDATA%\DelphiCommons\windows-operator-portable-candidate\server-runtime`
 
 ## Package contents (minimum Stage 1)
 
 - `app/dist` frontend build artifact
 - `server/dist` backend build artifact
-- `scripts/windows/operator-candidate.ps1`
+- `server/package.json`
+- `server/package-lock.json`
+- `scripts/windows/portable-operator-candidate.ps1`
+- `tools/static-file-server.mjs`
 - `README.txt`
 - `package-manifest.json`
 - `LICENSE`
@@ -64,6 +68,8 @@ powershell -ExecutionPolicy Bypass -File .\scripts\windows\operator-candidate.ps
 ## Limitations
 
 - Local Node/npm dependency remains.
+- First-run server production dependencies are installed under the runtime data root, not into the package root.
+- The package is a portable/internal prototype, not a standalone installer or signed distribution artifact.
 - No installer (NSIS/MSI), signing, updater, or Tauri shell.
 - No real SMS provider delivery.
 - No PWA/service-worker behavior.
@@ -76,7 +82,12 @@ This prototype does **not** claim production readiness, pilot readiness, real hu
 
 ## Next evidence required
 
-- Run package build on clean Windows machine with documented command transcript.
-- Verify package manifest integrity and included-file inventory.
-- Verify operator launch/stop from packaged artifacts with runtime data outside source tree.
+- Run from a clean extracted zip directory, separate from the build staging directory.
+- Verify on a second Windows machine or clean Windows user profile.
+- Decide whether to bundle a portable Node runtime or keep local Node/npm as a documented prerequisite.
+- Verify package manifest integrity and included-file inventory for every candidate build.
 - Verify limitation messaging remains visible in docs and manifest.
+
+## Local evidence
+
+- [WINDOWS_OPERATOR_PORTABLE_PACKAGE_LOCAL_EVIDENCE.md](./WINDOWS_OPERATOR_PORTABLE_PACKAGE_LOCAL_EVIDENCE.md)

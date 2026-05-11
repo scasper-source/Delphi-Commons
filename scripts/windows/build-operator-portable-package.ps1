@@ -31,6 +31,14 @@ function Assert-Within([string]$candidatePath, [string]$rootPath) {
   }
 }
 
+function Get-RelativePathCompat([string]$rootPath, [string]$childPath) {
+  $root = [System.IO.Path]::GetFullPath($rootPath).TrimEnd('\', '/') + [System.IO.Path]::DirectorySeparatorChar
+  $child = [System.IO.Path]::GetFullPath($childPath)
+  $rootUri = [System.Uri]::new($root)
+  $childUri = [System.Uri]::new($child)
+  return [System.Uri]::UnescapeDataString($rootUri.MakeRelativeUri($childUri).ToString()).Replace('/', [System.IO.Path]::DirectorySeparatorChar)
+}
+
 function Invoke-Checked([string]$filePath, [string[]]$arguments) {
   & $filePath @arguments
   if ($LASTEXITCODE -ne 0) {
@@ -58,7 +66,7 @@ try {
   $packageRoot = Join-Path $stageRoot $packageName
   New-Item -ItemType Directory -Path $packageRoot | Out-Null
 
-  foreach ($relativePath in @('app/dist','server/dist','scripts/windows/operator-candidate.ps1','LICENSE','NOTICE')) {
+  foreach ($relativePath in @('app/dist','server/dist','server/package.json','server/package-lock.json','scripts/windows/portable-operator-candidate.ps1','scripts/windows/static-file-server.mjs','LICENSE','NOTICE')) {
     $sourcePath = Join-Path $RepoRoot $relativePath
     if (!(Test-Path -LiteralPath $sourcePath)) {
       throw "Required path missing for packaging: $relativePath"
@@ -68,10 +76,14 @@ try {
   New-Item -ItemType Directory -Path (Join-Path $packageRoot 'app') | Out-Null
   New-Item -ItemType Directory -Path (Join-Path $packageRoot 'server') | Out-Null
   New-Item -ItemType Directory -Path (Join-Path $packageRoot 'scripts/windows') -Force | Out-Null
+  New-Item -ItemType Directory -Path (Join-Path $packageRoot 'tools') -Force | Out-Null
 
   Copy-Item -LiteralPath (Join-Path $RepoRoot 'app/dist') -Destination (Join-Path $packageRoot 'app') -Recurse -Force
   Copy-Item -LiteralPath (Join-Path $RepoRoot 'server/dist') -Destination (Join-Path $packageRoot 'server') -Recurse -Force
-  Copy-Item -LiteralPath (Join-Path $RepoRoot 'scripts/windows/operator-candidate.ps1') -Destination (Join-Path $packageRoot 'scripts/windows/operator-candidate.ps1') -Force
+  Copy-Item -LiteralPath (Join-Path $RepoRoot 'server/package.json') -Destination (Join-Path $packageRoot 'server/package.json') -Force
+  Copy-Item -LiteralPath (Join-Path $RepoRoot 'server/package-lock.json') -Destination (Join-Path $packageRoot 'server/package-lock.json') -Force
+  Copy-Item -LiteralPath (Join-Path $RepoRoot 'scripts/windows/portable-operator-candidate.ps1') -Destination (Join-Path $packageRoot 'scripts/windows/portable-operator-candidate.ps1') -Force
+  Copy-Item -LiteralPath (Join-Path $RepoRoot 'scripts/windows/static-file-server.mjs') -Destination (Join-Path $packageRoot 'tools/static-file-server.mjs') -Force
   Copy-Item -LiteralPath (Join-Path $RepoRoot 'LICENSE') -Destination (Join-Path $packageRoot 'LICENSE') -Force
   Copy-Item -LiteralPath (Join-Path $RepoRoot 'NOTICE') -Destination (Join-Path $packageRoot 'NOTICE') -Force
 
@@ -86,16 +98,17 @@ This package is an internal Stage 1 prototype for the `human_testing_candidate` 
 ## Run
 
 1. Install local Node.js + npm on Windows.
-2. Open PowerShell in repository root.
-3. Run:
+2. Unzip this package.
+3. Open PowerShell in the package root.
+4. Run:
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File .\scripts\windows\operator-candidate.ps1 start
+powershell -ExecutionPolicy Bypass -File .\scripts\windows\portable-operator-candidate.ps1 start
 ```
 
 ## Runtime and data policy
 
-- Runtime data root: `%LOCALAPPDATA%\DelphiCommons\windows-operator-candidate`
+- Runtime data root: `%LOCALAPPDATA%\DelphiCommons\windows-operator-portable-candidate`
 - Runtime data is intentionally outside the package and outside source tree.
 
 ## Limitations
@@ -111,7 +124,7 @@ This package does **not** claim production readiness, pilot readiness, real huma
   Set-Content -LiteralPath (Join-Path $packageRoot 'README.txt') -Value $packageReadme -Encoding UTF8
 
   $included = Get-ChildItem -LiteralPath $packageRoot -Recurse -Force | ForEach-Object {
-    [System.IO.Path]::GetRelativePath($packageRoot, $_.FullName)
+    Get-RelativePathCompat $packageRoot $_.FullName
   }
 
   $manifest = [ordered]@{
@@ -124,7 +137,7 @@ This package does **not** claim production readiness, pilot readiness, real huma
     buildMachine = $env:COMPUTERNAME
     buildOs = [System.Environment]::OSVersion.VersionString
     packageRoot = $packageRoot
-    runtimeDataPath = '%LOCALAPPDATA%\DelphiCommons\windows-operator-candidate'
+    runtimeDataPath = '%LOCALAPPDATA%\DelphiCommons\windows-operator-portable-candidate'
     requiredExternalDependencies = @(
       'Node.js + npm on local Windows machine',
       'PowerShell 5.1+ or PowerShell 7+'
