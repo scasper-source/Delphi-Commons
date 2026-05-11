@@ -157,11 +157,11 @@ Current progress:
 
 - **DONE:** Stage 1 Windows operator supervisor local evidence recorded.
 - **DONE:** Stage 1 Windows portable/internal package local evidence recorded.
+- **DONE:** Stage 1 Windows portable/internal package extracted-zip local evidence recorded.
 - **IN PROGRESS:** Phase 2 downloadable laptop operator candidate. The current Windows portable package is local engineering evidence only and remains **NOT READY FOR HUMAN TESTING**.
 
 Remaining Phase 2 blockers before the downloadable laptop operator candidate gate can close:
 
-- Run the portable package from a clean extracted zip directory, separate from the build staging directory (**OPEN**; latest repository-side evidence record is environment-constrained and does not close this gate).
 - Verify on a second Windows machine or clean Windows user profile.
 - Decide whether the candidate will bundle a portable Node runtime or keep local Node/npm as a documented prerequisite.
 - Record Windows signing/distribution limitations, including unsigned-package behavior if applicable.
