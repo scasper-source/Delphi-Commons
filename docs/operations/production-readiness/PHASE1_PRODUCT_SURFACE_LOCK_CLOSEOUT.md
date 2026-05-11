@@ -8,6 +8,7 @@
 
 - [Phase 1 Product Surface Lock](./PHASE1_PRODUCT_SURFACE_LOCK.md)
 - [Install Architecture Decision Record](./INSTALL_ARCHITECTURE_DECISION_RECORD.md)
+- [Backend Packaging and Process Supervision ADR](./BACKEND_PACKAGING_PROCESS_SUPERVISION_ADR.md)
 - [Product Readiness Plan for eDelphi](./PRODUCTION_READY_EDELPHI_PLATFORM.md)
 
 ## Owner Decision Recording Statement
@@ -32,7 +33,7 @@ Owner decisions for product surfaces, deferred targets, and non-claims are now r
 
 ## Remaining Next-Step Dependencies
 
-- Backend packaging/process supervision ADR.
+- Backend packaging/process supervision ADR. *(Decision now documented; implementation/evidence remains pending.)*
 - Windows operator package implementation and execution evidence.
 - macOS build/test evidence if macOS support is to be claimed.
 - Phone mobile web and SMS mock/sandbox implementation evidence.

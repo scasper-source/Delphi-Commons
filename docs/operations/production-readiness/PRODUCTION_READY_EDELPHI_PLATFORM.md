@@ -119,6 +119,7 @@ Exit gate:
 Goal: decide exactly what the human testing candidate will include.
 
 Reference closeout note: [PHASE1_PRODUCT_SURFACE_LOCK_CLOSEOUT.md](./PHASE1_PRODUCT_SURFACE_LOCK_CLOSEOUT.md).
+Architecture ADR required before implementation: [BACKEND_PACKAGING_PROCESS_SUPERVISION_ADR.md](./BACKEND_PACKAGING_PROCESS_SUPERVISION_ADR.md).
 
 Required decisions:
 
