@@ -9,6 +9,11 @@ Scope: Phase 1 pilot-readiness assessment using the Human Subjects Readiness con
 
 Per release rule, pilot readiness cannot be marked achieved while any P0 blocker remains open unless each blocker is formally accepted by the required owner role(s) with linked evidence and rationale. As of this rollup, open P0 blockers remain and no complete formal acceptance package is linked for all open items.
 
+## Phase 0 baseline preservation linkage
+
+- Regression baseline index for controlled synthetic/mock-trial continuity: `docs/operations/production-readiness/PHASE0_BASELINE_PRESERVATION_REGRESSION_INDEX.md`
+- Baseline index preserves GO WITH CONDITIONS boundary for `mock_trial` only and keeps explicit non-claims for pilot/production/human-subjects status.
+
 ## Source set used
 
 ### Baseline matrix and blocker sources
