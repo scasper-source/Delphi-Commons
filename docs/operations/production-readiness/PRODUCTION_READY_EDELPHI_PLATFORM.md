@@ -99,6 +99,8 @@ This plan focuses on `human_testing_candidate`.
 
 Goal: preserve current mock-trial and Phase 1 engineering evidence as a regression baseline.
 
+Primary baseline index: `docs/operations/production-readiness/PHASE0_BASELINE_PRESERVATION_REGRESSION_INDEX.md`.
+
 Required work:
 
 - Keep latest mock-trial artifacts and pointers.

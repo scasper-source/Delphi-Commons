@@ -38,6 +38,9 @@
 ## Additional external collaborator evidence
 - `docs/operations/production-readiness/phase1-evidence-closeout/PHASE1_EXTERNAL_COLLABORATOR_BUILD_START_VALIDATION.md` - external collaborator reported successful client/server build and start, with interface loaded successfully. This is build/start smoke evidence only; business-logic and workflow validation remain pending.
 
+## Phase 0 regression baseline preservation index
+- `docs/operations/production-readiness/PHASE0_BASELINE_PRESERVATION_REGRESSION_INDEX.md` - preserved cross-phase baseline index linking mock-trial pointers, mobile closeout evidence, export privacy/provenance interpretation, and Phase 1 evidence streams for controlled synthetic regression continuity only.
+
 ## Additional export provenance evidence
 - `docs/operations/production-readiness/phase1-evidence-closeout/PHASE1_EXPORT_PROVENANCE_EVIDENCE.md` - reviewer-facing export provenance metadata and privacy/provenance test evidence. This materially reduces HSB-P0-006 but does not close it without Data Custodian or authorized reviewer signoff/acceptance.
 
