@@ -118,6 +118,8 @@ Exit gate:
 
 Goal: decide exactly what the human testing candidate will include.
 
+Reference closeout note: [PHASE1_PRODUCT_SURFACE_LOCK_CLOSEOUT.md](./PHASE1_PRODUCT_SURFACE_LOCK_CLOSEOUT.md).
+
 Required decisions:
 
 - Windows laptop operator path: included / excluded / deferred.
