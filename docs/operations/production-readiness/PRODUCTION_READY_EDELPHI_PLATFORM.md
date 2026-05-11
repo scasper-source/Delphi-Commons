@@ -67,6 +67,37 @@ Production readiness must name the client distribution targets that are supporte
 
 Desktop and phone applications must not broaden data or readiness claims. A native app release is blocked if it introduces offline storage, push notifications, device identifiers, crash analytics, third-party SDKs, or app-store telemetry without privacy review, participant disclosure, and Data Custodian approval.
 
+## Human Closeout Sequencing Rule
+
+Human-required Phase 1 evidence should be collected against a pinned closeout candidate, not against a moving development branch. The next planning target is therefore an operator-ready build that a Study Owner can install, start, and walk through with Codex and human reviewers in real time.
+
+Until that closeout candidate exists, human-required P0 evidence remains intentionally deferred, not closed:
+
+- manual accessibility review,
+- named deployment security signoff,
+- production-like backup/restore and retention/deletion rehearsal,
+- deployment-connected incident drill,
+- Data Custodian export/residual-risk signoff,
+- full human-observed end-to-end dry run.
+
+Codex may prepare scripts, templates, checklists, seeded synthetic data, package docs, and evidence binders before that point. Codex must not invent human observations, device results, reviewer decisions, deployment facts, notification outcomes, or signoffs.
+
+The closeout candidate must be tied to a commit hash and must identify exactly which operator path is in scope:
+
+| Operator path | Use in Phase 1 human closeout | Required before human closeout |
+| --- | --- | --- |
+| Local web/operator package on Windows | Preferred first laptop walkthrough path if no hosted staging environment exists. | Documented install/start/stop/reset/uninstall steps, synthetic seed data, no secrets in repo, local data directory policy, browser URL, smoke-test command, known limitations. |
+| Local web/operator package on macOS | Required before claiming macOS operator support. | Same evidence as Windows, plus Intel/Apple Silicon and Gatekeeper/signing limitation notes. |
+| Hosted staging web deployment | Preferred named deployment path for pilot-like security and operations evidence. | URL/environment label, TLS/reverse-proxy proof, session/CORS/CSRF/header checks, monitoring/logging notes, backup/restore target, residual-risk record. |
+| Mobile web / PWA | Preferred phone review path before native apps. | iOS Safari and Android Chrome real-device walkthrough, cache/storage privacy check, small-screen accessibility review. |
+| Native iOS/Android app | Out of Phase 1 scope unless explicitly added. | App-store/test-channel, permissions, secure storage, privacy labels, session revocation, push notification governance, mobile accessibility evidence. |
+
+The first successful result of this stage is not "pilot ready." It is:
+
+**PHASE 1 CLOSEOUT CANDIDATE READY FOR HUMAN REVIEW**
+
+That decision means the system is ready for a structured human walkthrough using synthetic/internal data. It does not authorize real participants or production deployment.
+
 ## Current State Summary
 
 Use existing evidence instead of repeating completed mock-trial work. The current state should be interpreted as a strong baseline for the `mock_trial` track and an input to later tracks.
@@ -75,12 +106,13 @@ Use existing evidence instead of repeating completed mock-trial work. The curren
 | --- | --- | --- |
 | Controlled full mock trial | Evidence exists for 8 synthetic participants x 4 Classical Delphi rounds through local browser automation. Latest documented result: P0=0, P1=0, P2=0, P3=0. | Reuse as mock-trial baseline evidence. Do not treat as pilot or production evidence. |
 | Mobile final closeout | 320px, 390px, and 414px evidence passes with no page-level horizontal overflow after remediation. | Reuse as regression baseline. Add real-device and assistive-technology evidence before accessibility claims. |
-| Export privacy | De-identified exports passed with 0 failures; restricted warnings remain limited to restricted/internal packages. | Reuse as export privacy regression baseline. Expand for real study packages and reviewer-ready redaction evidence. |
+| Export privacy and provenance | De-identified exports passed with 0 failures; restricted warnings remain limited to restricted/internal packages. Reviewer-facing export provenance metadata now exists for governed packages. | Reuse as export privacy/provenance regression baseline. Human Data Custodian review and residual-risk signoff remain required. |
 | AI/HITL governance | Local/test AI governance checks passed with no live external AI calls. | Reuse for No External AI mode. External AI connectors require separate policy, tests, disclosure, and minimization evidence. |
 | Phase 10 operations | Documentation exists; some synthetic/dev rehearsals passed; incident response, production-like staging, independent security review, and human accessibility review remain incomplete. | Reuse documentation and partial rehearsal evidence. Complete missing drills before pilot or production-candidate claims. |
 | Human-subjects readiness package | Human-subjects readiness plan, blockers, control matrix, and evidence checklist exist. | Use as the detailed control baseline. Update statuses as implementation lands. |
 | Open-source readiness | Clean GitHub import exists; governance, security policy, contribution files, and release checklist exist. | Use as repository baseline. Public release still needs dependency/license/security/release evidence. |
 | Install packaging | Web/local developer operation exists as the practical baseline. Windows, macOS, PWA, and native mobile packaging are not yet release-supported unless separately evidenced. | Treat installers and phone apps as future distribution work, not implied current capability. |
+| Human closeout sequencing | Phase 1 human-required evidence remains open by design until a pinned closeout candidate exists. | Build an operator-ready install/start/walkthrough path first; then run the human closeout live against that candidate. |
 
 ## Phase Roadmap
 
@@ -101,9 +133,16 @@ Exit gate:
 - `mock_trial` track remains GO WITH CONDITIONS only.
 - No language claims production, IRB, legal, security, or accessibility certification.
 
-### Phase 1: Pilot-Readiness Hardening
+### Phase 1: Pilot-Readiness Hardening And Human Closeout Preparation
 
-Goal: close P0 blockers for a controlled pilot and remove ordinary reliance on local scripts for study operations.
+Goal: close implementation blockers where possible, then produce a pinned operator-ready closeout candidate so human-required evidence can be collected in a realistic walkthrough.
+
+Phase 1 is split into two sub-stages:
+
+- **Phase 1A: Operator-ready closeout preparation.** Build the install/start/run/reset evidence path, package docs, seeded synthetic study, smoke tests, and walkthrough binder needed before formal human evidence collection.
+- **Phase 1B: Human-observed closeout.** Run the structured human checks against the pinned closeout candidate and attach the resulting observations, screenshots, logs, defects, residual-risk decisions, and signoffs.
+
+Phase 1A can be completed without closing human-required P0 blockers. Phase 1B cannot be completed without actual human/deployment evidence.
 
 Required implementation:
 
@@ -115,8 +154,25 @@ Required implementation:
 - Human-observed dry run covering staff and participant workflows.
 - Accessibility review for consent and active round tasks with NVDA and/or VoiceOver.
 - Pilot package templates for participant information, consent, confidentiality, withdrawal, retention, AI disclosure, and support.
+- Operator-ready install/start/stop/reset documentation for the chosen closeout path.
+- Synthetic seed/demo study suitable for repeatable human walkthroughs.
+- Windows and macOS local operator paths documented if desktop/laptop closeout is in scope.
+- Mobile web/PWA real-device review path documented if phone closeout is in scope.
+- Human closeout binder that can be filled in live during the walkthrough.
 
-Required evidence:
+Required Phase 1A evidence:
+
+- Clean checkout install/start command set for the selected operator path.
+- Commit hash and environment label for the closeout candidate.
+- Synthetic seed/demo data instructions.
+- Smoke-test command and expected result.
+- Operator walkthrough checklist covering staff, participant, export, incident, deletion, backup/restore, and support flows.
+- Windows evidence if Windows operator path is in scope.
+- macOS evidence if macOS operator path is in scope.
+- Mobile web/PWA preflight evidence if phone review is in scope.
+- Explicit list of human-required evidence still deferred.
+
+Required Phase 1B evidence:
 
 - Updated human-subjects control matrix.
 - Closed or accepted P0 blocker list.
@@ -131,6 +187,9 @@ Required evidence:
 
 Exit gate:
 
+- Phase 1A exit gate: closeout candidate is ready for human review only if install/start/reset docs, synthetic data, smoke tests, and walkthrough binder are complete for the selected operator path.
+- Phase 1A exit does not close pilot readiness, production readiness, real human-subjects readiness, or human-required P0 blockers.
+- Phase 1B exit gate: every P0 blocker is closed with linked evidence or formally accepted with dated owner rationale and residual-risk statement.
 - Pilot approval is possible only for a named deployment, study protocol, data class, and approval context.
 - Any real participant pilot still requires applicable institutional, IRB, legal, or ethics authorization outside the software.
 
@@ -236,6 +295,20 @@ Exit gate:
 
 ## Testing Requirements
 
+Minimum closeout-candidate checks before human walkthrough:
+
+- clean checkout setup on the selected operator machine,
+- documented start/stop/reset path,
+- seeded synthetic demo study creation or import,
+- server build and test pass,
+- app build and smoke pass if the app is part of the selected operator path,
+- browser smoke of staff and participant entry points,
+- backup/restore rehearsal command or operator script dry run with synthetic data,
+- export package generation and privacy/provenance scan,
+- incident/deletion workflow smoke where supported by the operator path,
+- screenshot/log evidence index template ready for the human observer,
+- `git diff --check`.
+
 Minimum release-candidate commands must include:
 
 - frontend install/build/test,
@@ -335,6 +408,16 @@ Before `production_candidate`:
 
 ## Deployment And Install Packaging Requirements
 
+Before Phase 1B human closeout:
+
+- A closeout candidate commit is selected and recorded.
+- The selected operator path is named: Windows local web/operator package, macOS local web/operator package, hosted staging web deployment, mobile web/PWA review path, or another explicitly documented path.
+- Install/start/stop/reset instructions are complete enough for the Study Owner to run them without editing source code.
+- Runtime data directories, logs, exports, backups, and local secrets policy are documented.
+- A synthetic demo study can be loaded or created repeatably.
+- The observer has a checklist, transcript template, screenshot/log index, and defect rubric.
+- Unsupported targets are explicitly marked not shipped for this closeout.
+
 Before `pilot`:
 
 - Environment variables are documented with safe defaults.
@@ -430,6 +513,11 @@ Unrestricted real-world use is blocked until all of the following are true:
 | P1-WP4 | Implement retention/deletion execution evidence. | Human-subjects readiness plan. | Data Custodian review, deletion/restriction rules, audit events, export evidence. |
 | P1-WP5 | Run pilot accessibility closeout. | Accessibility docs and mobile evidence. | NVDA/VoiceOver notes, keyboard transcript, mobile screenshots, defect log. |
 | P1-WP6 | Produce deployment-specific security checklist and smoke test. | Environment guide, security tests. | TLS/secrets/session/CORS/CSRF/rate-limit/security-header evidence tied to commit. |
+| P1A-WP7 | Build operator-ready closeout path. | Current app/server start docs and Phase 1 evidence. | Study Owner can install/start/stop/reset the selected path from docs on the closeout machine. |
+| P1A-WP8 | Create synthetic closeout demo package. | Mock-trial fixtures and export/privacy evidence. | Repeatable synthetic study seed/import plus expected workflow checkpoints. |
+| P1A-WP9 | Create real-time human closeout binder. | Phase 1 P0 blockers and evidence templates. | One binder covers operator checklist, observer transcript, screenshot/log index, defect rubric, signoff forms, and final blocker table. |
+| P1A-WP10 | Define laptop and phone support scope for closeout. | Client distribution target matrix. | Windows, macOS, mobile web/PWA, and native app statuses are explicitly supported, experimental, deferred, or not shipped. |
+| P1B-WP11 | Execute human closeout walkthrough. | Pinned closeout candidate and binder. | Human-observed evidence is attached for accessibility, deployment/security, backup/restore, deletion, incident, export review, and full dry run. |
 
 ### Phase 2 Work Packets
 
