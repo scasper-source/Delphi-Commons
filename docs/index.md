@@ -36,6 +36,7 @@ Current readiness: controlled mock-participant MVP testing with synthetic or low
 - [Phase 1 product surface lock closeout](./operations/production-readiness/PHASE1_PRODUCT_SURFACE_LOCK_CLOSEOUT.md)
 - [Backend packaging and process supervision ADR](./operations/production-readiness/BACKEND_PACKAGING_PROCESS_SUPERVISION_ADR.md)
 - [Windows operator candidate prototype (Stage 1)](./operations/production-readiness/WINDOWS_OPERATOR_CANDIDATE_PROTOTYPE.md)
+- [Windows operator portable package prototype (Stage 1)](./operations/production-readiness/WINDOWS_OPERATOR_PORTABLE_PACKAGE.md)
 - [Windows operator candidate evidence closeout](./operations/production-readiness/WINDOWS_OPERATOR_CANDIDATE_EVIDENCE_CLOSEOUT.md)
 - [Windows operator candidate local supervisor evidence](./operations/production-readiness/WINDOWS_OPERATOR_CANDIDATE_LOCAL_SUPERVISOR_EVIDENCE.md)
 - [Phase 0 baseline preservation regression index](./operations/production-readiness/PHASE0_BASELINE_PRESERVATION_REGRESSION_INDEX.md)

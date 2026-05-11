@@ -144,4 +144,5 @@ Keep deferred unless separately decided:
 ## Implementation Note (2026-05-11)
 
 - Stage 1 script/documentation prototype reference: [WINDOWS_OPERATOR_CANDIDATE_PROTOTYPE.md](./WINDOWS_OPERATOR_CANDIDATE_PROTOTYPE.md).
+- Stage 1 portable package prototype reference: [WINDOWS_OPERATOR_PORTABLE_PACKAGE.md](./WINDOWS_OPERATOR_PORTABLE_PACKAGE.md).
 - Current implementation remains local-script based and internal; portable Node bundling, Tauri Stage 2, and installer/signing stay deferred.

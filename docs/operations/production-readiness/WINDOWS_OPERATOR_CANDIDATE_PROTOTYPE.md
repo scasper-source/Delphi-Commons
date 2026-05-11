@@ -104,6 +104,12 @@ powershell -ExecutionPolicy Bypass -File .\scripts\windows\operator-candidate.ps
 
 This prototype does **not** claim production readiness, pilot readiness, real human-subjects readiness, IRB/legal/security/accessibility certification, installer readiness, Windows support readiness, macOS support readiness, real SMS readiness, PWA readiness, native mobile readiness, or external AI readiness.
 
+## Portable package prototype companion
+
+- Windows portable package prototype note: [WINDOWS_OPERATOR_PORTABLE_PACKAGE.md](./WINDOWS_OPERATOR_PORTABLE_PACKAGE.md).
+- Package builder script: `scripts/windows/build-operator-portable-package.ps1`.
+- Stage 1 package posture remains local Node/npm dependency (not standalone).
+
 ## Evidence closeout
 
 - Windows candidate evidence closeout: [WINDOWS_OPERATOR_CANDIDATE_EVIDENCE_CLOSEOUT.md](./WINDOWS_OPERATOR_CANDIDATE_EVIDENCE_CLOSEOUT.md).
