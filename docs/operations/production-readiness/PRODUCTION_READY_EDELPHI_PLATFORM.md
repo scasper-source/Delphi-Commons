@@ -123,6 +123,7 @@ Architecture ADR required before implementation: [BACKEND_PACKAGING_PROCESS_SUPE
 Stage 1 Windows prototype implementation note: [WINDOWS_OPERATOR_CANDIDATE_PROTOTYPE.md](./WINDOWS_OPERATOR_CANDIDATE_PROTOTYPE.md).
 Stage 1 Windows portable package prototype note: [WINDOWS_OPERATOR_PORTABLE_PACKAGE.md](./WINDOWS_OPERATOR_PORTABLE_PACKAGE.md).
 Local Windows portable package evidence note: [WINDOWS_OPERATOR_PORTABLE_PACKAGE_LOCAL_EVIDENCE.md](./WINDOWS_OPERATOR_PORTABLE_PACKAGE_LOCAL_EVIDENCE.md).
+Extracted zip evidence note: [WINDOWS_OPERATOR_PORTABLE_PACKAGE_EXTRACTED_ZIP_EVIDENCE.md](./WINDOWS_OPERATOR_PORTABLE_PACKAGE_EXTRACTED_ZIP_EVIDENCE.md).
 Stage 1 Windows evidence closeout note: [WINDOWS_OPERATOR_CANDIDATE_EVIDENCE_CLOSEOUT.md](./WINDOWS_OPERATOR_CANDIDATE_EVIDENCE_CLOSEOUT.md).
 Local Windows supervisor evidence note: [WINDOWS_OPERATOR_CANDIDATE_LOCAL_SUPERVISOR_EVIDENCE.md](./WINDOWS_OPERATOR_CANDIDATE_LOCAL_SUPERVISOR_EVIDENCE.md).
 
@@ -160,7 +161,7 @@ Current progress:
 
 Remaining Phase 2 blockers before the downloadable laptop operator candidate gate can close:
 
-- Run the portable package from a clean extracted zip directory, separate from the build staging directory.
+- Run the portable package from a clean extracted zip directory, separate from the build staging directory (**OPEN**; latest repository-side evidence record is environment-constrained and does not close this gate).
 - Verify on a second Windows machine or clean Windows user profile.
 - Decide whether the candidate will bundle a portable Node runtime or keep local Node/npm as a documented prerequisite.
 - Record Windows signing/distribution limitations, including unsigned-package behavior if applicable.
