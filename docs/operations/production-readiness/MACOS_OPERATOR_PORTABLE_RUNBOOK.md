@@ -12,6 +12,8 @@ This runbook is a planning/operator procedure document for the planned macOS por
 
 No claim is made here that this runbook has been validated on real Mac hardware.
 
+> Warning: command examples in this document are not operational evidence until they are executed and recorded on a real macOS machine.
+
 ## Prerequisites
 
 - macOS shell access with permission to run local scripts from Terminal.
@@ -83,14 +85,14 @@ Run in this sequence:
 2. `start`
 3. `status`
 4. `health`
-5. `ui-head`
+5. `ui-head` (UI HEAD check)
 6. `smoke`
 7. `backup`
 8. `reset` (while running, should refuse)
 9. `restart`
 10. `status`
 11. `health`
-12. `ui-head`
+12. `UI HEAD`
 13. `stop`
 14. `reset` (after stop)
 15. `status`
@@ -103,7 +105,7 @@ Expected output patterns (examples; final strings depend on script implementatio
 - `start`: confirms backend + UI start attempt and pid/state capture.
 - `status` after start: reports backend pid and UI pid running.
 - `health`: returns service health OK from `http://127.0.0.1:3001/health`.
-- `ui-head`: returns HTTP `200` from `http://127.0.0.1:4173/`.
+- `UI HEAD`: returns HTTP `200` from `http://127.0.0.1:4173/`.
 - `smoke`: prints health smoke success.
 - `backup`: creates timestamped backup under runtime `backups`.
 - `reset` while running: refuses reset and instructs stop-first behavior.
@@ -167,6 +169,7 @@ Current planned candidate limitations include:
 - no signing;
 - no notarization;
 - no updater;
+- no enterprise distribution support;
 - no macOS support readiness claim.
 
 ## Explicit Non-Claims

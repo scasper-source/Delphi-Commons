@@ -77,5 +77,6 @@ This prototype does **not** include or claim:
 
 - [macOS Operator Portable/Internal Package ADR (Phase 2 Planning)](./MACOS_OPERATOR_PORTABLE_PACKAGE_ADR.md)
 - [macOS Signing And Distribution Limitations (Phase 2)](./MACOS_SIGNING_DISTRIBUTION_LIMITATIONS.md)
+- [macOS Operator Portable Runbook (planned internal candidate)](./MACOS_OPERATOR_PORTABLE_RUNBOOK.md)
 - [Windows Operator Portable Package (Stage 1 Prototype)](./WINDOWS_OPERATOR_PORTABLE_PACKAGE.md)
 - [Product Readiness Plan for eDelphi](./PRODUCTION_READY_EDELPHI_PLATFORM.md)
