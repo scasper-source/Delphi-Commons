@@ -43,7 +43,7 @@ Define the implementation and evidence plan for a phone-openable participant exp
 | iPhone/Safari real-device or simulator | Timestamped run evidence covering open-link, consent, task completion, support/withdrawal navigation. | NOT RUN |
 | Android/Chrome real-device or emulator | Timestamped run evidence covering open-link, consent, task completion, support/withdrawal navigation. | NOT RUN |
 | SMS mock/sandbox outbox or provider sandbox | Outbox log or sandbox transcript proving invitation/reminder dispatch path with synthetic/internal test data. | NOT RUN |
-| SMS copy review | Reviewer-marked copy set showing neutral language and prohibited-content checks. | NOT RUN |
+| SMS copy review | Reviewer-marked copy set showing neutral language and prohibited-content checks; governance baseline documented in `PHASE3_SMS_COPY_GOVERNANCE.md`. | NOT RUN |
 | Link/token privacy review | Review artifact confirming no identifiers in URL and controlled token exposure handling. | NOT RUN |
 | Screenshots/screen recordings | Indexed media set for primary participant states and failure/edge states on phone form factors. | NOT RUN |
 
