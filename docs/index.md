@@ -40,6 +40,7 @@ Current readiness: controlled mock-participant MVP testing with synthetic or low
 - [Windows operator portable package local evidence](./operations/production-readiness/WINDOWS_OPERATOR_PORTABLE_PACKAGE_LOCAL_EVIDENCE.md)
 - [Windows operator portable package extracted zip evidence](./operations/production-readiness/WINDOWS_OPERATOR_PORTABLE_PACKAGE_EXTRACTED_ZIP_EVIDENCE.md)
 - [Windows signing/distribution limitations (Phase 2)](./operations/production-readiness/WINDOWS_SIGNING_DISTRIBUTION_LIMITATIONS.md)
+- [macOS operator portable/internal package ADR (Phase 2 planning)](./operations/production-readiness/MACOS_OPERATOR_PORTABLE_PACKAGE_ADR.md)
 - [Windows operator candidate evidence closeout](./operations/production-readiness/WINDOWS_OPERATOR_CANDIDATE_EVIDENCE_CLOSEOUT.md)
 - [Windows operator candidate local supervisor evidence](./operations/production-readiness/WINDOWS_OPERATOR_CANDIDATE_LOCAL_SUPERVISOR_EVIDENCE.md)
 - [Phase 0 baseline preservation regression index](./operations/production-readiness/PHASE0_BASELINE_PRESERVATION_REGRESSION_INDEX.md)
