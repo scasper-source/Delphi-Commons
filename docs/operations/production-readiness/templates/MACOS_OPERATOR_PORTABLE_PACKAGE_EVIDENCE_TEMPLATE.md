@@ -1,13 +1,18 @@
-# macOS Portable/Internal Operator Package Evidence Template (Future Execution)
+# macOS Portable/Internal Package Evidence Template (Future Execution)
 
-> Status: **macOS evidence NOT RUN until performed**
+> Status: **macOS evidence remains NOT RUN until completed**
 >
-> Phase: **Phase 2 IN PROGRESS**
+> Phase: **Phase 2 remains IN PROGRESS**
 >
-> Readiness: **NOT READY FOR HUMAN TESTING**
+> Readiness: **Product remains NOT READY FOR HUMAN TESTING**
+
+## Usage notes
+- This is a documentation template for a future macOS tester.
+- Complete all fields with concrete evidence once testing is executed.
+- Do **not** infer successful outcomes without captured command output.
 
 ## Evidence metadata
-- Tester name/initials:
+- Tester:
 - Date/time (UTC):
 - Mac model:
 - macOS version:
@@ -15,25 +20,32 @@
 - Branch:
 - Commit hash:
 
-## Package artifact details
-- Package artifact path:
+## Package details
+- Package archive path:
 - Extracted package path:
 - Manifest summary:
-- README check (present + reviewed):
-
-## Required script checks
-- Required scripts discovered:
-- Script executability check results:
-- Script invocation help/usage checks:
-- Notes:
+- README exists (path + brief confirmation):
+- Launcher exists (path + executable check):
+- Static UI server exists (path + brief confirmation):
+- Dependency posture (lockfiles/vendor state/warnings):
 
 ## Pre-run package-root exclusion checks
-- Package-root exclusion checks run:
-- Evidence/results:
+> Confirm the extracted package root does **not** contain excluded material.
+
+- `.git` absent:
+- `.env` absent:
+- Secrets/provider credentials absent:
+- Runtime data absent:
+- Logs absent:
+- Exports absent:
+- Backups absent:
+- Evidence artifacts absent:
+- Package-root `node_modules` absent:
+- Commands used + output excerpts:
 - Notes:
 
-## Lifecycle command evidence (capture command + output)
-> Record each command and output exactly as run.
+## Lifecycle results (capture command + output)
+> Record every command and its output exactly as run.
 
 1. `status`
    - Command:
@@ -44,7 +56,7 @@
 3. `status` (post-start)
    - Command:
    - Output:
-4. `health`
+4. `backend health`
    - Command:
    - Output:
 5. `UI HEAD`
@@ -65,7 +77,7 @@
 10. `status` (post-restart)
     - Command:
     - Output:
-11. `health` (post-restart)
+11. `backend health` (post-restart)
     - Command:
     - Output:
 12. `UI HEAD` (post-restart)
@@ -74,30 +86,36 @@
 13. `stop`
     - Command:
     - Output:
-14. `reset`
+14. `reset after stop`
     - Command:
     - Output:
 15. `final status`
     - Command:
     - Output:
 
-## Runtime root evidence
-- Required runtime root:
+## Post-run package-root cleanliness
+- Package-root cleanliness check command(s):
+- Unexpected files detected:
+- Unexpected permission/ownership drift:
+- Cleanup performed (if any):
+
+## Runtime path evidence
+- Required runtime path:
   - `~/Library/Application Support/DelphiCommons/macos-operator-portable-candidate`
-- Runtime directories/files observed:
-- Runtime logs captured:
-- Runtime artifacts captured:
+- Runtime directories observed:
+- Runtime files observed:
+- Runtime logs/artifacts captured:
 
-## Package-root cleanliness after lifecycle
-- Post-lifecycle package-root listing/check:
-- Unexpected file/permission drift:
-- Cleanup required:
+## Gatekeeper/quarantine observations (if encountered)
+- Prompt/error observed:
+- Related file/path:
+- Execution impact:
+- Approved remediation used (if any):
 
-## Gatekeeper/quarantine observations
-- Any Gatekeeper/quarantine prompts/errors encountered:
-- Observable impact on execution:
-- Approved remediation path used (if any):
-- **Do not add bypass instructions unless already approved in project policy.**
+## npm warnings (if observed)
+- Command context:
+- Warning text:
+- Impact assessment:
 
 ## Limitations
 - 
@@ -106,8 +124,9 @@
 - 
 
 ## Explicit non-claims
-- No claim of macOS support.
-- No claim that macOS evidence has been executed.
+- No claim of executed macOS evidence unless this template is fully completed with command outputs.
+- No claim of macOS support/compliance.
+- No claim that Phase 2 is complete.
+- No claim that the product is ready for human testing.
 - No production readiness claim.
-- No human-subjects readiness claim.
 - No security/legal/regulatory certification claim.
