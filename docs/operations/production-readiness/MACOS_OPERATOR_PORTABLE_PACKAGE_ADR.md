@@ -139,3 +139,4 @@ The product remains **NOT READY FOR HUMAN TESTING**, and Phase 2 remains **IN PR
 - [Backend Packaging and Process Supervision ADR](./BACKEND_PACKAGING_PROCESS_SUPERVISION_ADR.md)
 - [Windows Operator Portable Package (Stage 1 Prototype)](./WINDOWS_OPERATOR_PORTABLE_PACKAGE.md)
 - [Windows Signing And Distribution Limitations (Phase 2)](./WINDOWS_SIGNING_DISTRIBUTION_LIMITATIONS.md)
+- [macOS Signing And Distribution Limitations (Phase 2)](./MACOS_SIGNING_DISTRIBUTION_LIMITATIONS.md)
