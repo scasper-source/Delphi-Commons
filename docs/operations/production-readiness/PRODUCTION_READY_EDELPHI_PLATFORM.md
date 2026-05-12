@@ -198,6 +198,8 @@ Exit gate:
 
 Goal: make the participant experience openable on phones, with SMS-linked entry ready for human testing.
 
+Phase 3 plan/evidence matrix: [PHASE3_PHONE_SMS_CANDIDATE_PLAN.md](./PHASE3_PHONE_SMS_CANDIDATE_PLAN.md).
+
 Required implementation:
 
 - Mobile participant entry route works from an opaque link.
