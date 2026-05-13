@@ -42,7 +42,7 @@ Current readiness: controlled mock-participant MVP testing with synthetic or low
 - [Windows signing/distribution limitations (Phase 2)](./operations/production-readiness/WINDOWS_SIGNING_DISTRIBUTION_LIMITATIONS.md)
 - [macOS signing/distribution limitations (Phase 2)](./operations/production-readiness/MACOS_SIGNING_DISTRIBUTION_LIMITATIONS.md)
 - [macOS operator portable/internal package ADR (Phase 2 planning)](./operations/production-readiness/MACOS_OPERATOR_PORTABLE_PACKAGE_ADR.md)
-- [macOS operator portable package prototype (Phase 2 internal scaffold)](./operations/production-readiness/MACOS_OPERATOR_PORTABLE_PACKAGE.md)
+- [macOS operator portable package prototype + 2026-05-13 Apple Silicon internal engineering evidence](./operations/production-readiness/MACOS_OPERATOR_PORTABLE_PACKAGE.md)
 - [macOS operator portable/internal package static review evidence](./operations/production-readiness/MACOS_OPERATOR_PORTABLE_PACKAGE_STATIC_REVIEW.md)
 - [macOS operator portable runbook (planned internal candidate)](./operations/production-readiness/MACOS_OPERATOR_PORTABLE_RUNBOOK.md)
 - [Windows operator candidate evidence closeout](./operations/production-readiness/WINDOWS_OPERATOR_CANDIDATE_EVIDENCE_CLOSEOUT.md)

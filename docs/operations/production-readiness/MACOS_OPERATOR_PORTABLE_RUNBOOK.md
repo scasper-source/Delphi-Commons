@@ -3,14 +3,14 @@
 Status: **MACOS OPERATOR PORTABLE RUNBOOK RECORDED**.
 Decision label: **NOT READY FOR HUMAN TESTING**.
 Phase status: **Phase 2 Downloadable Laptop Operator Candidate remains IN PROGRESS**.
-Date basis: **2026-05-12**.
+Date basis: **2026-05-13**.
 Track: **`human_testing_candidate`**.
 
 ## Scope and Safety Boundary
 
 This runbook is a planning/operator procedure document for the planned macOS portable/internal operator package candidate. It is documentation-only at this time unless and until matching macOS scripts are present in the package.
 
-No claim is made here that this runbook has been validated on real Mac hardware.
+A pre-fix real Mac run was recorded on 2026-05-13 with partial package/build/start evidence and lifecycle defects; this runbook remains non-readiness documentation and a post-fix rerun checklist.
 
 > Warning: command examples in this document are not operational evidence until they are executed and recorded on a real macOS machine.
 
@@ -23,7 +23,14 @@ No claim is made here that this runbook has been validated on real Mac hardware.
 
 ## Build Package Command
 
-From repository root, run the planned macOS package builder:
+From repository root, run the macOS package builder (clean-checkout expectation after fix: it safely creates `build/macos-operator-portable`):
+
+```bash
+rm -rf build
+./scripts/macos/build-operator-portable-package.sh
+```
+
+Standard invocation:
 
 ```bash
 bash ./scripts/macos/build-operator-portable-package.sh
@@ -106,7 +113,7 @@ Expected output patterns (examples; final strings depend on script implementatio
 - `status` after start: reports backend pid and UI pid running.
 - `health`: returns service health OK from `http://127.0.0.1:3001/health`.
 - `UI HEAD`: returns HTTP `200` from `http://127.0.0.1:4173/`.
-- `smoke`: prints health smoke success.
+- `smoke`: in the pre-fix tested package this returned placeholder output (`smoke: NOT RUN in non-macOS CI environment`) and must **not** be marked as runtime pass until fixed/rerun.
 - `backup`: creates timestamped backup under runtime `backups`.
 - `reset` while running: refuses reset and instructs stop-first behavior.
 - `restart`: stops/restarts and returns to healthy state.
