@@ -39,6 +39,20 @@ Forbidden SMS concepts include:
 
 Provider webhook handlers must validate signatures before updating delivery state. Delivery events are idempotent by provider event ID.
 
+## Candidate-stage mock inbound controls (local/sandbox only)
+
+- Local mock endpoint: `POST /sms/mock/inbound-keyword` (staff-only), used to simulate inbound carrier keyword behavior in candidate-stage testing.
+- Supported keywords:
+  - `STOP`: records a simulated inbound stop event, revokes SMS consent, and forces `notification_preference=no_sms` for the matched contact.
+  - `HELP`: records a simulated support/help audit event without storing sensitive message content.
+- This is a simulation path for local candidate evidence. It is not a carrier-integrated telecom compliance implementation.
+
+## Candidate-stage resend/reminder bounds (local/sandbox only)
+
+- Resend cooldown: 10 minutes (per participant/study/version).
+- Daily cap: 2 messages per rolling 24 hours (per participant/study/version).
+- When blocked, a suppression reason is captured (`resend_cooldown_active` or `daily_sms_cap_reached`) in notification/audit evidence.
+
 ## Operational Warning
 
 Real SMS should not be enabled for real human-subjects studies until production security, retention, backup/restore, incident response, provider contract review, and IRB/governance readiness are complete.

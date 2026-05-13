@@ -20,7 +20,9 @@ import {
   createMagicLinkToken,
   revokeActiveMagicLinksForParticipantRound,
   createPhoneChallenge,
+  countSmsNotificationsByParticipant,
   createSmsNotification,
+  findContactPreferenceByPhoneHash,
   getContactPreference,
   getMagicLinkSession,
   getPhoneChallenge,
@@ -42,6 +44,8 @@ export const MAGIC_LINK_SESSION_COOKIE = "edelphi_magic_session";
 const SMS_CONSENT_VERSION = "sms-study-texts-v1";
 const MAGIC_TOKEN_PATTERN = /^[A-Za-z0-9_-]{32,256}$/;
 const OTP_MAX_ATTEMPTS = 5;
+const RESEND_COOLDOWN_MINUTES = 10;
+const DAILY_SMS_CAP = 2;
 
 const FORBIDDEN_SMS_PHRASES = [
   "you must respond",
@@ -88,6 +92,8 @@ export type SmsFanoutResult = {
   skipped: number;
   notifications: SmsNotification[];
 };
+
+type InboundKeyword = "STOP" | "HELP";
 
 export function hashSecret(value: string): string {
   return crypto.createHash("sha256").update(value).digest("base64url");
@@ -280,6 +286,7 @@ function eligibilityReason(input: {
   participantStatusOk: boolean;
   activeConsent: boolean;
   roundOpen: boolean;
+  rateLimitedReason: string | null;
 }): string | null {
   if (!input.policy.sms_enabled) return "study_sms_disabled";
   if (!input.roundOpen) return "round_not_open";
@@ -290,6 +297,16 @@ function eligibilityReason(input: {
   if (!input.preference.sms_consent_at || input.preference.sms_consent_revoked_at) return "no_sms_consent";
   if (!input.preference.phone_e164 || !input.preference.phone_verified_at) return "phone_not_verified";
   if (!input.activeConsent) return "no_active_study_consent";
+  if (input.rateLimitedReason) return input.rateLimitedReason;
+  return null;
+}
+
+function rateLimitedReason(input: { participant_id: string; study_id: string; version_id: string }): string | null {
+  const now = Date.now();
+  const cooldownSince = new Date(now - RESEND_COOLDOWN_MINUTES * 60_000).toISOString();
+  const daySince = new Date(now - 24 * 60 * 60_000).toISOString();
+  if (countSmsNotificationsByParticipant({ ...input, since: cooldownSince }) > 0) return "resend_cooldown_active";
+  if (countSmsNotificationsByParticipant({ ...input, since: daySince }) >= DAILY_SMS_CAP) return "daily_sms_cap_reached";
   return null;
 }
 
@@ -336,6 +353,11 @@ export async function sendRoundOpenSmsNotifications(input: {
         round_number: input.round_number,
       }),
       activeConsent: hasActiveConsent({
+        participant_id: enrollment.participant_id,
+        study_id: input.study_id,
+        version_id: input.version_id,
+      }),
+      rateLimitedReason: rateLimitedReason({
         participant_id: enrollment.participant_id,
         study_id: input.study_id,
         version_id: input.version_id,
@@ -457,6 +479,45 @@ export async function sendRoundOpenSmsNotifications(input: {
   }
 
   return { eligible_checked: enrollments.length, sent, skipped, notifications };
+}
+
+export async function handleInboundSmsKeyword(input: {
+  from_phone: string;
+  message_text: string;
+  actor_user_id?: string;
+}): Promise<{ ok: boolean; action: "stop" | "help" | "ignored"; reason?: string }> {
+  const normalizedPhone = normalizePhoneE164(input.from_phone);
+  if (!normalizedPhone) return { ok: false, action: "ignored", reason: "phone_normalization_failed" };
+  const keyword = input.message_text.trim().toUpperCase() as InboundKeyword;
+  if (keyword !== "STOP" && keyword !== "HELP") return { ok: true, action: "ignored" };
+
+  const preference = findContactPreferenceByPhoneHash(hashSecret(normalizedPhone));
+  if (!preference) return { ok: false, action: "ignored", reason: "contact_preference_not_found" };
+  const actorUserId = input.actor_user_id ?? "sms-mock-inbound";
+
+  if (keyword === "STOP") {
+    upsertContactPreference({
+      participant_id: preference.participant_id,
+      notification_preference: "no_sms",
+      sms_consent_granted: false,
+      updated_by_user_id: actorUserId,
+    });
+    await writeAuditEvent({
+      actor: { userId: actorUserId, role: "system", systemRoles: ["system" as any], authSource: "anonymous" },
+      action: "sms_inbound_stop_processed",
+      object: { type: "participant", id: preference.participant_id },
+      details: { masked_phone: maskPhone(normalizedPhone), simulated_inbound: true },
+    });
+    return { ok: true, action: "stop" };
+  }
+
+  await writeAuditEvent({
+    actor: { userId: actorUserId, role: "system", systemRoles: ["system" as any], authSource: "anonymous" },
+    action: "sms_inbound_help_requested",
+    object: { type: "participant", id: preference.participant_id },
+    details: { masked_phone: maskPhone(normalizedPhone), simulated_inbound: true, support_ticket_required: true },
+  });
+  return { ok: true, action: "help" };
 }
 
 export function setMagicSessionCookie(reply: FastifyReply, sessionToken: string, expiresAt: string) {

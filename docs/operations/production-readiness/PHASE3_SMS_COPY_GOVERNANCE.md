@@ -1,6 +1,6 @@
 # Phase 3 SMS Copy Governance and Review Note
 
-Status: **SMS COPY GOVERNANCE RECORDED**.
+Status: **SMS COPY GOVERNANCE RECORDED + MOCK CONTROL EVIDENCE UPDATED (2026-05-13)**.
 
 Decision label: **NOT READY FOR HUMAN TESTING**.
 
@@ -76,7 +76,10 @@ Minimum policy expectations for Phase 3 mock/sandbox behavior:
 - Daily per-participant cap documented for mock/sandbox tests.
 - Operator-visible reason when a send is suppressed by rate-limit policy.
 
-Exact thresholds must be documented in implementation evidence before human-testing consideration.
+Candidate-stage implementation evidence (local sandbox) now records:
+- resend cooldown: 10 minutes;
+- daily per-participant cap: 2 sends per rolling 24 hours;
+- suppression reason evidence (`resend_cooldown_active`, `daily_sms_cap_reached`).
 
 ## Staff permission gates
 

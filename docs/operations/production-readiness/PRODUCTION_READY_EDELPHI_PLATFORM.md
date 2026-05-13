@@ -68,6 +68,7 @@ Use existing evidence as baseline. Do not rerun mock-trial work unless a change 
 | Export privacy/provenance | Governed packages include reviewer provenance metadata; focused export privacy/provenance tests exist. | Data Custodian/reviewer signoff still required. |
 | External collaborator smoke | External collaborator reported successful client/server build and start. | Build/start smoke only; not workflow validation. |
 | Human/deployment closeout | Evidence-gap binders/templates exist or are being prepared. | Gaps remain open until human testing is performed against a candidate. |
+| Phase 3 SMS candidate controls | Local mock STOP/HELP simulation, opt-in gates, resend limits, and staff permission tests added in server automated coverage. | Engineering-only local evidence; still not telecom/pilot/production readiness. |
 
 ## Product Tracks
 
