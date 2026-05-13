@@ -1,6 +1,6 @@
 # Phase 3 Mobile Web Task-Flow Local Automation Evidence
 
-Status: **LOCAL SYNTHETIC AUTOMATION EVIDENCE RECORDED**.
+Status: **LOCAL SYNTHETIC MOBILE-BROWSER AUTOMATION PASS RECORDED**.
 
 Date basis: 2026-05-13.
 
@@ -8,23 +8,26 @@ Date basis: 2026-05-13.
 
 This evidence is limited to local synthetic/internal automation for Phase 3 participant mobile web task-flow coverage and does **not** claim production/pilot/human-subject/real-device/accessibility/real-SMS readiness.
 
+The 2026-05-13 local run passed with a live local backend/frontend and Microsoft Edge headless at a 390px mobile viewport. Earlier Cloud attempts without those live services are precondition evidence only.
+
 ## Scaffold
 
 - Script: `docs/qc/full-mock-trial/run_phase3_mobile_task_flow_scaffold_local.mjs`
 - NPM entrypoint: `npm --prefix server run test:phase3-mobile-task-flow-scaffold`
-- Artifacts: timestamped Markdown plus `phase3-mobile-task-flow-scaffold-latest.json` under `docs/qc/full-mock-trial/artifacts/`.
+- Current PASS artifact: `docs/qc/full-mock-trial/artifacts/phase3-mobile-task-flow-scaffold-2026-05-13T21-32-09-080Z.md`
+- Latest JSON: `docs/qc/full-mock-trial/artifacts/phase3-mobile-task-flow-scaffold-latest.json`
 
 ## Task-Flow Coverage States
 
-Recorded as PASS/PARTIAL/FAIL per run:
+Recorded as PASS/PARTIAL/FAIL per run. Current local PASS coverage:
 
-- consent
-- Round 1
-- later round
-- no-active-task
-- closeout/completed state
-- support
-- withdrawal
+- consent information, participant rights, and withdrawal language
+- Round 1 mobile browser submission
+- participant support issue submission
+- no-active-task/waiting state between rounds
+- later-round structured judgment submission
+- released closeout/final-results view
+- withdrawal from future participation
 
 ## Privacy/Redaction Boundary
 

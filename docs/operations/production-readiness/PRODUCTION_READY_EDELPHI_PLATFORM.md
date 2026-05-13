@@ -217,12 +217,12 @@ Current Phase 3 status as of 2026-05-13: **PARTIAL IMPLEMENTATION / EVIDENCE IN 
 
 Completion snapshot:
 
-- Required implementation matrix items: 9 complete for local mock/sandbox scope, 1 partial mobile task-flow item, and 1 deferred PWA item.
-- Required evidence items: SMS mock/sandbox automation, SMS copy governance, and link/token privacy remediation are partial/local-only; iPhone/Safari, Android/Chrome, and screenshot/screen-recording evidence are not run.
+- Required implementation matrix items: 10 complete for local mock/sandbox scope, with PWA deferred for Phase 3.
+- Required evidence items: SMS mock/sandbox automation, SMS copy governance, link/token privacy remediation, and mobile task-flow automation are partial/local-only; iPhone/Safari and Android/Chrome real-device evidence are not run.
 - PWA decision: deferred for Phase 3. The charter requires device-agnostic participation, accessibility, secure defaults, data minimization, and low-waste operation; it does not require installable/offline PWA behavior. Mobile web is the Phase 3 phone surface.
 - Targeted verification: Phase 3 server build, focused SMS/magic-link regression tests, and full server tests passed on 2026-05-13 in the merged Phase 3 PRs.
-- Optional browser scaffold: `npm --prefix server run test:phase3-magic-link-browser-scaffold` passed locally on 2026-05-13 with live backend/frontend prerequisites and Microsoft Edge headless. A Cloud run without the backend produced expected `ECONNREFUSED` precondition evidence.
-- Exit gate remains open because phone-device evidence, full support/withdrawal/no-active-task scenario evidence, real SMS/provider evidence, and human reviewer/signoff work are still outstanding.
+- Optional browser scaffolds: `npm --prefix server run test:phase3-magic-link-browser-scaffold` passed locally on 2026-05-13 with live backend/frontend prerequisites and Microsoft Edge headless; `npm --prefix server run test:phase3-mobile-task-flow-scaffold` passed locally on 2026-05-13 and recorded consent, Round 1, support, no-active-task, later round, closeout, and withdrawal observations. Cloud runs without backend/frontend prerequisites can only produce precondition evidence.
+- Exit gate remains open because phone-device evidence, real SMS/provider evidence, accessibility evidence, and human reviewer/signoff work are still outstanding.
 
 Local task-flow scaffold evidence note: [PHASE3_MOBILE_WEB_TASK_FLOW_EVIDENCE.md](./PHASE3_MOBILE_WEB_TASK_FLOW_EVIDENCE.md).
 
@@ -470,3 +470,9 @@ Public open-source release remains separate and requires repository hygiene, lic
 - Local run evidence: `docs/qc/full-mock-trial/artifacts/phase3-magic-link-browser-scaffold-2026-05-13T20-54-54-667Z.md`.
 - Precondition: the scaffold is optional and requires a running local backend plus compatible browser automation support; failure without that backend is expected and does not by itself indicate a build/test failure.
 - Non-claim boundary: this scaffold is not phone-device, human-observed, accessibility, real-SMS, or production readiness evidence.
+
+## Phase 3 mobile task-flow scaffold update (2026-05-13)
+- Added and repaired: local scripted mobile task-flow scaffold for synthetic/internal participant state coverage.
+- Covered when run with prerequisites: consent information, Round 1 submission, participant support issue submission, no-active-task waiting state, later-round structured judgment submission, released closeout/final-results view, withdrawal action, and redacted evidence output.
+- Local run evidence: `docs/qc/full-mock-trial/artifacts/phase3-mobile-task-flow-scaffold-2026-05-13T21-32-09-080Z.md`.
+- Non-claim boundary: this scaffold is not iPhone/Safari or Android/Chrome real-device evidence, not accessibility evidence, not human-observed testing, not real-SMS/provider evidence, and not production readiness evidence.
