@@ -17,7 +17,7 @@ Define the implementation and evidence plan for a phone-openable participant exp
 - Documentation-only planning artifact.
 - No SMS provider production behavior is implemented by this plan.
 - No real SMS credentials are added by this plan.
-- No PWA/service worker behavior is added by this plan unless explicitly approved in a separate change.
+- PWA/service worker behavior is **deferred for Phase 3**. Mobile web in Safari/Chrome is the candidate surface; no install prompt, offline mode, service worker, background sync, or participant-data cache is in scope unless a later ADR explicitly approves PWA with cache/storage/session-revocation policy and privacy review.
 - No native iOS or Android app behavior is added by this plan.
 
 ## Required Implementation Matrix
@@ -34,7 +34,7 @@ Define the implementation and evidence plan for a phone-openable participant exp
 | STOP/HELP implemented or simulated | STOP/HELP response path exists or is explicitly simulated for candidate-stage testing with clear operator handling. | **Complete for local/mock simulation.** Staff-gated `/sms/mock/inbound-keyword` simulates STOP consent revocation and HELP support audit; carrier/provider behavior is not implemented. | Product + Engineering | STOP/HELP behavior note and rehearsal evidence template. |
 | Resend/reminder permission gates and rate limits | Staff resend/reminder controls are permission-gated and throttled by defined limits/cooldowns. | **Complete for local/mock enforcement.** Staff permission checks, 10-minute cooldown, and daily cap of 2 per participant are covered by automated suppression-reason assertions. | Engineering + QA | Permission matrix and rate-limit test checklist. |
 | Mobile web task flow: consent, Round 1, later round, no-active-task, closeout, support, withdrawal | Participant can navigate all required task states on phone form factors with clear outcomes and recovery paths. | **Partial.** Local browser scaffold covers `/m/{token}`, Round 1 submit attempt, single-use rejection, and invalid-token rejection; support/withdrawal/no-active-task and real-device scenario evidence remain open. | QA + Study operations reviewer | Scenario checklist with screenshots/screen recordings plus local scaffold artifact. |
-| PWA cache/storage policy if PWA is in scope | If and only if PWA is approved for scope, cache/storage/session revocation policy is documented and privacy-reviewed. | Deferred pending explicit approval. | Engineering + Privacy reviewer | PWA policy note (conditional) and cache behavior evidence. |
+| PWA cache/storage policy if PWA is in scope | If and only if PWA is approved for scope, cache/storage/session revocation policy is documented and privacy-reviewed. | **Deferred for Phase 3 by charter-based scope decision.** Mobile web satisfies the near-term device-agnostic participation goal with less cache/storage/session risk. | Engineering + Privacy reviewer | No Phase 3 artifact required beyond this deferral record; future PWA work requires a separate ADR and evidence plan. |
 
 ## Required Evidence Matrix
 
@@ -57,6 +57,7 @@ A participant tester can receive or simulate SMS, open the phone link, complete 
 - This document does not authorize real participant outreach or real human-subjects activity.
 - This document does not establish production SMS deliverability or telecom compliance.
 - This document does not prove accessibility compliance or security certification.
+- This document explicitly defers PWA/offline/install-to-home-screen behavior for Phase 3; phone evidence is for browser-based mobile web only.
 
 ## Remaining Blockers
 
@@ -65,6 +66,7 @@ A participant tester can receive or simulate SMS, open the phone link, complete 
 - Link/token privacy review and local remediation are recorded, but independent Security/Privacy and Data Custodian signoff remain open.
 - STOP/HELP and permission/rate-limit behavior have local automated evidence only; real carrier/provider behavior and human-observed rehearsal remain open.
 - Human reviewer signoff for SMS copy is not yet recorded.
+- PWA remains deferred unless a later approved ADR demonstrates a charter-compatible need and covers cache/storage/session-revocation evidence.
 
 ## Explicit Non-Claims
 

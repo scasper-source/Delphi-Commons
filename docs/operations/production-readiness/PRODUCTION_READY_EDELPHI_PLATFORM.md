@@ -90,9 +90,9 @@ This plan focuses on `human_testing_candidate`.
 | macOS laptop operator package | In scope now if a Mac tester is available. | Secondary laptop support path. | Clean install/start/stop/reset, Intel/Apple Silicon statement, Gatekeeper/signing limitation notes, local data directory policy, smoke test. |
 | Phone participant mobile web | In scope now. | Primary phone experience for participants. | iOS Safari and Android Chrome open-link evidence, responsive active task checks, consent/Round 1/later round/support/withdrawal checks, real-device accessibility notes. |
 | SMS magic-link entry | In scope now. | Primary invitation/reminder entry path for phone testing. | Neutral SMS copy, opt-in/verification rules, opaque expiring links, rate limits, audit events, no sensitive content in SMS, STOP/HELP or documented simulated equivalent. |
-| PWA install-to-home-screen | Design now; ship only if privacy-reviewed. | Optional phone convenience path. | Manifest/service-worker review, cache/storage privacy proof, logout/session revocation, iOS/Android behavior notes. |
-| Native iOS app | Deferred unless explicitly approved. | Later distribution path only if mobile web/PWA is insufficient. | TestFlight/App Store plan, permissions, secure storage, privacy labels, SDK review, push notification governance. |
-| Native Android app | Deferred unless explicitly approved. | Later distribution path only if mobile web/PWA is insufficient. | Internal testing/Play plan, permissions, secure storage, Data Safety inputs, SDK review, push notification governance. |
+| PWA install-to-home-screen | Deferred for Phase 3 by charter-based scope decision. | Later convenience path only if mobile web is insufficient and a separate ADR approves cache/storage/session policy. | Not required for Phase 3. Future PWA scope requires manifest/service-worker review, cache/storage privacy proof, logout/session revocation, and iOS/Android behavior notes. |
+| Native iOS app | Deferred unless explicitly approved. | Later distribution path only if mobile web is insufficient. | TestFlight/App Store plan, permissions, secure storage, privacy labels, SDK review, push notification governance. |
+| Native Android app | Deferred unless explicitly approved. | Later distribution path only if mobile web is insufficient. | Internal testing/Play plan, permissions, secure storage, Data Safety inputs, SDK review, push notification governance. |
 
 ## Phase Roadmap
 
@@ -219,6 +219,7 @@ Completion snapshot:
 
 - Required implementation matrix items: 9 complete for local mock/sandbox scope, 1 partial mobile task-flow item, and 1 deferred PWA item.
 - Required evidence items: SMS mock/sandbox automation, SMS copy governance, and link/token privacy remediation are partial/local-only; iPhone/Safari, Android/Chrome, and screenshot/screen-recording evidence are not run.
+- PWA decision: deferred for Phase 3. The charter requires device-agnostic participation, accessibility, secure defaults, data minimization, and low-waste operation; it does not require installable/offline PWA behavior. Mobile web is the Phase 3 phone surface.
 - Targeted verification: Phase 3 server build, focused SMS/magic-link regression tests, and full server tests passed on 2026-05-13 in the merged Phase 3 PRs.
 - Optional browser scaffold: `npm --prefix server run test:phase3-magic-link-browser-scaffold` passed locally on 2026-05-13 with live backend/frontend prerequisites and Microsoft Edge headless. A Cloud run without the backend produced expected `ECONNREFUSED` precondition evidence.
 - Exit gate remains open because phone-device evidence, full support/withdrawal/no-active-task scenario evidence, real SMS/provider evidence, and human reviewer/signoff work are still outstanding.
@@ -234,7 +235,7 @@ Required implementation:
 - STOP/HELP handling is implemented or explicitly simulated for the human testing candidate.
 - Staff controls for resend/reminder are rate-limited and permission-gated.
 - Mobile web task flow covers consent, Round 1, later round, no-active-task, closeout, support, and withdrawal.
-- PWA cache/storage policy is documented if PWA is in scope.
+- PWA cache/storage policy is not required for Phase 3 because PWA is deferred; future PWA work requires a separate ADR and privacy-reviewed cache/storage/session-revocation policy.
 
 Required evidence:
 
@@ -349,12 +350,12 @@ Rules:
 
 | Evidence | Windows laptop | macOS laptop | Phone mobile web | SMS | PWA | Native mobile |
 | --- | --- | --- | --- | --- | --- | --- |
-| Install/start | Required if included | Required if included | Browser open-link required | Provider/mock setup required | Required if included | Deferred |
-| Stop/reset/uninstall | Required | Required | Logout/session reset | Opt-out/reset | Cache reset | Deferred |
-| Data directory policy | Required | Required | Browser storage policy | Phone storage/audit policy | Cache/storage policy | Secure storage policy |
-| Accessibility | Keyboard and screen reader | Keyboard and VoiceOver | Real-device mobile | SMS copy clarity | Mobile a11y | Native a11y |
-| Security/privacy | Local secrets, logs, exports | Local secrets, logs, exports | Link/session privacy | Token/provider privacy | Cache privacy | Permissions/SDK review |
-| Human testing evidence | Required | Required if in scope | Required | Required if in scope | Required if in scope | Not in scope unless approved |
+| Install/start | Required if included | Required if included | Browser open-link required | Provider/mock setup required | Deferred for Phase 3 | Deferred |
+| Stop/reset/uninstall | Required | Required | Logout/session reset | Opt-out/reset | Deferred for Phase 3 | Deferred |
+| Data directory policy | Required | Required | Browser storage policy | Phone storage/audit policy | Deferred; future ADR required | Secure storage policy |
+| Accessibility | Keyboard and screen reader | Keyboard and VoiceOver | Real-device mobile | SMS copy clarity | Deferred; mobile web a11y carries Phase 3 | Native a11y |
+| Security/privacy | Local secrets, logs, exports | Local secrets, logs, exports | Link/session privacy | Token/provider privacy | Deferred; future cache privacy review required | Permissions/SDK review |
+| Human testing evidence | Required | Required if in scope | Required | Required if in scope | Not required for Phase 3 | Not in scope unless approved |
 
 ## Testing Requirements Before Human Testing
 
@@ -418,7 +419,7 @@ These blockers cannot be closed by Codex alone:
 | HTC-WP4 | Build synthetic demo study setup. | One documented setup path creates a repeatable human testing study. |
 | HTC-WP5 | Harden phone participant flow. | Phone URL flow covers consent, active rounds, support, withdrawal, and closeout on mobile. |
 | HTC-WP6 | Harden SMS magic-link path. | Neutral SMS, opaque link, opt-in, mock/sandbox evidence, audit/privacy checks. |
-| HTC-WP7 | Decide PWA scope. | PWA is shipped, deferred, or not shipped with cache/storage rationale. |
+| HTC-WP7 | Decide PWA scope. | **Done for Phase 3:** PWA is deferred by charter-based scope decision; future PWA requires separate ADR plus cache/storage/session-revocation evidence. |
 | HTC-WP8 | Assemble human testing binder. | Binder contains checklists, transcript, screenshot/log index, defect rubric, signoffs, and blocker table. |
 | HTC-WP9 | Run candidate smoke evidence. | Build/tests/smoke/mobile/export/backup/security checks are recorded. |
 | HTC-WP10 | Execute final human testing. | Human evidence is attached and final blocker status is updated. |
