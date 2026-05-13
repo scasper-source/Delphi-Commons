@@ -1,0 +1,16 @@
+{
+  "run_at": "2026-05-13T21:17:16.673Z",
+  "commit": "1993422c11395892da156ff7baf55b3943ad0522",
+  "boundary": "Local synthetic/internal automation evidence only; not production/pilot/human-subject/real-SMS/accessibility/real-device evidence.",
+  "preconditions": [],
+  "synthetic": {},
+  "steps": [
+    {
+      "name": "precondition_backend_frontend",
+      "status": "FAIL",
+      "reason": "Local API not reachable at configured base URL; start local backend/frontend then rerun.",
+      "baseUrl": "http://127.0.0.1:3001",
+      "frontendUrl": "http://127.0.0.1:5173"
+    }
+  ]
+}
