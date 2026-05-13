@@ -18,6 +18,7 @@ import {
   consumeMagicLinkByHash,
   createMagicLinkSession,
   createMagicLinkToken,
+  revokeActiveMagicLinksForParticipantRound,
   createPhoneChallenge,
   createSmsNotification,
   getContactPreference,
@@ -173,7 +174,6 @@ export async function updateParticipantSmsPreference(input: {
     action: input.sms_consent_granted === false ? "sms_consent_revoked" : "sms_preference_changed",
     object: { type: "participant", id: input.participant_id },
     details: {
-      participantId: input.participant_id,
       notification_preference: record.notification_preference,
       masked_phone: maskPhone(record.phone_e164),
       sms_consent_granted: Boolean(record.sms_consent_at && !record.sms_consent_revoked_at),
@@ -184,7 +184,7 @@ export async function updateParticipantSmsPreference(input: {
       actor: { userId: input.actor_user_id, role: "owner", systemRoles: ["owner"], authSource: "legacy-dev-header" },
       action: "sms_consent_granted",
       object: { type: "participant", id: input.participant_id },
-      details: { participantId: input.participant_id, sms_consent_version: SMS_CONSENT_VERSION },
+      details: { sms_consent_version: SMS_CONSENT_VERSION },
     });
   }
 
@@ -214,7 +214,7 @@ export async function startPhoneVerification(input: {
     actor: { userId: input.actor_user_id, role: "owner", systemRoles: ["owner"], authSource: "legacy-dev-header" },
     action: "phone_verification_started",
     object: { type: "participant", id: input.participant_id },
-    details: { participantId: input.participant_id, masked_phone: challenge.masked_phone, expires_at: challenge.expires_at },
+    details: { masked_phone: challenge.masked_phone, expires_at: challenge.expires_at },
   });
 
   return {
@@ -244,7 +244,7 @@ export async function verifyPhoneOtp(input: {
     actor: { userId: input.actor_user_id, role: "owner", systemRoles: ["owner"], authSource: "legacy-dev-header" },
     action: ok ? "phone_verified" : "phone_verification_failed",
     object: { type: "participant", id: challenge.participant_id },
-    details: { participantId: challenge.participant_id, challenge_id: challenge.challenge_id, masked_phone: challenge.masked_phone },
+    details: { challenge_id: challenge.challenge_id, masked_phone: challenge.masked_phone },
   });
 
   if (!ok) throw new Error("invalid_phone_verification_code");
@@ -367,6 +367,12 @@ export async function sendRoundOpenSmsNotifications(input: {
     const token = createMagicToken();
     const ttlMinutes = Math.min(Math.max(1, policy.magic_link_ttl_minutes), 24 * 60);
     const expiresAt = new Date(Date.now() + ttlMinutes * 60_000).toISOString();
+    const revoked_prior_active_links = revokeActiveMagicLinksForParticipantRound({
+      participant_id: enrollment.participant_id,
+      study_id: input.study_id,
+      version_id: input.version_id,
+      round_number: input.round_number,
+    });
     const magicLink = createMagicLinkToken({
       token_hash: hashSecret(token),
       participant_id: enrollment.participant_id,
@@ -399,7 +405,7 @@ export async function sendRoundOpenSmsNotifications(input: {
       actor: { userId: input.actor_user_id, role: "owner", systemRoles: ["owner"], authSource: "legacy-dev-header" },
       action: "magic_link_created",
       object: { type: "magic_link", id: magicLink.magic_link_id },
-      details: { studyId: input.study_id, versionId: input.version_id, round_number: input.round_number, participantId: enrollment.participant_id, expires_at: expiresAt },
+      details: { studyId: input.study_id, versionId: input.version_id, round_number: input.round_number, expires_at: expiresAt, revoked_prior_active_links },
     });
 
     try {
@@ -428,7 +434,6 @@ export async function sendRoundOpenSmsNotifications(input: {
           studyId: input.study_id,
           versionId: input.version_id,
           round_number: input.round_number,
-          participantId: enrollment.participant_id,
           provider: provider.name,
           provider_message_id: result.providerMessageId,
           masked_phone: preferenceSnapshot.masked_phone,
@@ -446,7 +451,7 @@ export async function sendRoundOpenSmsNotifications(input: {
         actor: { userId: input.actor_user_id, role: "owner", systemRoles: ["owner"], authSource: "legacy-dev-header" },
         action: "round_open_sms_failed",
         object: { type: "sms_notification", id: notification.sms_notification_id },
-        details: { studyId: input.study_id, versionId: input.version_id, round_number: input.round_number, participantId: enrollment.participant_id, provider: provider.name },
+        details: { studyId: input.study_id, versionId: input.version_id, round_number: input.round_number, provider: provider.name },
       });
     }
   }
@@ -495,7 +500,7 @@ export async function consumeMagicLinkToken(input: { token: string }): Promise<{
     actor: { userId: consumed.participant_id, role: "participant", systemRoles: ["participant"], authSource: "invitation" },
     action: "magic_link_used",
     object: { type: "magic_link", id: consumed.magic_link_id },
-    details: { studyId: consumed.study_id, versionId: consumed.version_id, round_number: consumed.round_number, participantId: consumed.participant_id },
+    details: { studyId: consumed.study_id, versionId: consumed.version_id, round_number: consumed.round_number },
   });
   await writeAuditEvent({
     actor: { userId: consumed.participant_id, role: "participant", systemRoles: ["participant"], authSource: "invitation" },

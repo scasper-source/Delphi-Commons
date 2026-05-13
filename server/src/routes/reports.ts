@@ -1640,6 +1640,25 @@ export async function reportsRoutes(app: FastifyInstance) {
         reviewed_by_role: suggestion.decided_by_role ?? "",
         reviewed_at: suggestion.decided_at ?? "",
       }));
+      const redactAuditDetailValue = (value: unknown): unknown => {
+        if (Array.isArray(value)) return value.map(redactAuditDetailValue);
+        if (!value || typeof value !== "object") return value;
+        const output: Record<string, unknown> = {};
+        for (const [key, entry] of Object.entries(value as Record<string, unknown>)) {
+          if (/^participantId$/i.test(key) || /^participant_id$/i.test(key)) {
+            output[key] = "[REDACTED]";
+            continue;
+          }
+          output[key] = redactAuditDetailValue(entry);
+        }
+        return output;
+      };
+
+      const redactedAuditEvents = (events: Array<{ details?: Record<string, unknown> } & Record<string, unknown>>) => events.map((event) => ({
+        ...event,
+        details: event.details ? redactAuditDetailValue(event.details) as Record<string, unknown> : event.details,
+      }));
+
       const relevantAuditEvents = listAuditEvents().filter((event) => {
         const details = event.details ?? {};
         return (
@@ -1958,7 +1977,7 @@ export async function reportsRoutes(app: FastifyInstance) {
         "audit-package": [
           ...baseFiles,
           { path: "audit-package/audit_events.csv", content: toCsv(auditRows), format: ".csv", record_count: auditRows.length, contains_identifiable_data: false, redaction_profile: { participant_direct_identifiers: "excluded" } },
-          { path: "audit-package/audit_events.json", content: JSON.stringify(relevantAuditEvents, null, 2), format: ".json", record_count: relevantAuditEvents.length, contains_identifiable_data: false, redaction_profile: { participant_direct_identifiers: "excluded" } },
+          { path: "audit-package/audit_events.json", content: JSON.stringify(redactedAuditEvents(relevantAuditEvents), null, 2), format: ".json", record_count: relevantAuditEvents.length, contains_identifiable_data: false, redaction_profile: { participant_direct_identifiers: "excluded" } },
           { path: "audit-package/integrity_hashes.json", content: JSON.stringify({ audit_integrity: verifyAuditIntegrity(), export_manifest_count: exportManifests.length, dataset_hash: datasetHash }, null, 2), format: ".json", record_count: null, contains_identifiable_data: false, redaction_profile: { direct_identifiers: "not_applicable" } },
           { path: "audit-package/audit_chain_summary.txt", content: `Audit events included: ${auditRows.length}\nIntegrity verified: ${verifyAuditIntegrity().ok}\n`, format: ".txt", record_count: null, contains_identifiable_data: false, redaction_profile: { direct_identifiers: "not_applicable" } },
         ],

@@ -391,6 +391,25 @@ export function upsertStudySmsPolicy(input: {
   return record;
 }
 
+export function revokeActiveMagicLinksForParticipantRound(input: {
+  participant_id: string;
+  study_id: string;
+  version_id: string;
+  round_number: number;
+  revoked_at?: string;
+}): number {
+  const revokedAt = input.revoked_at ?? nowIso();
+  const result = getDatabase()
+    .prepare(
+      `UPDATE magic_link_tokens
+       SET revoked_at = ?
+       WHERE participant_id = ? AND study_id = ? AND version_id = ? AND round_number = ?
+         AND consumed_at IS NULL AND revoked_at IS NULL AND expires_at > ?`,
+    )
+    .run(revokedAt, input.participant_id, input.study_id, input.version_id, input.round_number, revokedAt);
+  return Number(result.changes ?? 0);
+}
+
 export function createMagicLinkToken(input: {
   token_hash: string;
   participant_id: string;
