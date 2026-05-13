@@ -1,6 +1,6 @@
 # macOS Operator Portable Package (Phase 2 Prototype/Internal)
 
-Status: **MACOS PORTABLE PACKAGE PROTOTYPE / PARTIAL MACOS RUNTIME EVIDENCE RECORDED**.
+Status: **MACOS PORTABLE PACKAGE PROTOTYPE / PARTIAL MACOS RUNTIME EVIDENCE RECORDED / INTERNAL ENGINEERING EVIDENCE ONLY**.
 Decision label: **NOT READY FOR HUMAN TESTING**.
 Date basis: **2026-05-13**.
 
@@ -8,7 +8,7 @@ Date basis: **2026-05-13**.
 
 This document covers the scaffolded internal macOS portable operator package path for Phase 2. It is implementation scaffolding only.
 
-One Apple Silicon macOS internal engineering runtime run was performed on **2026-05-13**. It produced partial positive package/build/start evidence but exposed lifecycle defects. It does **not** establish macOS support readiness or human-testing readiness.
+One Apple Silicon macOS internal engineering runtime run was performed on **2026-05-13**. It produced partial positive package/build/start evidence but exposed lifecycle defects. Follow-up script fixes and local package verification are recorded separately; a post-fix real macOS lifecycle rerun remains required. This does **not** establish macOS support readiness or human-testing readiness.
 
 ## Builder
 
@@ -22,7 +22,7 @@ One Apple Silicon macOS internal engineering runtime run was performed on **2026
 
 Backend and UI are configured for localhost-only binding (`127.0.0.1`).
 
-Reset refuses while running.
+Status, stop, restart, and reset are expected to verify actual localhost listener processes rather than trusting stale PID files alone. Reset refuses while the expected backend or UI service is actually running.
 
 ## Runtime root policy
 

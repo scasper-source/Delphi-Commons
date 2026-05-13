@@ -90,9 +90,9 @@ This plan focuses on `human_testing_candidate`.
 | macOS laptop operator package | In scope now if a Mac tester is available. | Secondary laptop support path. | Clean install/start/stop/reset, Intel/Apple Silicon statement, Gatekeeper/signing limitation notes, local data directory policy, smoke test. |
 | Phone participant mobile web | In scope now. | Primary phone experience for participants. | iOS Safari and Android Chrome open-link evidence, responsive active task checks, consent/Round 1/later round/support/withdrawal checks, real-device accessibility notes. |
 | SMS magic-link entry | In scope now. | Primary invitation/reminder entry path for phone testing. | Neutral SMS copy, opt-in/verification rules, opaque expiring links, rate limits, audit events, no sensitive content in SMS, STOP/HELP or documented simulated equivalent. |
-| PWA install-to-home-screen | Design now; ship only if privacy-reviewed. | Optional phone convenience path. | Manifest/service-worker review, cache/storage privacy proof, logout/session revocation, iOS/Android behavior notes. |
-| Native iOS app | Deferred unless explicitly approved. | Later distribution path only if mobile web/PWA is insufficient. | TestFlight/App Store plan, permissions, secure storage, privacy labels, SDK review, push notification governance. |
-| Native Android app | Deferred unless explicitly approved. | Later distribution path only if mobile web/PWA is insufficient. | Internal testing/Play plan, permissions, secure storage, Data Safety inputs, SDK review, push notification governance. |
+| PWA install-to-home-screen | Deferred for Phase 3 by charter-based scope decision. | Later convenience path only if mobile web is insufficient and a separate ADR approves cache/storage/session policy. | Not required for Phase 3. Future PWA scope requires manifest/service-worker review, cache/storage privacy proof, logout/session revocation, and iOS/Android behavior notes. |
+| Native iOS app | Deferred unless explicitly approved. | Later distribution path only if mobile web is insufficient. | TestFlight/App Store plan, permissions, secure storage, privacy labels, SDK review, push notification governance. |
+| Native Android app | Deferred unless explicitly approved. | Later distribution path only if mobile web is insufficient. | Internal testing/Play plan, permissions, secure storage, Data Safety inputs, SDK review, push notification governance. |
 
 ## Phase Roadmap
 
@@ -127,9 +127,13 @@ Local Windows portable package evidence note: [WINDOWS_OPERATOR_PORTABLE_PACKAGE
 Extracted zip evidence note: [WINDOWS_OPERATOR_PORTABLE_PACKAGE_EXTRACTED_ZIP_EVIDENCE.md](./WINDOWS_OPERATOR_PORTABLE_PACKAGE_EXTRACTED_ZIP_EVIDENCE.md).
 Windows signing/distribution limitations note: [WINDOWS_SIGNING_DISTRIBUTION_LIMITATIONS.md](./WINDOWS_SIGNING_DISTRIBUTION_LIMITATIONS.md).
 macOS operator portable/internal package planning ADR: [MACOS_OPERATOR_PORTABLE_PACKAGE_ADR.md](./MACOS_OPERATOR_PORTABLE_PACKAGE_ADR.md).
+macOS operator portable package prototype note: [MACOS_OPERATOR_PORTABLE_PACKAGE.md](./MACOS_OPERATOR_PORTABLE_PACKAGE.md).
+macOS operator portable package static review evidence: [MACOS_OPERATOR_PORTABLE_PACKAGE_STATIC_REVIEW.md](./MACOS_OPERATOR_PORTABLE_PACKAGE_STATIC_REVIEW.md).
+macOS operator portable runbook: [MACOS_OPERATOR_PORTABLE_RUNBOOK.md](./MACOS_OPERATOR_PORTABLE_RUNBOOK.md).
+macOS signing/distribution limitations note: [MACOS_SIGNING_DISTRIBUTION_LIMITATIONS.md](./MACOS_SIGNING_DISTRIBUTION_LIMITATIONS.md).
+macOS Apple Silicon defect-fix evidence note: [MACOS_OPERATOR_PORTABLE_APPLE_SILICON_DEFECT_FIX_EVIDENCE.md](./MACOS_OPERATOR_PORTABLE_APPLE_SILICON_DEFECT_FIX_EVIDENCE.md).
 Stage 1 Windows evidence closeout note: [WINDOWS_OPERATOR_CANDIDATE_EVIDENCE_CLOSEOUT.md](./WINDOWS_OPERATOR_CANDIDATE_EVIDENCE_CLOSEOUT.md).
 Local Windows supervisor evidence note: [WINDOWS_OPERATOR_CANDIDATE_LOCAL_SUPERVISOR_EVIDENCE.md](./WINDOWS_OPERATOR_CANDIDATE_LOCAL_SUPERVISOR_EVIDENCE.md).
-macOS Apple Silicon internal engineering evidence note (2026-05-13): [MACOS_OPERATOR_PORTABLE_PACKAGE.md](./MACOS_OPERATOR_PORTABLE_PACKAGE.md).
 
 Required decisions:
 
@@ -162,15 +166,18 @@ Current progress:
 - **DONE:** Stage 1 Windows operator supervisor local evidence recorded.
 - **DONE:** Stage 1 Windows portable/internal package local evidence recorded.
 - **DONE:** Stage 1 Windows portable/internal package extracted-zip local evidence recorded.
-- **IN PROGRESS:** Phase 2 downloadable laptop operator candidate. The current Windows portable package is local engineering evidence only and remains **NOT READY FOR HUMAN TESTING**.
+- **DONE:** Windows signing/distribution limitations recorded.
+- **DONE:** macOS operator portable planning, prototype, static review, runbook, and signing/distribution limitation notes recorded.
 - **RECORDED (2026-05-13):** One Apple Silicon macOS internal engineering runtime run produced partial package/build/start evidence but exposed lifecycle supervision defects; this does **not** establish macOS support readiness or human-testing readiness.
-- **REQUIRED NEXT:** Post-fix real macOS lifecycle rerun evidence remains required before any macOS readiness interpretation.
+- **DONE:** macOS Apple Silicon package defects fixed and internal engineering verification recorded.
+- **IN PROGRESS:** Phase 2 downloadable laptop operator candidate. The current Windows and macOS portable package evidence remains internal engineering evidence only and remains **NOT READY FOR HUMAN TESTING**.
 
 Remaining Phase 2 blockers before the downloadable laptop operator candidate gate can close:
 
 - Verify on a second Windows machine or clean Windows user profile.
 - Runtime posture reconciled for current Phase 2 work: keep local Node/npm as the documented prerequisite for the current candidate; portable bundled runtime remains deferred.
-- Record Windows signing/distribution limitations, including unsigned-package behavior if applicable.
+- Execute full post-fix extracted-package lifecycle evidence on a real Mac after the Apple Silicon package fixes.
+- Capture signing/Gatekeeper/unsigned-package behavior evidence for the intended distribution path; current limitation notes are documentation only.
 - Preserve deferred status for Tauri, NSIS/MSI installer work, updater behavior, and platform support claims until separate evidence exists.
 
 Required implementation:
@@ -203,6 +210,19 @@ Exit gate:
 Goal: make the participant experience openable on phones, with SMS-linked entry ready for human testing.
 
 Phase 3 plan/evidence matrix: [PHASE3_PHONE_SMS_CANDIDATE_PLAN.md](./PHASE3_PHONE_SMS_CANDIDATE_PLAN.md).
+SMS copy governance note: [PHASE3_SMS_COPY_GOVERNANCE.md](./PHASE3_SMS_COPY_GOVERNANCE.md).
+Magic-link privacy review: [PHASE3_MAGIC_LINK_PRIVACY_REVIEW.md](./PHASE3_MAGIC_LINK_PRIVACY_REVIEW.md).
+
+Current Phase 3 status as of 2026-05-13: **PARTIAL IMPLEMENTATION / EVIDENCE IN PROGRESS** and **NOT READY FOR HUMAN TESTING**.
+
+Completion snapshot:
+
+- Required implementation matrix items: 10 complete for local mock/sandbox scope, with PWA deferred for Phase 3.
+- Required evidence items: SMS mock/sandbox automation, SMS copy governance, link/token privacy remediation, and mobile task-flow automation are partial/local-only; iPhone/Safari and Android/Chrome real-device evidence are not run.
+- PWA decision: deferred for Phase 3. The charter requires device-agnostic participation, accessibility, secure defaults, data minimization, and low-waste operation; it does not require installable/offline PWA behavior. Mobile web is the Phase 3 phone surface.
+- Targeted verification: Phase 3 server build, focused SMS/magic-link regression tests, and full server tests passed on 2026-05-13 in the merged Phase 3 PRs.
+- Optional browser scaffolds: `npm --prefix server run test:phase3-magic-link-browser-scaffold` passed locally on 2026-05-13 with live backend/frontend prerequisites and Microsoft Edge headless; `npm --prefix server run test:phase3-mobile-task-flow-scaffold` passed locally on 2026-05-13 and recorded consent, Round 1, support, no-active-task, later round, closeout, and withdrawal observations. Cloud runs without backend/frontend prerequisites can only produce precondition evidence.
+- Exit gate remains open because phone-device evidence, real SMS/provider evidence, accessibility evidence, and human reviewer/signoff work are still outstanding.
 
 Local task-flow scaffold evidence note: [PHASE3_MOBILE_WEB_TASK_FLOW_EVIDENCE.md](./PHASE3_MOBILE_WEB_TASK_FLOW_EVIDENCE.md).
 
@@ -217,7 +237,7 @@ Required implementation:
 - STOP/HELP handling is implemented or explicitly simulated for the human testing candidate.
 - Staff controls for resend/reminder are rate-limited and permission-gated.
 - Mobile web task flow covers consent, Round 1, later round, no-active-task, closeout, support, and withdrawal.
-- PWA cache/storage policy is documented if PWA is in scope.
+- PWA cache/storage policy is not required for Phase 3 because PWA is deferred; future PWA work requires a separate ADR and privacy-reviewed cache/storage/session-revocation policy.
 
 Required evidence:
 
@@ -332,12 +352,12 @@ Rules:
 
 | Evidence | Windows laptop | macOS laptop | Phone mobile web | SMS | PWA | Native mobile |
 | --- | --- | --- | --- | --- | --- | --- |
-| Install/start | Required if included | Required if included | Browser open-link required | Provider/mock setup required | Required if included | Deferred |
-| Stop/reset/uninstall | Required | Required | Logout/session reset | Opt-out/reset | Cache reset | Deferred |
-| Data directory policy | Required | Required | Browser storage policy | Phone storage/audit policy | Cache/storage policy | Secure storage policy |
-| Accessibility | Keyboard and screen reader | Keyboard and VoiceOver | Real-device mobile | SMS copy clarity | Mobile a11y | Native a11y |
-| Security/privacy | Local secrets, logs, exports | Local secrets, logs, exports | Link/session privacy | Token/provider privacy | Cache privacy | Permissions/SDK review |
-| Human testing evidence | Required | Required if in scope | Required | Required if in scope | Required if in scope | Not in scope unless approved |
+| Install/start | Required if included | Required if included | Browser open-link required | Provider/mock setup required | Deferred for Phase 3 | Deferred |
+| Stop/reset/uninstall | Required | Required | Logout/session reset | Opt-out/reset | Deferred for Phase 3 | Deferred |
+| Data directory policy | Required | Required | Browser storage policy | Phone storage/audit policy | Deferred; future ADR required | Secure storage policy |
+| Accessibility | Keyboard and screen reader | Keyboard and VoiceOver | Real-device mobile | SMS copy clarity | Deferred; mobile web a11y carries Phase 3 | Native a11y |
+| Security/privacy | Local secrets, logs, exports | Local secrets, logs, exports | Link/session privacy | Token/provider privacy | Deferred; future cache privacy review required | Permissions/SDK review |
+| Human testing evidence | Required | Required if in scope | Required | Required if in scope | Not required for Phase 3 | Not in scope unless approved |
 
 ## Testing Requirements Before Human Testing
 
@@ -401,7 +421,7 @@ These blockers cannot be closed by Codex alone:
 | HTC-WP4 | Build synthetic demo study setup. | One documented setup path creates a repeatable human testing study. |
 | HTC-WP5 | Harden phone participant flow. | Phone URL flow covers consent, active rounds, support, withdrawal, and closeout on mobile. |
 | HTC-WP6 | Harden SMS magic-link path. | Neutral SMS, opaque link, opt-in, mock/sandbox evidence, audit/privacy checks. |
-| HTC-WP7 | Decide PWA scope. | PWA is shipped, deferred, or not shipped with cache/storage rationale. |
+| HTC-WP7 | Decide PWA scope. | **Done for Phase 3:** PWA is deferred by charter-based scope decision; future PWA requires separate ADR plus cache/storage/session-revocation evidence. |
 | HTC-WP8 | Assemble human testing binder. | Binder contains checklists, transcript, screenshot/log index, defect rubric, signoffs, and blocker table. |
 | HTC-WP9 | Run candidate smoke evidence. | Build/tests/smoke/mobile/export/backup/security checks are recorded. |
 | HTC-WP10 | Execute final human testing. | Human evidence is attached and final blocker status is updated. |
@@ -437,3 +457,22 @@ Public open-source release remains separate and requires repository hygiene, lic
 - Implemented: audit-package JSON export now applies detail-level redaction for `participantId`/`participant_id` fields to align with reviewer-facing redaction metadata.
 - Added regression checks for opaque URL token path, no raw token persistence/audit leakage, OTP and full-phone non-leakage, participant-ID absence from SMS/magic-link audit details, and one-active-token behavior across repeated sends.
 - Non-claim boundary: these updates are local engineering hardening only and do not constitute production/pilot/human-subjects/real-SMS readiness claims.
+
+## Phase 3 SMS governance update (2026-05-13)
+- Implemented: local/mock STOP and HELP keyword simulation through a staff-gated inbound endpoint.
+- Implemented: local/mock resend cooldown and daily SMS cap enforcement with suppression-reason assertions.
+- Implemented: permission tests for SMS controls and redacted HELP support audit events.
+- Non-claim boundary: these updates do not establish carrier integration, telecom compliance, real SMS readiness, or human-testing readiness.
+
+## Phase 3 browser scaffold update (2026-05-13)
+- Added: local scripted `/m/{token}` browser scaffold for synthetic/internal magic-link flow checks.
+- Covered when run with prerequisites: synthetic participant setup, mock SMS send verification, local shared-database magic-link token seeding without exposing SMS body text through an API, mobile-sized browser open, Round 1 submit attempt, single-use rejection, invalid-token rejection, and redacted artifact writing.
+- Local run evidence: `docs/qc/full-mock-trial/artifacts/phase3-magic-link-browser-scaffold-2026-05-13T20-54-54-667Z.md`.
+- Precondition: the scaffold is optional and requires a running local backend plus compatible browser automation support; failure without that backend is expected and does not by itself indicate a build/test failure.
+- Non-claim boundary: this scaffold is not phone-device, human-observed, accessibility, real-SMS, or production readiness evidence.
+
+## Phase 3 mobile task-flow scaffold update (2026-05-13)
+- Added and repaired: local scripted mobile task-flow scaffold for synthetic/internal participant state coverage.
+- Covered when run with prerequisites: consent information, Round 1 submission, participant support issue submission, no-active-task waiting state, later-round structured judgment submission, released closeout/final-results view, withdrawal action, and redacted evidence output.
+- Local run evidence: `docs/qc/full-mock-trial/artifacts/phase3-mobile-task-flow-scaffold-2026-05-13T21-32-09-080Z.md`.
+- Non-claim boundary: this scaffold is not iPhone/Safari or Android/Chrome real-device evidence, not accessibility evidence, not human-observed testing, not real-SMS/provider evidence, and not production readiness evidence.

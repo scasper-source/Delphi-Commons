@@ -1,12 +1,12 @@
 # Phase 3 Phone Participant and SMS Candidate Plan/Evidence Matrix
 
-Status: **PHASE 3 PHONE/SMS CANDIDATE PLAN RECORDED**.
+Status: **PHASE 3 PHONE/SMS CANDIDATE PARTIAL IMPLEMENTATION / EVIDENCE IN PROGRESS**.
 
 Decision label: **NOT READY FOR HUMAN TESTING**.
 
-Phase 3 status: **PARTIALLY IMPLEMENTED IN LOCAL MOCK/SANDBOX (2026-05-13)**.
+Phase 3 status: **PARTIALLY IMPLEMENTED IN LOCAL MOCK/SANDBOX; PHONE DEVICE AND HUMAN TESTING EVIDENCE NOT RUN**.
 
-Date basis: 2026-05-12.
+Date basis: 2026-05-13.
 
 ## Purpose
 
@@ -17,24 +17,24 @@ Define the implementation and evidence plan for a phone-openable participant exp
 - Documentation-only planning artifact.
 - No SMS provider production behavior is implemented by this plan.
 - No real SMS credentials are added by this plan.
-- No PWA/service worker behavior is added by this plan unless explicitly approved in a separate change.
+- PWA/service worker behavior is **deferred for Phase 3**. Mobile web in Safari/Chrome is the candidate surface; no install prompt, offline mode, service worker, background sync, or participant-data cache is in scope unless a later ADR explicitly approves PWA with cache/storage/session-revocation policy and privacy review.
 - No native iOS or Android app behavior is added by this plan.
 
 ## Required Implementation Matrix
 
-| Requirement | Planned requirement detail | Current planning status | Evidence owner | Evidence artifact expectation |
+| Requirement | Planned requirement detail | Current status | Evidence owner | Evidence artifact expectation |
 | --- | --- | --- | --- | --- |
-| Mobile participant entry route from opaque link | Participant can open a phone-safe HTTPS URL carrying only opaque non-identifying token material. | Planned only. Not implemented by this document. | Engineering + QA | Route design note, token format note, and mobile open-flow capture. |
-| Neutral SMS copy | Invitation/reminder messages remain neutral and avoid study-sensitive content, diagnosis, risk details, or condition labels. | Planned only. | Product + Compliance reviewer | SMS copy deck with reviewer notes. |
-| SMS optional/opt-in | SMS channel is optional and consent/opt-in controlled; participant can use non-SMS fallback entry if defined by study policy. | Planned only. | Product + Engineering | Settings/flow specification and operator checklist step. |
-| Phone verification or mock/sandbox equivalent | Verification is either implemented for test channel or explicitly simulated via sandbox/mock flow for synthetic/internal testing. | Planned only. | Engineering | Verification design record or mock/sandbox runbook section. |
-| Opaque expiring magic links | Links are expiring and single-use or risk-controlled equivalent; token entropy and expiration are documented. | Planned only. | Engineering + Security reviewer | Link lifecycle specification and test evidence plan. |
-| No participant ID/study ID/email/phone/role in URL | URL path/query/fragment excludes direct identifiers and role labels. | Planned only. | Engineering + Privacy reviewer | URL schema review checklist output. |
-| SMS audit without raw token/OTP/full phone/message content | Audit logs capture event metadata only (attempt, status, actor, timestamp, template/version) without sensitive fields. | Planned only. | Engineering + Data Custodian | Audit schema note and redaction check evidence. |
-| STOP/HELP implemented or simulated | STOP/HELP response path exists or is explicitly simulated for candidate-stage testing with clear operator handling. | Implemented as local mock inbound keyword simulation endpoint (`/sms/mock/inbound-keyword`, staff-gated). | Product + Engineering | Automated test + governance note update. |
-| Resend/reminder permission gates and rate limits | Staff resend/reminder controls are permission-gated and throttled by defined limits/cooldowns. | Local mock thresholds enforced (10-min cooldown, daily cap 2 per participant). | Engineering + QA | Automated suppression-reason assertions. |
-| Mobile web task flow: consent, Round 1, later round, no-active-task, closeout, support, withdrawal | Participant can navigate all required task states on phone form factors with clear outcomes and recovery paths. | Browser scaffold implemented locally for `/m/{token}` using synthetic/internal data; real-device/human evidence remains NOT RUN. | QA + Study operations reviewer | Scenario checklist with screenshots/screen recordings plus local scaffold artifact. |
-| PWA cache/storage policy if PWA is in scope | If and only if PWA is approved for scope, cache/storage/session revocation policy is documented and privacy-reviewed. | Deferred pending explicit approval. | Engineering + Privacy reviewer | PWA policy note (conditional) and cache behavior evidence. |
+| Mobile participant entry route from opaque link | Participant can open a phone-safe HTTPS URL carrying only opaque non-identifying token material. | **Complete for local mock/sandbox server/app path; phone-device evidence not run.** App parses `/m/{token}`, server consumes `/magic-links/consume`, and the local browser scaffold exercises the route when a backend/browser are available. | Engineering + QA | Route design note, token format note, and mobile open-flow capture. |
+| Neutral SMS copy | Invitation/reminder messages remain neutral and avoid study-sensitive content, diagnosis, risk details, or condition labels. | **Complete as local implementation/governance baseline; human reviewer signoff not run.** Governance note recorded; automated coverage asserts neutral copy and prohibited-language absence. | Product + Compliance reviewer | SMS copy deck with reviewer notes. |
+| SMS optional/opt-in | SMS channel is optional and consent/opt-in controlled; participant can use non-SMS fallback entry if defined by study policy. | **Complete for local/mock enforcement.** Send eligibility requires SMS preference, consent, active status, active consent, and verified phone; STOP simulation revokes SMS consent. Non-SMS fallback policy remains study-specific. | Product + Engineering | Settings/flow specification and operator checklist step. |
+| Phone verification or mock/sandbox equivalent | Verification is either implemented for test channel or explicitly simulated via sandbox/mock flow for synthetic/internal testing. | **Complete for local/mock OTP flow.** Targeted coverage starts and verifies a development OTP; production provider verification is not claimed. | Engineering | Verification design record or mock/sandbox runbook section. |
+| Opaque expiring magic links | Links are expiring and single-use or risk-controlled equivalent; token entropy and expiration are documented. | **Complete for local/mock path.** Opaque URL, hashed token storage, expiry, one-use consumption, and one-active-token-per-participant-round policy are implemented/tested; security signoff is not claimed. | Engineering + Security reviewer | Link lifecycle specification and test evidence plan. |
+| No participant ID/study ID/email/phone/role in URL | URL path/query/fragment excludes direct identifiers and role labels. | **Complete for inspected/tested path; real-device URL capture not run.** Static review, regression coverage, and scaffold design use only `/m/{token}` and exclude participant/study/email fields. | Engineering + Privacy reviewer | URL schema review checklist output. |
+| SMS audit without raw token/OTP/full phone/message content | Audit logs capture event metadata only (attempt, status, actor, timestamp, template/version) without sensitive fields. | **Complete for local regression scope; Data Custodian review not run.** Tests cover no raw token/OTP/full phone, participant-ID removal from SMS/magic-link audit details, and audit-package detail redaction. | Engineering + Data Custodian | Audit schema note and redaction check evidence. |
+| STOP/HELP implemented or simulated | STOP/HELP response path exists or is explicitly simulated for candidate-stage testing with clear operator handling. | **Complete for local/mock simulation.** Staff-gated `/sms/mock/inbound-keyword` simulates STOP consent revocation and HELP support audit; carrier/provider behavior is not implemented. | Product + Engineering | STOP/HELP behavior note and rehearsal evidence template. |
+| Resend/reminder permission gates and rate limits | Staff resend/reminder controls are permission-gated and throttled by defined limits/cooldowns. | **Complete for local/mock enforcement.** Staff permission checks, 10-minute cooldown, and daily cap of 2 per participant are covered by automated suppression-reason assertions. | Engineering + QA | Permission matrix and rate-limit test checklist. |
+| Mobile web task flow: consent, Round 1, later round, no-active-task, closeout, support, withdrawal | Participant can navigate all required task states on phone form factors with clear outcomes and recovery paths. | **Complete for local synthetic mobile-browser scaffold; phone-device/human evidence not run.** The local task-flow scaffold provisions a synthetic three-round study and records PASS browser observations for consent, Round 1 submission, support, no-active-task, later-round submission, closeout, and withdrawal. | QA + Study operations reviewer | Scenario checklist with screenshots/screen recordings plus local scaffold artifact. |
+| PWA cache/storage policy if PWA is in scope | If and only if PWA is approved for scope, cache/storage/session revocation policy is documented and privacy-reviewed. | **Deferred for Phase 3 by charter-based scope decision.** Mobile web satisfies the near-term device-agnostic participation goal with less cache/storage/session risk. | Engineering + Privacy reviewer | No Phase 3 artifact required beyond this deferral record; future PWA work requires a separate ADR and evidence plan. |
 
 ## Required Evidence Matrix
 
@@ -42,10 +42,10 @@ Define the implementation and evidence plan for a phone-openable participant exp
 | --- | --- | --- |
 | iPhone/Safari real-device or simulator | Timestamped run evidence covering open-link, consent, task completion, support/withdrawal navigation. | NOT RUN |
 | Android/Chrome real-device or emulator | Timestamped run evidence covering open-link, consent, task completion, support/withdrawal navigation. | NOT RUN |
-| SMS mock/sandbox outbox or provider sandbox | Outbox log or sandbox transcript proving invitation/reminder dispatch path with synthetic/internal test data. | PARTIAL: local scaffold artifact generated by `run_phase3_magic_link_browser_scaffold_local.mjs` (mock outbox path only). |
-| SMS copy review | Reviewer-marked copy set showing neutral language and prohibited-content checks; governance baseline documented in `PHASE3_SMS_COPY_GOVERNANCE.md`. | NOT RUN |
-| Link/token privacy review | Review artifact confirming no identifiers in URL and controlled token exposure handling. | NOT RUN |
-| Screenshots/screen recordings | Indexed media set for primary participant states and failure/edge states on phone form factors. | NOT RUN |
+| SMS mock/sandbox outbox or provider sandbox | Outbox log or sandbox transcript proving invitation/reminder dispatch path with synthetic/internal test data. | **PARTIAL/PASS for targeted local automated path.** Server regression coverage passes; local browser scaffold passed on 2026-05-13 with live backend/frontend prerequisites and wrote redacted artifacts. Provider sandbox evidence is not run. |
+| SMS copy review | Reviewer-marked copy set showing neutral language and prohibited-content checks; governance baseline documented in `PHASE3_SMS_COPY_GOVERNANCE.md`. | **PARTIAL - governance baseline and automated copy checks recorded; human reviewer signoff not run.** |
+| Link/token privacy review | Review artifact confirming no identifiers in URL and controlled token exposure handling. | **PARTIAL - review and local remediation recorded in `PHASE3_MAGIC_LINK_PRIVACY_REVIEW.md`; independent Security/Privacy or Data Custodian signoff not run.** |
+| Screenshots/screen recordings | Indexed media set for primary participant states and failure/edge states on phone form factors. | **PARTIAL - local headless mobile-browser observation artifacts recorded; real-device screenshots/screen recordings not run.** |
 
 ## Exit Gate (Future)
 
@@ -53,18 +53,20 @@ A participant tester can receive or simulate SMS, open the phone link, complete 
 
 ## Limitations
 
-- This is a planning/evidence matrix only; it is not implementation evidence.
+- This matrix includes targeted local implementation evidence, but it is not a complete Phase 3 evidence binder.
 - This document does not authorize real participant outreach or real human-subjects activity.
 - This document does not establish production SMS deliverability or telecom compliance.
 - This document does not prove accessibility compliance or security certification.
+- This document explicitly defers PWA/offline/install-to-home-screen behavior for Phase 3; phone evidence is for browser-based mobile web only.
 
 ## Remaining Blockers
 
 - No completed phone-device evidence runs are attached yet.
-- SMS channel behavior remains unverified in mock/sandbox evidence.
-- Link/token privacy review artifacts are not yet recorded.
-- STOP/HELP behavior evidence is not yet recorded.
-- Permission/rate-limit enforcement evidence is not yet recorded.
+- SMS channel behavior has targeted mock/sandbox test evidence, but no provider sandbox transcript, full real-device walkthrough, or phone-device evidence.
+- Link/token privacy review and local remediation are recorded, but independent Security/Privacy and Data Custodian signoff remain open.
+- STOP/HELP and permission/rate-limit behavior have local automated evidence only; real carrier/provider behavior and human-observed rehearsal remain open.
+- Human reviewer signoff for SMS copy is not yet recorded.
+- PWA remains deferred unless a later approved ADR demonstrates a charter-compatible need and covers cache/storage/session-revocation evidence.
 
 ## Explicit Non-Claims
 
@@ -94,15 +96,18 @@ This plan does **not** claim:
 
 ## Phase 3 browser/mobile scaffold update (2026-05-13)
 - Added local scripted scaffold: `docs/qc/full-mock-trial/run_phase3_magic_link_browser_scaffold_local.mjs`.
-- Scope covered by scaffold: synthetic study/version/participant setup, SMS opt-in + verified phone configuration, mock round-open SMS send, opaque `/m/{token}` extraction from mock outbox, mobile-sized browser open and submit attempt, single-use token rejection check, invalid-token rejection check.
-- Support/withdrawal/no-active-task paths: scaffold validates surface entry and records automated status only; full scenario-path evidence still requires targeted scripted extension and human/device walkthrough evidence.
-- Artifact outputs: timestamped Markdown + `phase3-magic-link-browser-scaffold-latest.json` in `docs/qc/full-mock-trial/artifacts/` with redacted token evidence only.
+- Scope covered by scaffold: synthetic study/version/participant setup, SMS opt-in + verified phone configuration, mock round-open SMS send verification, local shared-database seeding of an opaque `/m/{token}` for browser entry, mobile-sized browser open and submit attempt, single-use token rejection check, invalid-token rejection check.
+- Token handling note: the scaffold does not require an API that exposes mock SMS body text or raw tokens; notification APIs remain redacted.
+- Support/withdrawal/no-active-task paths: scaffold validates the Round 1 magic-link path only; full scenario-path evidence still requires targeted scripted extension and human/device walkthrough evidence.
+- Local run evidence: `docs/qc/full-mock-trial/artifacts/phase3-magic-link-browser-scaffold-2026-05-13T20-54-54-667Z.md` and `phase3-magic-link-browser-scaffold-latest.json` record a PASS run with redacted token evidence only.
 - Explicit non-claim boundary: this scaffold is local automation evidence only; iPhone/Safari and Android/Chrome real-device evidence remain **NOT RUN**.
 
 
 ## Phase 3 mobile task-flow scaffold expansion (2026-05-13)
-- Added local scaffold script: `docs/qc/full-mock-trial/run_phase3_mobile_task_flow_scaffold_local.mjs`.
+- Added and repaired local scaffold script: `docs/qc/full-mock-trial/run_phase3_mobile_task_flow_scaffold_local.mjs`.
 - Added npm script: `npm --prefix server run test:phase3-mobile-task-flow-scaffold`.
 - Added dedicated evidence note: `PHASE3_MOBILE_WEB_TASK_FLOW_EVIDENCE.md`.
+- Coverage: synthetic three-round study setup, participant invitation consent view, Round 1 mobile browser submission, support issue submission, no-active-task waiting state, Round 2 mobile browser rating submission, released closeout/final-results view, and withdrawal action.
 - Output artifacts: timestamped Markdown + `phase3-mobile-task-flow-scaffold-latest.json` in `docs/qc/full-mock-trial/artifacts/`.
+- Local run evidence: `docs/qc/full-mock-trial/artifacts/phase3-mobile-task-flow-scaffold-2026-05-13T21-32-09-080Z.md` records a PASS run with redacted participant/token evidence only.
 - Boundary: local synthetic/internal automation evidence only; iPhone/Safari, Android/Chrome real-device evidence, human-observed testing, and accessibility review remain **NOT RUN**.
