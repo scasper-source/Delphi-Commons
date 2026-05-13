@@ -4,7 +4,7 @@ Status: **PHASE 3 PHONE/SMS CANDIDATE PLAN RECORDED**.
 
 Decision label: **NOT READY FOR HUMAN TESTING**.
 
-Phase 3 status: **NOT RUN / IN PLANNING**.
+Phase 3 status: **PARTIALLY IMPLEMENTED IN LOCAL MOCK/SANDBOX (2026-05-13)**.
 
 Date basis: 2026-05-12.
 
@@ -31,8 +31,8 @@ Define the implementation and evidence plan for a phone-openable participant exp
 | Opaque expiring magic links | Links are expiring and single-use or risk-controlled equivalent; token entropy and expiration are documented. | Planned only. | Engineering + Security reviewer | Link lifecycle specification and test evidence plan. |
 | No participant ID/study ID/email/phone/role in URL | URL path/query/fragment excludes direct identifiers and role labels. | Planned only. | Engineering + Privacy reviewer | URL schema review checklist output. |
 | SMS audit without raw token/OTP/full phone/message content | Audit logs capture event metadata only (attempt, status, actor, timestamp, template/version) without sensitive fields. | Planned only. | Engineering + Data Custodian | Audit schema note and redaction check evidence. |
-| STOP/HELP implemented or simulated | STOP/HELP response path exists or is explicitly simulated for candidate-stage testing with clear operator handling. | Planned only. | Product + Engineering | STOP/HELP behavior note and rehearsal evidence template. |
-| Resend/reminder permission gates and rate limits | Staff resend/reminder controls are permission-gated and throttled by defined limits/cooldowns. | Planned only. | Engineering + QA | Permission matrix and rate-limit test checklist. |
+| STOP/HELP implemented or simulated | STOP/HELP response path exists or is explicitly simulated for candidate-stage testing with clear operator handling. | Implemented as local mock inbound keyword simulation endpoint (`/sms/mock/inbound-keyword`, staff-gated). | Product + Engineering | Automated test + governance note update. |
+| Resend/reminder permission gates and rate limits | Staff resend/reminder controls are permission-gated and throttled by defined limits/cooldowns. | Local mock thresholds enforced (10-min cooldown, daily cap 2 per participant). | Engineering + QA | Automated suppression-reason assertions. |
 | Mobile web task flow: consent, Round 1, later round, no-active-task, closeout, support, withdrawal | Participant can navigate all required task states on phone form factors with clear outcomes and recovery paths. | Planned only. | QA + Study operations reviewer | Scenario checklist with screenshots/screen recordings. |
 | PWA cache/storage policy if PWA is in scope | If and only if PWA is approved for scope, cache/storage/session revocation policy is documented and privacy-reviewed. | Deferred pending explicit approval. | Engineering + Privacy reviewer | PWA policy note (conditional) and cache behavior evidence. |
 

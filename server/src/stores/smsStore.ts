@@ -145,6 +145,13 @@ export function getContactPreference(participantId: string): ParticipantContactP
   return row ? toContactPreference(row) : null;
 }
 
+export function findContactPreferenceByPhoneHash(phoneHash: string): ParticipantContactPreference | null {
+  const row = getDatabase()
+    .prepare("SELECT * FROM participant_contact_preferences WHERE phone_hash = ?")
+    .get(phoneHash) as ContactPreferenceRow | undefined;
+  return row ? toContactPreference(row) : null;
+}
+
 export function upsertContactPreference(input: {
   participant_id: string;
   notification_preference: NotificationPreference;
@@ -634,6 +641,26 @@ export function listSmsNotifications(filter: {
     )
     .all(filter.study_id, filter.version_id) as SmsNotification[];
   return rows.filter((row) => filter.round_number === undefined || row.round_number === filter.round_number);
+}
+
+export function countSmsNotificationsByParticipant(filter: {
+  participant_id: string;
+  study_id: string;
+  version_id: string;
+  statuses?: Array<SmsNotification["status"]>;
+  since?: string;
+}): number {
+  const statuses = filter.statuses?.length ? filter.statuses : ["queued", "sent", "delivered"];
+  const placeholders = statuses.map(() => "?").join(", ");
+  const params: any[] = [filter.participant_id, filter.study_id, filter.version_id, ...statuses];
+  let sql = `SELECT COUNT(*) AS count FROM sms_notifications
+    WHERE participant_id = ? AND study_id = ? AND version_id = ? AND status IN (${placeholders})`;
+  if (filter.since) {
+    sql += " AND created_at >= ?";
+    params.push(filter.since);
+  }
+  const row = getDatabase().prepare(sql).get(...params) as { count: number } | undefined;
+  return Number(row?.count ?? 0);
 }
 
 export function recordSmsDeliveryEvent(input: {

@@ -46,6 +46,7 @@ const { mockSmsOutbox, clearMockSmsOutbox } = await import("../dist/core/smsProv
 const { getDatabase } = await import("../dist/core/database.js");
 
 const owner = { "x-user-id": "owner-1", "x-user-role": "owner" };
+const analyst = { "x-user-id": "analyst-1", "x-user-role": "analyst" };
 
 async function buildApp() {
   resetRateLimitsForTests();
@@ -239,7 +240,7 @@ test("round_open_sms_magic_link_mobile_entry sends neutral opt-in SMS and uses o
   assert.equal(tokenRows.length, 1);
   assert.notEqual(tokenRows[0].token_hash, token);
 
-  await expectStatus(
+  const resendAttempt = await expectStatus(
     app,
     {
       method: "POST",
@@ -249,23 +250,19 @@ test("round_open_sms_magic_link_mobile_entry sends neutral opt-in SMS and uses o
     },
     200,
   );
-  assert.equal(mockSmsOutbox.length, 2);
-  const secondLinkMatch = mockSmsOutbox[1].body.match(/http:\/\/127\.0\.0\.1:5173\/m\/([A-Za-z0-9_-]+)/);
-  assert.ok(secondLinkMatch, "second SMS includes opaque /m/{token} link");
-  const secondToken = secondLinkMatch[1];
-  assert.notEqual(secondToken, token);
+  assert.equal(resendAttempt.body.sms.sent, 0);
+  assert.equal(mockSmsOutbox.length, 1);
   const activeTokenCount = getDatabase()
     .prepare("SELECT COUNT(*) as c FROM magic_link_tokens WHERE participant_id = ? AND study_id = ? AND version_id = ? AND round_number = 1 AND consumed_at IS NULL AND revoked_at IS NULL AND expires_at > datetime('now')")
     .get(participant.participant_id, studyId, versionId).c;
   assert.equal(activeTokenCount, 1);
-  await expectStatus(app, { method: "POST", url: "/magic-links/consume", body: { token } }, 410);
 
   const consumed = await expectStatus(
     app,
     {
       method: "POST",
       url: "/magic-links/consume",
-      body: { token: secondToken },
+      body: { token },
     },
     200,
   );
@@ -302,4 +299,53 @@ test("round_open_sms_magic_link_mobile_entry sends neutral opt-in SMS and uses o
   assert.doesNotMatch(auditRaw, /\"participantId\"\s*:/);
   assert.doesNotMatch(auditRaw, /\"participant_id\"\s*:/);
 
+});
+
+test("sms governance candidate controls enforce opt-in gates, stop/help simulation, rate limits, and role gates", async (t) => {
+  const app = await buildApp();
+  t.after(async () => {
+    await app.close();
+  });
+  const now = new Date().toISOString();
+  const studyId = "sms-study-2";
+  const versionId = "sms-version-2";
+  await createStudy({ id: studyId, title: "Sandbox SMS Study", description: "Mock inbound controls.", created_by: "owner-1", created_at: now }, { study_id: studyId, user_id: "owner-1", role: "Owner", created_at: now });
+  await createStudyVersion({ id: versionId, study_id: studyId, version_number: 1, status: "Active", study_format: "ModifiedDelphi", planned_round_count: 2, terminal_round_number: 2, method_rationale: "test", consensus_rule_json: { threshold: 80, agreement_min_rating: 7 }, feedback_config_json: null, retention_policy_json: null, study_design_packet_json: { researchQuestion: "q", researchQuestions: [] }, config_hash: "x", opened_round1_at: null, created_by: "owner-1", created_at: now });
+  upsertRoundConfig({ study_id: studyId, version_id: versionId, round_number: 1, task_type: "open_text", title: "R1", prompt: "prompt", participant_instructions: "instructions", response_window_days: 7, reminder_subject: "s", reminder_body: "b", controlled_feedback_enabled: false, ai_curation_enabled: false, feedback_config: null, status: "Open" });
+  const participant = createParticipantMaster({ name: "Governance SMS", email: "governance@example.test", created_by_user_id: "owner-1" });
+  ensureParticipantEnrollment({ study_id: studyId, version_id: versionId, participant_id: participant.participant_id, created_by_user_id: "owner-1" });
+  const consentVersion = createConsentVersion({ study_id: studyId, version_id: versionId, text_md: "consent" });
+  activateConsentVersion({ study_id: studyId, version_id: versionId, consent_version_id: consentVersion.consent_version_id });
+  recordConsent({ participant_id: participant.participant_id, study_id: studyId, version_id: versionId, consent_version_id: consentVersion.consent_version_id });
+  await expectStatus(app, { method: "PUT", url: `/studies/${studyId}/versions/${versionId}/sms-policy`, headers: owner, body: { sms_enabled: true, notification_safe_name: "Sandbox" } }, 200);
+
+  await expectStatus(app, { method: "POST", url: `/studies/${studyId}/versions/${versionId}/rounds/1/sms/send`, headers: owner, body: {} }, 200);
+  let notifications = await expectStatus(app, { method: "GET", url: `/studies/${studyId}/versions/${versionId}/sms-notifications`, headers: owner }, 200);
+  assert.equal(notifications.body.notifications[0].failure_code, "no_sms_preference");
+
+  await expectStatus(app, { method: "PATCH", url: `/studies/${studyId}/versions/${versionId}/participants/${participant.participant_id}/contact-preferences`, headers: owner, body: { notification_preference: "both", phone: "+15550109999", sms_consent_granted: true } }, 200);
+  const challenge = await expectStatus(app, { method: "POST", url: `/studies/${studyId}/versions/${versionId}/participants/${participant.participant_id}/phone-verification/start`, headers: owner, body: {} }, 201);
+  await expectStatus(app, { method: "POST", url: `/studies/${studyId}/versions/${versionId}/participants/${participant.participant_id}/phone-verification/verify`, headers: owner, body: { challenge_id: challenge.body.challenge_id, otp: challenge.body.dev_otp } }, 200);
+  await expectStatus(app, { method: "POST", url: `/studies/${studyId}/versions/${versionId}/rounds/1/sms/send`, headers: owner, body: {} }, 200);
+  assert.equal(mockSmsOutbox.length, 1);
+  await expectStatus(app, { method: "POST", url: `/studies/${studyId}/versions/${versionId}/rounds/1/sms/send`, headers: owner, body: {} }, 200);
+  notifications = await expectStatus(app, { method: "GET", url: `/studies/${studyId}/versions/${versionId}/sms-notifications`, headers: owner }, 200);
+  assert.ok(notifications.body.notifications.some((n) => n.failure_code === "resend_cooldown_active"));
+
+  await expectStatus(app, { method: "POST", url: "/sms/mock/inbound-keyword", headers: owner, body: { from_phone: "+1 (555) 010-9999", message_text: "HELP" } }, 200);
+  await expectStatus(app, { method: "POST", url: "/sms/mock/inbound-keyword", headers: owner, body: { from_phone: "+1 (555) 010-9999", message_text: "STOP" } }, 200);
+  await expectStatus(app, { method: "POST", url: `/studies/${studyId}/versions/${versionId}/rounds/1/sms/send`, headers: owner, body: {} }, 200);
+  notifications = await expectStatus(app, { method: "GET", url: `/studies/${studyId}/versions/${versionId}/sms-notifications`, headers: owner }, 200);
+  assert.ok(notifications.body.notifications.some((n) => n.failure_code === "no_sms_preference"));
+
+  await expectStatus(app, { method: "PUT", url: `/studies/${studyId}/versions/${versionId}/sms-policy`, headers: analyst, body: { sms_enabled: true } }, 403);
+  await expectStatus(app, { method: "PATCH", url: `/studies/${studyId}/versions/${versionId}/participants/${participant.participant_id}/contact-preferences`, headers: analyst, body: { notification_preference: "both" } }, 403);
+  await expectStatus(app, { method: "POST", url: `/studies/${studyId}/versions/${versionId}/participants/${participant.participant_id}/phone-verification/start`, headers: analyst, body: {} }, 403);
+  await expectStatus(app, { method: "POST", url: `/studies/${studyId}/versions/${versionId}/rounds/1/sms/send`, headers: analyst, body: {} }, 403);
+
+  const auditRows = getDatabase().prepare("SELECT event_json FROM audit_events").all();
+  const auditRaw = JSON.stringify(auditRows);
+  assert.match(auditRaw, /sms_inbound_help_requested/);
+  assert.match(auditRaw, /sms_inbound_stop_processed/);
+  assert.doesNotMatch(auditRaw, /\+15550109999|5550109999/);
 });
