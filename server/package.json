@@ -13,7 +13,8 @@
     "test:backup-restore-rehearsal": "npm run build && node ../scripts/run-tests.mjs \"tests/backupRestoreRehearsal.test.mjs\"",
     "test:incident-workflow": "npm run build && node ../scripts/run-tests.mjs \"tests/incidentWorkflowPhase1.test.mjs\"",
     "security:verify:deployment": "node ../scripts/verify-deployment-security.mjs local",
-    "test:phase3-magic-link-browser-scaffold": "npm run build && node ../docs/qc/full-mock-trial/run_phase3_magic_link_browser_scaffold_local.mjs"
+    "test:phase3-magic-link-browser-scaffold": "npm run build && node ../docs/qc/full-mock-trial/run_phase3_magic_link_browser_scaffold_local.mjs",
+    "test:phase3-mobile-task-flow-scaffold": "npm run build && node ../docs/qc/full-mock-trial/run_phase3_mobile_task_flow_scaffold_local.mjs"
   },
   "dependencies": {
     "fastify": "^5.7.4",

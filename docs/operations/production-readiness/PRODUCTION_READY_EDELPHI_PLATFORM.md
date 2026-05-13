@@ -224,6 +224,8 @@ Completion snapshot:
 - Optional browser scaffold: `npm --prefix server run test:phase3-magic-link-browser-scaffold` passed locally on 2026-05-13 with live backend/frontend prerequisites and Microsoft Edge headless. A Cloud run without the backend produced expected `ECONNREFUSED` precondition evidence.
 - Exit gate remains open because phone-device evidence, full support/withdrawal/no-active-task scenario evidence, real SMS/provider evidence, and human reviewer/signoff work are still outstanding.
 
+Local task-flow scaffold evidence note: [PHASE3_MOBILE_WEB_TASK_FLOW_EVIDENCE.md](./PHASE3_MOBILE_WEB_TASK_FLOW_EVIDENCE.md).
+
 Required implementation:
 
 - Mobile participant entry route works from an opaque link.

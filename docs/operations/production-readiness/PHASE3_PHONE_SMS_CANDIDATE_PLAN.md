@@ -101,3 +101,11 @@ This plan does **not** claim:
 - Support/withdrawal/no-active-task paths: scaffold validates the Round 1 magic-link path only; full scenario-path evidence still requires targeted scripted extension and human/device walkthrough evidence.
 - Local run evidence: `docs/qc/full-mock-trial/artifacts/phase3-magic-link-browser-scaffold-2026-05-13T20-54-54-667Z.md` and `phase3-magic-link-browser-scaffold-latest.json` record a PASS run with redacted token evidence only.
 - Explicit non-claim boundary: this scaffold is local automation evidence only; iPhone/Safari and Android/Chrome real-device evidence remain **NOT RUN**.
+
+
+## Phase 3 mobile task-flow scaffold expansion (2026-05-13)
+- Added local scaffold script: `docs/qc/full-mock-trial/run_phase3_mobile_task_flow_scaffold_local.mjs`.
+- Added npm script: `npm --prefix server run test:phase3-mobile-task-flow-scaffold`.
+- Added dedicated evidence note: `PHASE3_MOBILE_WEB_TASK_FLOW_EVIDENCE.md`.
+- Output artifacts: timestamped Markdown + `phase3-mobile-task-flow-scaffold-latest.json` in `docs/qc/full-mock-trial/artifacts/`.
+- Boundary: local synthetic/internal automation evidence only; iPhone/Safari, Android/Chrome real-device evidence, human-observed testing, and accessibility review remain **NOT RUN**.
