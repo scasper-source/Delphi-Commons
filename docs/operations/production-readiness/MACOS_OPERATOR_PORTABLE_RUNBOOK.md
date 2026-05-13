@@ -1,16 +1,16 @@
 # macOS Operator Portable Runbook (Planned Internal Candidate)
 
-Status: **MACOS OPERATOR PORTABLE RUNBOOK RECORDED**.
+Status: **MACOS OPERATOR PORTABLE RUNBOOK RECORDED / INTERNAL ENGINEERING EVIDENCE ONLY**.
 Decision label: **NOT READY FOR HUMAN TESTING**.
 Phase status: **Phase 2 Downloadable Laptop Operator Candidate remains IN PROGRESS**.
-Date basis: **2026-05-12**.
+Date basis: **2026-05-13**.
 Track: **`human_testing_candidate`**.
 
 ## Scope and Safety Boundary
 
 This runbook is a planning/operator procedure document for the planned macOS portable/internal operator package candidate. It is documentation-only at this time unless and until matching macOS scripts are present in the package.
 
-No claim is made here that this runbook has been validated on real Mac hardware.
+No claim is made here that this runbook creates macOS support readiness or validated support status.
 
 > Warning: command examples in this document are not operational evidence until they are executed and recorded on a real macOS machine.
 
@@ -106,12 +106,12 @@ Expected output patterns (examples; final strings depend on script implementatio
 - `status` after start: reports backend pid and UI pid running.
 - `health`: returns service health OK from `http://127.0.0.1:3001/health`.
 - `UI HEAD`: returns HTTP `200` from `http://127.0.0.1:4173/`.
-- `smoke`: prints health smoke success.
+- `smoke`: verifies `http://127.0.0.1:3001/health` returns `status: ok` and `http://127.0.0.1:4173/` returns HTTP `200`; failures must be treated as failed internal engineering evidence, not as readiness evidence.
 - `backup`: creates timestamped backup under runtime `backups`.
 - `reset` while running: refuses reset and instructs stop-first behavior.
 - `restart`: stops/restarts and returns to healthy state.
 - `stop`: confirms processes stopped.
-- `reset` after stop: creates reset snapshot and clears mutable runtime state per script policy.
+- `reset` after stop: creates reset snapshot, clears mutable runtime state per script policy, and removes stale `state/backend.pid`, `state/ui.pid`, and `state/instance.lock` files.
 - final `status`: reports not running.
 
 ## Package-Root Cleanliness Checks
@@ -158,6 +158,12 @@ find . -maxdepth 3 -type d \( -name logs -o -name backups -o -name db -o -name a
 
 - Symptom: npm reports vulnerabilities during dependency installation.
 - Action: record warning output and dependency versions in evidence; do not convert warning output into unsupported security-readiness claims.
+
+### Stale or mismatched PID state
+
+- Symptom: `status`, `stop`, `restart`, or `reset` disagrees with actual localhost listeners.
+- Action: record the lock file, PID files, `lsof` listener evidence for ports `3001` and `4173`, and the process command lines. Treat mismatches as internal engineering defects until corrected.
+- Expected policy: launcher state is advisory only. Actual backend/UI process checks must confirm expected localhost listener commands before reporting `running`, stopping services, or refusing reset.
 
 ## Limitations
 

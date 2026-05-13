@@ -1,14 +1,14 @@
 # macOS Operator Portable Package (Phase 2 Prototype/Internal)
 
-Status: **MACOS PORTABLE PACKAGE PROTOTYPE / NOT RUN**.
+Status: **MACOS PORTABLE PACKAGE PROTOTYPE / INTERNAL ENGINEERING EVIDENCE ONLY**.
 Decision label: **NOT READY FOR HUMAN TESTING**.
-Date basis: **2026-05-12**.
+Date basis: **2026-05-13**.
 
 ## Scope
 
 This document covers the scaffolded internal macOS portable operator package path for Phase 2. It is implementation scaffolding only.
 
-macOS evidence is **NOT RUN** until lifecycle execution is completed on a real Mac.
+macOS lifecycle evidence must be recorded separately for each candidate run and remains **internal engineering evidence only**.
 
 ## Builder
 
@@ -22,7 +22,7 @@ macOS evidence is **NOT RUN** until lifecycle execution is completed on a real M
 
 Backend and UI are configured for localhost-only binding (`127.0.0.1`).
 
-Reset refuses while running.
+Status, stop, restart, and reset are expected to verify actual localhost listener processes rather than trusting stale PID files alone. Reset refuses while the expected backend or UI service is actually running.
 
 ## Runtime root policy
 

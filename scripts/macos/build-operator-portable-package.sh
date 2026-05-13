@@ -6,18 +6,54 @@ OUTPUT_ROOT="${2:-}"
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
+CALLER_PWD="$(pwd)"
 
 if [[ -z "$OUTPUT_ROOT" ]]; then
   OUTPUT_ROOT="$REPO_ROOT/build/macos-operator-portable"
 fi
 
-OUTPUT_ROOT="$(cd "$(dirname "$OUTPUT_ROOT")" && pwd)/$(basename "$OUTPUT_ROOT")"
+canonicalize_output_root() {
+  local raw_path parent base parent_abs
+  raw_path="$1"
+  case "$raw_path" in
+    /*) ;;
+    *) raw_path="$CALLER_PWD/$raw_path" ;;
+  esac
+
+  parent="$(dirname "$raw_path")"
+  base="$(basename "$raw_path")"
+  if [[ "$parent" == "/" ]]; then
+    echo "Refusing root-level output root: $raw_path" >&2
+    return 1
+  fi
+
+  if ! mkdir -p "$parent"; then
+    echo "Unable to create output parent directory: $parent" >&2
+    return 1
+  fi
+
+  if ! parent_abs="$(cd "$parent" && pwd -P)"; then
+    echo "Unable to resolve output parent directory: $parent" >&2
+    return 1
+  fi
+
+  if [[ "$parent_abs" == "/" ]]; then
+    echo "Refusing root-level output root: $raw_path" >&2
+    return 1
+  fi
+
+  printf '%s/%s\n' "$parent_abs" "$base"
+}
+
+if ! OUTPUT_ROOT="$(canonicalize_output_root "$OUTPUT_ROOT")"; then
+  exit 1
+fi
 mkdir -p "$OUTPUT_ROOT"
 
 assert_within() {
   local candidate root
-  candidate="$(cd "$(dirname "$1")" && pwd)/$(basename "$1")"
-  root="$(cd "$2" && pwd)"
+  candidate="$(cd "$(dirname "$1")" && pwd -P)/$(basename "$1")"
+  root="$(cd "$2" && pwd -P)"
   case "$candidate" in
     "$root"/*|"$root") ;;
     *) echo "Refusing unsafe path operation outside output root. candidate=$candidate root=$root" >&2; exit 1 ;;
@@ -69,7 +105,7 @@ cp "$REPO_ROOT/NOTICE" "$package_root/NOTICE"
 cat > "$package_root/README.txt" <<'README_EOF'
 # macOS Operator Portable Package Prototype
 
-Status: MACOS PORTABLE PACKAGE PROTOTYPE / NOT RUN
+Status: MACOS PORTABLE PACKAGE PROTOTYPE / INTERNAL ENGINEERING EVIDENCE ONLY
 Decision label: NOT READY FOR HUMAN TESTING
 
 This package is an internal Phase 2 prototype for the `human_testing_candidate` track.
@@ -84,6 +120,12 @@ This package is an internal Phase 2 prototype for the `human_testing_candidate` 
 ./scripts/macos/portable-operator-candidate.sh start
 ```
 
+Optional local internal smoke check after start:
+
+```bash
+./scripts/macos/portable-operator-candidate.sh smoke
+```
+
 ## Runtime and data policy
 
 - Runtime data root: `~/Library/Application Support/DelphiCommons/macos-operator-portable-candidate`
@@ -93,7 +135,7 @@ This package is an internal Phase 2 prototype for the `human_testing_candidate` 
 
 - No `.app`, `.pkg`, `.dmg`, signing, notarization, updater, or enterprise distribution.
 - No production/pilot/human-subject readiness.
-- macOS evidence is NOT RUN until tested on a real Mac.
+- macOS lifecycle evidence must be recorded separately for each candidate package and remains internal engineering evidence only.
 - Local Node/npm prerequisite currently remains.
 README_EOF
 
@@ -117,7 +159,7 @@ cat > "$manifest_path" <<MANIFEST_EOF
   "explicitLimitations": [
     "Portable Node runtime not bundled in this macOS prototype package.",
     "No .app/.pkg/.dmg, signing, notarization, updater, or enterprise distribution.",
-    "macOS evidence remains NOT RUN until tested on real Mac hardware."
+    "macOS lifecycle evidence must be recorded separately as internal engineering evidence only."
   ],
   "explicitNonClaims": [
     "Not production-ready.",
