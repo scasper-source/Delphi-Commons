@@ -68,6 +68,7 @@ Use existing evidence as baseline. Do not rerun mock-trial work unless a change 
 | Export privacy/provenance | Governed packages include reviewer provenance metadata; focused export privacy/provenance tests exist. | Data Custodian/reviewer signoff still required. |
 | External collaborator smoke | External collaborator reported successful client/server build and start. | Build/start smoke only; not workflow validation. |
 | Human/deployment closeout | Evidence-gap binders/templates exist or are being prepared. | Gaps remain open until human testing is performed against a candidate. |
+| Phase 3 SMS candidate controls | Local mock STOP/HELP simulation, opt-in gates, resend limits, and staff permission tests added in server automated coverage. | Engineering-only local evidence; still not telecom/pilot/production readiness. |
 
 ## Product Tracks
 
@@ -216,10 +217,11 @@ Current Phase 3 status as of 2026-05-13: **PARTIAL IMPLEMENTATION / EVIDENCE IN 
 
 Completion snapshot:
 
-- Required implementation matrix items: 5 complete for mock/sandbox scope, 4 partial, 1 not complete, 1 deferred PWA item.
-- Required evidence items: 1 targeted mock/sandbox evidence item passed, 2 review items are partial/recorded with gaps, 3 phone/browser evidence items are not run.
-- Targeted verification: `npm.cmd run build` and `node ..\scripts\run-tests.mjs "tests/smsMagicLink.test.mjs"` passed on 2026-05-13 in `server` (1 test passed).
-- Exit gate remains open because phone-device evidence, STOP/HELP execution evidence, rate-limit/permission evidence, privacy gap remediation, and human reviewer signoffs are still outstanding.
+- Required implementation matrix items: 9 complete for local mock/sandbox scope, 1 partial mobile task-flow item, and 1 deferred PWA item.
+- Required evidence items: SMS mock/sandbox automation, SMS copy governance, and link/token privacy remediation are partial/local-only; iPhone/Safari, Android/Chrome, and screenshot/screen-recording evidence are not run.
+- Targeted verification: Phase 3 server build, focused SMS/magic-link regression tests, and full server tests passed on 2026-05-13 in the merged Phase 3 PRs.
+- Optional browser scaffold: `npm --prefix server run test:phase3-magic-link-browser-scaffold` passed locally on 2026-05-13 with live backend/frontend prerequisites and Microsoft Edge headless. A Cloud run without the backend produced expected `ECONNREFUSED` precondition evidence.
+- Exit gate remains open because phone-device evidence, full support/withdrawal/no-active-task scenario evidence, real SMS/provider evidence, and human reviewer/signoff work are still outstanding.
 
 Required implementation:
 
@@ -444,3 +446,24 @@ Public open-source release remains separate and requires repository hygiene, lic
 - Keep SMS and phone governance visible in every release decision.
 - Link every readiness claim to commit-specific evidence.
 - Prefer "not ready" over ambiguous evidence.
+
+
+## Phase 3 local hardening update (2026-05-13)
+- Implemented: SMS/magic-link audit `details` no longer include direct `participantId`/`participant_id` fields for magic-link creation/use, round-open send/fail, and phone verification events; object IDs and authorization behavior remain unchanged.
+- Implemented: new-send token minimization now revokes prior active participant+study+version+round magic-link tokens before issuing a new token, with regression coverage verifying only one active usable token remains.
+- Implemented: audit-package JSON export now applies detail-level redaction for `participantId`/`participant_id` fields to align with reviewer-facing redaction metadata.
+- Added regression checks for opaque URL token path, no raw token persistence/audit leakage, OTP and full-phone non-leakage, participant-ID absence from SMS/magic-link audit details, and one-active-token behavior across repeated sends.
+- Non-claim boundary: these updates are local engineering hardening only and do not constitute production/pilot/human-subjects/real-SMS readiness claims.
+
+## Phase 3 SMS governance update (2026-05-13)
+- Implemented: local/mock STOP and HELP keyword simulation through a staff-gated inbound endpoint.
+- Implemented: local/mock resend cooldown and daily SMS cap enforcement with suppression-reason assertions.
+- Implemented: permission tests for SMS controls and redacted HELP support audit events.
+- Non-claim boundary: these updates do not establish carrier integration, telecom compliance, real SMS readiness, or human-testing readiness.
+
+## Phase 3 browser scaffold update (2026-05-13)
+- Added: local scripted `/m/{token}` browser scaffold for synthetic/internal magic-link flow checks.
+- Covered when run with prerequisites: synthetic participant setup, mock SMS send verification, local shared-database magic-link token seeding without exposing SMS body text through an API, mobile-sized browser open, Round 1 submit attempt, single-use rejection, invalid-token rejection, and redacted artifact writing.
+- Local run evidence: `docs/qc/full-mock-trial/artifacts/phase3-magic-link-browser-scaffold-2026-05-13T20-54-54-667Z.md`.
+- Precondition: the scaffold is optional and requires a running local backend plus compatible browser automation support; failure without that backend is expected and does not by itself indicate a build/test failure.
+- Non-claim boundary: this scaffold is not phone-device, human-observed, accessibility, real-SMS, or production readiness evidence.

@@ -1,0 +1,39 @@
+{
+  "run_at": "2026-05-13T20:54:54.667Z",
+  "commit": "1a0e0be6ed4e8c135de91b42905cb5a40c62698d",
+  "commands": [],
+  "synthetic": {
+    "study_id": "1d73cc03-4cf8-444c-86d7-90c9f194eb76",
+    "version_id": "601e9d7e-6c2f-4e73-883e-43a70942819f",
+    "participant_ref": "d8591cc0...",
+    "magic_token": "redacted:v3XBIV..."
+  },
+  "steps": [
+    {
+      "name": "send_sms",
+      "status": "pass",
+      "sent": 1,
+      "source": "round_open"
+    },
+    {
+      "name": "seed_magic_link",
+      "status": "pass",
+      "source": "shared_local_db",
+      "sms_notification_id": "149beddf-7731-4a32-aa6a-5ab9fdf574b7"
+    },
+    {
+      "name": "mobile_browser_submit",
+      "status": "pass",
+      "browser": "msedge.exe"
+    },
+    {
+      "name": "single_use_enforced",
+      "status": "pass"
+    },
+    {
+      "name": "invalid_token",
+      "status": "pass"
+    }
+  ],
+  "boundary": "Automated local browser scaffold with synthetic/internal data only. Not real-device, not human-subject, not production-SMS evidence."
+}

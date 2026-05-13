@@ -15,6 +15,7 @@ import {
   setMagicSessionCookie,
   sendRoundOpenSmsNotifications,
   startPhoneVerification,
+  handleInboundSmsKeyword,
   updateDeliveryWebhook,
   updateParticipantSmsPreference,
   verifyPhoneOtp,
@@ -203,6 +204,18 @@ export async function smsRoutes(app: FastifyInstance) {
     const ok = await updateDeliveryWebhook({ req });
     if (!ok) return reply.code(401).send({ error: "invalid_sms_webhook" });
     return reply.send({ ok: true });
+  });
+
+  app.post("/sms/mock/inbound-keyword", { preHandler: allowStaff }, async (req, reply) => {
+    const actor = getActor(req);
+    const body = (req.body ?? {}) as Record<string, unknown>;
+    const result = await handleInboundSmsKeyword({
+      from_phone: String(body.from_phone ?? ""),
+      message_text: String(body.message_text ?? ""),
+      actor_user_id: actor.userId,
+    });
+    if (!result.ok) return reply.code(400).send({ error: result.reason ?? "mock_inbound_keyword_failed" });
+    return reply.send({ inbound: result });
   });
 
   app.post("/magic-links/consume", async (req, reply) => {

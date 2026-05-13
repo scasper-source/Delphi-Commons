@@ -145,6 +145,13 @@ export function getContactPreference(participantId: string): ParticipantContactP
   return row ? toContactPreference(row) : null;
 }
 
+export function findContactPreferenceByPhoneHash(phoneHash: string): ParticipantContactPreference | null {
+  const row = getDatabase()
+    .prepare("SELECT * FROM participant_contact_preferences WHERE phone_hash = ?")
+    .get(phoneHash) as ContactPreferenceRow | undefined;
+  return row ? toContactPreference(row) : null;
+}
+
 export function upsertContactPreference(input: {
   participant_id: string;
   notification_preference: NotificationPreference;
@@ -391,6 +398,25 @@ export function upsertStudySmsPolicy(input: {
   return record;
 }
 
+export function revokeActiveMagicLinksForParticipantRound(input: {
+  participant_id: string;
+  study_id: string;
+  version_id: string;
+  round_number: number;
+  revoked_at?: string;
+}): number {
+  const revokedAt = input.revoked_at ?? nowIso();
+  const result = getDatabase()
+    .prepare(
+      `UPDATE magic_link_tokens
+       SET revoked_at = ?
+       WHERE participant_id = ? AND study_id = ? AND version_id = ? AND round_number = ?
+         AND consumed_at IS NULL AND revoked_at IS NULL AND expires_at > ?`,
+    )
+    .run(revokedAt, input.participant_id, input.study_id, input.version_id, input.round_number, revokedAt);
+  return Number(result.changes ?? 0);
+}
+
 export function createMagicLinkToken(input: {
   token_hash: string;
   participant_id: string;
@@ -615,6 +641,26 @@ export function listSmsNotifications(filter: {
     )
     .all(filter.study_id, filter.version_id) as SmsNotification[];
   return rows.filter((row) => filter.round_number === undefined || row.round_number === filter.round_number);
+}
+
+export function countSmsNotificationsByParticipant(filter: {
+  participant_id: string;
+  study_id: string;
+  version_id: string;
+  statuses?: Array<SmsNotification["status"]>;
+  since?: string;
+}): number {
+  const statuses = filter.statuses?.length ? filter.statuses : ["queued", "sent", "delivered"];
+  const placeholders = statuses.map(() => "?").join(", ");
+  const params: any[] = [filter.participant_id, filter.study_id, filter.version_id, ...statuses];
+  let sql = `SELECT COUNT(*) AS count FROM sms_notifications
+    WHERE participant_id = ? AND study_id = ? AND version_id = ? AND status IN (${placeholders})`;
+  if (filter.since) {
+    sql += " AND created_at >= ?";
+    params.push(filter.since);
+  }
+  const row = getDatabase().prepare(sql).get(...params) as { count: number } | undefined;
+  return Number(row?.count ?? 0);
 }
 
 export function recordSmsDeliveryEvent(input: {
