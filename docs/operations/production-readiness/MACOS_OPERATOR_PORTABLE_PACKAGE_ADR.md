@@ -15,7 +15,7 @@ This ADR is planning-only documentation. It does not implement scripts, packagin
 ## Decision Summary
 
 - macOS is **planned** as a future laptop operator path in Phase 2.
-- macOS remains **not yet supported** for readiness claims because macOS evidence is **NOT RUN**.
+- one Apple Silicon internal engineering runtime run was recorded on **2026-05-13** with partial package/build/start evidence and lifecycle defects; this does **not** establish macOS support readiness or human-testing readiness.
 - The product remains **NOT READY FOR HUMAN TESTING**.
 - Phase 2 remains **IN PROGRESS**.
 
@@ -101,7 +101,8 @@ Current decision state:
 
 Current macOS evidence status:
 
-- **NOT RUN** (no recorded macOS run evidence yet for this candidate path).
+- one Apple Silicon internal engineering runtime run recorded on **2026-05-13** (partial positive evidence with lifecycle defects).
+- post-fix real macOS lifecycle rerun remains required before any macOS support/readiness statement.
 
 Minimum evidence required before any macOS support/readiness statement:
 

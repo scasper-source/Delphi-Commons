@@ -10,7 +10,7 @@ Track: **`human_testing_candidate`**.
 
 This runbook is a planning/operator procedure document for the planned macOS portable/internal operator package candidate. It is documentation-only at this time unless and until matching macOS scripts are present in the package.
 
-No claim is made here that this runbook creates macOS support readiness or validated support status.
+A pre-fix real Mac run was recorded on 2026-05-13 with partial package/build/start evidence and lifecycle defects. This runbook now serves as the post-fix rerun checklist, but no claim is made here that the runbook itself creates macOS support readiness or validated support status.
 
 > Warning: command examples in this document are not operational evidence until they are executed and recorded on a real macOS machine.
 
@@ -23,7 +23,14 @@ No claim is made here that this runbook creates macOS support readiness or valid
 
 ## Build Package Command
 
-From repository root, run the planned macOS package builder:
+From repository root, run the macOS package builder (clean-checkout expectation after fix: it safely creates `build/macos-operator-portable`):
+
+```bash
+rm -rf build
+./scripts/macos/build-operator-portable-package.sh
+```
+
+Standard invocation:
 
 ```bash
 bash ./scripts/macos/build-operator-portable-package.sh
@@ -106,7 +113,7 @@ Expected output patterns (examples; final strings depend on script implementatio
 - `status` after start: reports backend pid and UI pid running.
 - `health`: returns service health OK from `http://127.0.0.1:3001/health`.
 - `UI HEAD`: returns HTTP `200` from `http://127.0.0.1:4173/`.
-- `smoke`: verifies `http://127.0.0.1:3001/health` returns `status: ok` and `http://127.0.0.1:4173/` returns HTTP `200`; failures must be treated as failed internal engineering evidence, not as readiness evidence.
+- `smoke`: verifies `http://127.0.0.1:3001/health` returns `status: ok` and `http://127.0.0.1:4173/` returns HTTP `200`; failures must be treated as failed internal engineering evidence, not as readiness evidence. The pre-fix tested package returned placeholder output, so a post-fix real Mac rerun must record the real smoke result.
 - `backup`: creates timestamped backup under runtime `backups`.
 - `reset` while running: refuses reset and instructs stop-first behavior.
 - `restart`: stops/restarts and returns to healthy state.

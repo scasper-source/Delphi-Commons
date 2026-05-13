@@ -2,7 +2,7 @@
 
 Status: planning document. This is not a production-readiness claim.
 
-Date basis: 2026-05-11.
+Date basis: 2026-05-13.
 
 This document resets the near-term readiness plan around the project's actual next goal:
 
@@ -128,6 +128,7 @@ Windows signing/distribution limitations note: [WINDOWS_SIGNING_DISTRIBUTION_LIM
 macOS operator portable/internal package planning ADR: [MACOS_OPERATOR_PORTABLE_PACKAGE_ADR.md](./MACOS_OPERATOR_PORTABLE_PACKAGE_ADR.md).
 Stage 1 Windows evidence closeout note: [WINDOWS_OPERATOR_CANDIDATE_EVIDENCE_CLOSEOUT.md](./WINDOWS_OPERATOR_CANDIDATE_EVIDENCE_CLOSEOUT.md).
 Local Windows supervisor evidence note: [WINDOWS_OPERATOR_CANDIDATE_LOCAL_SUPERVISOR_EVIDENCE.md](./WINDOWS_OPERATOR_CANDIDATE_LOCAL_SUPERVISOR_EVIDENCE.md).
+macOS Apple Silicon internal engineering evidence note (2026-05-13): [MACOS_OPERATOR_PORTABLE_PACKAGE.md](./MACOS_OPERATOR_PORTABLE_PACKAGE.md).
 
 Required decisions:
 
@@ -161,11 +162,13 @@ Current progress:
 - **DONE:** Stage 1 Windows portable/internal package local evidence recorded.
 - **DONE:** Stage 1 Windows portable/internal package extracted-zip local evidence recorded.
 - **IN PROGRESS:** Phase 2 downloadable laptop operator candidate. The current Windows portable package is local engineering evidence only and remains **NOT READY FOR HUMAN TESTING**.
+- **RECORDED (2026-05-13):** One Apple Silicon macOS internal engineering runtime run produced partial package/build/start evidence but exposed lifecycle supervision defects; this does **not** establish macOS support readiness or human-testing readiness.
+- **REQUIRED NEXT:** Post-fix real macOS lifecycle rerun evidence remains required before any macOS readiness interpretation.
 
 Remaining Phase 2 blockers before the downloadable laptop operator candidate gate can close:
 
 - Verify on a second Windows machine or clean Windows user profile.
-- Decide whether the candidate will bundle a portable Node runtime or keep local Node/npm as a documented prerequisite.
+- Runtime posture reconciled for current Phase 2 work: keep local Node/npm as the documented prerequisite for the current candidate; portable bundled runtime remains deferred.
 - Record Windows signing/distribution limitations, including unsigned-package behavior if applicable.
 - Preserve deferred status for Tauri, NSIS/MSI installer work, updater behavior, and platform support claims until separate evidence exists.
 
@@ -178,7 +181,7 @@ Required implementation:
 - One-command or clearly sequenced smoke test.
 - Synthetic demo study seed or repeatable setup workflow.
 - Operator checklist that covers study setup, roles, consent, invitations, rounds, curation, closeout, export, deletion, incident, backup, restore, and support.
-- Packaging decision: script-based local package, bundled runtime, installer, or documented temporary dev package.
+- Packaging decision: current candidate uses script-based local package with local Node/npm prerequisite; bundled runtime and installer tracks remain deferred.
 
 Required evidence:
 

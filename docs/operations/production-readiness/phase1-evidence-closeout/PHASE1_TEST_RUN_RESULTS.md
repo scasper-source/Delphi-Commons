@@ -1,34 +1,36 @@
 # Phase 1 Test Run Results
 
-- Date/time (UTC): 2026-05-07T20:18:45Z
-- Commit under test: `487c18b`
-- Branch: `codex/phase1-evidence-closeout`
+- Date/time (UTC): 2026-05-13T19:13:32Z
+- Commit under test: `127443e`
+- Branch: `work`
 - Environment: local Codex container
 
 ## Commands and results
 
 1. **Server build**
-   - Command: `npm run build` (in `server/`)
+   - Command: `npm --prefix server run build`
    - Result: **PASS**
 
-2. **Server tests (full)**
-   - Command: `npm test` (in `server/`)
+2. **Targeted backup/restore rehearsal test**
+   - Command: `npm --prefix server run test:backup-restore-rehearsal`
    - Result: **PASS**
 
-3. **Targeted auth/session hardening test**
-   - Command: `node ../scripts/run-tests.mjs "tests/authPhase1Hardening.test.mjs"` (in `server/`)
+3. **Targeted incident workflow test**
+   - Command: `npm --prefix server run test:incident-workflow`
    - Result: **PASS**
 
-4. **Targeted deletion/Data Custodian workflow test**
-   - Command: `node ../scripts/run-tests.mjs "tests/deletionRequestCustodianWorkflow.test.mjs"` (in `server/`)
-   - Result: **PASS**
+4. **Deployment security verification script (local profile)**
+   - Command: `npm --prefix server run security:verify:deployment`
+   - Result: **FAIL (expected for unconfigured local environment)**
+   - Details: script reported missing required deployment configuration (`NODE_ENV`, `EDELPHI_ALLOWED_ORIGINS`, `EDELPHI_AI_KEY_ENCRYPTION_SECRET`, `EDELPHI_AUTH_REQUIRE_SESSION`).
+   - Interpretation: useful negative evidence only; this run does not satisfy named deployment security evidence.
 
-5. **Security audit script (if present)**
-   - Command: `npm run security:audit` (in `server/`)
-   - Result: **FAIL (environment/network limitation)**
-   - Details: `npm audit` returned `403 Forbidden` from npm advisory API endpoint.
+5. **NPM high-severity audit**
+   - Command: `npm --prefix server run security:audit`
+   - Result: **FAIL (external registry access limitation)**
+   - Details: `npm audit` returned `403 Forbidden` from `https://registry.npmjs.org/-/npm/v1/security/advisories/bulk`.
 
 ## Notes
 
 - `npm` emitted non-fatal warnings: `Unknown env config "http-proxy"`.
-- Security audit evidence is incomplete due to external registry access denial in this run.
+- No production-readiness, pilot-readiness, or human-subjects-readiness claim is made from this evidence.
