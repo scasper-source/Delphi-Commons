@@ -426,3 +426,11 @@ Public open-source release remains separate and requires repository hygiene, lic
 - Keep SMS and phone governance visible in every release decision.
 - Link every readiness claim to commit-specific evidence.
 - Prefer "not ready" over ambiguous evidence.
+
+
+## Phase 3 local hardening update (2026-05-13)
+- Implemented: SMS/magic-link audit `details` no longer include direct `participantId`/`participant_id` fields for magic-link creation/use, round-open send/fail, and phone verification events; object IDs and authorization behavior remain unchanged.
+- Implemented: new-send token minimization now revokes prior active participant+study+version+round magic-link tokens before issuing a new token, with regression coverage verifying only one active usable token remains.
+- Implemented: audit-package JSON export now applies detail-level redaction for `participantId`/`participant_id` fields to align with reviewer-facing redaction metadata.
+- Added regression checks for opaque URL token path, no raw token persistence/audit leakage, OTP and full-phone non-leakage, participant-ID absence from SMS/magic-link audit details, and one-active-token behavior across repeated sends.
+- Non-claim boundary: these updates are local engineering hardening only and do not constitute production/pilot/human-subjects/real-SMS readiness claims.

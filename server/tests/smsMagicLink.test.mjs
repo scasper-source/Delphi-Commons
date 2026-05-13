@@ -239,12 +239,33 @@ test("round_open_sms_magic_link_mobile_entry sends neutral opt-in SMS and uses o
   assert.equal(tokenRows.length, 1);
   assert.notEqual(tokenRows[0].token_hash, token);
 
+  await expectStatus(
+    app,
+    {
+      method: "POST",
+      url: `/studies/${studyId}/versions/${versionId}/rounds/1/sms/send`,
+      headers: owner,
+      body: {},
+    },
+    200,
+  );
+  assert.equal(mockSmsOutbox.length, 2);
+  const secondLinkMatch = mockSmsOutbox[1].body.match(/http:\/\/127\.0\.0\.1:5173\/m\/([A-Za-z0-9_-]+)/);
+  assert.ok(secondLinkMatch, "second SMS includes opaque /m/{token} link");
+  const secondToken = secondLinkMatch[1];
+  assert.notEqual(secondToken, token);
+  const activeTokenCount = getDatabase()
+    .prepare("SELECT COUNT(*) as c FROM magic_link_tokens WHERE participant_id = ? AND study_id = ? AND version_id = ? AND round_number = 1 AND consumed_at IS NULL AND revoked_at IS NULL AND expires_at > datetime('now')")
+    .get(participant.participant_id, studyId, versionId).c;
+  assert.equal(activeTokenCount, 1);
+  await expectStatus(app, { method: "POST", url: "/magic-links/consume", body: { token } }, 410);
+
   const consumed = await expectStatus(
     app,
     {
       method: "POST",
       url: "/magic-links/consume",
-      body: { token },
+      body: { token: secondToken },
     },
     200,
   );
@@ -278,4 +299,7 @@ test("round_open_sms_magic_link_mobile_entry sends neutral opt-in SMS and uses o
   assert.doesNotMatch(auditRaw, new RegExp(token));
   assert.doesNotMatch(auditRaw, /5550101234|\+15550101234/);
   assert.doesNotMatch(auditRaw, new RegExp(challenge.body.dev_otp));
+  assert.doesNotMatch(auditRaw, /\"participantId\"\s*:/);
+  assert.doesNotMatch(auditRaw, /\"participant_id\"\s*:/);
+
 });
