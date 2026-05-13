@@ -2,7 +2,7 @@
 
 Status: planning document. This is not a production-readiness claim.
 
-Date basis: 2026-05-11.
+Date basis: 2026-05-13.
 
 This document resets the near-term readiness plan around the project's actual next goal:
 
@@ -168,7 +168,7 @@ Current progress:
 Remaining Phase 2 blockers before the downloadable laptop operator candidate gate can close:
 
 - Verify on a second Windows machine or clean Windows user profile.
-- Decide whether the candidate will bundle a portable Node runtime or keep local Node/npm as a documented prerequisite.
+- Runtime posture reconciled for current Phase 2 work: keep local Node/npm as the documented prerequisite for the current candidate; portable bundled runtime remains deferred.
 - Record Windows signing/distribution limitations, including unsigned-package behavior if applicable.
 - Preserve deferred status for Tauri, NSIS/MSI installer work, updater behavior, and platform support claims until separate evidence exists.
 
@@ -181,7 +181,7 @@ Required implementation:
 - One-command or clearly sequenced smoke test.
 - Synthetic demo study seed or repeatable setup workflow.
 - Operator checklist that covers study setup, roles, consent, invitations, rounds, curation, closeout, export, deletion, incident, backup, restore, and support.
-- Packaging decision: script-based local package, bundled runtime, installer, or documented temporary dev package.
+- Packaging decision: current candidate uses script-based local package with local Node/npm prerequisite; bundled runtime and installer tracks remain deferred.
 
 Required evidence:
 
