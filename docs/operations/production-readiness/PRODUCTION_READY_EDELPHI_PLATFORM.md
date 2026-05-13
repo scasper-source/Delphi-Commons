@@ -128,6 +128,7 @@ Windows signing/distribution limitations note: [WINDOWS_SIGNING_DISTRIBUTION_LIM
 macOS operator portable/internal package planning ADR: [MACOS_OPERATOR_PORTABLE_PACKAGE_ADR.md](./MACOS_OPERATOR_PORTABLE_PACKAGE_ADR.md).
 Stage 1 Windows evidence closeout note: [WINDOWS_OPERATOR_CANDIDATE_EVIDENCE_CLOSEOUT.md](./WINDOWS_OPERATOR_CANDIDATE_EVIDENCE_CLOSEOUT.md).
 Local Windows supervisor evidence note: [WINDOWS_OPERATOR_CANDIDATE_LOCAL_SUPERVISOR_EVIDENCE.md](./WINDOWS_OPERATOR_CANDIDATE_LOCAL_SUPERVISOR_EVIDENCE.md).
+macOS Apple Silicon internal engineering evidence note (2026-05-13): [MACOS_OPERATOR_PORTABLE_PACKAGE.md](./MACOS_OPERATOR_PORTABLE_PACKAGE.md).
 
 Required decisions:
 
@@ -161,6 +162,8 @@ Current progress:
 - **DONE:** Stage 1 Windows portable/internal package local evidence recorded.
 - **DONE:** Stage 1 Windows portable/internal package extracted-zip local evidence recorded.
 - **IN PROGRESS:** Phase 2 downloadable laptop operator candidate. The current Windows portable package is local engineering evidence only and remains **NOT READY FOR HUMAN TESTING**.
+- **RECORDED (2026-05-13):** One Apple Silicon macOS internal engineering runtime run produced partial package/build/start evidence but exposed lifecycle supervision defects; this does **not** establish macOS support readiness or human-testing readiness.
+- **REQUIRED NEXT:** Post-fix real macOS lifecycle rerun evidence remains required before any macOS readiness interpretation.
 
 Remaining Phase 2 blockers before the downloadable laptop operator candidate gate can close:
 

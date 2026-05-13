@@ -11,7 +11,7 @@ Track: `human_testing_candidate`.
 The following owner decisions are final for Phase 1 and must not be changed by implementation work without explicit owner re-approval:
 
 - Windows laptop operator path: **INCLUDED**.
-- macOS laptop operator path: **INCLUDED BUT EVIDENCE-DEPENDENT**; no macOS support claim until Mac build/test evidence exists.
+- macOS laptop operator path: **INCLUDED BUT EVIDENCE-DEPENDENT**; one Apple Silicon internal engineering run (2026-05-13) now exists but exposed lifecycle supervision defects, so no macOS support/readiness claim is made.
 - Phone participant path: **REQUIRED as mobile web**.
 - SMS path: **MOCK/SIMULATED/SANDBOX ONLY** for now; real production SMS deferred.
 - Non-SMS fallback: **REQUIRED** via QR code or copy-link.

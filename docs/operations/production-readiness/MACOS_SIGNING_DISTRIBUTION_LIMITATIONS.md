@@ -46,7 +46,7 @@ At this time, the record contains **no** evidence of:
 - macOS version support matrix commitments;
 - accessibility/security/legal/IRB certification evidence.
 
-macOS package evidence is **NOT RUN** unless separately recorded in a dedicated evidence note.
+One Apple Silicon internal engineering runtime run was recorded on **2026-05-13** in a dedicated evidence note; that run does not close signing/distribution blockers and does not establish macOS support readiness.
 
 ## Relationship To Phase 2 Blockers
 

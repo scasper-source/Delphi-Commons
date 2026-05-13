@@ -105,6 +105,10 @@ Builder static generation confirms:
 | Patch hygiene | `git diff --check` | PASS |
 | Working tree status | `git status` | PASS (informational snapshot) |
 
+## Runtime Follow-up Note
+
+A later real Apple Silicon internal engineering run (2026-05-13) is now recorded in `MACOS_OPERATOR_PORTABLE_PACKAGE.md`. This static review remains repository/documentation analysis only and does not supersede runtime defect findings.
+
 ## NOT RUN Items
 
 The following remain **NOT RUN** in this static review record:
