@@ -126,9 +126,13 @@ Local Windows portable package evidence note: [WINDOWS_OPERATOR_PORTABLE_PACKAGE
 Extracted zip evidence note: [WINDOWS_OPERATOR_PORTABLE_PACKAGE_EXTRACTED_ZIP_EVIDENCE.md](./WINDOWS_OPERATOR_PORTABLE_PACKAGE_EXTRACTED_ZIP_EVIDENCE.md).
 Windows signing/distribution limitations note: [WINDOWS_SIGNING_DISTRIBUTION_LIMITATIONS.md](./WINDOWS_SIGNING_DISTRIBUTION_LIMITATIONS.md).
 macOS operator portable/internal package planning ADR: [MACOS_OPERATOR_PORTABLE_PACKAGE_ADR.md](./MACOS_OPERATOR_PORTABLE_PACKAGE_ADR.md).
+macOS operator portable package prototype note: [MACOS_OPERATOR_PORTABLE_PACKAGE.md](./MACOS_OPERATOR_PORTABLE_PACKAGE.md).
+macOS operator portable package static review evidence: [MACOS_OPERATOR_PORTABLE_PACKAGE_STATIC_REVIEW.md](./MACOS_OPERATOR_PORTABLE_PACKAGE_STATIC_REVIEW.md).
+macOS operator portable runbook: [MACOS_OPERATOR_PORTABLE_RUNBOOK.md](./MACOS_OPERATOR_PORTABLE_RUNBOOK.md).
+macOS signing/distribution limitations note: [MACOS_SIGNING_DISTRIBUTION_LIMITATIONS.md](./MACOS_SIGNING_DISTRIBUTION_LIMITATIONS.md).
+macOS Apple Silicon defect-fix evidence note: [MACOS_OPERATOR_PORTABLE_APPLE_SILICON_DEFECT_FIX_EVIDENCE.md](./MACOS_OPERATOR_PORTABLE_APPLE_SILICON_DEFECT_FIX_EVIDENCE.md).
 Stage 1 Windows evidence closeout note: [WINDOWS_OPERATOR_CANDIDATE_EVIDENCE_CLOSEOUT.md](./WINDOWS_OPERATOR_CANDIDATE_EVIDENCE_CLOSEOUT.md).
 Local Windows supervisor evidence note: [WINDOWS_OPERATOR_CANDIDATE_LOCAL_SUPERVISOR_EVIDENCE.md](./WINDOWS_OPERATOR_CANDIDATE_LOCAL_SUPERVISOR_EVIDENCE.md).
-macOS Apple Silicon internal engineering evidence note (2026-05-13): [MACOS_OPERATOR_PORTABLE_PACKAGE.md](./MACOS_OPERATOR_PORTABLE_PACKAGE.md).
 
 Required decisions:
 
@@ -161,15 +165,18 @@ Current progress:
 - **DONE:** Stage 1 Windows operator supervisor local evidence recorded.
 - **DONE:** Stage 1 Windows portable/internal package local evidence recorded.
 - **DONE:** Stage 1 Windows portable/internal package extracted-zip local evidence recorded.
-- **IN PROGRESS:** Phase 2 downloadable laptop operator candidate. The current Windows portable package is local engineering evidence only and remains **NOT READY FOR HUMAN TESTING**.
+- **DONE:** Windows signing/distribution limitations recorded.
+- **DONE:** macOS operator portable planning, prototype, static review, runbook, and signing/distribution limitation notes recorded.
 - **RECORDED (2026-05-13):** One Apple Silicon macOS internal engineering runtime run produced partial package/build/start evidence but exposed lifecycle supervision defects; this does **not** establish macOS support readiness or human-testing readiness.
-- **REQUIRED NEXT:** Post-fix real macOS lifecycle rerun evidence remains required before any macOS readiness interpretation.
+- **DONE:** macOS Apple Silicon package defects fixed and internal engineering verification recorded.
+- **IN PROGRESS:** Phase 2 downloadable laptop operator candidate. The current Windows and macOS portable package evidence remains internal engineering evidence only and remains **NOT READY FOR HUMAN TESTING**.
 
 Remaining Phase 2 blockers before the downloadable laptop operator candidate gate can close:
 
 - Verify on a second Windows machine or clean Windows user profile.
 - Runtime posture reconciled for current Phase 2 work: keep local Node/npm as the documented prerequisite for the current candidate; portable bundled runtime remains deferred.
-- Record Windows signing/distribution limitations, including unsigned-package behavior if applicable.
+- Execute full post-fix extracted-package lifecycle evidence on a real Mac after the Apple Silicon package fixes.
+- Capture signing/Gatekeeper/unsigned-package behavior evidence for the intended distribution path; current limitation notes are documentation only.
 - Preserve deferred status for Tauri, NSIS/MSI installer work, updater behavior, and platform support claims until separate evidence exists.
 
 Required implementation:
@@ -202,6 +209,17 @@ Exit gate:
 Goal: make the participant experience openable on phones, with SMS-linked entry ready for human testing.
 
 Phase 3 plan/evidence matrix: [PHASE3_PHONE_SMS_CANDIDATE_PLAN.md](./PHASE3_PHONE_SMS_CANDIDATE_PLAN.md).
+SMS copy governance note: [PHASE3_SMS_COPY_GOVERNANCE.md](./PHASE3_SMS_COPY_GOVERNANCE.md).
+Magic-link privacy review: [PHASE3_MAGIC_LINK_PRIVACY_REVIEW.md](./PHASE3_MAGIC_LINK_PRIVACY_REVIEW.md).
+
+Current Phase 3 status as of 2026-05-13: **PARTIAL IMPLEMENTATION / EVIDENCE IN PROGRESS** and **NOT READY FOR HUMAN TESTING**.
+
+Completion snapshot:
+
+- Required implementation matrix items: 5 complete for mock/sandbox scope, 4 partial, 1 not complete, 1 deferred PWA item.
+- Required evidence items: 1 targeted mock/sandbox evidence item passed, 2 review items are partial/recorded with gaps, 3 phone/browser evidence items are not run.
+- Targeted verification: `npm.cmd run build` and `node ..\scripts\run-tests.mjs "tests/smsMagicLink.test.mjs"` passed on 2026-05-13 in `server` (1 test passed).
+- Exit gate remains open because phone-device evidence, STOP/HELP execution evidence, rate-limit/permission evidence, privacy gap remediation, and human reviewer signoffs are still outstanding.
 
 Required implementation:
 
