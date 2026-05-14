@@ -37,14 +37,20 @@ const DEFAULT_FORBIDDEN_PATTERNS = [
 const RUNTIME_ARTIFACT_DIR_NAMES = new Set(['db', 'logs', 'backups', 'evidence', 'exports', 'state', 'server-runtime']);
 
 const RUNTIME_ARTIFACT_ALLOWLIST_PATTERNS = [
-  /^server\/dist\/exports(\/|$)/i,
-  /(^|\/)node_modules(\/|$)/i
+  /^server\/dist\/exports(\/|$)/i
 ];
+
+function hasRuntimeArtifactDirectoryBeforeDependencies(item) {
+  const segments = item.split('/');
+  const dependencyIndex = segments.findIndex((segment) => segment.toLowerCase() === 'node_modules');
+  const guardedSegments = dependencyIndex === -1 ? segments : segments.slice(0, dependencyIndex);
+  return guardedSegments.some((segment) => RUNTIME_ARTIFACT_DIR_NAMES.has(segment.toLowerCase()));
+}
 
 function findRuntimeArtifactDirectories(inventory) {
   return inventory.filter((item) => {
     if (RUNTIME_ARTIFACT_ALLOWLIST_PATTERNS.some((pattern) => pattern.test(item))) return false;
-    return item.split('/').some((segment) => RUNTIME_ARTIFACT_DIR_NAMES.has(segment.toLowerCase()));
+    return hasRuntimeArtifactDirectoryBeforeDependencies(item);
   });
 }
 

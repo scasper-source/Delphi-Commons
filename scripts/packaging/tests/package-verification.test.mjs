@@ -80,3 +80,31 @@ test('package verification rejects nested runtime artifact directories outside c
   assert.ok(res.failures.some((f) => f.includes('operator/backups/backup.json')));
   assert.ok(res.failures.some((f) => f.includes('participant/exports/data.json')));
 });
+
+test('package verification rejects runtime artifact directories before node_modules', async () => {
+  const root = makePkg({
+    'README.txt': 'internal package',
+    'server/node_modules/safe-pkg/state/index.js': 'export const safe = true;',
+    'db/node_modules/dep/index.js': 'module.exports = {};',
+    'logs/node_modules/x/index.js': 'module.exports = {};'
+  });
+  const { buildChecksums } = await import('../core/index.mjs');
+  const inventory = [
+    'README.txt',
+    'server/node_modules/safe-pkg/state/index.js',
+    'db/node_modules/dep/index.js',
+    'logs/node_modules/x/index.js'
+  ].sort();
+  fs.writeFileSync(path.join(root, 'package-manifest.json'), JSON.stringify({
+    manifestSchemaVersion: '1.0.0', packageLabel: 'x', packageName: 'y', packageVersion: '0', track: 'internal', platform: 'windows',
+    commitHash: 'abc', networkBindAddress: '127.0.0.1', runtimeRootConvention: '%LOCALAPPDATA%/Delphi', runtimeMetadata: {},
+    inventory, checksums: buildChecksums(root, inventory), limitations: [], nonClaims: []
+  }));
+
+  const res = verifyPackageEvidence({ packageRoot: root, runtimeRoot: path.join(root, '..', 'runtime') });
+
+  assert.equal(res.ok, false);
+  assert.ok(res.failures.some((f) => f.includes('db/node_modules/dep/index.js')));
+  assert.ok(res.failures.some((f) => f.includes('logs/node_modules/x/index.js')));
+  assert.ok(!res.failures.some((f) => f.includes('server/node_modules/safe-pkg/state/index.js')));
+});
