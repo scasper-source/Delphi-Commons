@@ -39,3 +39,10 @@ Produce human-observed evidence that the Windows operator candidate can run from
 ## Non-claims
 
 Even if this runbook passes, it does **not** by itself claim pilot readiness, production readiness, or human-subjects readiness.
+
+
+## Phase 2 bundled-runtime foundation note (2026-05-14)
+
+- This runbook still validates the current accepted local Node/npm prerequisite posture.
+- A shared packaging core now exists for future bundled-runtime packaging work, but this runbook is not evidence that bundled runtime packaging is complete.
+- Continue to record Node/npm version evidence until bundled-runtime evidence templates are executed and approved.
