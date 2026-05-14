@@ -131,6 +131,16 @@ export function scanOverclaimText(text) {
     /production[- ]ready/i,
     /pilot[- ]ready/i,
     /ready for human testing/i,
+    /irb\/ethics approval/i,
+    /legal approval/i,
+    /security certification/i,
+    /accessibility certification/i,
+    /real sms readiness/i,
+    /pwa readiness/i,
+    /native mobile readiness/i,
+    /public release readiness/i,
+    /(installer|updater|signing|notarization) readiness/i,
+    /(windows|macos) support readiness/i,
     /support readiness/i
   ];
   return patterns.filter((p) => p.test(text)).map((p) => p.source);
