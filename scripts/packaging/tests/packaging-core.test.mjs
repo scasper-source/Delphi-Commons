@@ -63,6 +63,12 @@ test('overclaim scan detects readiness overclaims', () => {
   assert.ok(hits.length >= 4);
 });
 
+test('overclaim scan detects standalone IRB approval claims', () => {
+  assert.ok(scanOverclaimText('This package has IRB approval.').length >= 1);
+  assert.ok(scanOverclaimText('This package has IRB/ethics approval.').length >= 1);
+  assert.ok(scanOverclaimText('This package has ethics approval.').length >= 1);
+});
+
 test('runtime path policy forbids runtime under package root', () => {
   assert.throws(() => enforceRuntimePathPolicy({ packageRoot: '/tmp/pkg', runtimeRoot: '/tmp/pkg/runtime' }));
 });

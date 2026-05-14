@@ -131,7 +131,7 @@ export function scanOverclaimText(text) {
     /production[- ]ready/i,
     /pilot[- ]ready/i,
     /ready for human testing/i,
-    /irb\/ethics approval/i,
+    /\b(irb(?:\/ethics)?|ethics) approval\b/i,
     /legal approval/i,
     /security certification/i,
     /accessibility certification/i,
