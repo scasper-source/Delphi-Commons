@@ -16,9 +16,21 @@ function makePkg(files) {
 }
 
 test('package verification passes for coherent manifest/inventory/checksums', async () => {
-  const root = makePkg({ 'README.txt': 'internal package', 'evidence-template.md': 'NOT RUN\nHUMAN_REQUIRED\nSIGNOFF_REQUIRED\nDEPLOYMENT_REQUIRED' });
+  const root = makePkg({
+    'README.txt': 'internal package',
+    'evidence-template.md': 'NOT RUN\nHUMAN_REQUIRED\nSIGNOFF_REQUIRED\nDEPLOYMENT_REQUIRED',
+    'server/dist/routes/sms.js': 'export const route = true;',
+    'server/dist/exports/exportPrivacy.js': 'export const renderer = true;',
+    'server/node_modules/ret/dist/tokenizer.js': 'export const tokenizer = true;'
+  });
   const { buildChecksums } = await import('../core/index.mjs');
-  const inventory = ['README.txt', 'evidence-template.md'];
+  const inventory = [
+    'README.txt',
+    'evidence-template.md',
+    'server/dist/routes/sms.js',
+    'server/dist/exports/exportPrivacy.js',
+    'server/node_modules/ret/dist/tokenizer.js'
+  ].sort();
   const checksums = buildChecksums(root, inventory);
   fs.writeFileSync(path.join(root, 'package-manifest.json'), JSON.stringify({
     manifestSchemaVersion: '1.0.0', packageLabel: 'x', packageName: 'y', packageVersion: '0', track: 'internal', platform: 'windows',

@@ -333,9 +333,7 @@ function verifyPackage() {
     overclaimFiles: ['README.txt', 'evidence-template.md', 'package-manifest.json']
   });
   if (!result.ok) {
-    throw new Error(`Package verification failed:
-- ${result.failures.join('
-- ')}`);
+    throw new Error(`Package verification failed:\n- ${result.failures.join('\n- ')}`);
   }
 }
 
