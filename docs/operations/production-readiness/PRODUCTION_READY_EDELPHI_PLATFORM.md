@@ -176,6 +176,7 @@ Remaining Phase 2 blockers before the downloadable laptop operator candidate gat
 
 - Verify on a second Windows machine or clean Windows user profile.
 - Runtime posture reconciled for current Phase 2 work: keep local Node/npm as the documented prerequisite for the current candidate; portable bundled runtime remains deferred.
+- **NEW (2026-05-14):** Portable bundled-runtime foundation ADR accepted for internal human-testing candidate packaging hardening; shared packaging core created while bundled runtime build/download remains deferred pending evidence.
 - Execute full post-fix extracted-package lifecycle evidence on a real Mac after the Apple Silicon package fixes.
 - Capture signing/Gatekeeper/unsigned-package behavior evidence for the intended distribution path; current limitation notes are documentation only.
 - Preserve deferred status for Tauri, NSIS/MSI installer work, updater behavior, and platform support claims until separate evidence exists.
