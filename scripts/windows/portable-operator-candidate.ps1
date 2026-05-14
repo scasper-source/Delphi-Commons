@@ -7,7 +7,8 @@ $ErrorActionPreference = 'Stop'
 
 function Get-PackageRoot { Split-Path -Parent (Split-Path -Parent $PSScriptRoot) }
 $PackageRoot = Get-PackageRoot
-$RuntimeRoot = Join-Path $env:LOCALAPPDATA 'DelphiCommons\windows-operator-portable-candidate'
+$RuntimeSubdir = if ($env:EDELPHI_RUNTIME_SUBDIR) { $env:EDELPHI_RUNTIME_SUBDIR } else { 'windows-operator-portable-candidate' }
+$RuntimeRoot = if ($env:EDELPHI_RUNTIME_ROOT) { $env:EDELPHI_RUNTIME_ROOT } else { Join-Path $env:LOCALAPPDATA "DelphiCommons\$RuntimeSubdir" }
 $StateDir = Join-Path $RuntimeRoot 'state'
 $LogsDir = Join-Path $RuntimeRoot 'logs'
 $EvidenceDir = Join-Path $RuntimeRoot 'evidence'
@@ -23,6 +24,9 @@ $UiUrl = "http://127.0.0.1:$UiPort"
 $HealthUrl = "http://127.0.0.1:$ApiPort/health"
 $LockFile = Join-Path $StateDir 'instance.lock.json'
 $NpmCommand = 'npm.cmd'
+$NodeCommand = if ($env:EDELPHI_PORTABLE_NODE_EXE) { $env:EDELPHI_PORTABLE_NODE_EXE } else { 'node' }
+$ServerNodeModulesSource = $env:EDELPHI_SERVER_NODE_MODULES_SOURCE
+$SkipRuntimeNpmInstall = $env:EDELPHI_SKIP_RUNTIME_NPM_INSTALL -eq '1'
 
 function Ensure-Dirs {
   foreach ($path in @($RuntimeRoot,$StateDir,$LogsDir,$EvidenceDir,$DbDir,$AuditDir,$ExportsDir,$BackupsDir)) {
@@ -48,6 +52,12 @@ function Invoke-Checked([string]$filePath, [string[]]$arguments, [string]$workin
   }
   finally {
     Pop-Location
+  }
+}
+
+function Assert-NodeRuntime {
+  if ($env:EDELPHI_PORTABLE_NODE_EXE -and !(Test-Path -LiteralPath $NodeCommand)) {
+    throw "Packaged Node executable missing: $NodeCommand"
   }
 }
 
@@ -120,6 +130,25 @@ function Ensure-ServerDependencies {
   $serverNodeModules = Join-Path $RuntimeServerDir 'node_modules'
   $fastifyPackage = Join-Path $serverNodeModules 'fastify\package.json'
   if (Test-Path -LiteralPath $fastifyPackage) { return }
+
+  if ($ServerNodeModulesSource) {
+    $sourceFastifyPackage = Join-Path $ServerNodeModulesSource 'fastify\package.json'
+    if (!(Test-Path -LiteralPath $sourceFastifyPackage)) {
+      throw "Packaged server production dependencies missing or incomplete: $ServerNodeModulesSource"
+    }
+    Write-Host 'Copying packaged server production dependencies into runtime root...'
+    Assert-PathWithinRuntime $serverNodeModules
+    if (Test-Path -LiteralPath $serverNodeModules) {
+      Remove-Item -LiteralPath $serverNodeModules -Recurse -Force
+    }
+    Copy-Item -LiteralPath $ServerNodeModulesSource -Destination $RuntimeServerDir -Recurse -Force
+    return
+  }
+
+  if ($SkipRuntimeNpmInstall) {
+    throw 'Runtime npm install is disabled for this package and no packaged server dependencies were supplied.'
+  }
+
   Write-Host 'Installing runtime server production dependencies outside package root...'
   Invoke-Checked $NpmCommand @('--prefix',$RuntimeServerDir,'ci','--omit=dev') $PackageRoot
 }
@@ -144,6 +173,14 @@ function Sync-RuntimeServer {
   Copy-Item -LiteralPath $sourceDist -Destination $RuntimeServerDir -Recurse -Force
   Copy-Item -LiteralPath $sourcePackageJson -Destination (Join-Path $RuntimeServerDir 'package.json') -Force
   Copy-Item -LiteralPath $sourcePackageLock -Destination (Join-Path $RuntimeServerDir 'package-lock.json') -Force
+
+  if ($ServerNodeModulesSource) {
+    $runtimeNodeModules = Join-Path $RuntimeServerDir 'node_modules'
+    Assert-PathWithinRuntime $runtimeNodeModules
+    if (Test-Path -LiteralPath $runtimeNodeModules) {
+      Remove-Item -LiteralPath $runtimeNodeModules -Recurse -Force
+    }
+  }
 }
 
 function Start-Prototype {
@@ -159,6 +196,7 @@ function Start-Prototype {
 
   Assert-PortFree -port $ApiPort
   Assert-PortFree -port $UiPort
+  Assert-NodeRuntime
   Sync-RuntimeServer
   Ensure-ServerDependencies
 
@@ -185,8 +223,8 @@ function Start-Prototype {
     NODE_ENV = 'production'
   }
 
-  $backend = Set-ProcessEnvAndStart -filePath 'node' -arguments @($serverEntry) -workingDirectory $RuntimeServerDir -stdoutLog $backendOutLog -stderrLog $backendErrLog -envVars $backendEnv
-  $ui = Start-Process -FilePath 'node' -ArgumentList @($staticServer,'--root',$uiRoot,'--host','127.0.0.1','--port',"$UiPort") -PassThru -NoNewWindow -RedirectStandardOutput $uiOutLog -RedirectStandardError $uiErrLog -WorkingDirectory $PackageRoot
+  $backend = Set-ProcessEnvAndStart -filePath $NodeCommand -arguments @($serverEntry) -workingDirectory $RuntimeServerDir -stdoutLog $backendOutLog -stderrLog $backendErrLog -envVars $backendEnv
+  $ui = Start-Process -FilePath $NodeCommand -ArgumentList @($staticServer,'--root',$uiRoot,'--host','127.0.0.1','--port',"$UiPort") -PassThru -NoNewWindow -RedirectStandardOutput $uiOutLog -RedirectStandardError $uiErrLog -WorkingDirectory $PackageRoot
 
   $deadline = (Get-Date).AddSeconds(45)
   $ready = $false
@@ -212,9 +250,12 @@ function Start-Prototype {
     healthUrl = $HealthUrl
     runtimeRoot = $RuntimeRoot
     packageRoot = $PackageRoot
+    nodeExecutable = $NodeCommand
   }
   Write-Evidence "Started portable prototype backendPid=$($backend.Id) uiPid=$($ui.Id) url=$UiUrl"
-  Start-Process $UiUrl
+  if ($env:EDELPHI_SKIP_OPEN_BROWSER -ne '1') {
+    Start-Process $UiUrl
+  }
   Write-Host "Operator UI: $UiUrl"
   Write-Host "Health check: $HealthUrl"
 }

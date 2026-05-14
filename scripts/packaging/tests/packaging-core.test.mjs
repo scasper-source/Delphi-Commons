@@ -33,10 +33,24 @@ test('config validation enforces 127.0.0.1', () => {
 
 test('manifest includes required shape', () => {
   const config = validatePackageConfig({ label: 'l', track: 't', platform: 'windows', runtimeRootConvention: 'x' });
-  const runtimeMetadata = buildRuntimeMetadata({ nodeVersion: '20.0.0', npmVersion: '10.0.0', source: 'local prerequisite' });
+  const runtimeMetadata = buildRuntimeMetadata({
+    nodeVersion: '20.0.0',
+    npmVersion: null,
+    platform: 'windows',
+    arch: 'x64',
+    source: 'https://example.test/node.zip',
+    sourceSha256: 'a'.repeat(64),
+    sourceLicense: 'MIT',
+    bundledRuntimeRelativePath: 'runtime/node',
+    nodeExecutableRelativePath: 'runtime/node/node.exe',
+    npmIncluded: false,
+    npmUsedAtRuntime: false
+  });
   const manifest = buildManifest({ config, inventory: ['README.txt'], checksums: { 'README.txt': 'abc' }, runtimeMetadata });
   assert.equal(manifest.networkBindAddress, '127.0.0.1');
   assert.equal(manifest.runtimeMetadata.bundled, true);
+  assert.equal(manifest.runtimeMetadata.nodeExecutableRelativePath, 'runtime/node/node.exe');
+  assert.equal(manifest.runtimeMetadata.npmUsedAtRuntime, false);
 });
 
 test('forbidden-material scan detects blocked names', () => {
