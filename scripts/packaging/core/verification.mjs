@@ -29,11 +29,24 @@ const DEFAULT_FORBIDDEN_PATTERNS = [
   /(^|\/)\.git(\/|$)/i,
   /(^|\/)\.env(\.|$)/i,
   /(^|\/)(id_rsa|id_dsa|\.ssh|\.pem|\.p12|\.key)(\/|$)/i,
-  /^(db|logs|backups|evidence|exports|state|server-runtime)(\/|$)/i,
   /(^|\/)(secrets?|credentials?)(\/|\.|$)/i,
   /(^|\/)(raw-)?(tokens?|otps?|sms-outbox|phone-content)(\.json|\.csv|\.txt|\/|$)/i,
   /\.(sqlite|db|log|bak|backup)$/i
 ];
+
+const RUNTIME_ARTIFACT_DIR_NAMES = new Set(['db', 'logs', 'backups', 'evidence', 'exports', 'state', 'server-runtime']);
+
+const RUNTIME_ARTIFACT_ALLOWLIST_PATTERNS = [
+  /^server\/dist\/exports(\/|$)/i,
+  /(^|\/)node_modules(\/|$)/i
+];
+
+function findRuntimeArtifactDirectories(inventory) {
+  return inventory.filter((item) => {
+    if (RUNTIME_ARTIFACT_ALLOWLIST_PATTERNS.some((pattern) => pattern.test(item))) return false;
+    return item.split('/').some((segment) => RUNTIME_ARTIFACT_DIR_NAMES.has(segment.toLowerCase()));
+  });
+}
 
 export function verifyPackageEvidence({ packageRoot, runtimeRoot, lifecycleChecks = {}, overclaimFiles = [] }) {
   const failures = [];
@@ -77,7 +90,10 @@ export function verifyPackageEvidence({ packageRoot, runtimeRoot, lifecycleCheck
     failures.push('Package contents do not match manifest inventory.');
   }
 
-  const forbiddenHits = scanForbiddenMaterial(actualInventory, DEFAULT_FORBIDDEN_PATTERNS);
+  const forbiddenHits = [
+    ...scanForbiddenMaterial(actualInventory, DEFAULT_FORBIDDEN_PATTERNS),
+    ...findRuntimeArtifactDirectories(actualInventory)
+  ];
   if (forbiddenHits.length) failures.push(`Forbidden material detected: ${forbiddenHits.join(', ')}`);
 
   try {
