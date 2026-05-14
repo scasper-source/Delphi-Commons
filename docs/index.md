@@ -44,6 +44,7 @@ Current readiness: controlled mock-participant MVP testing with synthetic or low
 - [macOS operator portable/internal package ADR (Phase 2 planning)](./operations/production-readiness/MACOS_OPERATOR_PORTABLE_PACKAGE_ADR.md)
 - [macOS operator portable package prototype + 2026-05-13 Apple Silicon internal engineering evidence](./operations/production-readiness/MACOS_OPERATOR_PORTABLE_PACKAGE.md)
 - [macOS operator portable/internal package static review evidence](./operations/production-readiness/MACOS_OPERATOR_PORTABLE_PACKAGE_STATIC_REVIEW.md)
+- [macOS operator portable post-fix lifecycle evidence (2026-05-14)](./operations/production-readiness/MACOS_OPERATOR_PORTABLE_POST_FIX_LIFECYCLE_EVIDENCE_2026-05-14.md)
 - [macOS operator portable runbook (planned internal candidate)](./operations/production-readiness/MACOS_OPERATOR_PORTABLE_RUNBOOK.md)
 - [Windows operator candidate evidence closeout](./operations/production-readiness/WINDOWS_OPERATOR_CANDIDATE_EVIDENCE_CLOSEOUT.md)
 - [Windows operator candidate local supervisor evidence](./operations/production-readiness/WINDOWS_OPERATOR_CANDIDATE_LOCAL_SUPERVISOR_EVIDENCE.md)

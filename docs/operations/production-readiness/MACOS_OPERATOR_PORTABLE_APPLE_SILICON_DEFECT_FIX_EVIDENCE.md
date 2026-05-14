@@ -2,7 +2,7 @@
 
 Status: **INTERNAL ENGINEERING EVIDENCE ONLY**.
 Decision label: **NOT READY FOR HUMAN TESTING**.
-Date basis: **2026-05-13**.
+Date basis: **2026-05-14**.
 
 ## Scope
 
@@ -46,8 +46,16 @@ This note records focused fixes for defects found during a manual macOS portable
 | Extracted package `status` command | PASS: reported `stopped`. |
 | Final package build after generated README/manifest wording updates | PASS using alternate output root `build/macos-operator-portable-final`; default output-root rerun was blocked by a local Windows directory lock on an earlier staging folder. |
 | Final alternate package artifact inspection and cleanliness | PASS. |
-| Full lifecycle start/restart/reset verification in this workspace | NOT RUN as macOS evidence. This workspace is Windows/Git Bash; its `ps`/`kill` process semantics do not match macOS process supervision. Real macOS lifecycle rerun remains required. |
+| Full lifecycle start/restart/reset verification in this workspace | NOT RUN as macOS evidence. This workspace is Windows/Git Bash; its `ps`/`kill` process semantics do not match macOS process supervision. A real post-fix macOS lifecycle rerun is recorded separately in [MACOS_OPERATOR_PORTABLE_POST_FIX_LIFECYCLE_EVIDENCE_2026-05-14.md](./MACOS_OPERATOR_PORTABLE_POST_FIX_LIFECYCLE_EVIDENCE_2026-05-14.md). |
 | Final local port check for `3001` / `4173` | PASS: no local listeners remained after cleanup. |
+
+## Post-Fix Real macOS Rerun
+
+The required post-fix Apple Silicon lifecycle rerun was performed on **2026-05-14** at commit `56b37b7494e9b9c796de4a80010d290307ac3a50`.
+
+Result: **PASS** for the previously observed macOS portable lifecycle defects. Detailed evidence is recorded in [MACOS_OPERATOR_PORTABLE_POST_FIX_LIFECYCLE_EVIDENCE_2026-05-14.md](./MACOS_OPERATOR_PORTABLE_POST_FIX_LIFECYCLE_EVIDENCE_2026-05-14.md).
+
+The rerun remains internal engineering evidence only and does not broaden any readiness claim.
 
 ## Non-Claims Preserved
 

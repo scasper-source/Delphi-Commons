@@ -2,7 +2,7 @@
 
 Status: planning document. This is not a production-readiness claim.
 
-Date basis: 2026-05-13.
+Date basis: 2026-05-14.
 
 This document resets the near-term readiness plan around the project's actual next goal:
 
@@ -132,6 +132,7 @@ macOS operator portable package static review evidence: [MACOS_OPERATOR_PORTABLE
 macOS operator portable runbook: [MACOS_OPERATOR_PORTABLE_RUNBOOK.md](./MACOS_OPERATOR_PORTABLE_RUNBOOK.md).
 macOS signing/distribution limitations note: [MACOS_SIGNING_DISTRIBUTION_LIMITATIONS.md](./MACOS_SIGNING_DISTRIBUTION_LIMITATIONS.md).
 macOS Apple Silicon defect-fix evidence note: [MACOS_OPERATOR_PORTABLE_APPLE_SILICON_DEFECT_FIX_EVIDENCE.md](./MACOS_OPERATOR_PORTABLE_APPLE_SILICON_DEFECT_FIX_EVIDENCE.md).
+macOS Apple Silicon post-fix lifecycle evidence: [MACOS_OPERATOR_PORTABLE_POST_FIX_LIFECYCLE_EVIDENCE_2026-05-14.md](./MACOS_OPERATOR_PORTABLE_POST_FIX_LIFECYCLE_EVIDENCE_2026-05-14.md).
 Stage 1 Windows evidence closeout note: [WINDOWS_OPERATOR_CANDIDATE_EVIDENCE_CLOSEOUT.md](./WINDOWS_OPERATOR_CANDIDATE_EVIDENCE_CLOSEOUT.md).
 Local Windows supervisor evidence note: [WINDOWS_OPERATOR_CANDIDATE_LOCAL_SUPERVISOR_EVIDENCE.md](./WINDOWS_OPERATOR_CANDIDATE_LOCAL_SUPERVISOR_EVIDENCE.md).
 
@@ -170,6 +171,7 @@ Current progress:
 - **DONE:** macOS operator portable planning, prototype, static review, runbook, and signing/distribution limitation notes recorded.
 - **RECORDED (2026-05-13):** One Apple Silicon macOS internal engineering runtime run produced partial package/build/start evidence but exposed lifecycle supervision defects; this does **not** establish macOS support readiness or human-testing readiness.
 - **DONE:** macOS Apple Silicon package defects fixed and internal engineering verification recorded.
+- **RECORDED (2026-05-14):** Post-fix real Apple Silicon macOS lifecycle rerun passed for build, extraction, status, start, health, UI HEAD, smoke, restart, stop, reset-after-stopped, start/smoke/stop after reset, idempotent stopped-state behavior, clean-worktree build after dependencies, and server audit. This remains internal engineering evidence only and does **not** establish macOS support readiness or human-testing readiness.
 - **IN PROGRESS:** Phase 2 downloadable laptop operator candidate. The current Windows and macOS portable package evidence remains internal engineering evidence only and remains **NOT READY FOR HUMAN TESTING**.
 - **IN PROGRESS (2026-05-14):** Windows bundled-runtime hardening is wiring a pinned packaged Node runtime plus build-time production dependencies for the internal portable package. This is implementation hardening only until a named package is built, verified, and run from a downloaded package or clean profile.
 - **LOCAL BRANCH EVIDENCE (2026-05-14):** Windows bundled-runtime package build, package verification, focused packaging tests, and staged lifecycle commands passed locally with packaged Node 24.15.0. This is not second-machine, clean-profile, signing, SmartScreen, Defender, or platform-support evidence.
@@ -179,8 +181,8 @@ Remaining Phase 2 blockers before the downloadable laptop operator candidate gat
 - Verify on a second Windows machine or clean Windows user profile.
 - Runtime posture reconciled for current Phase 2 work: local Node/npm remain required at build time; the Windows bundled-runtime package now stages packaged Node and production dependencies for runtime lifecycle commands. Runtime no-local-Node behavior still needs downloaded-package or clean-profile confirmation before the Phase 2 gate closes.
 - **UPDATED (2026-05-14):** Portable bundled-runtime foundation ADR accepted for internal package hardening; shared packaging core exists and Windows runtime wiring has local branch evidence.
-- Execute full post-fix extracted-package lifecycle evidence on a real Mac after the Apple Silicon package fixes.
-- Capture signing/Gatekeeper/unsigned-package behavior evidence for the intended distribution path; current limitation notes are documentation only.
+- Capture signing/Gatekeeper/unsigned-package behavior evidence for the intended distribution path; current limitation notes are documentation only. The 2026-05-14 Apple Silicon rerun recorded no Gatekeeper/quarantine observations.
+- Decide whether one Apple Silicon Mac is enough for the current internal candidate, or whether Intel Mac / additional macOS version coverage is required before closing Phase 2.
 - Preserve deferred status for Tauri, NSIS/MSI installer work, updater behavior, and platform support claims until separate evidence exists.
 
 Required implementation:
