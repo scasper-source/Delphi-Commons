@@ -27,11 +27,27 @@ $NpmCommand = 'npm.cmd'
 $NodeCommand = if ($env:EDELPHI_PORTABLE_NODE_EXE) { $env:EDELPHI_PORTABLE_NODE_EXE } else { 'node' }
 $ServerNodeModulesSource = $env:EDELPHI_SERVER_NODE_MODULES_SOURCE
 $SkipRuntimeNpmInstall = $env:EDELPHI_SKIP_RUNTIME_NPM_INSTALL -eq '1'
+$LanParticipantMode = $env:EDELPHI_ENABLE_LAN_PARTICIPANT_URL -eq '1'
+$LanAcknowledged = $env:EDELPHI_ACK_LAN_SYNTHETIC_ONLY -eq '1'
+$TunnelMode = $env:EDELPHI_ENABLE_TUNNEL_URL -eq '1'
+$ParticipantPath = if ($env:EDELPHI_PARTICIPANT_PATH) { $env:EDELPHI_PARTICIPANT_PATH } else { '/participant' }
 
 function Ensure-Dirs {
   foreach ($path in @($RuntimeRoot,$StateDir,$LogsDir,$EvidenceDir,$DbDir,$AuditDir,$ExportsDir,$BackupsDir)) {
     if (!(Test-Path -LiteralPath $path)) { New-Item -ItemType Directory -Path $path | Out-Null }
   }
+}
+
+function Get-PrimaryLanIPv4 {
+  $candidate = Get-NetIPAddress -AddressFamily IPv4 -ErrorAction SilentlyContinue |
+    Where-Object {
+      $_.IPAddress -ne '127.0.0.1' -and
+      $_.IPAddress -notlike '169.254.*' -and
+      $_.PrefixOrigin -ne 'WellKnown'
+    } |
+    Select-Object -First 1
+  if ($candidate) { return $candidate.IPAddress }
+  return $null
 }
 
 function Assert-PathWithinRuntime([string]$path) {
@@ -257,6 +273,26 @@ function Start-Prototype {
     Start-Process $UiUrl
   }
   Write-Host "Operator UI: $UiUrl"
+  Write-Host "Operator localhost URL (default, safe): $UiUrl"
+  if ($LanParticipantMode) {
+    if (!$LanAcknowledged) {
+      Stop-ProcessTree -processId $backend.Id -name 'backend'
+      Stop-ProcessTree -processId $ui.Id -name 'static-ui'
+      Remove-Item -LiteralPath $LockFile -Force -ErrorAction SilentlyContinue
+      throw 'LAN participant mode requires explicit acknowledgement. Re-run with EDELPHI_ACK_LAN_SYNTHETIC_ONLY=1.'
+    }
+    $lanIp = Get-PrimaryLanIPv4
+    if ($lanIp) {
+      Write-Host "Participant LAN URL (synthetic/internal testing only): http://$lanIp:$UiPort$ParticipantPath"
+      Write-Host 'WARNING: Internal synthetic testing only. Do not use for production, pilot, or human-subjects claims.'
+    } else {
+      Write-Host 'LAN participant mode enabled but no LAN IP detected; participant LAN URL unavailable.'
+    }
+  }
+  if ($TunnelMode) {
+    Write-Host 'WARNING: Tunnel mode flag is ON, but tunnel support is intentionally not provisioned in package runtime.'
+    Write-Host 'WARNING: Keep tunnel OFF by default; do not expose participant traffic to public internet.'
+  }
   Write-Host "Health check: $HealthUrl"
 }
 

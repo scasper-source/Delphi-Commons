@@ -34,6 +34,10 @@ NODE_COMMAND_DEFAULT="${EDELPHI_PORTABLE_NODE_EXE:-node}"
 NodeCommand="$NODE_COMMAND_DEFAULT"
 SERVER_NODE_MODULES_SOURCE="${EDELPHI_SERVER_NODE_MODULES_SOURCE:-}"
 SKIP_RUNTIME_NPM_INSTALL="${EDELPHI_SKIP_RUNTIME_NPM_INSTALL:-0}"
+LAN_PARTICIPANT_MODE="${EDELPHI_ENABLE_LAN_PARTICIPANT_URL:-0}"
+LAN_ACKNOWLEDGED="${EDELPHI_ACK_LAN_SYNTHETIC_ONLY:-0}"
+TUNNEL_MODE="${EDELPHI_ENABLE_TUNNEL_URL:-0}"
+PARTICIPANT_PATH="${EDELPHI_PARTICIPANT_PATH:-/participant}"
 
 ensure_dirs() {
   mkdir -p "$RUNTIME_ROOT" "$STATE_DIR" "$LOGS_DIR" "$EVIDENCE_DIR" "$DB_DIR" "$AUDIT_DIR" "$EXPORTS_DIR" "$BACKUPS_DIR" "$SERVER_RUNTIME_DIR"
@@ -41,6 +45,14 @@ ensure_dirs() {
 
 write_evidence() {
   printf '[%s] %s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$1" >> "$EVIDENCE_DIR/portable-operator-events.log"
+}
+
+get_primary_lan_ip() {
+  if command -v ipconfig >/dev/null 2>&1; then
+    ipconfig getifaddr en0 2>/dev/null || ipconfig getifaddr en1 2>/dev/null || true
+    return 0
+  fi
+  true
 }
 
 assert_path_within_runtime() {
@@ -354,6 +366,26 @@ start_flow() {
   write_lock "$verified_backend" "$verified_ui"
   write_evidence "Started portable prototype backendPid=$verified_backend uiPid=$verified_ui"
   echo "Operator UI: $UI_URL"
+  echo "Operator localhost URL (default, safe): $UI_URL"
+  if [[ "$LAN_PARTICIPANT_MODE" == "1" ]]; then
+    if [[ "$LAN_ACKNOWLEDGED" != "1" ]]; then
+      stop_if_running
+      echo "LAN participant mode requires explicit acknowledgement. Re-run with EDELPHI_ACK_LAN_SYNTHETIC_ONLY=1." >&2
+      exit 1
+    fi
+    local lan_ip
+    lan_ip="$(get_primary_lan_ip)"
+    if [[ -n "$lan_ip" ]]; then
+      echo "Participant LAN URL (synthetic/internal testing only): http://$lan_ip:$UI_PORT$PARTICIPANT_PATH"
+      echo "WARNING: Internal synthetic testing only. Do not use for production, pilot, or human-subjects claims."
+    else
+      echo "LAN participant mode enabled but no LAN IP detected; participant LAN URL unavailable."
+    fi
+  fi
+  if [[ "$TUNNEL_MODE" == "1" ]]; then
+    echo "WARNING: Tunnel mode flag is ON, but tunnel support is intentionally not provisioned in package runtime."
+    echo "WARNING: Keep tunnel OFF by default; do not expose participant traffic to public internet."
+  fi
   echo "Health check: $HEALTH_URL"
 }
 

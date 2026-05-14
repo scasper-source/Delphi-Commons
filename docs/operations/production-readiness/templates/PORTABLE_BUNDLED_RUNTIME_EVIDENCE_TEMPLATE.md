@@ -40,3 +40,7 @@ Status: template only; does not claim bundled runtime readiness by itself.
 - Until this template is executed with attached artifacts, package lifecycle evidence remains `NOT RUN`.
 - Build-time local Node/npm requirements are separate from runtime package behavior.
 - No installer/signing/notarization/platform support claim is made.
+- Local phone/SMS testing posture is synthetic/internal only; no real SMS provider readiness is claimed.
+- Default network posture remains localhost-only (`127.0.0.1`) unless an explicit LAN test mode flag is enabled.
+- If LAN participant URL mode is used, record operator acknowledgement evidence and avoid storing LAN/tunnel endpoints in retained artifacts.
+- Tunnel/public internet exposure must remain disabled by default and is not packaged as a production-ready feature.

@@ -6,6 +6,8 @@ Execution status default: `NOT RUN`.
 |---|---|---|---|---|
 | install/extract | Obtain package and extract to controlled local path | NOT RUN | HUMAN_REQUIRED |  |
 | start/status/smoke | Start backend/UI; collect health/status and smoke result | NOT RUN | HUMAN_REQUIRED |  |
+| local URL posture | Verify localhost operator URL is displayed and default bind remains `127.0.0.1` | NOT RUN | HUMAN_REQUIRED |  |
+| optional LAN mode | If and only if needed for synthetic phone-flow rehearsal, set `EDELPHI_ENABLE_LAN_PARTICIPANT_URL=1` and `EDELPHI_ACK_LAN_SYNTHETIC_ONLY=1`; capture acknowledgement and warnings | NOT RUN | HUMAN_REQUIRED |  |
 | study setup | Create/select study and confirm synthetic/non-production scope | NOT RUN | HUMAN_REQUIRED |  |
 | roles | Assign/confirm least-privilege roles for operator workflow | NOT RUN | HUMAN_REQUIRED |  |
 | consent | Verify consent wording and acknowledgement gate behavior | NOT RUN | HUMAN_REQUIRED |  |
@@ -26,5 +28,6 @@ Execution status default: `NOT RUN`.
 ## Mandatory execution notes
 
 - Use only synthetic/test data.
+- Keep SMS/testing internal-only; do not claim real SMS provider readiness from this checklist.
 - Attach command logs, screenshots, and generated report/export metadata.
 - Do not convert `NOT RUN` to `PASS` without linked evidence created during this run.
