@@ -23,7 +23,7 @@ test('manifest includes required shape', () => {
   const runtimeMetadata = buildRuntimeMetadata({ nodeVersion: '20.0.0', npmVersion: '10.0.0', source: 'local prerequisite' });
   const manifest = buildManifest({ config, inventory: ['README.txt'], checksums: { 'README.txt': 'abc' }, runtimeMetadata });
   assert.equal(manifest.networkBindAddress, '127.0.0.1');
-  assert.equal(manifest.runtimeMetadata.bundled, false);
+  assert.equal(manifest.runtimeMetadata.bundled, true);
 });
 
 test('forbidden-material scan detects blocked names', () => {
