@@ -74,6 +74,14 @@ AI suggestions are non-binding, must be labeled as suggestions, require human ac
 | `EDELPHI_PHONE_OTP_TTL_MINUTES` | `server/src/core/config.ts` | `10` | Phone OTP TTL. |
 | `EDELPHI_SMS_PROVIDER` | `server/src/core/config.ts` | `mock`; `twilio` when set to `twilio` | Real SMS provider readiness is NOT READY for real studies. |
 | `EDELPHI_SMS_WEBHOOK_SECRET` | `server/src/core/config.ts` | `null` | Optional webhook secret. |
+| `EDELPHI_ENABLE_REAL_SMS` | `server/src/core/config.ts` | unset/false | Must be `true` before Twilio sends are allowed. This is only one technical gate and is not a readiness approval. |
+| `EDELPHI_REAL_SMS_ACK` | `server/src/core/config.ts` | unset | Must equal `TWILIO_REAL_SMS_REVIEWED_AND_APPROVED` before Twilio sends are allowed. Do not set without documented approval. |
+| `EDELPHI_PUBLIC_PARTICIPANT_ORIGIN` | `server/src/core/config.ts`, `server/src/core/smsNotifications.ts` | unset | Required for Twilio round links; must be HTTPS and not localhost. |
+| `EDELPHI_TWILIO_WEBHOOK_BASE_URL` | `server/src/core/config.ts`, `server/src/core/smsProvider.ts` | unset | Required to validate Twilio webhook signatures against the exact public webhook URL; must be HTTPS and not localhost. |
+| `EDELPHI_TWILIO_STATUS_CALLBACK_URL` | `server/src/core/config.ts`, `server/src/core/smsProvider.ts` | unset | Optional explicit Twilio status callback URL; defaults to `<EDELPHI_TWILIO_WEBHOOK_BASE_URL>/sms/webhook` when Twilio sends are enabled. |
+| `TWILIO_ACCOUNT_SID` | `server/src/core/config.ts`, `server/src/core/smsProvider.ts` | unset | Required for Twilio sends and webhook signature validation. Secret-adjacent account identifier; do not commit. |
+| `TWILIO_AUTH_TOKEN` | `server/src/core/config.ts`, `server/src/core/smsProvider.ts` | unset | Required Twilio secret for API auth and webhook validation. Never commit, paste into prompts, screenshots, or evidence. |
+| `TWILIO_MESSAGING_SERVICE_SID` | `server/src/core/config.ts`, `server/src/core/smsProvider.ts` | unset | Required Twilio Messaging Service SID for sends. Configure opt-out/help behavior and carrier registration in Twilio before real use. |
 
 ## Email-Related
 

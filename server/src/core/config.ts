@@ -18,6 +18,14 @@ export type ServerConfig = {
   phoneOtpTtlMinutes: number;
   smsProvider: "mock" | "twilio";
   smsWebhookSecret: string | null;
+  realSmsEnabled: boolean;
+  realSmsAcknowledged: boolean;
+  publicParticipantOrigin: string | null;
+  twilioAccountSid: string | null;
+  twilioAuthToken: string | null;
+  twilioMessagingServiceSid: string | null;
+  twilioWebhookBaseUrl: string | null;
+  twilioStatusCallbackUrl: string | null;
 };
 
 function parsePort(value: string | undefined): number {
@@ -53,6 +61,11 @@ function parsePositiveInt(value: string | undefined, fallback: number, name: str
   return parsed;
 }
 
+function nonEmpty(value: string | undefined): string | null {
+  const trimmed = value?.trim();
+  return trimmed ? trimmed : null;
+}
+
 export function getServerConfig(): ServerConfig {
   const environment = process.env.NODE_ENV === "production"
     ? "production"
@@ -78,5 +91,13 @@ export function getServerConfig(): ServerConfig {
     phoneOtpTtlMinutes: parsePositiveInt(process.env.EDELPHI_PHONE_OTP_TTL_MINUTES, 10, "phone_otp_ttl_minutes"),
     smsProvider: process.env.EDELPHI_SMS_PROVIDER === "twilio" ? "twilio" : "mock",
     smsWebhookSecret: process.env.EDELPHI_SMS_WEBHOOK_SECRET ?? null,
+    realSmsEnabled: process.env.EDELPHI_ENABLE_REAL_SMS === "true",
+    realSmsAcknowledged: process.env.EDELPHI_REAL_SMS_ACK === "TWILIO_REAL_SMS_REVIEWED_AND_APPROVED",
+    publicParticipantOrigin: nonEmpty(process.env.EDELPHI_PUBLIC_PARTICIPANT_ORIGIN),
+    twilioAccountSid: nonEmpty(process.env.TWILIO_ACCOUNT_SID),
+    twilioAuthToken: nonEmpty(process.env.TWILIO_AUTH_TOKEN),
+    twilioMessagingServiceSid: nonEmpty(process.env.TWILIO_MESSAGING_SERVICE_SID),
+    twilioWebhookBaseUrl: nonEmpty(process.env.EDELPHI_TWILIO_WEBHOOK_BASE_URL),
+    twilioStatusCallbackUrl: nonEmpty(process.env.EDELPHI_TWILIO_STATUS_CALLBACK_URL),
   };
 }

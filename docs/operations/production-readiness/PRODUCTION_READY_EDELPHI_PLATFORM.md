@@ -229,6 +229,7 @@ Goal: make the participant experience openable on phones, with SMS-linked entry 
 Phase 3 plan/evidence matrix: [PHASE3_PHONE_SMS_CANDIDATE_PLAN.md](./PHASE3_PHONE_SMS_CANDIDATE_PLAN.md).
 SMS copy governance note: [PHASE3_SMS_COPY_GOVERNANCE.md](./PHASE3_SMS_COPY_GOVERNANCE.md).
 Magic-link privacy review: [PHASE3_MAGIC_LINK_PRIVACY_REVIEW.md](./PHASE3_MAGIC_LINK_PRIVACY_REVIEW.md).
+Twilio real-SMS track: [PHASE3_TWILIO_REAL_SMS_TRACK.md](./PHASE3_TWILIO_REAL_SMS_TRACK.md).
 
 Current Phase 3 status as of 2026-05-14: **PARTIAL IMPLEMENTATION / INTERNAL EVIDENCE RECORDED** and **NOT READY FOR HUMAN TESTING**.
 
@@ -244,6 +245,7 @@ Completion snapshot:
 Phase 3 blocker interpretation:
 
 - SMS remains mock/sandbox/internal-only. Real provider credentials, telecom/compliance readiness, and production SMS operations remain deferred.
+- Twilio real-SMS plumbing now has a gated implementation track, but it remains disabled by default and does not close real-SMS readiness, telecom compliance, privacy/security review, or human-testing approval.
 - Opaque-link, token-privacy, and SMS audit boundaries are implemented for engineering scope, but these controls still require human-observed phone evidence and signoff artifacts.
 - Mobile web is the required phone path for this candidate; PWA install/offline behavior and native mobile app paths remain out of scope unless separately approved.
 
