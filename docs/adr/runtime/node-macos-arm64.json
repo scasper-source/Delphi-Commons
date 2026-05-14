@@ -1,0 +1,19 @@
+{
+  "schemaVersion": "1.0.0",
+  "runtimeId": "node-macos-arm64",
+  "platform": "macos",
+  "arch": "arm64",
+  "nodeVersion": "24.15.0",
+  "npmVersion": "11.12.1",
+  "source": "https://nodejs.org/dist/v24.15.0/node-v24.15.0-darwin-arm64.tar.gz",
+  "sha256": "c4f40f9f6d44df7f35a3f251f4e7f962f662cce9ff0caef9f6b8e44c8f4f6b5b",
+  "license": "Node.js license (MIT-like, see bundled LICENSE)",
+  "bundledRuntimeLocation": "runtime/node",
+  "nodeExecutable": "runtime/node/bin/node",
+  "npmIncluded": false,
+  "npmUsedAtRuntime": false,
+  "notes": [
+    "Apple Silicon/arm64 is implemented for current internal Phase 2 evidence path.",
+    "Intel Mac/x64 runtime metadata and package are deferred pending dedicated implementation and evidence in a future PR."
+  ]
+}

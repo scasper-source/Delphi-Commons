@@ -30,6 +30,11 @@ SERVER_ENTRY="$SERVER_RUNTIME_DIR/dist/index.js"
 STATIC_SERVER="$PACKAGE_ROOT/tools/static-file-server.mjs"
 UI_ROOT="$PACKAGE_ROOT/app/dist"
 
+NODE_COMMAND_DEFAULT="${EDELPHI_PORTABLE_NODE_EXE:-node}"
+NodeCommand="$NODE_COMMAND_DEFAULT"
+SERVER_NODE_MODULES_SOURCE="${EDELPHI_SERVER_NODE_MODULES_SOURCE:-}"
+SKIP_RUNTIME_NPM_INSTALL="${EDELPHI_SKIP_RUNTIME_NPM_INSTALL:-0}"
+
 ensure_dirs() {
   mkdir -p "$RUNTIME_ROOT" "$STATE_DIR" "$LOGS_DIR" "$EVIDENCE_DIR" "$DB_DIR" "$AUDIT_DIR" "$EXPORTS_DIR" "$BACKUPS_DIR" "$SERVER_RUNTIME_DIR"
 }
@@ -215,6 +220,15 @@ sync_runtime_server() {
 }
 
 ensure_server_dependencies() {
+  if [[ -d "$SERVER_NODE_MODULES_SOURCE" ]]; then
+    rm -rf "$SERVER_RUNTIME_DIR/node_modules"
+    cp -R "$SERVER_NODE_MODULES_SOURCE" "$SERVER_RUNTIME_DIR/node_modules"
+    return 0
+  fi
+  if [[ "$SKIP_RUNTIME_NPM_INSTALL" == "1" ]]; then
+    echo "Packaged node_modules source missing and runtime npm install disabled." >&2
+    exit 1
+  fi
   if [[ ! -d "$SERVER_RUNTIME_DIR/node_modules" ]]; then
     npm --prefix "$SERVER_RUNTIME_DIR" ci --omit=dev
   fi
@@ -292,7 +306,7 @@ start_flow() {
     HOST="$API_HOST" PORT="$API_PORT" NODE_ENV=production \
       EDELPHI_DATA_DIR="$DB_DIR" EDELPHI_AUDIT_DIR="$AUDIT_DIR" EDELPHI_BACKUP_DIR="$BACKUPS_DIR" \
       EDELPHI_ALLOWED_ORIGINS="$UI_URL" \
-      node "$SERVER_ENTRY" >>"$backend_out" 2>>"$backend_err" &
+      "$NodeCommand" "$SERVER_ENTRY" >>"$backend_out" 2>>"$backend_err" &
     child_pid=$!
     echo "$child_pid" > "$BACKEND_PID_FILE"
     disown "$child_pid" 2>/dev/null || true
@@ -301,7 +315,7 @@ start_flow() {
 
   (
     cd "$PACKAGE_ROOT"
-    node "$STATIC_SERVER" --root "$UI_ROOT" --host "$UI_HOST" --port "$UI_PORT" >>"$ui_out" 2>>"$ui_err" &
+    "$NodeCommand" "$STATIC_SERVER" --root "$UI_ROOT" --host "$UI_HOST" --port "$UI_PORT" >>"$ui_out" 2>>"$ui_err" &
     child_pid=$!
     echo "$child_pid" > "$UI_PID_FILE"
     disown "$child_pid" 2>/dev/null || true

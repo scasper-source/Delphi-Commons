@@ -157,3 +157,12 @@ Specific prior defects closed by this rerun:
 - high-severity server audit finding at the tested commit.
 
 Remaining boundary: this is one Apple Silicon internal engineering rerun. It does not provide Intel Mac coverage, signed/notarized distribution evidence, installer evidence, accessibility evidence, security certification, pilot readiness, production readiness, or human-subjects readiness.
+
+
+## 2026-05-14 bundled-runtime internal hardening update
+
+- macOS Phase 2 packaging now uses `scripts/packaging/macos-portable.mjs` via thin shell entrypoint `scripts/macos/build-operator-portable-package.sh`.
+- Bundled runtime target implemented in this phase: Apple Silicon `macos/arm64` with Node `24.15.0` metadata at `docs/adr/runtime/node-macos-arm64.json`.
+- Intel Mac `x64` remains deferred and is not claimed supported in this package line.
+- Build-time still requires local Node/npm in the source checkout. Runtime lifecycle uses packaged Node (`scripts/macos/portable-bundled-runtime.sh`) and does not require ambient `node`, `npm`, or `npx`.
+- Signing, notarization, Gatekeeper/quarantine compatibility, platform support readiness, pilot readiness, production readiness, and human-subject readiness remain out of scope and NOT CLAIMED.
