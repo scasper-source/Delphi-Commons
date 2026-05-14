@@ -45,3 +45,12 @@ Recorded evidence:
 ## Non-claims
 
 This checklist is not evidence by itself and does **not** claim macOS support readiness, pilot readiness, or production readiness. The 2026-05-14 rerun covers one Apple Silicon Mac only.
+
+
+## 2026-05-14 bundled-runtime internal hardening update
+
+- macOS Phase 2 packaging now uses `scripts/packaging/macos-portable.mjs` via thin shell entrypoint `scripts/macos/build-operator-portable-package.sh`.
+- Bundled runtime target implemented in this phase: Apple Silicon `macos/arm64` with Node `24.15.0` metadata at `docs/adr/runtime/node-macos-arm64.json`.
+- Intel Mac `x64` remains deferred and is not claimed supported in this package line.
+- Build-time still requires local Node/npm in the source checkout. Runtime lifecycle uses packaged Node (`scripts/macos/portable-bundled-runtime.sh`) and does not require ambient `node`, `npm`, or `npx`.
+- Signing, notarization, Gatekeeper/quarantine compatibility, platform support readiness, pilot readiness, production readiness, and human-subject readiness remain out of scope and NOT CLAIMED.
