@@ -1,21 +1,22 @@
 # macOS Operator Portable/Internal Package ADR (Phase 2 Planning)
 
-Status: **MACOS OPERATOR PORTABLE PACKAGE PLANNING RECORDED**.
+Status: **MACOS OPERATOR PORTABLE PACKAGE DECISION AND EVIDENCE RECORDED**.
 Decision label: **NOT READY FOR HUMAN TESTING**.
 Phase status: **Phase 2 Downloadable Laptop Operator Candidate remains IN PROGRESS**.
-Date basis: **2026-05-12**.
+Date basis: **2026-05-14**.
 Track: **`human_testing_candidate`**.
 
 ## Purpose
 
 Record the planned Phase 2 path for a future macOS laptop operator portable/internal candidate package, without changing current Windows package behavior and without overclaiming macOS support/readiness.
 
-This ADR is planning-only documentation. It does not implement scripts, packaging automation, installer behavior, signing/notarization, updater flow, real SMS, PWA, native mobile, or external AI behavior.
+This ADR records the macOS internal candidate packaging decision and evidence boundary. It does not claim installer behavior, signing/notarization, updater flow, real SMS, PWA, native mobile, external AI behavior, macOS support readiness, or human-testing readiness.
 
 ## Decision Summary
 
-- macOS is **planned** as a future laptop operator path in Phase 2.
+- macOS is tracked as an internal laptop operator path in Phase 2.
 - one Apple Silicon internal engineering runtime run was recorded on **2026-05-13** with partial package/build/start evidence and lifecycle defects; this does **not** establish macOS support readiness or human-testing readiness.
+- one post-fix Apple Silicon internal engineering lifecycle rerun was recorded on **2026-05-14** at commit `56b37b7494e9b9c796de4a80010d290307ac3a50`; it passed for the previously observed portable lifecycle defects, still without establishing macOS support readiness or human-testing readiness.
 - The product remains **NOT READY FOR HUMAN TESTING**.
 - Phase 2 remains **IN PROGRESS**.
 
@@ -86,23 +87,23 @@ Behavior expectations:
 - no secrets in package artifacts.
 - no claim of deployment, pilot, or production suitability.
 
-## Runtime Prerequisite Decision (Open)
+## Runtime Prerequisite Decision
 
-The macOS runtime dependency posture is unresolved for Phase 2 planning and depends on broader candidate packaging direction:
+The current macOS Phase 2 internal candidate uses local Node.js/npm as a documented prerequisite. A bundled portable runtime remains deferred to a later candidate track.
 
-- Option A: local Node.js/npm prerequisite (documented) for first macOS internal candidate.
-- Option B: bundled portable runtime in a later macOS candidate.
+Clean-worktree evidence on 2026-05-14 confirmed that packaging fails before dependencies are installed (`tsc` unavailable), then passes after:
 
-Current decision state:
+- `npm --prefix app ci`
+- `npm --prefix server ci`
 
-- **Unresolved** pending/paired with the Windows bundled-runtime vs local-prerequisite decision and associated evidence.
+This is expected for the current candidate and is not a bundled-runtime claim.
 
 ## Evidence Status and Required Next Evidence
 
 Current macOS evidence status:
 
 - one Apple Silicon internal engineering runtime run recorded on **2026-05-13** (partial positive evidence with lifecycle defects).
-- post-fix real macOS lifecycle rerun remains required before any macOS support/readiness statement.
+- one post-fix Apple Silicon internal engineering lifecycle rerun recorded on **2026-05-14** passed for the previously observed lifecycle defects.
 
 Minimum evidence required before any macOS support/readiness statement:
 
@@ -112,7 +113,7 @@ Minimum evidence required before any macOS support/readiness statement:
 - runtime-root path evidence (including logs/evidence/backups/db/audit/exports/state);
 - known-limitations and non-claims evidence kept visible.
 
-Until that evidence exists, macOS remains planning-only for this track.
+This evidence now exists for one Apple Silicon machine only. macOS support/readiness statements still require a separate support-scope decision, plus any required Intel Mac, macOS-version, signing/notarization, Gatekeeper, accessibility, and security evidence.
 
 ## Explicit Limitations (Current)
 

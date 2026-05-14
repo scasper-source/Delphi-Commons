@@ -3,14 +3,16 @@
 Status: **MACOS OPERATOR PORTABLE RUNBOOK RECORDED / INTERNAL ENGINEERING EVIDENCE ONLY**.
 Decision label: **NOT READY FOR HUMAN TESTING**.
 Phase status: **Phase 2 Downloadable Laptop Operator Candidate remains IN PROGRESS**.
-Date basis: **2026-05-13**.
+Date basis: **2026-05-14**.
 Track: **`human_testing_candidate`**.
 
 ## Scope and Safety Boundary
 
 This runbook is a planning/operator procedure document for the planned macOS portable/internal operator package candidate. It is documentation-only at this time unless and until matching macOS scripts are present in the package.
 
-A pre-fix real Mac run was recorded on 2026-05-13 with partial package/build/start evidence and lifecycle defects. This runbook now serves as the post-fix rerun checklist, but no claim is made here that the runbook itself creates macOS support readiness or validated support status.
+A pre-fix real Mac run was recorded on 2026-05-13 with partial package/build/start evidence and lifecycle defects. A post-fix Apple Silicon real Mac rerun was recorded on 2026-05-14 and passed the lifecycle sequence for the previously observed defects.
+
+This runbook remains the operator procedure/checklist. The evidence record is separate: [MACOS_OPERATOR_PORTABLE_POST_FIX_LIFECYCLE_EVIDENCE_2026-05-14.md](./MACOS_OPERATOR_PORTABLE_POST_FIX_LIFECYCLE_EVIDENCE_2026-05-14.md).
 
 > Warning: command examples in this document are not operational evidence until they are executed and recorded on a real macOS machine.
 
@@ -113,7 +115,7 @@ Expected output patterns (examples; final strings depend on script implementatio
 - `status` after start: reports backend pid and UI pid running.
 - `health`: returns service health OK from `http://127.0.0.1:3001/health`.
 - `UI HEAD`: returns HTTP `200` from `http://127.0.0.1:4173/`.
-- `smoke`: verifies `http://127.0.0.1:3001/health` returns `status: ok` and `http://127.0.0.1:4173/` returns HTTP `200`; failures must be treated as failed internal engineering evidence, not as readiness evidence. The pre-fix tested package returned placeholder output, so a post-fix real Mac rerun must record the real smoke result.
+- `smoke`: verifies `http://127.0.0.1:3001/health` returns `status: ok` and `http://127.0.0.1:4173/` returns HTTP `200`; failures must be treated as failed internal engineering evidence, not as readiness evidence. The 2026-05-14 post-fix real Mac rerun recorded a real smoke PASS.
 - `backup`: creates timestamped backup under runtime `backups`.
 - `reset` while running: refuses reset and instructs stop-first behavior.
 - `restart`: stops/restarts and returns to healthy state.
@@ -200,6 +202,6 @@ This runbook does **not** claim:
 - PWA readiness;
 - native mobile readiness;
 - external AI readiness;
-- validated Mac execution evidence.
+- broad validated Mac support beyond the specific 2026-05-14 Apple Silicon internal engineering rerun.
 
 The decision label remains **NOT READY FOR HUMAN TESTING**.

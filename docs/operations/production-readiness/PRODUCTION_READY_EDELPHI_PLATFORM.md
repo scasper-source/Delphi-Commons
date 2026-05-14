@@ -2,7 +2,7 @@
 
 Status: planning document. This is not a production-readiness claim.
 
-Date basis: 2026-05-13.
+Date basis: 2026-05-14.
 
 This document resets the near-term readiness plan around the project's actual next goal:
 
@@ -119,8 +119,10 @@ Exit gate:
 
 Goal: decide exactly what the human testing candidate will include.
 
+Status: **COMPLETE AS SCOPE LOCK ONLY (2026-05-14).** This means the candidate surfaces are locked; it does **not** mean Phase 2 laptop evidence, Phase 3 phone/SMS evidence, Phase 4 binder evidence, or human testing is complete.
+
 Reference closeout note: [PHASE1_PRODUCT_SURFACE_LOCK_CLOSEOUT.md](./PHASE1_PRODUCT_SURFACE_LOCK_CLOSEOUT.md).
-Architecture ADR required before implementation: [BACKEND_PACKAGING_PROCESS_SUPERVISION_ADR.md](./BACKEND_PACKAGING_PROCESS_SUPERVISION_ADR.md).
+Architecture ADR recorded: [BACKEND_PACKAGING_PROCESS_SUPERVISION_ADR.md](./BACKEND_PACKAGING_PROCESS_SUPERVISION_ADR.md).
 Stage 1 Windows prototype implementation note: [WINDOWS_OPERATOR_CANDIDATE_PROTOTYPE.md](./WINDOWS_OPERATOR_CANDIDATE_PROTOTYPE.md).
 Stage 1 Windows portable package prototype note: [WINDOWS_OPERATOR_PORTABLE_PACKAGE.md](./WINDOWS_OPERATOR_PORTABLE_PACKAGE.md).
 Local Windows portable package evidence note: [WINDOWS_OPERATOR_PORTABLE_PACKAGE_LOCAL_EVIDENCE.md](./WINDOWS_OPERATOR_PORTABLE_PACKAGE_LOCAL_EVIDENCE.md).
@@ -132,34 +134,39 @@ macOS operator portable package static review evidence: [MACOS_OPERATOR_PORTABLE
 macOS operator portable runbook: [MACOS_OPERATOR_PORTABLE_RUNBOOK.md](./MACOS_OPERATOR_PORTABLE_RUNBOOK.md).
 macOS signing/distribution limitations note: [MACOS_SIGNING_DISTRIBUTION_LIMITATIONS.md](./MACOS_SIGNING_DISTRIBUTION_LIMITATIONS.md).
 macOS Apple Silicon defect-fix evidence note: [MACOS_OPERATOR_PORTABLE_APPLE_SILICON_DEFECT_FIX_EVIDENCE.md](./MACOS_OPERATOR_PORTABLE_APPLE_SILICON_DEFECT_FIX_EVIDENCE.md).
+macOS Apple Silicon post-fix lifecycle evidence: [MACOS_OPERATOR_PORTABLE_POST_FIX_LIFECYCLE_EVIDENCE_2026-05-14.md](./MACOS_OPERATOR_PORTABLE_POST_FIX_LIFECYCLE_EVIDENCE_2026-05-14.md).
 Stage 1 Windows evidence closeout note: [WINDOWS_OPERATOR_CANDIDATE_EVIDENCE_CLOSEOUT.md](./WINDOWS_OPERATOR_CANDIDATE_EVIDENCE_CLOSEOUT.md).
 Local Windows supervisor evidence note: [WINDOWS_OPERATOR_CANDIDATE_LOCAL_SUPERVISOR_EVIDENCE.md](./WINDOWS_OPERATOR_CANDIDATE_LOCAL_SUPERVISOR_EVIDENCE.md).
 
-Required decisions:
+Locked decisions:
 
-- Windows laptop operator path: included / excluded / deferred.
-- macOS laptop operator path: included / excluded / deferred.
-- Phone participant path: mobile web required.
-- SMS path: mock provider only / real provider sandbox / real provider production credentials deferred.
-- PWA path: included / excluded / deferred.
-- Native iOS/Android: excluded unless separately approved.
-- External AI mode: No External AI unless a named connector is separately approved.
+- Windows laptop operator path: **included** as the primary laptop operator path.
+- macOS laptop operator path: **included, evidence-dependent**; one 2026-05-14 Apple Silicon post-fix lifecycle rerun is recorded, but broad macOS support/readiness is not claimed.
+- Phone participant path: **mobile web required**.
+- SMS path: **mock/simulated/sandbox only** for the current candidate; real production SMS credentials and delivery operations are deferred.
+- PWA path: **deferred / disabled by default** for Phase 3; future PWA work requires a separate privacy ADR.
+- Native iOS/Android: **excluded/deferred unless separately approved**.
+- External AI mode: **No External AI unless a named connector is separately approved**.
 
-Required evidence:
+Recorded Phase 1 evidence:
 
-- Product surface matrix with included/deferred/not-shipped status.
-- Runtime architecture diagram for laptop operator package and phone/SMS participant entry.
-- Data storage and secret handling statement for laptop and phone paths.
-- Explicit unsupported-target statements.
+- Product surface matrix with included/deferred/not-shipped status is recorded in [PHASE1_PRODUCT_SURFACE_LOCK.md](./PHASE1_PRODUCT_SURFACE_LOCK.md).
+- Runtime architecture diagram for laptop operator package and phone/SMS participant entry is recorded in [PHASE1_PRODUCT_SURFACE_LOCK.md](./PHASE1_PRODUCT_SURFACE_LOCK.md).
+- Data storage and secret handling statement for laptop and phone paths is recorded in [PHASE1_PRODUCT_SURFACE_LOCK.md](./PHASE1_PRODUCT_SURFACE_LOCK.md).
+- Explicit unsupported-target statements are recorded in [PHASE1_PRODUCT_SURFACE_LOCK.md](./PHASE1_PRODUCT_SURFACE_LOCK.md).
 
-Exit gate:
+Exit gate result:
 
+- **SATISFIED FOR SCOPE LOCK ONLY.**
 - Human testing scope is locked for the candidate.
 - No surface is implied supported unless it has an evidence plan.
+- Remaining implementation, device evidence, package evidence, reviewer signoff, and human-observed testing are tracked in later phases and do not reopen Phase 1 unless the owner changes the product surface.
 
 ### Phase 2: Downloadable Laptop Operator Candidate
 
 Goal: make the app runnable by a human operator on a laptop without source-code editing.
+
+Status: **IN PROGRESS / INTERNAL PACKAGE EVIDENCE RECORDED / NOT READY FOR HUMAN TESTING**.
 
 Current progress:
 
@@ -167,46 +174,47 @@ Current progress:
 - **DONE:** Stage 1 Windows portable/internal package local evidence recorded.
 - **DONE:** Stage 1 Windows portable/internal package extracted-zip local evidence recorded.
 - **DONE:** Windows signing/distribution limitations recorded.
+- **DONE:** Runtime posture reconciled for the current Phase 2 candidate: local Node.js/npm remain build-time prerequisites; Windows bundled-runtime hardening now stages packaged Node and production dependencies for runtime lifecycle commands; Tauri, installers, signing, and updater tracks remain deferred.
 - **DONE:** macOS operator portable planning, prototype, static review, runbook, and signing/distribution limitation notes recorded.
 - **RECORDED (2026-05-13):** One Apple Silicon macOS internal engineering runtime run produced partial package/build/start evidence but exposed lifecycle supervision defects; this does **not** establish macOS support readiness or human-testing readiness.
 - **DONE:** macOS Apple Silicon package defects fixed and internal engineering verification recorded.
+- **RECORDED (2026-05-14):** Post-fix real Apple Silicon macOS lifecycle rerun passed for build, extraction, status, start, health, UI HEAD, smoke, restart, stop, reset-after-stopped, start/smoke/stop after reset, idempotent stopped-state behavior, clean-worktree build after dependencies, and server audit. This remains internal engineering evidence only and does **not** establish macOS support readiness or human-testing readiness.
 - **IN PROGRESS:** Phase 2 downloadable laptop operator candidate. The current Windows and macOS portable package evidence remains internal engineering evidence only and remains **NOT READY FOR HUMAN TESTING**.
-- **IN PROGRESS (2026-05-14):** Windows bundled-runtime hardening is wiring a pinned packaged Node runtime plus build-time production dependencies for the internal portable package. This is implementation hardening only until a named package is built, verified, and run from a downloaded package or clean profile.
-- **LOCAL BRANCH EVIDENCE (2026-05-14):** Windows bundled-runtime package build, package verification, focused packaging tests, and staged lifecycle commands passed locally with packaged Node 24.15.0. This is not second-machine, clean-profile, signing, SmartScreen, Defender, or platform-support evidence.
+- **RECORDED (2026-05-14):** Windows bundled-runtime package build, package verification, focused packaging tests, and staged lifecycle commands passed locally with packaged Node 24.15.0. This is not second-machine, clean-profile, signing, SmartScreen, Defender, or platform-support evidence.
+- **RECORDED:** Repeatable synthetic study setup baseline exists in [SYNTHETIC_STUDY_SETUP.md](../../qc/full-mock-trial/SYNTHETIC_STUDY_SETUP.md), but package-specific operator walkthrough evidence remains a downstream Phase 2/4 task.
 
 Remaining Phase 2 blockers before the downloadable laptop operator candidate gate can close:
 
-- Verify on a second Windows machine or clean Windows user profile.
+- Verify the Windows package on a second Windows machine or clean Windows user profile.
 - Runtime posture reconciled for current Phase 2 work: local Node/npm remain required at build time; the Windows bundled-runtime package now stages packaged Node and production dependencies for runtime lifecycle commands. Runtime no-local-Node behavior still needs downloaded-package or clean-profile confirmation before the Phase 2 gate closes.
 - **UPDATED (2026-05-14):** Portable bundled-runtime foundation ADR accepted for internal package hardening; shared packaging core exists and Windows runtime wiring has local branch evidence.
-- Execute full post-fix extracted-package lifecycle evidence on a real Mac after the Apple Silicon package fixes.
-- Capture signing/Gatekeeper/unsigned-package behavior evidence for the intended distribution path; current limitation notes are documentation only.
-- Preserve deferred status for Tauri, NSIS/MSI installer work, updater behavior, and platform support claims until separate evidence exists.
+- Capture or explicitly accept unsigned-package behavior for the intended Windows and macOS distribution channel. Limitation notes are recorded; signing/notarization/installer work remains deferred unless separately approved. The 2026-05-14 Apple Silicon rerun recorded no Gatekeeper/quarantine observations.
+- Decide whether one Apple Silicon Mac is enough for the current internal candidate, or whether Intel Mac / additional macOS version coverage is required before closing Phase 2.
+- Complete a package-specific Study Owner/operator walkthrough from docs, including synthetic study setup, roles, consent/invitations, rounds, curation, closeout, export, deletion/retention review, incident path, backup/restore, and support path.
+- Preserve deferred status for Tauri, NSIS/MSI installer work, updater behavior, signing/notarization, and platform support claims until separate evidence exists.
 
-Required implementation:
+Recorded Phase 2 implementation:
 
-- Documented install/start/stop/reset path for Windows.
-- Documented install/start/stop/reset path for macOS if in scope.
-- Local runtime directory policy for database, audit logs, exports, backups, and evidence artifacts.
-- Safe environment setup for development/testing secrets.
-- One-command or clearly sequenced smoke test.
-- Synthetic demo study seed or repeatable setup workflow.
-- Operator checklist that covers study setup, roles, consent, invitations, rounds, curation, closeout, export, deletion, incident, backup, restore, and support.
-- Packaging decision: current candidate remains script-based. Windows bundled-runtime hardening may remove local Node/npm as a runtime prerequisite after package build, but local Node/npm still remain build-time prerequisites and installer tracks remain deferred.
+- Windows install/start/stop/reset/backup/smoke paths are documented in [WINDOWS_OPERATOR_PORTABLE_PACKAGE.md](./WINDOWS_OPERATOR_PORTABLE_PACKAGE.md) and related evidence notes.
+- macOS install/start/stop/reset/backup/smoke paths are documented in [MACOS_OPERATOR_PORTABLE_PACKAGE.md](./MACOS_OPERATOR_PORTABLE_PACKAGE.md) and [MACOS_OPERATOR_PORTABLE_RUNBOOK.md](./MACOS_OPERATOR_PORTABLE_RUNBOOK.md).
+- Local runtime directory policy for database, audit logs, exports, backups, evidence artifacts, logs, and state is documented for Windows and macOS package paths.
+- Safe repository/package posture is documented: generated package evidence checks for no committed `.env`, secrets, runtime database, logs, backups, evidence artifacts, or package-root `node_modules`.
+- Smoke commands are documented and have internal engineering pass evidence for Windows and the 2026-05-14 Apple Silicon macOS rerun.
+- Packaging decision is recorded: current candidate uses script-based local packages; Windows bundled-runtime hardening may remove local Node/npm as a runtime prerequisite after package build, but local Node/npm still remain build-time prerequisites and installer tracks remain deferred.
+- Repeatable synthetic study setup exists as a baseline; package-specific operator walkthrough evidence is still required before closing Phase 2.
 
-Required evidence:
+Recorded Phase 2 evidence:
 
-- Clean checkout or downloaded package run result on Windows.
-- Clean checkout or downloaded package run result on macOS if in scope.
-- Commit hash and package/version identifier.
-- Smoke test output.
-- Known limitations.
-- No secrets in repo or package.
+- Windows extracted-zip package run result is recorded in [WINDOWS_OPERATOR_PORTABLE_PACKAGE_EXTRACTED_ZIP_EVIDENCE.md](./WINDOWS_OPERATOR_PORTABLE_PACKAGE_EXTRACTED_ZIP_EVIDENCE.md), with commit hash, package identifier, smoke output, runtime path evidence, known limitations, and package-root sensitive-material checks.
+- macOS Apple Silicon post-fix lifecycle run result is recorded in [MACOS_OPERATOR_PORTABLE_POST_FIX_LIFECYCLE_EVIDENCE_2026-05-14.md](./MACOS_OPERATOR_PORTABLE_POST_FIX_LIFECYCLE_EVIDENCE_2026-05-14.md), with commit hash, package identifier, smoke output, clean-worktree packaging evidence, runtime lifecycle evidence, and known limitations.
+- Windows and macOS signing/distribution limitation notes are recorded, but they do not provide signed installer, notarization, SmartScreen, Gatekeeper, enterprise distribution, or support-matrix evidence.
 
-Exit gate:
+Exit gate result:
 
-- Study Owner can launch the operator path from docs on a laptop.
-- The candidate is ready for controlled synthetic walkthrough, not pilot or production.
+- **NOT YET SATISFIED.**
+- Study Owner/operator launch from docs on a clean laptop profile remains to be evidenced.
+- The package path is close to controlled synthetic walkthrough readiness, but Phase 2 remains open until the remaining Windows clean-profile, distribution-scope, macOS support-scope, and operator walkthrough evidence is recorded.
+- Even after Phase 2 closes, the result is readiness for controlled synthetic walkthrough only, not pilot or production.
 
 ### Phase 3: Phone Participant And SMS Candidate
 

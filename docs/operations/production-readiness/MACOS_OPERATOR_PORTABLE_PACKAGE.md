@@ -1,14 +1,16 @@
 # macOS Operator Portable Package (Phase 2 Prototype/Internal)
 
-Status: **MACOS PORTABLE PACKAGE PROTOTYPE / PARTIAL MACOS RUNTIME EVIDENCE RECORDED / INTERNAL ENGINEERING EVIDENCE ONLY**.
+Status: **MACOS PORTABLE PACKAGE PROTOTYPE / POST-FIX APPLE SILICON LIFECYCLE EVIDENCE RECORDED / INTERNAL ENGINEERING EVIDENCE ONLY**.
 Decision label: **NOT READY FOR HUMAN TESTING**.
-Date basis: **2026-05-13**.
+Date basis: **2026-05-14**.
 
 ## Scope
 
 This document covers the scaffolded internal macOS portable operator package path for Phase 2. It is implementation scaffolding only.
 
-One Apple Silicon macOS internal engineering runtime run was performed on **2026-05-13**. It produced partial positive package/build/start evidence but exposed lifecycle defects. Follow-up script fixes and local package verification are recorded separately; a post-fix real macOS lifecycle rerun remains required. This does **not** establish macOS support readiness or human-testing readiness.
+One Apple Silicon macOS internal engineering runtime run was performed on **2026-05-13**. It produced partial positive package/build/start evidence but exposed lifecycle defects. Follow-up script fixes and local package verification were recorded separately.
+
+A post-fix real Apple Silicon macOS lifecycle rerun was performed on **2026-05-14** at commit `56b37b7494e9b9c796de4a80010d290307ac3a50` and passed for the previously observed lifecycle defects. This remains internal engineering evidence only and does **not** establish macOS support readiness or human-testing readiness.
 
 ## Builder
 
@@ -78,6 +80,7 @@ This prototype does **not** include or claim:
 - [macOS Operator Portable/Internal Package ADR (Phase 2 Planning)](./MACOS_OPERATOR_PORTABLE_PACKAGE_ADR.md)
 - [macOS Signing And Distribution Limitations (Phase 2)](./MACOS_SIGNING_DISTRIBUTION_LIMITATIONS.md)
 - [macOS Operator Portable Runbook (planned internal candidate)](./MACOS_OPERATOR_PORTABLE_RUNBOOK.md)
+- [macOS Operator Portable Post-Fix Lifecycle Evidence (2026-05-14)](./MACOS_OPERATOR_PORTABLE_POST_FIX_LIFECYCLE_EVIDENCE_2026-05-14.md)
 - [Windows Operator Portable Package (Stage 1 Prototype)](./WINDOWS_OPERATOR_PORTABLE_PACKAGE.md)
 - [Product Readiness Plan for eDelphi](./PRODUCTION_READY_EDELPHI_PLATFORM.md)
 
@@ -135,3 +138,22 @@ Test scope: one internal engineering run on a real Apple Silicon MacBook Air (Ma
 ### Explicit non-claims (preserved)
 
 This internal evidence does **not** claim production readiness, pilot readiness, human-subjects readiness, IRB/legal/security/accessibility certification, installer readiness, Windows support readiness, macOS support readiness, real SMS readiness, PWA readiness, native mobile readiness, external AI readiness, or open public release readiness.
+
+## 2026-05-14 Apple Silicon Post-Fix Lifecycle Rerun (Internal Engineering Evidence Only)
+
+Detailed evidence: [MACOS_OPERATOR_PORTABLE_POST_FIX_LIFECYCLE_EVIDENCE_2026-05-14.md](./MACOS_OPERATOR_PORTABLE_POST_FIX_LIFECYCLE_EVIDENCE_2026-05-14.md).
+
+Summary: the package built, extracted, started, reported accurate status, returned backend health, returned UI HTTP 200, passed real `smoke`, restarted with new listener PIDs, stopped cleanly, reset safely after stopped, restarted after reset, and preserved a clean stopped final state on a real Apple Silicon MacBook Air.
+
+Specific prior defects closed by this rerun:
+
+- clean-checkout/output-root behavior after dependency prerequisites;
+- PID supervision mismatch;
+- stale PID files misleading `status`;
+- restart not replacing old listeners correctly;
+- stop leaving listeners/state behind;
+- reset-after-stopped stale state;
+- placeholder `smoke`;
+- high-severity server audit finding at the tested commit.
+
+Remaining boundary: this is one Apple Silicon internal engineering rerun. It does not provide Intel Mac coverage, signed/notarized distribution evidence, installer evidence, accessibility evidence, security certification, pilot readiness, production readiness, or human-subjects readiness.
