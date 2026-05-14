@@ -166,53 +166,55 @@ Exit gate result:
 
 Goal: make the app runnable by a human operator on a laptop without source-code editing.
 
+Status: **IN PROGRESS / INTERNAL PACKAGE EVIDENCE RECORDED / NOT READY FOR HUMAN TESTING**.
+
 Current progress:
 
 - **DONE:** Stage 1 Windows operator supervisor local evidence recorded.
 - **DONE:** Stage 1 Windows portable/internal package local evidence recorded.
 - **DONE:** Stage 1 Windows portable/internal package extracted-zip local evidence recorded.
 - **DONE:** Windows signing/distribution limitations recorded.
+- **DONE:** Runtime posture reconciled for the current Phase 2 candidate: local Node.js/npm remain build-time prerequisites; Windows bundled-runtime hardening now stages packaged Node and production dependencies for runtime lifecycle commands; Tauri, installers, signing, and updater tracks remain deferred.
 - **DONE:** macOS operator portable planning, prototype, static review, runbook, and signing/distribution limitation notes recorded.
 - **RECORDED (2026-05-13):** One Apple Silicon macOS internal engineering runtime run produced partial package/build/start evidence but exposed lifecycle supervision defects; this does **not** establish macOS support readiness or human-testing readiness.
 - **DONE:** macOS Apple Silicon package defects fixed and internal engineering verification recorded.
 - **RECORDED (2026-05-14):** Post-fix real Apple Silicon macOS lifecycle rerun passed for build, extraction, status, start, health, UI HEAD, smoke, restart, stop, reset-after-stopped, start/smoke/stop after reset, idempotent stopped-state behavior, clean-worktree build after dependencies, and server audit. This remains internal engineering evidence only and does **not** establish macOS support readiness or human-testing readiness.
 - **IN PROGRESS:** Phase 2 downloadable laptop operator candidate. The current Windows and macOS portable package evidence remains internal engineering evidence only and remains **NOT READY FOR HUMAN TESTING**.
-- **IN PROGRESS (2026-05-14):** Windows bundled-runtime hardening is wiring a pinned packaged Node runtime plus build-time production dependencies for the internal portable package. This is implementation hardening only until a named package is built, verified, and run from a downloaded package or clean profile.
-- **LOCAL BRANCH EVIDENCE (2026-05-14):** Windows bundled-runtime package build, package verification, focused packaging tests, and staged lifecycle commands passed locally with packaged Node 24.15.0. This is not second-machine, clean-profile, signing, SmartScreen, Defender, or platform-support evidence.
+- **RECORDED (2026-05-14):** Windows bundled-runtime package build, package verification, focused packaging tests, and staged lifecycle commands passed locally with packaged Node 24.15.0. This is not second-machine, clean-profile, signing, SmartScreen, Defender, or platform-support evidence.
+- **RECORDED:** Repeatable synthetic study setup baseline exists in [SYNTHETIC_STUDY_SETUP.md](../../qc/full-mock-trial/SYNTHETIC_STUDY_SETUP.md), but package-specific operator walkthrough evidence remains a downstream Phase 2/4 task.
 
 Remaining Phase 2 blockers before the downloadable laptop operator candidate gate can close:
 
-- Verify on a second Windows machine or clean Windows user profile.
+- Verify the Windows package on a second Windows machine or clean Windows user profile.
 - Runtime posture reconciled for current Phase 2 work: local Node/npm remain required at build time; the Windows bundled-runtime package now stages packaged Node and production dependencies for runtime lifecycle commands. Runtime no-local-Node behavior still needs downloaded-package or clean-profile confirmation before the Phase 2 gate closes.
 - **UPDATED (2026-05-14):** Portable bundled-runtime foundation ADR accepted for internal package hardening; shared packaging core exists and Windows runtime wiring has local branch evidence.
-- Capture signing/Gatekeeper/unsigned-package behavior evidence for the intended distribution path; current limitation notes are documentation only. The 2026-05-14 Apple Silicon rerun recorded no Gatekeeper/quarantine observations.
+- Capture or explicitly accept unsigned-package behavior for the intended Windows and macOS distribution channel. Limitation notes are recorded; signing/notarization/installer work remains deferred unless separately approved. The 2026-05-14 Apple Silicon rerun recorded no Gatekeeper/quarantine observations.
 - Decide whether one Apple Silicon Mac is enough for the current internal candidate, or whether Intel Mac / additional macOS version coverage is required before closing Phase 2.
-- Preserve deferred status for Tauri, NSIS/MSI installer work, updater behavior, and platform support claims until separate evidence exists.
+- Complete a package-specific Study Owner/operator walkthrough from docs, including synthetic study setup, roles, consent/invitations, rounds, curation, closeout, export, deletion/retention review, incident path, backup/restore, and support path.
+- Preserve deferred status for Tauri, NSIS/MSI installer work, updater behavior, signing/notarization, and platform support claims until separate evidence exists.
 
-Required implementation:
+Recorded Phase 2 implementation:
 
-- Documented install/start/stop/reset path for Windows.
-- Documented install/start/stop/reset path for macOS if in scope.
-- Local runtime directory policy for database, audit logs, exports, backups, and evidence artifacts.
-- Safe environment setup for development/testing secrets.
-- One-command or clearly sequenced smoke test.
-- Synthetic demo study seed or repeatable setup workflow.
-- Operator checklist that covers study setup, roles, consent, invitations, rounds, curation, closeout, export, deletion, incident, backup, restore, and support.
-- Packaging decision: current candidate remains script-based. Windows bundled-runtime hardening may remove local Node/npm as a runtime prerequisite after package build, but local Node/npm still remain build-time prerequisites and installer tracks remain deferred.
+- Windows install/start/stop/reset/backup/smoke paths are documented in [WINDOWS_OPERATOR_PORTABLE_PACKAGE.md](./WINDOWS_OPERATOR_PORTABLE_PACKAGE.md) and related evidence notes.
+- macOS install/start/stop/reset/backup/smoke paths are documented in [MACOS_OPERATOR_PORTABLE_PACKAGE.md](./MACOS_OPERATOR_PORTABLE_PACKAGE.md) and [MACOS_OPERATOR_PORTABLE_RUNBOOK.md](./MACOS_OPERATOR_PORTABLE_RUNBOOK.md).
+- Local runtime directory policy for database, audit logs, exports, backups, evidence artifacts, logs, and state is documented for Windows and macOS package paths.
+- Safe repository/package posture is documented: generated package evidence checks for no committed `.env`, secrets, runtime database, logs, backups, evidence artifacts, or package-root `node_modules`.
+- Smoke commands are documented and have internal engineering pass evidence for Windows and the 2026-05-14 Apple Silicon macOS rerun.
+- Packaging decision is recorded: current candidate uses script-based local packages; Windows bundled-runtime hardening may remove local Node/npm as a runtime prerequisite after package build, but local Node/npm still remain build-time prerequisites and installer tracks remain deferred.
+- Repeatable synthetic study setup exists as a baseline; package-specific operator walkthrough evidence is still required before closing Phase 2.
 
-Required evidence:
+Recorded Phase 2 evidence:
 
-- Clean checkout or downloaded package run result on Windows.
-- Clean checkout or downloaded package run result on macOS if in scope.
-- Commit hash and package/version identifier.
-- Smoke test output.
-- Known limitations.
-- No secrets in repo or package.
+- Windows extracted-zip package run result is recorded in [WINDOWS_OPERATOR_PORTABLE_PACKAGE_EXTRACTED_ZIP_EVIDENCE.md](./WINDOWS_OPERATOR_PORTABLE_PACKAGE_EXTRACTED_ZIP_EVIDENCE.md), with commit hash, package identifier, smoke output, runtime path evidence, known limitations, and package-root sensitive-material checks.
+- macOS Apple Silicon post-fix lifecycle run result is recorded in [MACOS_OPERATOR_PORTABLE_POST_FIX_LIFECYCLE_EVIDENCE_2026-05-14.md](./MACOS_OPERATOR_PORTABLE_POST_FIX_LIFECYCLE_EVIDENCE_2026-05-14.md), with commit hash, package identifier, smoke output, clean-worktree packaging evidence, runtime lifecycle evidence, and known limitations.
+- Windows and macOS signing/distribution limitation notes are recorded, but they do not provide signed installer, notarization, SmartScreen, Gatekeeper, enterprise distribution, or support-matrix evidence.
 
-Exit gate:
+Exit gate result:
 
-- Study Owner can launch the operator path from docs on a laptop.
-- The candidate is ready for controlled synthetic walkthrough, not pilot or production.
+- **NOT YET SATISFIED.**
+- Study Owner/operator launch from docs on a clean laptop profile remains to be evidenced.
+- The package path is close to controlled synthetic walkthrough readiness, but Phase 2 remains open until the remaining Windows clean-profile, distribution-scope, macOS support-scope, and operator walkthrough evidence is recorded.
+- Even after Phase 2 closes, the result is readiness for controlled synthetic walkthrough only, not pilot or production.
 
 ### Phase 3: Phone Participant And SMS Candidate
 
