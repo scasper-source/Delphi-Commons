@@ -13,6 +13,7 @@ import {
   generateEvidenceTemplate,
   sha256File
 } from './core/index.mjs';
+import { verifyPackageEvidence } from './core/verification.mjs';
 
 const repoRoot = process.cwd();
 const command = process.argv[2] ?? 'build';
@@ -325,49 +326,17 @@ async function buildPackage() {
 }
 
 function verifyPackage() {
-  const manifestPath = path.join(packageRoot, 'package-manifest.json');
-  if (!fs.existsSync(manifestPath)) {
-    throw new Error(`Package manifest missing. Build package first: ${manifestPath}`);
+  const runtimeRoot = process.env.EDELPHI_RUNTIME_ROOT || path.resolve(packageRoot, '..', 'runtime-state');
+  const result = verifyPackageEvidence({
+    packageRoot,
+    runtimeRoot,
+    overclaimFiles: ['README.txt', 'evidence-template.md', 'package-manifest.json']
+  });
+  if (!result.ok) {
+    throw new Error(`Package verification failed:
+- ${result.failures.join('
+- ')}`);
   }
-  const manifest = readJson(manifestPath);
-  const inventory = packageInventory(packageRoot);
-  const checksums = buildChecksums(packageRoot, inventory);
-  if (JSON.stringify(manifest.inventory) !== JSON.stringify(inventory)) {
-    throw new Error('Package inventory does not match manifest inventory.');
-  }
-  if (JSON.stringify(manifest.checksums) !== JSON.stringify(checksums)) {
-    throw new Error('Package checksums do not match manifest checksums.');
-  }
-
-  const runtime = manifest.runtimeMetadata;
-  const requiredRuntimeFields = [
-    'nodeVersion',
-    'platform',
-    'arch',
-    'runtimeSource',
-    'runtimeSha256',
-    'runtimeLicense',
-    'bundledRuntimeRelativePath',
-    'nodeExecutableRelativePath',
-    'npmIncluded',
-    'npmUsedAtRuntime'
-  ];
-  for (const field of requiredRuntimeFields) {
-    if (!(field in runtime)) {
-      throw new Error(`Runtime metadata missing field: ${field}`);
-    }
-  }
-  if (runtime.npmIncluded !== false || runtime.npmUsedAtRuntime !== false) {
-    throw new Error('Windows internal package must not include or use npm at runtime.');
-  }
-  if (!fs.existsSync(path.join(packageRoot, runtime.nodeExecutableRelativePath))) {
-    throw new Error(`Packaged Node executable missing: ${runtime.nodeExecutableRelativePath}`);
-  }
-  if (!fs.existsSync(path.join(packageRoot, 'server/node_modules'))) {
-    throw new Error('Production server dependencies missing from package: server/node_modules');
-  }
-  assertNoAmbientRuntimeCommands(packageRoot);
-  console.log('Verification passed.');
 }
 
 if (command === 'build') {
