@@ -119,8 +119,10 @@ Exit gate:
 
 Goal: decide exactly what the human testing candidate will include.
 
+Status: **COMPLETE AS SCOPE LOCK ONLY (2026-05-14).** This means the candidate surfaces are locked; it does **not** mean Phase 2 laptop evidence, Phase 3 phone/SMS evidence, Phase 4 binder evidence, or human testing is complete.
+
 Reference closeout note: [PHASE1_PRODUCT_SURFACE_LOCK_CLOSEOUT.md](./PHASE1_PRODUCT_SURFACE_LOCK_CLOSEOUT.md).
-Architecture ADR required before implementation: [BACKEND_PACKAGING_PROCESS_SUPERVISION_ADR.md](./BACKEND_PACKAGING_PROCESS_SUPERVISION_ADR.md).
+Architecture ADR recorded: [BACKEND_PACKAGING_PROCESS_SUPERVISION_ADR.md](./BACKEND_PACKAGING_PROCESS_SUPERVISION_ADR.md).
 Stage 1 Windows prototype implementation note: [WINDOWS_OPERATOR_CANDIDATE_PROTOTYPE.md](./WINDOWS_OPERATOR_CANDIDATE_PROTOTYPE.md).
 Stage 1 Windows portable package prototype note: [WINDOWS_OPERATOR_PORTABLE_PACKAGE.md](./WINDOWS_OPERATOR_PORTABLE_PACKAGE.md).
 Local Windows portable package evidence note: [WINDOWS_OPERATOR_PORTABLE_PACKAGE_LOCAL_EVIDENCE.md](./WINDOWS_OPERATOR_PORTABLE_PACKAGE_LOCAL_EVIDENCE.md).
@@ -136,27 +138,29 @@ macOS Apple Silicon post-fix lifecycle evidence: [MACOS_OPERATOR_PORTABLE_POST_F
 Stage 1 Windows evidence closeout note: [WINDOWS_OPERATOR_CANDIDATE_EVIDENCE_CLOSEOUT.md](./WINDOWS_OPERATOR_CANDIDATE_EVIDENCE_CLOSEOUT.md).
 Local Windows supervisor evidence note: [WINDOWS_OPERATOR_CANDIDATE_LOCAL_SUPERVISOR_EVIDENCE.md](./WINDOWS_OPERATOR_CANDIDATE_LOCAL_SUPERVISOR_EVIDENCE.md).
 
-Required decisions:
+Locked decisions:
 
-- Windows laptop operator path: included / excluded / deferred.
-- macOS laptop operator path: included / excluded / deferred.
-- Phone participant path: mobile web required.
-- SMS path: mock provider only / real provider sandbox / real provider production credentials deferred.
-- PWA path: included / excluded / deferred.
-- Native iOS/Android: excluded unless separately approved.
-- External AI mode: No External AI unless a named connector is separately approved.
+- Windows laptop operator path: **included** as the primary laptop operator path.
+- macOS laptop operator path: **included, evidence-dependent**; one 2026-05-14 Apple Silicon post-fix lifecycle rerun is recorded, but broad macOS support/readiness is not claimed.
+- Phone participant path: **mobile web required**.
+- SMS path: **mock/simulated/sandbox only** for the current candidate; real production SMS credentials and delivery operations are deferred.
+- PWA path: **deferred / disabled by default** for Phase 3; future PWA work requires a separate privacy ADR.
+- Native iOS/Android: **excluded/deferred unless separately approved**.
+- External AI mode: **No External AI unless a named connector is separately approved**.
 
-Required evidence:
+Recorded Phase 1 evidence:
 
-- Product surface matrix with included/deferred/not-shipped status.
-- Runtime architecture diagram for laptop operator package and phone/SMS participant entry.
-- Data storage and secret handling statement for laptop and phone paths.
-- Explicit unsupported-target statements.
+- Product surface matrix with included/deferred/not-shipped status is recorded in [PHASE1_PRODUCT_SURFACE_LOCK.md](./PHASE1_PRODUCT_SURFACE_LOCK.md).
+- Runtime architecture diagram for laptop operator package and phone/SMS participant entry is recorded in [PHASE1_PRODUCT_SURFACE_LOCK.md](./PHASE1_PRODUCT_SURFACE_LOCK.md).
+- Data storage and secret handling statement for laptop and phone paths is recorded in [PHASE1_PRODUCT_SURFACE_LOCK.md](./PHASE1_PRODUCT_SURFACE_LOCK.md).
+- Explicit unsupported-target statements are recorded in [PHASE1_PRODUCT_SURFACE_LOCK.md](./PHASE1_PRODUCT_SURFACE_LOCK.md).
 
-Exit gate:
+Exit gate result:
 
+- **SATISFIED FOR SCOPE LOCK ONLY.**
 - Human testing scope is locked for the candidate.
 - No surface is implied supported unless it has an evidence plan.
+- Remaining implementation, device evidence, package evidence, reviewer signoff, and human-observed testing are tracked in later phases and do not reopen Phase 1 unless the owner changes the product surface.
 
 ### Phase 2: Downloadable Laptop Operator Candidate
 
