@@ -34,6 +34,7 @@ Status defaults: `NOT RUN`, `HUMAN_REQUIRED`, `SIGNOFF_REQUIRED`.
 - [macOS operator portable package evidence template](../templates/MACOS_OPERATOR_PORTABLE_PACKAGE_EVIDENCE_TEMPLATE.md)
 - [Windows portable package local evidence](../WINDOWS_OPERATOR_PORTABLE_PACKAGE_LOCAL_EVIDENCE.md)
 - [Windows extracted zip evidence](../WINDOWS_OPERATOR_PORTABLE_PACKAGE_EXTRACTED_ZIP_EVIDENCE.md)
+- [Windows bundled-runtime release asset evidence](../WINDOWS_PORTABLE_BUNDLED_RUNTIME_RELEASE_ASSET_EVIDENCE_2026-05-14.md)
 - [Phase 2 Windows second machine runbook](../PHASE2_WINDOWS_SECOND_MACHINE_RUNBOOK.md)
 - [Phase 2 macOS follow-up evidence checklist](../PHASE2_MACOS_FOLLOWUP_EVIDENCE_CHECKLIST.md)
 

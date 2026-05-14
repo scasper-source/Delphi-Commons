@@ -1,6 +1,6 @@
 # Windows Operator Portable Package
 
-Status: **PORTABLE PACKAGE PROTOTYPE / BUNDLED-RUNTIME HARDENING IN PROGRESS**.
+Status: **PORTABLE PACKAGE PROTOTYPE / BUNDLED-RUNTIME RELEASE-ASSET SMOKE RECORDED**.
 Decision label: **NOT READY FOR HUMAN TESTING**.
 Date basis: **2026-05-14**.
 
@@ -16,7 +16,7 @@ Date basis: **2026-05-14**.
 
 Stage 1 legacy package: **local Node/npm required at runtime**.
 
-Bundled-runtime hardening track: **local Node/npm are still required at build time**, but the staged internal package is designed so lifecycle commands use a packaged Windows `node.exe` and build-time production server dependencies. This track remains internal hardening evidence until a downloaded or clean-profile lifecycle run is recorded.
+Bundled-runtime hardening track: **local Node/npm are still required at build time**, but the staged internal package is designed so lifecycle commands use a packaged Windows `node.exe` and build-time production server dependencies. A downloaded `r2` GitHub release asset smoke is recorded for one local Windows user profile; clean-profile or second-machine evidence remains required before closing Phase 2.
 
 Bundled-runtime package rules:
 
@@ -97,8 +97,8 @@ The same wrapper supports `status`, `smoke`, `backup`, `restart`, `stop`, and `r
 ## Limitations
 
 - Local Node/npm dependency remains for package build.
-- Runtime no-local-Node behavior is an implementation target and package verification check, not clean-machine evidence until lifecycle is run from a downloaded package or clean profile.
-- Lifecycle evidence for the bundled-runtime package remains **NOT RUN** unless a named build records start/status/smoke/backup/restart/stop/reset output.
+- Runtime no-local-Node behavior is implemented for package lifecycle commands and covered by package verification; the downloaded `r2` release asset has local one-profile smoke evidence. Clean-machine or clean-profile evidence remains required before closing Phase 2.
+- Lifecycle evidence for the bundled-runtime package is recorded for the `r2` GitHub release asset start/status/browser/smoke/stop path. Backup, restart, reset, clean-profile, and second-machine evidence remain separate gates unless a named run records them.
 - The package is a portable/internal prototype, not a standalone installer or signed distribution artifact.
 - No installer (NSIS/MSI), signing, updater, or Tauri shell.
 - No real SMS provider delivery.
@@ -114,13 +114,15 @@ This prototype does **not** claim production readiness, pilot readiness, real hu
 
 - Verify on a second Windows machine or clean Windows user profile.
 - Build and verify a named bundled-runtime package artifact.
-- Run bundled-runtime lifecycle evidence from the extracted package.
+- Run bundled-runtime lifecycle evidence from the extracted package for backup, restart, reset, and clean-profile/second-machine coverage.
 - Verify package manifest integrity and included-file inventory for every candidate build.
 - Verify limitation messaging remains visible in docs and manifest.
 
 ## Local evidence
 
 - 2026-05-14 current-branch bundled-runtime validation: build, package verify, focused packaging tests, and staged lifecycle commands passed locally on Windows using packaged Node 24.15.0. Lifecycle sequence covered `status`, stopped-state `reset`, `start`, `status`, `smoke`, `backup`, `restart`, `status`, `smoke`, `stop`, and final `status`. This is not second-machine, clean-profile, signing, SmartScreen, Defender, or Windows platform-support evidence.
+- 2026-05-14 GitHub `r2` release asset smoke: downloaded release zip, extracted under a path with spaces, `start`, browser UI reachability, `status`, `smoke`, and `stop` passed. Evidence: [WINDOWS_PORTABLE_BUNDLED_RUNTIME_RELEASE_ASSET_EVIDENCE_2026-05-14.md](./WINDOWS_PORTABLE_BUNDLED_RUNTIME_RELEASE_ASSET_EVIDENCE_2026-05-14.md). This is not second-machine, clean-profile, signing, SmartScreen, Defender, installer, or Windows platform-support evidence.
 - [WINDOWS_OPERATOR_PORTABLE_PACKAGE_LOCAL_EVIDENCE.md](./WINDOWS_OPERATOR_PORTABLE_PACKAGE_LOCAL_EVIDENCE.md)
 - [WINDOWS_OPERATOR_PORTABLE_PACKAGE_EXTRACTED_ZIP_EVIDENCE.md](./WINDOWS_OPERATOR_PORTABLE_PACKAGE_EXTRACTED_ZIP_EVIDENCE.md)
+- [WINDOWS_PORTABLE_BUNDLED_RUNTIME_RELEASE_ASSET_EVIDENCE_2026-05-14.md](./WINDOWS_PORTABLE_BUNDLED_RUNTIME_RELEASE_ASSET_EVIDENCE_2026-05-14.md)
 - [WINDOWS_SIGNING_DISTRIBUTION_LIMITATIONS.md](./WINDOWS_SIGNING_DISTRIBUTION_LIMITATIONS.md)
