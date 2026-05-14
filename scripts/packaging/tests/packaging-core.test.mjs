@@ -3,7 +3,10 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
+import { pathToFileURL } from 'node:url';
 import {
+  resolveRepoRoot,
+  resolveUnderRoot,
   validatePackageConfig,
   buildManifest,
   buildRuntimeMetadata,
@@ -13,6 +16,16 @@ import {
   enforceRuntimePathPolicy,
   sha256File
 } from '../core/index.mjs';
+
+test('repo root resolution decodes file URL paths', () => {
+  const temp = fs.mkdtempSync(path.join(os.tmpdir(), 'packaging core space-'));
+  const repoRoot = path.join(temp, 'repo root');
+  const coreFile = path.join(repoRoot, 'scripts', 'packaging', 'core', 'index.mjs');
+  fs.mkdirSync(path.dirname(coreFile), { recursive: true });
+  fs.writeFileSync(coreFile, '', 'utf8');
+
+  assert.equal(resolveRepoRoot(pathToFileURL(coreFile).href), repoRoot);
+});
 
 test('config validation enforces 127.0.0.1', () => {
   assert.throws(() => validatePackageConfig({ label: 'a', track: 'b', platform: 'c', runtimeRootConvention: '/tmp', networkBindAddress: '0.0.0.0' }));
@@ -38,6 +51,17 @@ test('overclaim scan detects readiness overclaims', () => {
 
 test('runtime path policy forbids runtime under package root', () => {
   assert.throws(() => enforceRuntimePathPolicy({ packageRoot: '/tmp/pkg', runtimeRoot: '/tmp/pkg/runtime' }));
+});
+
+test('runtime path policy normalizes Windows path case', { skip: process.platform !== 'win32' }, () => {
+  assert.throws(() => enforceRuntimePathPolicy({
+    packageRoot: 'C:\\PackageRoot',
+    runtimeRoot: 'c:\\packageroot\\runtime'
+  }));
+});
+
+test('root path resolution normalizes Windows path case', { skip: process.platform !== 'win32' }, () => {
+  assert.equal(resolveUnderRoot('C:\\PackageRoot', 'c:\\packageroot\\child'), path.resolve('c:\\packageroot\\child'));
 });
 
 test('inventory + checksum generation works', () => {
