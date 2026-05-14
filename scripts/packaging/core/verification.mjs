@@ -29,8 +29,9 @@ const DEFAULT_FORBIDDEN_PATTERNS = [
   /(^|\/)\.git(\/|$)/i,
   /(^|\/)\.env(\.|$)/i,
   /(^|\/)(id_rsa|id_dsa|\.ssh|\.pem|\.p12|\.key)(\/|$)/i,
-  /(^|\/)(db|logs|backups|evidence|exports|state|server-runtime)(\/|$)/i,
-  /(secret|credential|token|otp|sms|phone.*content)/i,
+  /^(db|logs|backups|evidence|exports|state|server-runtime)(\/|$)/i,
+  /(^|\/)(secrets?|credentials?)(\/|\.|$)/i,
+  /(^|\/)(raw-)?(tokens?|otps?|sms-outbox|phone-content)(\.json|\.csv|\.txt|\/|$)/i,
   /\.(sqlite|db|log|bak|backup)$/i
 ];
 

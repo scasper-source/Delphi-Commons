@@ -283,7 +283,7 @@ function Start-Prototype {
     }
     $lanIp = Get-PrimaryLanIPv4
     if ($lanIp) {
-      Write-Host "Participant LAN URL (synthetic/internal testing only): http://$lanIp:$UiPort$ParticipantPath"
+      Write-Host "Participant LAN URL (synthetic/internal testing only): http://${lanIp}:$UiPort$ParticipantPath"
       Write-Host 'WARNING: Internal synthetic testing only. Do not use for production, pilot, or human-subjects claims.'
     } else {
       Write-Host 'LAN participant mode enabled but no LAN IP detected; participant LAN URL unavailable.'
