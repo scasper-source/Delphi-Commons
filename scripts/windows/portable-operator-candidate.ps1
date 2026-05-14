@@ -133,13 +133,23 @@ function Set-ProcessEnvAndStart([string]$filePath, [string[]]$arguments, [string
     [Environment]::SetEnvironmentVariable($key, $envVars[$key], 'Process')
   }
   try {
-    return Start-Process -FilePath $filePath -ArgumentList $arguments -PassThru -NoNewWindow -RedirectStandardOutput $stdoutLog -RedirectStandardError $stderrLog -WorkingDirectory $workingDirectory
+    return Start-Process -FilePath $filePath -ArgumentList (ConvertTo-ProcessArgumentList $arguments) -PassThru -NoNewWindow -RedirectStandardOutput $stdoutLog -RedirectStandardError $stderrLog -WorkingDirectory $workingDirectory
   }
   finally {
     foreach ($key in $envVars.Keys) {
       [Environment]::SetEnvironmentVariable($key, $previous[$key], 'Process')
     }
   }
+}
+
+function ConvertTo-ProcessArgument([string]$argument) {
+  if ($null -eq $argument) { return '""' }
+  if ($argument -notmatch '[\s"]') { return $argument }
+  return '"' + ($argument -replace '"', '\"') + '"'
+}
+
+function ConvertTo-ProcessArgumentList([string[]]$arguments) {
+  return ($arguments | ForEach-Object { ConvertTo-ProcessArgument $_ }) -join ' '
 }
 
 function Ensure-ServerDependencies {
@@ -240,7 +250,7 @@ function Start-Prototype {
   }
 
   $backend = Set-ProcessEnvAndStart -filePath $NodeCommand -arguments @($serverEntry) -workingDirectory $RuntimeServerDir -stdoutLog $backendOutLog -stderrLog $backendErrLog -envVars $backendEnv
-  $ui = Start-Process -FilePath $NodeCommand -ArgumentList @($staticServer,'--root',$uiRoot,'--host','127.0.0.1','--port',"$UiPort") -PassThru -NoNewWindow -RedirectStandardOutput $uiOutLog -RedirectStandardError $uiErrLog -WorkingDirectory $PackageRoot
+  $ui = Start-Process -FilePath $NodeCommand -ArgumentList (ConvertTo-ProcessArgumentList @($staticServer,'--root',$uiRoot,'--host','127.0.0.1','--port',"$UiPort")) -PassThru -NoNewWindow -RedirectStandardOutput $uiOutLog -RedirectStandardError $uiErrLog -WorkingDirectory $PackageRoot
 
   $deadline = (Get-Date).AddSeconds(45)
   $ready = $false

@@ -50,6 +50,14 @@ test('portable lifecycle script does not launch ambient node/npm/npx for runtime
   assert.doesNotMatch(lifecycle, /Start-Process\s+-FilePath\s+['"]?(node|npm|npx|npm\.cmd)/i);
 });
 
+test('portable lifecycle script quotes Start-Process arguments for paths with spaces', () => {
+  const lifecycle = fs.readFileSync(lifecyclePath, 'utf8');
+  assert.match(lifecycle, /function ConvertTo-ProcessArgument/);
+  assert.match(lifecycle, /function ConvertTo-ProcessArgumentList/);
+  assert.match(lifecycle, /Set-ProcessEnvAndStart[\s\S]*Start-Process[\s\S]*-ArgumentList \(ConvertTo-ProcessArgumentList \$arguments\)/);
+  assert.match(lifecycle, /\$ui = Start-Process[\s\S]*-ArgumentList \(ConvertTo-ProcessArgumentList @\(\$staticServer,'--root',\$uiRoot/);
+});
+
 test('manifest and checksums integrity when package exists', { skip: !fs.existsSync(manifestForPkgRoot) }, () => {
   const manifestPath = manifestForPkgRoot;
   assert.ok(fs.existsSync(manifestPath));
