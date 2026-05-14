@@ -2,9 +2,13 @@
   "schemaVersion": "1.0.0",
   "platform": "windows",
   "arch": "x64",
-  "nodeVersion": "20.19.5",
-  "npmVersion": "10.8.2",
-  "source": "https://nodejs.org/dist/v20.19.5/node-v20.19.5-win-x64.zip",
-  "sha256": "PINNED_AT_BUILD_TIME",
-  "license": "MIT"
+  "nodeVersion": "24.15.0",
+  "npmVersion": "11.12.1",
+  "source": "https://nodejs.org/dist/v24.15.0/node-v24.15.0-win-x64.zip",
+  "sha256": "cc5149eabd53779ce1e7bdc5401643622d0c7e6800ade18928a767e940bb0e62",
+  "license": "MIT",
+  "bundledRuntimeLocation": "runtime/node",
+  "nodeExecutable": "runtime/node/node.exe",
+  "npmIncluded": false,
+  "npmUsedAtRuntime": false
 }

@@ -51,18 +51,46 @@ export function validatePackageConfig(config) {
   return Object.freeze({ networkBindAddress: '127.0.0.1', ...config });
 }
 
-export function buildRuntimeMetadata({ nodeVersion, npmVersion, source, sourceSha256, sourceLicense, bundled = true }) {
-  if (!nodeVersion || !npmVersion || !source) {
-    throw new Error('Runtime metadata requires nodeVersion, npmVersion, and source.');
+export function buildRuntimeMetadata({
+  nodeVersion,
+  npmVersion = null,
+  platform = null,
+  arch = null,
+  source,
+  sourceSha256 = null,
+  sourceLicense = null,
+  bundled = true,
+  bundledRuntimeRelativePath = null,
+  nodeExecutableRelativePath = null,
+  npmIncluded = false,
+  npmUsedAtRuntime = false
+}) {
+  if (!nodeVersion || !source) {
+    throw new Error('Runtime metadata requires nodeVersion and source.');
+  }
+  if (bundled && (!sourceSha256 || !sourceLicense || !bundledRuntimeRelativePath || !nodeExecutableRelativePath)) {
+    throw new Error('Bundled runtime metadata requires sourceSha256, sourceLicense, bundledRuntimeRelativePath, and nodeExecutableRelativePath.');
+  }
+  if (npmUsedAtRuntime && !npmIncluded) {
+    throw new Error('Runtime metadata cannot use npm at runtime when npm is not included.');
   }
   return {
     schemaVersion: RUNTIME_METADATA_SCHEMA_VERSION,
     nodeVersion,
     npmVersion,
+    platform,
+    arch,
     source,
     sourceSha256,
     sourceLicense,
-    bundled
+    runtimeSource: source,
+    runtimeSha256: sourceSha256,
+    runtimeLicense: sourceLicense,
+    bundled,
+    bundledRuntimeRelativePath,
+    nodeExecutableRelativePath,
+    npmIncluded,
+    npmUsedAtRuntime
   };
 }
 
@@ -120,7 +148,7 @@ export function enforceRuntimePathPolicy({ packageRoot, runtimeRoot }) {
 export function generateEvidenceTemplate({ platform, outputPath }) {
   fs.writeFileSync(
     outputPath,
-    `# ${platform} Portable Bundled Runtime Evidence Template\n\n- Date:\n- Commit:\n- Package label:\n- Runtime metadata schema version: ${RUNTIME_METADATA_SCHEMA_VERSION}\n- Manifest schema version: ${MANIFEST_SCHEMA_VERSION}\n- Lifecycle execution: NOT RUN\n- Reason (if NOT RUN):\n`,
+    `# ${platform} Portable Bundled Runtime Evidence Template\n\nStatus: template only until executed with attached artifacts.\n\n- Date:\n- Commit:\n- Package label:\n- Package/version identifier:\n- Build host:\n- Runtime metadata schema version: ${RUNTIME_METADATA_SCHEMA_VERSION}\n- Manifest schema version: ${MANIFEST_SCHEMA_VERSION}\n\n## Build-Time Tooling\n\n- Local Node available for package build: NOT RUN\n- Local npm available for package build: NOT RUN\n- Production server dependencies installed during build: NOT RUN\n\n## Packaged Runtime\n\n- Packaged Node executable present: NOT RUN\n- Runtime uses packaged Node executable: NOT RUN\n- Local Node required after package build: NOT RUN\n- Local npm required after package build: NOT RUN\n- npm included in packaged runtime: NOT RUN\n- npm used during lifecycle commands: NOT RUN\n\n## Lifecycle Evidence\n\n| Check | Result | Evidence path / notes |\n| --- | --- | --- |\n| status before start | NOT RUN | |\n| start | NOT RUN | |\n| status after start | NOT RUN | |\n| smoke | NOT RUN | |\n| backup | NOT RUN | |\n| restart | NOT RUN | |\n| stop | NOT RUN | |\n| reset after stop | NOT RUN | |\n\n## Boundary\n\nThis template does not record production, pilot, real participant, installer, signing, SmartScreen, Defender, or platform-support approval.\n`,
     'utf8'
   );
 }

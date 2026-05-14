@@ -171,12 +171,14 @@ Current progress:
 - **RECORDED (2026-05-13):** One Apple Silicon macOS internal engineering runtime run produced partial package/build/start evidence but exposed lifecycle supervision defects; this does **not** establish macOS support readiness or human-testing readiness.
 - **DONE:** macOS Apple Silicon package defects fixed and internal engineering verification recorded.
 - **IN PROGRESS:** Phase 2 downloadable laptop operator candidate. The current Windows and macOS portable package evidence remains internal engineering evidence only and remains **NOT READY FOR HUMAN TESTING**.
+- **IN PROGRESS (2026-05-14):** Windows bundled-runtime hardening is wiring a pinned packaged Node runtime plus build-time production dependencies for the internal portable package. This is implementation hardening only until a named package is built, verified, and run from a downloaded package or clean profile.
+- **LOCAL BRANCH EVIDENCE (2026-05-14):** Windows bundled-runtime package build, package verification, focused packaging tests, and staged lifecycle commands passed locally with packaged Node 24.15.0. This is not second-machine, clean-profile, signing, SmartScreen, Defender, or platform-support evidence.
 
 Remaining Phase 2 blockers before the downloadable laptop operator candidate gate can close:
 
 - Verify on a second Windows machine or clean Windows user profile.
-- Runtime posture reconciled for current Phase 2 work: keep local Node/npm as the documented prerequisite for the current candidate; portable bundled runtime remains deferred.
-- **NEW (2026-05-14):** Portable bundled-runtime foundation ADR accepted for internal human-testing candidate packaging hardening; shared packaging core created while bundled runtime build/download remains deferred pending evidence.
+- Runtime posture reconciled for current Phase 2 work: local Node/npm remain required at build time; the Windows bundled-runtime package now stages packaged Node and production dependencies for runtime lifecycle commands. Runtime no-local-Node behavior still needs downloaded-package or clean-profile confirmation before the Phase 2 gate closes.
+- **UPDATED (2026-05-14):** Portable bundled-runtime foundation ADR accepted for internal package hardening; shared packaging core exists and Windows runtime wiring has local branch evidence.
 - Execute full post-fix extracted-package lifecycle evidence on a real Mac after the Apple Silicon package fixes.
 - Capture signing/Gatekeeper/unsigned-package behavior evidence for the intended distribution path; current limitation notes are documentation only.
 - Preserve deferred status for Tauri, NSIS/MSI installer work, updater behavior, and platform support claims until separate evidence exists.
@@ -190,7 +192,7 @@ Required implementation:
 - One-command or clearly sequenced smoke test.
 - Synthetic demo study seed or repeatable setup workflow.
 - Operator checklist that covers study setup, roles, consent, invitations, rounds, curation, closeout, export, deletion, incident, backup, restore, and support.
-- Packaging decision: current candidate uses script-based local package with local Node/npm prerequisite; bundled runtime and installer tracks remain deferred.
+- Packaging decision: current candidate remains script-based. Windows bundled-runtime hardening may remove local Node/npm as a runtime prerequisite after package build, but local Node/npm still remain build-time prerequisites and installer tracks remain deferred.
 
 Required evidence:
 
