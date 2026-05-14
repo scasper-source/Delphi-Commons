@@ -69,6 +69,7 @@ Use existing evidence as baseline. Do not rerun mock-trial work unless a change 
 | External collaborator smoke | External collaborator reported successful client/server build and start. | Build/start smoke only; not workflow validation. |
 | Human/deployment closeout | Evidence-gap binders/templates exist or are being prepared. | Gaps remain open until human testing is performed against a candidate. |
 | Phase 3 SMS candidate controls | Local mock STOP/HELP simulation, opt-in gates, resend limits, and staff permission tests added in server automated coverage. | Engineering-only local evidence; still not telecom/pilot/production readiness. |
+| Readiness claim controls | Packaging overclaim scanner now covers production/pilot/human-testing, IRB/ethics/legal/security/accessibility approval, real-SMS/PWA/native/public-release, installer/updater/signing/notarization, and Windows/macOS support-readiness language. | Guardrail only; it prevents overclaims in package evidence surfaces but does not replace human review. |
 
 ## Product Tracks
 
@@ -181,6 +182,7 @@ Current progress:
 - **RECORDED (2026-05-14):** Post-fix real Apple Silicon macOS lifecycle rerun passed for build, extraction, status, start, health, UI HEAD, smoke, restart, stop, reset-after-stopped, start/smoke/stop after reset, idempotent stopped-state behavior, clean-worktree build after dependencies, and server audit. This remains internal engineering evidence only and does **not** establish macOS support readiness or human-testing readiness.
 - **IN PROGRESS:** Phase 2 downloadable laptop operator candidate. The current Windows and macOS portable package evidence remains internal engineering evidence only and remains **NOT READY FOR HUMAN TESTING**.
 - **RECORDED (2026-05-14):** Windows bundled-runtime package build, package verification, focused packaging tests, and staged lifecycle commands passed locally with packaged Node 24.15.0. This is not second-machine, clean-profile, signing, SmartScreen, Defender, or platform-support evidence.
+- **RECORDED (2026-05-14):** Prompt 7 documentation/claim-scan cleanup was merged and then locally validated on main at `121a526`: app build passed, app tests passed 28/28, server tests passed, packaging/claim-scan tests passed 18/18, bundled-runtime package verification passed, app/server high-severity npm audits reported 0 vulnerabilities, and `git diff --check` passed. App lint had two existing React Hook dependency warnings and no errors.
 - **RECORDED:** Repeatable synthetic study setup baseline exists in [SYNTHETIC_STUDY_SETUP.md](../../qc/full-mock-trial/SYNTHETIC_STUDY_SETUP.md), but package-specific operator walkthrough evidence remains a downstream Phase 2/4 task.
 
 Remaining Phase 2 blockers before the downloadable laptop operator candidate gate can close:
@@ -207,6 +209,7 @@ Recorded Phase 2 evidence:
 
 - Windows extracted-zip package run result is recorded in [WINDOWS_OPERATOR_PORTABLE_PACKAGE_EXTRACTED_ZIP_EVIDENCE.md](./WINDOWS_OPERATOR_PORTABLE_PACKAGE_EXTRACTED_ZIP_EVIDENCE.md), with commit hash, package identifier, smoke output, runtime path evidence, known limitations, and package-root sensitive-material checks.
 - macOS Apple Silicon post-fix lifecycle run result is recorded in [MACOS_OPERATOR_PORTABLE_POST_FIX_LIFECYCLE_EVIDENCE_2026-05-14.md](./MACOS_OPERATOR_PORTABLE_POST_FIX_LIFECYCLE_EVIDENCE_2026-05-14.md), with commit hash, package identifier, smoke output, clean-worktree packaging evidence, runtime lifecycle evidence, and known limitations.
+- Prompt 7 local validation on 2026-05-14 recorded app build/test, server test, packaging/claim-scan tests, bundled-runtime package verification, app/server high-severity npm audit, and diff-check results on merged main.
 - Windows and macOS signing/distribution limitation notes are recorded, but they do not provide signed installer, notarization, SmartScreen, Gatekeeper, enterprise distribution, or support-matrix evidence.
 
 Exit gate result:
@@ -391,6 +394,11 @@ Minimum repo-verifiable checks:
 - mobile viewport checks at 320px, 390px, and 414px
 - documentation claim scan for overstatements
 - `git diff --check`
+
+Latest repo-verifiable validation snapshot:
+
+- 2026-05-14, merged main at `121a526`: `npm.cmd --prefix app run build` passed after rerun outside the local sandbox; `npm.cmd --prefix app run test` passed 28/28; `npm.cmd --prefix server test` passed; packaging/claim-scan tests passed 18/18; `powershell -ExecutionPolicy Bypass -File .\scripts\windows\portable-bundled-runtime.ps1 verify` passed; app and server `npm audit --audit-level=high` reported 0 vulnerabilities; `git diff --check` passed. `npm.cmd --prefix app run lint` produced two existing React Hook dependency warnings and no errors.
+- 2026-05-14, merged main at `121a526`: claim-scan follow-up coverage catches standalone `IRB approval`, combined `IRB/ethics approval`, and standalone `ethics approval` package overclaims.
 
 Minimum manual preflight checks:
 
