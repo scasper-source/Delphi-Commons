@@ -26,6 +26,7 @@ export type ServerConfig = {
   twilioMessagingServiceSid: string | null;
   twilioWebhookBaseUrl: string | null;
   twilioStatusCallbackUrl: string | null;
+  twilioConnectUrl: string | null;
 };
 
 function parsePort(value: string | undefined): number {
@@ -99,5 +100,6 @@ export function getServerConfig(): ServerConfig {
     twilioMessagingServiceSid: nonEmpty(process.env.TWILIO_MESSAGING_SERVICE_SID),
     twilioWebhookBaseUrl: nonEmpty(process.env.EDELPHI_TWILIO_WEBHOOK_BASE_URL),
     twilioStatusCallbackUrl: nonEmpty(process.env.EDELPHI_TWILIO_STATUS_CALLBACK_URL),
+    twilioConnectUrl: nonEmpty(process.env.EDELPHI_TWILIO_CONNECT_URL),
   };
 }

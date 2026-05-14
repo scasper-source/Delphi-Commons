@@ -41,6 +41,9 @@ The provider uses Twilio Messaging Services rather than direct `From` sender con
 
 ## Implemented Application Behavior
 
+- The operator UI now presents an SMS setup choice for privileged operators. SMS remains off unless the operator chooses the SMS path.
+- The setup prompt sends operators to a configured Twilio Connect/setup URL when `EDELPHI_TWILIO_CONNECT_URL` is set, otherwise to the Twilio Messaging Services Console.
+- The server exposes `/sms/setup-status` for privileged staff so the UI can show configuration readiness without returning Twilio credentials or SIDs.
 - Round-open SMS uses generic neutral copy and an opaque `/m/{token}` link.
 - Twilio round links use `EDELPHI_PUBLIC_PARTICIPANT_ORIGIN`; localhost links are rejected for real Twilio sends.
 - Phone verification OTP is sent by Twilio when the Twilio provider is enabled; development OTP echo is disabled for Twilio.

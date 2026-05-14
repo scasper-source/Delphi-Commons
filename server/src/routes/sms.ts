@@ -52,6 +52,37 @@ function registerUrlEncodedParser(app: FastifyInstance) {
   });
 }
 
+function twilioSetupStatus() {
+  const config = getServerConfig();
+  const connectUrl = config.twilioConnectUrl ?? "https://console.twilio.com/us1/develop/sms/services";
+  const required = {
+    provider_twilio: config.smsProvider === "twilio",
+    real_sms_enabled: config.realSmsEnabled,
+    real_sms_acknowledged: config.realSmsAcknowledged,
+    account_sid_configured: Boolean(config.twilioAccountSid),
+    auth_token_configured: Boolean(config.twilioAuthToken),
+    messaging_service_sid_configured: Boolean(config.twilioMessagingServiceSid),
+    public_participant_origin_configured: Boolean(config.publicParticipantOrigin),
+    webhook_base_url_configured: Boolean(config.twilioWebhookBaseUrl),
+  };
+  const ready = Object.values(required).every(Boolean);
+  return {
+    provider: config.smsProvider,
+    real_sms_enabled: config.realSmsEnabled,
+    real_sms_acknowledged: config.realSmsAcknowledged,
+    ready_for_real_sms_attempt: ready,
+    connect_url: connectUrl,
+    messaging_service_console_url: "https://console.twilio.com/us1/develop/sms/services",
+    required,
+    public_participant_origin_configured: Boolean(config.publicParticipantOrigin),
+    webhook_base_url_configured: Boolean(config.twilioWebhookBaseUrl),
+    status_callback_configured: Boolean(config.twilioStatusCallbackUrl || config.twilioWebhookBaseUrl),
+    account_sid_configured: Boolean(config.twilioAccountSid),
+    auth_token_configured: Boolean(config.twilioAuthToken),
+    messaging_service_sid_configured: Boolean(config.twilioMessagingServiceSid),
+  };
+}
+
 function participantActor(participantId: string) {
   return { userId: participantId, role: "participant", systemRoles: ["participant" as any], authSource: "invitation" as const };
 }
@@ -90,6 +121,10 @@ function latestRatingsForItem(itemId: string, roundNumber: number, responses: Re
 export async function smsRoutes(app: FastifyInstance) {
   registerUrlEncodedParser(app);
   const allowStaff = requireRole(["owner", "methods_steward", "privacy_lead", "admin"]);
+
+  app.get("/sms/setup-status", { preHandler: allowStaff }, async () => {
+    return { setup: twilioSetupStatus() };
+  });
 
   app.get("/studies/:studyId/versions/:versionId/sms-policy", { preHandler: allowStaff }, async (req, reply) => {
     const { studyId, versionId } = req.params as any;

@@ -33,6 +33,7 @@ import {
   type FinalResultSnapshot,
   type ParticipantFinalResponse,
   type SmsPolicy,
+  type SmsSetupStatus,
   type ParticipantContactPreference,
   type SmsNotification,
   type PhoneVerificationChallengeResponse,
@@ -116,6 +117,10 @@ const roleOrder: UserRole[] = [
 ];
 
 const DEMO_PARTICIPANT_ID = "demo-panelist-001";
+const SMS_SETUP_CHOICE_KEY = "edelphi.smsSetupChoice.v1";
+const TWILIO_SETUP_FALLBACK_URL = "https://console.twilio.com/us1/develop/sms/services";
+
+type SmsSetupChoice = "undecided" | "off" | "twilio";
 
 const statusLabels: Record<string, string> = {
   ReadyForReview: "Ready for review",
@@ -129,6 +134,79 @@ function participantInviteTokenFromLocation() {
 
   const hash = window.location.hash.startsWith("#") ? window.location.hash.slice(1) : window.location.hash;
   return new URLSearchParams(hash).get("invite");
+}
+
+function readSmsSetupChoice(): SmsSetupChoice {
+  try {
+    const stored = window.localStorage.getItem(SMS_SETUP_CHOICE_KEY);
+    return stored === "off" || stored === "twilio" ? stored : "undecided";
+  } catch {
+    return "undecided";
+  }
+}
+
+function storeSmsSetupChoice(choice: SmsSetupChoice) {
+  try {
+    if (choice === "undecided") {
+      window.localStorage.removeItem(SMS_SETUP_CHOICE_KEY);
+    } else {
+      window.localStorage.setItem(SMS_SETUP_CHOICE_KEY, choice);
+    }
+  } catch {
+    // Local storage can be unavailable in locked-down browser profiles.
+  }
+}
+
+function smsSetupProgress(setup: SmsSetupStatus | null): string {
+  if (!setup) return "Not checked";
+  const values = Object.values(setup.required);
+  const complete = values.filter(Boolean).length;
+  return `${complete}/${values.length} ready`;
+}
+
+function SmsSetupPrompt({
+  setup,
+  busy,
+  error,
+  onKeepOff,
+  onUseSms,
+  onRefresh,
+}: {
+  setup: SmsSetupStatus | null;
+  busy: boolean;
+  error: string | null;
+  onKeepOff: () => void;
+  onUseSms: () => void;
+  onRefresh: () => void;
+}) {
+  const connectUrl = setup?.connect_url ?? TWILIO_SETUP_FALLBACK_URL;
+  return (
+    <section className="sms-first-run-panel" aria-label="SMS setup choice">
+      <div>
+        <span className="eyebrow">Optional SMS setup</span>
+        <h2>Use text-message links for participants?</h2>
+        <p>
+          SMS is off until an operator chooses it and completes Twilio setup. The local package can continue without SMS.
+        </p>
+        {error ? <small className="inline-error">{humanizeBackendMessage(error)}</small> : null}
+      </div>
+      <div className="sms-first-run-actions">
+        <StatusBadge risk={setup?.ready_for_real_sms_attempt ? "success" : "warning"} label={smsSetupProgress(setup)} />
+        <button className="secondary-button" onClick={onKeepOff} type="button">
+          Keep SMS off
+        </button>
+        <button className="primary-button" onClick={onUseSms} type="button">
+          Use SMS
+        </button>
+        <a className="secondary-button link-button" href={connectUrl} rel="noreferrer" target="_blank">
+          Open Twilio
+        </a>
+        <button className="icon-text-button" disabled={busy} onClick={onRefresh} type="button">
+          {busy ? "Checking..." : "Refresh"}
+        </button>
+      </div>
+    </section>
+  );
 }
 
 function magicTokenFromLocation() {
@@ -542,6 +620,10 @@ function App() {
   const [finalResultSnapshot, setFinalResultSnapshot] = useState<FinalResultSnapshot | null>(null);
   const [finalResultBlockers, setFinalResultBlockers] = useState<string[]>(["final_result_snapshot_missing"]);
   const [participantFinalResponses, setParticipantFinalResponses] = useState<ParticipantFinalResponse[]>([]);
+  const [smsSetupChoice, setSmsSetupChoice] = useState<SmsSetupChoice>(readSmsSetupChoice);
+  const [smsSetupStatus, setSmsSetupStatus] = useState<SmsSetupStatus | null>(null);
+  const [smsSetupError, setSmsSetupError] = useState<string | null>(null);
+  const [smsSetupBusy, setSmsSetupBusy] = useState(false);
   const [finalResultMessage, setFinalResultMessage] = useState<string | null>(null);
   const [finalResultError, setFinalResultError] = useState<string | null>(null);
   const [finalResultBusy, setFinalResultBusy] = useState<string | null>(null);
@@ -559,6 +641,38 @@ function App() {
   const activeTitle = workflow.study?.title ?? selectedStudy.title;
   const activeStatus = workflow.version?.status ?? selectedStudy.status;
   const consensusLocked = Boolean(workflow.version?.consensus_rule_json ?? selectedStudy.consensusRule.locked);
+  const canSeeSmsSetup = role === "study_owner" || role === "security_privacy_lead" || role === "open_source_admin";
+  const showSmsSetupPrompt = canSeeSmsSetup && smsSetupChoice === "undecided" && !participantInviteToken && !magicToken;
+
+  async function loadSmsSetupStatus() {
+    if (!canSeeSmsSetup) return;
+    setSmsSetupBusy(true);
+    setSmsSetupError(null);
+    try {
+      const result = await conductorApi.getSmsSetupStatus(role);
+      setSmsSetupStatus(result.setup);
+    } catch (error) {
+      setSmsSetupError(error instanceof Error ? error.message : "Unable to load SMS setup status.");
+    } finally {
+      setSmsSetupBusy(false);
+    }
+  }
+
+  function chooseSmsSetup(choice: SmsSetupChoice) {
+    setSmsSetupChoice(choice);
+    storeSmsSetupChoice(choice);
+    if (choice === "twilio") {
+      setActiveModule("admin-security");
+      void loadSmsSetupStatus();
+    }
+  }
+
+  useEffect(() => {
+    if (canSeeSmsSetup && smsSetupChoice === "twilio") {
+      void loadSmsSetupStatus();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [role, smsSetupChoice]);
 
   useEffect(() => {
     function syncEntryTokensFromLocation() {
@@ -2314,6 +2428,17 @@ function App() {
         </header>
 
         <NextActionPanel nextAction={nextAction} onNavigate={setActiveModule} onRunCommand={runNextActionCommand} />
+
+        {showSmsSetupPrompt ? (
+          <SmsSetupPrompt
+            setup={smsSetupStatus}
+            busy={smsSetupBusy}
+            error={smsSetupError}
+            onKeepOff={() => chooseSmsSetup("off")}
+            onUseSms={() => chooseSmsSetup("twilio")}
+            onRefresh={loadSmsSetupStatus}
+          />
+        ) : null}
 
         <ModuleRenderer
           activeModule={visibleModule}
@@ -7832,6 +7957,8 @@ function AdminSecurityScreen({ role, workflow }: { role: UserRole; workflow: Con
   const [smsMessage, setSmsMessage] = useState<string | null>(null);
   const [smsError, setSmsError] = useState<string | null>(null);
   const [smsBusy, setSmsBusy] = useState(false);
+  const [smsSetup, setSmsSetup] = useState<SmsSetupStatus | null>(null);
+  const [smsSetupLoadError, setSmsSetupLoadError] = useState<string | null>(null);
   const activeStudyId = workflow.study?.id ?? null;
   const activeVersionId = workflow.version?.id ?? null;
   const canManageAccess = role === "study_owner" || role === "open_source_admin";
@@ -7839,6 +7966,22 @@ function AdminSecurityScreen({ role, workflow }: { role: UserRole; workflow: Con
   const canViewAI = canManageAI || role === "ethics_methods_steward" || role === "security_privacy_lead";
   const canManageAttrition = canManageAccess || role === "ethics_methods_steward";
   const canManageSms = canManageAccess || role === "security_privacy_lead";
+
+  async function loadSmsSetup() {
+    if (!canManageSms) return;
+    try {
+      const result = await conductorApi.getSmsSetupStatus(role);
+      setSmsSetup(result.setup);
+      setSmsSetupLoadError(null);
+    } catch (error) {
+      setSmsSetupLoadError(error instanceof Error ? error.message : "Unable to load SMS setup status.");
+    }
+  }
+
+  useEffect(() => {
+    void loadSmsSetup();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [role, canManageSms]);
 
   async function loadAccessReview() {
     if (!canManageAccess) return;
@@ -8551,8 +8694,34 @@ function AdminSecurityScreen({ role, workflow }: { role: UserRole; workflow: Con
           </WarningBanner>
         ) : (
           <>
+            <div className="setup-status-grid">
+              <article className="setup-status-card">
+                <div>
+                  <span className="eyebrow">Delivery provider</span>
+                  <h3>{smsSetup?.provider === "twilio" ? "Twilio selected" : "SMS provider not connected"}</h3>
+                  <p>Real texting requires Twilio account setup, an approved sender path, and configured public URLs.</p>
+                </div>
+                <StatusBadge risk={smsSetup?.ready_for_real_sms_attempt ? "success" : "warning"} label={smsSetupProgress(smsSetup)} />
+              </article>
+              <article className="setup-status-card">
+                <div>
+                  <span className="eyebrow">Connect</span>
+                  <h3>Twilio setup</h3>
+                  <p>Open Twilio to create or connect a Messaging Service before enabling real SMS.</p>
+                </div>
+                <div className="action-row compact-actions">
+                  <a className="secondary-button link-button" href={smsSetup?.connect_url ?? TWILIO_SETUP_FALLBACK_URL} rel="noreferrer" target="_blank">
+                    Open Twilio
+                  </a>
+                  <button className="secondary-button" onClick={loadSmsSetup} type="button">
+                    Refresh setup
+                  </button>
+                </div>
+              </article>
+            </div>
+            {smsSetupLoadError ? <WarningBanner title="SMS setup check blocked" risk="warning">{humanizeBackendMessage(smsSetupLoadError)}</WarningBanner> : null}
             <WarningBanner title="Neutral SMS wording" risk="info">
-              Texts say only that a round is open, provide a secure link, and remind participants that participation remains voluntary.
+              Texts use generic session-link language, include HELP/STOP, and avoid study-sensitive content.
             </WarningBanner>
             {smsPolicy ? (
               <div className="form-grid">

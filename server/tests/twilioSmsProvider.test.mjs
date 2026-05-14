@@ -8,6 +8,10 @@ import assert from "node:assert/strict";
 import crypto from "node:crypto";
 
 const { getSmsProvider } = await import("../dist/core/smsProvider.js");
+const Fastify = (await import("fastify")).default;
+const { getServerConfig } = await import("../dist/core/config.js");
+const { registerSecurity, resetRateLimitsForTests } = await import("../dist/core/security.js");
+const { smsRoutes } = await import("../dist/routes/sms.js");
 
 const accountSid = `AC${"a".repeat(32)}`;
 const authToken = "twilio-test-auth-token";
@@ -131,4 +135,38 @@ test("twilio webhook signature validation and parsers accept delivery and inboun
     body: "STOP",
     optOutType: "STOP",
   });
+});
+
+test("sms setup status exposes Twilio connection readiness without secrets", async (t) => {
+  resetTwilioEnv();
+  setBaseTwilioEnv();
+  process.env.EDELPHI_ENABLE_REAL_SMS = "true";
+  process.env.EDELPHI_REAL_SMS_ACK = "TWILIO_REAL_SMS_REVIEWED_AND_APPROVED";
+  process.env.EDELPHI_TWILIO_CONNECT_URL = "https://www.twilio.com/authorize/CNaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
+  t.after(resetTwilioEnv);
+
+  resetRateLimitsForTests();
+  const config = getServerConfig();
+  const app = Fastify({ logger: false, bodyLimit: config.bodyLimitBytes });
+  registerSecurity(app, config);
+  await app.register(smsRoutes);
+  t.after(async () => {
+    await app.close();
+  });
+
+  const response = await app.inject({
+    method: "GET",
+    url: "/sms/setup-status",
+    headers: { "x-user-id": "owner-1", "x-user-role": "owner" },
+  });
+  assert.equal(response.statusCode, 200, response.body);
+  const body = response.json();
+  assert.equal(body.setup.provider, "twilio");
+  assert.equal(body.setup.ready_for_real_sms_attempt, true);
+  assert.equal(body.setup.auth_token_configured, true);
+  assert.equal(body.setup.connect_url, "https://www.twilio.com/authorize/CNaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa");
+  const serialized = JSON.stringify(body);
+  assert.doesNotMatch(serialized, new RegExp(authToken));
+  assert.doesNotMatch(serialized, new RegExp(accountSid));
+  assert.doesNotMatch(serialized, new RegExp(messagingServiceSid));
 });

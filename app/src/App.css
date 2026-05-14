@@ -334,6 +334,60 @@
   background: #f4f7f5;
 }
 
+.sms-first-run-panel {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 16px;
+  align-items: center;
+  margin-bottom: 18px;
+  border: 1px solid #cfdcd5;
+  border-left: 5px solid #4d8fa4;
+  border-radius: 8px;
+  background: #ffffff;
+  padding: 16px 18px;
+  box-shadow: 0 1px 3px rgba(24, 42, 46, 0.06);
+}
+
+.sms-first-run-panel h2,
+.setup-status-card h3 {
+  margin: 4px 0 6px;
+  font-size: 1.08rem;
+  line-height: 1.25;
+}
+
+.sms-first-run-panel p,
+.setup-status-card p {
+  margin: 0;
+  color: #46575b;
+}
+
+.sms-first-run-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.setup-status-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.setup-status-card {
+  min-width: 0;
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: flex-start;
+  border: 1px solid #dbe4df;
+  border-radius: 8px;
+  padding: 14px;
+  background: #fbfdfc;
+}
+
 .screen-grid,
 .participant-flow {
   display: grid;
@@ -1130,6 +1184,36 @@
   color: #1f2a2e;
 }
 
+.link-button {
+  align-items: center;
+  display: inline-flex;
+  justify-content: center;
+  text-decoration: none;
+}
+
+.icon-text-button {
+  min-height: 44px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: #1f4f58;
+  cursor: pointer;
+  font-weight: 800;
+  padding: 9px 10px;
+}
+
+.icon-text-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.58;
+}
+
+.inline-error {
+  display: block;
+  margin-top: 8px;
+  color: #8a2c24;
+  font-weight: 700;
+}
+
 .danger-button {
   border-color: #d8aaa4;
   color: #79261f;
@@ -1791,7 +1875,9 @@ summary:focus-visible,
   .participant-flow,
   .curation-layout,
   .wizard-layout,
-  .export-center {
+  .export-center,
+  .sms-first-run-panel,
+  .setup-status-grid {
     grid-template-columns: 1fr;
   }
 }
@@ -1833,6 +1919,8 @@ summary:focus-visible,
 
   .topbar,
   .next-action,
+  .sms-first-run-panel,
+  .setup-status-card,
   .locked-rule,
   .audit-row,
   .report-row,
@@ -1853,6 +1941,10 @@ summary:focus-visible,
     gap: 12px;
   }
 
+  .sms-first-run-actions {
+    justify-content: stretch;
+  }
+
   .action-row,
   .candidate-actions,
   .output-actions,
@@ -1864,6 +1956,8 @@ summary:focus-visible,
   }
 
   .action-row > button,
+  .sms-first-run-actions > button,
+  .sms-first-run-actions > a,
   .candidate-actions > button,
   .output-actions > button,
   .saved-study-actions > button,

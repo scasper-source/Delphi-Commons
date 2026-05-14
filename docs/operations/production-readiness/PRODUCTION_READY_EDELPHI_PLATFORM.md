@@ -246,6 +246,7 @@ Phase 3 blocker interpretation:
 
 - SMS remains mock/sandbox/internal-only. Real provider credentials, telecom/compliance readiness, and production SMS operations remain deferred.
 - Twilio real-SMS plumbing now has a gated implementation track, but it remains disabled by default and does not close real-SMS readiness, telecom compliance, privacy/security review, or human-testing approval.
+- Downloaded-package operators now receive an SMS setup choice in the UI and can be directed to Twilio setup/Connect before study SMS policy configuration; the setup check returns readiness flags only, not secrets.
 - Opaque-link, token-privacy, and SMS audit boundaries are implemented for engineering scope, but these controls still require human-observed phone evidence and signoff artifacts.
 - Mobile web is the required phone path for this candidate; PWA install/offline behavior and native mobile app paths remain out of scope unless separately approved.
 

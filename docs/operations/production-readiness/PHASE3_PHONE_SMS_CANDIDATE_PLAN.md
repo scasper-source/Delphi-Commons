@@ -118,6 +118,7 @@ This plan does **not** claim:
 - Mock remains the default SMS provider.
 - Real Twilio sends require explicit environment gates, Twilio credentials, a Twilio Messaging Service SID, HTTPS public participant origin, and HTTPS public webhook base URL.
 - Added Twilio delivery callback handling at `/sms/webhook` and inbound STOP/HELP handling at `/sms/twilio/inbound`.
+- Added operator-facing SMS setup choice and non-secret setup status endpoint so downloaded packages can direct privileged operators to Twilio setup/Connect before SMS policy work.
 - Twilio webhook validation uses the Twilio `X-Twilio-Signature` model against the configured public webhook URL.
 - Phone verification OTP is sent through Twilio when the Twilio provider is enabled; development OTP echo is disabled for Twilio.
 - Real-SMS evidence remains **NOT RUN**. Twilio registration/sender approval, opt-out configuration, provider logs, privacy/security review, Data Custodian review, copy review, and human-use approval remain open.
