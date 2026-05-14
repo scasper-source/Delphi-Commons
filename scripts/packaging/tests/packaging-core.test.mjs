@@ -59,8 +59,8 @@ test('forbidden-material scan detects blocked names', () => {
 });
 
 test('overclaim scan detects readiness overclaims', () => {
-  const hits = scanOverclaimText('This is production-ready and ready for human testing.');
-  assert.ok(hits.length >= 2);
+  const hits = scanOverclaimText('This is production-ready, ready for human testing, and claims real SMS readiness and PWA readiness.');
+  assert.ok(hits.length >= 4);
 });
 
 test('runtime path policy forbids runtime under package root', () => {

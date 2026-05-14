@@ -224,16 +224,22 @@ Phase 3 plan/evidence matrix: [PHASE3_PHONE_SMS_CANDIDATE_PLAN.md](./PHASE3_PHON
 SMS copy governance note: [PHASE3_SMS_COPY_GOVERNANCE.md](./PHASE3_SMS_COPY_GOVERNANCE.md).
 Magic-link privacy review: [PHASE3_MAGIC_LINK_PRIVACY_REVIEW.md](./PHASE3_MAGIC_LINK_PRIVACY_REVIEW.md).
 
-Current Phase 3 status as of 2026-05-13: **PARTIAL IMPLEMENTATION / EVIDENCE IN PROGRESS** and **NOT READY FOR HUMAN TESTING**.
+Current Phase 3 status as of 2026-05-14: **PARTIAL IMPLEMENTATION / INTERNAL EVIDENCE RECORDED** and **NOT READY FOR HUMAN TESTING**.
 
 Completion snapshot:
 
-- Required implementation matrix items: 10 complete for local mock/sandbox scope, with PWA deferred for Phase 3.
-- Required evidence items: SMS mock/sandbox automation, SMS copy governance, link/token privacy remediation, and mobile task-flow automation are partial/local-only; iPhone/Safari and Android/Chrome real-device evidence are not run.
+- Required implementation matrix items: 10 complete for local mock/sandbox scope, with PWA deferred for Phase 3 and native iOS/Android excluded unless separately approved.
+- Required evidence items: SMS mock/sandbox automation, SMS copy governance, link/token privacy remediation, and mobile task-flow automation are recorded for internal engineering use only; iPhone/Safari and Android/Chrome real-device evidence remain NOT RUN.
 - PWA decision: deferred for Phase 3. The charter requires device-agnostic participation, accessibility, secure defaults, data minimization, and low-waste operation; it does not require installable/offline PWA behavior. Mobile web is the Phase 3 phone surface.
 - Targeted verification: Phase 3 server build, focused SMS/magic-link regression tests, and full server tests passed on 2026-05-13 in the merged Phase 3 PRs.
 - Optional browser scaffolds: `npm --prefix server run test:phase3-magic-link-browser-scaffold` passed locally on 2026-05-13 with live backend/frontend prerequisites and Microsoft Edge headless; `npm --prefix server run test:phase3-mobile-task-flow-scaffold` passed locally on 2026-05-13 and recorded consent, Round 1, support, no-active-task, later round, closeout, and withdrawal observations. Cloud runs without backend/frontend prerequisites can only produce precondition evidence.
 - Exit gate remains open because phone-device evidence, real SMS/provider evidence, accessibility evidence, and human reviewer/signoff work are still outstanding.
+
+Phase 3 blocker interpretation:
+
+- SMS remains mock/sandbox/internal-only. Real provider credentials, telecom/compliance readiness, and production SMS operations remain deferred.
+- Opaque-link, token-privacy, and SMS audit boundaries are implemented for engineering scope, but these controls still require human-observed phone evidence and signoff artifacts.
+- Mobile web is the required phone path for this candidate; PWA install/offline behavior and native mobile app paths remain out of scope unless separately approved.
 
 Local task-flow scaffold evidence note: [PHASE3_MOBILE_WEB_TASK_FLOW_EVIDENCE.md](./PHASE3_MOBILE_WEB_TASK_FLOW_EVIDENCE.md).
 
