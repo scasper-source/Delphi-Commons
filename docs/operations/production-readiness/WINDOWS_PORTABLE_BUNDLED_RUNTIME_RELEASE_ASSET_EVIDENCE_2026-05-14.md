@@ -34,7 +34,7 @@ No real participant data was used.
 
 ## Background
 
-The first `internal-package-candidate-2026-05-14` release asset was superseded after a local extracted-package test exposed a Windows launcher defect when the package path contained a space. The static UI process attempted to load `C:\Users\13152\Dropbox\Delphi` as a Node module when the package was extracted under `Dropbox\Delphi Commons\...`.
+The first `internal-package-candidate-2026-05-14` release asset was superseded after a local extracted-package test exposed a Windows launcher defect when the package path contained a space. The static UI process attempted to load a truncated parent path, such as `%USERPROFILE%\Path`, as a Node module when the package was extracted under a user-profile path containing spaces, such as `%USERPROFILE%\Path With Spaces\...`.
 
 PR #82 fixed the launcher by quoting `Start-Process` arguments for backend and static UI process launches. The `r2` release asset was rebuilt from the merged fix and verified from a path with spaces before publication.
 
@@ -43,8 +43,8 @@ PR #82 fixed the launcher by quoting `Start-Process` arguments for backend and s
 | Item | Observed value |
 | --- | --- |
 | Host shell | Windows PowerShell |
-| Package root | `C:\Users\13152\Dropbox\Delphi Commons\delphi-commons-windows-portable-bundled-runtime-internal-2026-05-14-8c71b66\windows-portable-bundled-runtime-internal` |
-| Runtime root | `C:\Users\13152\AppData\Local\DelphiCommons\windows-portable-bundled-runtime-internal` |
+| Package root | `%USERPROFILE%\Path With Spaces\delphi-commons-windows-portable-bundled-runtime-internal-2026-05-14-8c71b66\windows-portable-bundled-runtime-internal` |
+| Runtime root | `%LOCALAPPDATA%\DelphiCommons\windows-portable-bundled-runtime-internal` |
 | Operator UI | `http://127.0.0.1:4173` |
 | Backend health | `http://127.0.0.1:3001/health` |
 
@@ -78,8 +78,8 @@ Backend pid: 12772 running=True
 UI pid: 38812 running=True
 UI URL: http://127.0.0.1:4173
 Health: http://127.0.0.1:3001/health
-Runtime root: C:\Users\13152\AppData\Local\DelphiCommons\windows-portable-bundled-runtime-internal
-Package root: C:\Users\13152\Dropbox\Delphi Commons\delphi-commons-windows-portable-bundled-runtime-internal-2026-05-14-8c71b66\windows-portable-bundled-runtime-internal
+Runtime root: %LOCALAPPDATA%\DelphiCommons\windows-portable-bundled-runtime-internal
+Package root: %USERPROFILE%\Path With Spaces\delphi-commons-windows-portable-bundled-runtime-internal-2026-05-14-8c71b66\windows-portable-bundled-runtime-internal
 ```
 
 Browser observation:
@@ -116,7 +116,7 @@ Prototype stopped.
 | Check | Status | Notes |
 | --- | --- | --- |
 | GitHub `r2` Windows release asset downloaded | PASS | Release asset zip was used, not the GitHub source-code zip. |
-| Extracted package path contains spaces | PASS | Package ran from `Dropbox\Delphi Commons\...`. |
+| Extracted package path contains spaces | PASS | Package ran from `%USERPROFILE%\Path With Spaces\...`. |
 | Start command | PASS | Backend and static UI launch commands completed. |
 | UI browser reachability | PASS | `http://127.0.0.1:4173` loaded the operator UI. |
 | Status command | PASS | Backend and UI PIDs reported `running=True`. |
