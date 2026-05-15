@@ -38,9 +38,12 @@ The following examples are approved for mock/sandbox testing with synthetic/inte
   - "Delphi reminder: a secure session link is available: {short_link}. Participation is optional. Reply HELP for support or STOP to opt out."
 - **Resend confirmation (mock/sandbox)**
   - "Delphi: a new secure session link was requested and is ready: {short_link}. Participation is optional. Reply HELP for support or STOP to opt out."
+- **Phone verification (Twilio/provider testing only)**
+  - "Delphi phone verification code: {otp}. It expires in {ttl_minutes} minutes. Reply STOP to opt out."
 
 Notes:
 - `{short_link}` must be opaque and expiring.
+- `{otp}` must not be logged, exported, committed, or copied into evidence.
 - Message variants should change minimally and preserve neutral/optional language.
 
 ## Prohibited examples

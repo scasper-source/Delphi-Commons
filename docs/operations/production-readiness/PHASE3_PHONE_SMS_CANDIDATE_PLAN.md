@@ -63,6 +63,7 @@ A participant tester can receive or simulate SMS, open the phone link, complete 
 
 - No completed phone-device evidence runs are attached yet.
 - SMS channel behavior has targeted mock/sandbox test evidence, but no provider sandbox transcript, full real-device walkthrough, or phone-device evidence.
+- Twilio real-SMS plumbing has a gated implementation track, but no approved Twilio Messaging Service/A2P-or-equivalent sender evidence, live-provider send evidence, or human-use approval is recorded.
 - Link/token privacy review and local remediation are recorded, but independent Security/Privacy and Data Custodian signoff remain open.
 - STOP/HELP and permission/rate-limit behavior have local automated evidence only; real carrier/provider behavior and human-observed rehearsal remain open.
 - Human reviewer signoff for SMS copy is not yet recorded.
@@ -111,3 +112,14 @@ This plan does **not** claim:
 - Output artifacts: timestamped Markdown + `phase3-mobile-task-flow-scaffold-latest.json` in `docs/qc/full-mock-trial/artifacts/`.
 - Local run evidence: `docs/qc/full-mock-trial/artifacts/phase3-mobile-task-flow-scaffold-2026-05-13T21-32-09-080Z.md` records a PASS run with redacted participant/token evidence only.
 - Boundary: local synthetic/internal automation evidence only; iPhone/Safari, Android/Chrome real-device evidence, human-observed testing, and accessibility review remain **NOT RUN**.
+
+## Phase 3 Twilio real-SMS track (2026-05-14)
+- Added gated Twilio provider plumbing for future governed real-SMS testing.
+- Mock remains the default SMS provider.
+- Real Twilio sends require explicit environment gates, Twilio credentials, a Twilio Messaging Service SID, HTTPS public participant origin, and HTTPS public webhook base URL.
+- Added Twilio delivery callback handling at `/sms/webhook` and inbound STOP/HELP handling at `/sms/twilio/inbound`.
+- Added operator-facing SMS setup choice and non-secret setup status endpoint so downloaded packages can direct privileged operators to Twilio setup/Connect before SMS policy work.
+- Twilio webhook validation uses the Twilio `X-Twilio-Signature` model against the configured public webhook URL.
+- Phone verification OTP is sent through Twilio when the Twilio provider is enabled; development OTP echo is disabled for Twilio.
+- Real-SMS evidence remains **NOT RUN**. Twilio registration/sender approval, opt-out configuration, provider logs, privacy/security review, Data Custodian review, copy review, and human-use approval remain open.
+- Detailed track note: `PHASE3_TWILIO_REAL_SMS_TRACK.md`.

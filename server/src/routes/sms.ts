@@ -7,6 +7,7 @@ import type { FastifyInstance } from "fastify";
 import { requireRole, getActor } from "../middleware/auth.js";
 import { writeAuditEvent } from "../core/audit.js";
 import { getServerConfig } from "../core/config.js";
+import { getSmsProvider } from "../core/smsProvider.js";
 import {
   auditSmsPolicyChange,
   buildMagicRoundContext,
@@ -41,6 +42,45 @@ import { normalizeRoundOneResponsePayload } from "../studies/researchQuestions.j
 function frontendOrigin(req: any): string {
   const origin = typeof req.headers.origin === "string" ? req.headers.origin : "http://127.0.0.1:5173";
   return origin.replace(/\/$/, "");
+}
+
+function registerUrlEncodedParser(app: FastifyInstance) {
+  app.addContentTypeParser("application/x-www-form-urlencoded", { parseAs: "string" }, (_req, body, done) => {
+    const parsed: Record<string, string> = {};
+    for (const [key, value] of new URLSearchParams(String(body))) parsed[key] = value;
+    done(null, parsed);
+  });
+}
+
+function twilioSetupStatus() {
+  const config = getServerConfig();
+  const connectUrl = config.twilioConnectUrl ?? "https://console.twilio.com/us1/develop/sms/services";
+  const required = {
+    provider_twilio: config.smsProvider === "twilio",
+    real_sms_enabled: config.realSmsEnabled,
+    real_sms_acknowledged: config.realSmsAcknowledged,
+    account_sid_configured: Boolean(config.twilioAccountSid),
+    auth_token_configured: Boolean(config.twilioAuthToken),
+    messaging_service_sid_configured: Boolean(config.twilioMessagingServiceSid),
+    public_participant_origin_configured: Boolean(config.publicParticipantOrigin),
+    webhook_base_url_configured: Boolean(config.twilioWebhookBaseUrl),
+  };
+  const ready = Object.values(required).every(Boolean);
+  return {
+    provider: config.smsProvider,
+    real_sms_enabled: config.realSmsEnabled,
+    real_sms_acknowledged: config.realSmsAcknowledged,
+    ready_for_real_sms_attempt: ready,
+    connect_url: connectUrl,
+    messaging_service_console_url: "https://console.twilio.com/us1/develop/sms/services",
+    required,
+    public_participant_origin_configured: Boolean(config.publicParticipantOrigin),
+    webhook_base_url_configured: Boolean(config.twilioWebhookBaseUrl),
+    status_callback_configured: Boolean(config.twilioStatusCallbackUrl || config.twilioWebhookBaseUrl),
+    account_sid_configured: Boolean(config.twilioAccountSid),
+    auth_token_configured: Boolean(config.twilioAuthToken),
+    messaging_service_sid_configured: Boolean(config.twilioMessagingServiceSid),
+  };
 }
 
 function participantActor(participantId: string) {
@@ -79,7 +119,12 @@ function latestRatingsForItem(itemId: string, roundNumber: number, responses: Re
 }
 
 export async function smsRoutes(app: FastifyInstance) {
+  registerUrlEncodedParser(app);
   const allowStaff = requireRole(["owner", "methods_steward", "privacy_lead", "admin"]);
+
+  app.get("/sms/setup-status", { preHandler: allowStaff }, async () => {
+    return { setup: twilioSetupStatus() };
+  });
 
   app.get("/studies/:studyId/versions/:versionId/sms-policy", { preHandler: allowStaff }, async (req, reply) => {
     const { studyId, versionId } = req.params as any;
@@ -204,6 +249,27 @@ export async function smsRoutes(app: FastifyInstance) {
     const ok = await updateDeliveryWebhook({ req });
     if (!ok) return reply.code(401).send({ error: "invalid_sms_webhook" });
     return reply.send({ ok: true });
+  });
+
+  app.post("/sms/twilio/inbound", async (req, reply) => {
+    const provider = getSmsProvider();
+    if (provider.name !== "twilio") return reply.code(404).send({ error: "twilio_sms_not_enabled" });
+    if (!provider.verifyWebhookSignature(req)) return reply.code(401).send({ error: "invalid_twilio_webhook" });
+    const inbound = provider.parseInboundWebhook(req);
+    if (!inbound) return reply.code(400).send({ error: "invalid_twilio_inbound_sms" });
+    const result = await handleInboundSmsKeyword({
+      from_phone: inbound.from,
+      message_text: inbound.body,
+      actor_user_id: "sms-twilio-inbound",
+      source: "twilio",
+      provider_message_id: inbound.providerMessageId,
+      opt_out_type: inbound.optOutType,
+    });
+    reply.header("Content-Type", "text/xml");
+    if (!result.ok && result.reason !== "contact_preference_not_found") {
+      return reply.code(400).send("<Response></Response>");
+    }
+    return reply.send("<Response></Response>");
   });
 
   app.post("/sms/mock/inbound-keyword", { preHandler: allowStaff }, async (req, reply) => {

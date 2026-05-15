@@ -473,6 +473,22 @@ export type SmsPolicy = {
   updated_by_user_id: string;
 };
 
+export type SmsSetupStatus = {
+  provider: "mock" | "twilio";
+  real_sms_enabled: boolean;
+  real_sms_acknowledged: boolean;
+  ready_for_real_sms_attempt: boolean;
+  connect_url: string;
+  messaging_service_console_url: string;
+  required: Record<string, boolean>;
+  public_participant_origin_configured: boolean;
+  webhook_base_url_configured: boolean;
+  status_callback_configured: boolean;
+  account_sid_configured: boolean;
+  auth_token_configured: boolean;
+  messaging_service_sid_configured: boolean;
+};
+
 export type ParticipantContactPreference = {
   participant_id: string;
   notification_preference: "email_only" | "sms_only" | "both" | "no_sms";
@@ -1444,6 +1460,9 @@ export const conductorApi = {
 
   async getSmsPolicy(studyId: string, versionId: string, role: UserRole) {
     return requestJson<{ policy: SmsPolicy }>(`/studies/${studyId}/versions/${versionId}/sms-policy`, role);
+  },
+  async getSmsSetupStatus(role: UserRole) {
+    return requestJson<{ setup: SmsSetupStatus }>("/sms/setup-status", role);
   },
 
   async updateSmsPolicy(studyId: string, versionId: string, role: UserRole, policy: Partial<SmsPolicy>) {

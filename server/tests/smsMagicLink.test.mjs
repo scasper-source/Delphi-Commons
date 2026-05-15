@@ -227,8 +227,9 @@ test("round_open_sms_magic_link_mobile_entry sends neutral opt-in SMS and uses o
   assert.equal(opened.body.sms.sent, 1);
   assert.equal(mockSmsOutbox.length, 1);
   const sms = mockSmsOutbox[0];
-  assert.match(sms.body, /^A new Delphi study round is open: Care Delphi\./);
-  assert.match(sms.body, /Participation remains voluntary\./);
+  assert.match(sms.body, /^Delphi study update: your secure session link is ready:/);
+  assert.match(sms.body, /Participation is optional\./);
+  assert.match(sms.body, /Reply HELP for support or STOP to opt out\./);
   assert.doesNotMatch(sms.body.toLowerCase(), /you must respond|consensus depends on you|align with the group/);
   const linkMatch = sms.body.match(/http:\/\/127\.0\.0\.1:5173\/m\/([A-Za-z0-9_-]+)/);
   assert.ok(linkMatch, "SMS includes opaque /m/{token} link");

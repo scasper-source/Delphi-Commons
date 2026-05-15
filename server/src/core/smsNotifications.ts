@@ -126,12 +126,29 @@ export function lastFour(phoneE164: string | null): string | null {
 }
 
 export function buildNeutralSmsBody(input: { safeName: string; magicLinkUrl: string }): string {
-  const body = `A new Delphi study round is open: ${input.safeName}. You may complete it here: ${input.magicLinkUrl}. Participation remains voluntary.`;
+  void input.safeName;
+  const body = `Delphi study update: your secure session link is ready: ${input.magicLinkUrl}. Participation is optional. Reply HELP for support or STOP to opt out.`;
   const lowered = body.toLowerCase();
   if (FORBIDDEN_SMS_PHRASES.some((phrase) => lowered.includes(phrase))) {
     throw new Error("coercive_sms_language_blocked");
   }
   return body;
+}
+
+function buildPhoneVerificationSmsBody(input: { otp: string; ttlMinutes: number }): string {
+  return `Delphi phone verification code: ${input.otp}. It expires in ${input.ttlMinutes} minutes. Reply STOP to opt out.`;
+}
+
+function publicParticipantOrigin(fallbackOrigin: string): string {
+  const config = getServerConfig();
+  if (config.smsProvider !== "twilio") return fallbackOrigin.replace(/\/$/, "");
+  if (!config.publicParticipantOrigin) throw new Error("public_participant_origin_required_for_twilio_sms");
+  const url = new URL(config.publicParticipantOrigin);
+  if (url.protocol !== "https:") throw new Error("public_participant_origin_must_be_https_for_twilio_sms");
+  if (url.hostname === "localhost" || url.hostname === "127.0.0.1") {
+    throw new Error("public_participant_origin_must_not_be_localhost_for_twilio_sms");
+  }
+  return url.toString().replace(/\/$/, "");
 }
 
 export function smsTextHasForbiddenLanguage(value: string): boolean {
@@ -206,6 +223,7 @@ export async function startPhoneVerification(input: {
   const preference = getContactPreference(input.participant_id);
   if (!preference?.phone_e164 || !preference.phone_hash) throw new Error("phone_required_before_verification");
   const config = getServerConfig();
+  const provider = getSmsProvider();
   const otp = String(crypto.randomInt(0, 1_000_000)).padStart(6, "0");
   const expiresAt = new Date(Date.now() + config.phoneOtpTtlMinutes * 60_000).toISOString();
   const challenge = createPhoneChallenge({
@@ -223,11 +241,35 @@ export async function startPhoneVerification(input: {
     details: { masked_phone: challenge.masked_phone, expires_at: challenge.expires_at },
   });
 
+  if (provider.name === "twilio") {
+    try {
+      const result = await provider.sendSms({
+        to: preference.phone_e164,
+        body: buildPhoneVerificationSmsBody({ otp, ttlMinutes: config.phoneOtpTtlMinutes }),
+        metadata: { purpose: "phone_verification", challenge_id: challenge.challenge_id },
+      });
+      await writeAuditEvent({
+        actor: { userId: input.actor_user_id, role: "owner", systemRoles: ["owner"], authSource: "legacy-dev-header" },
+        action: "phone_verification_sms_sent",
+        object: { type: "phone_verification_challenge", id: challenge.challenge_id },
+        details: { provider: provider.name, provider_message_id: result.providerMessageId, masked_phone: challenge.masked_phone },
+      });
+    } catch (error) {
+      await writeAuditEvent({
+        actor: { userId: input.actor_user_id, role: "owner", systemRoles: ["owner"], authSource: "legacy-dev-header" },
+        action: "phone_verification_sms_failed",
+        object: { type: "phone_verification_challenge", id: challenge.challenge_id },
+        details: { provider: provider.name, masked_phone: challenge.masked_phone },
+      });
+      throw error;
+    }
+  }
+
   return {
     challenge_id: challenge.challenge_id,
     masked_phone: challenge.masked_phone,
     expires_at: challenge.expires_at,
-    ...(config.environment !== "production" ? { dev_otp: otp } : {}),
+    ...(config.environment !== "production" && provider.name !== "twilio" ? { dev_otp: otp } : {}),
   };
 }
 
@@ -420,7 +462,7 @@ export async function sendRoundOpenSmsNotifications(input: {
         : study?.title && study.title.length <= 50 && !policy.safe_name_is_sensitive
           ? study.title
           : "your Delphi study";
-    const link = `${input.frontend_origin.replace(/\/$/, "")}/m/${encodeURIComponent(token)}`;
+    const link = `${publicParticipantOrigin(input.frontend_origin)}/m/${encodeURIComponent(token)}`;
     const body = buildNeutralSmsBody({ safeName, magicLinkUrl: link });
 
     await writeAuditEvent({
@@ -485,10 +527,15 @@ export async function handleInboundSmsKeyword(input: {
   from_phone: string;
   message_text: string;
   actor_user_id?: string;
+  source?: "mock" | "twilio";
+  provider_message_id?: string;
+  opt_out_type?: "STOP" | "START" | "HELP" | null;
 }): Promise<{ ok: boolean; action: "stop" | "help" | "ignored"; reason?: string }> {
   const normalizedPhone = normalizePhoneE164(input.from_phone);
   if (!normalizedPhone) return { ok: false, action: "ignored", reason: "phone_normalization_failed" };
-  const keyword = input.message_text.trim().toUpperCase() as InboundKeyword;
+  const keyword = (input.opt_out_type === "STOP" || input.opt_out_type === "HELP"
+    ? input.opt_out_type
+    : input.message_text.trim().toUpperCase()) as InboundKeyword;
   if (keyword !== "STOP" && keyword !== "HELP") return { ok: true, action: "ignored" };
 
   const preference = findContactPreferenceByPhoneHash(hashSecret(normalizedPhone));
@@ -506,7 +553,7 @@ export async function handleInboundSmsKeyword(input: {
       actor: { userId: actorUserId, role: "system", systemRoles: ["system" as any], authSource: "anonymous" },
       action: "sms_inbound_stop_processed",
       object: { type: "participant", id: preference.participant_id },
-      details: { masked_phone: maskPhone(normalizedPhone), simulated_inbound: true },
+      details: { masked_phone: maskPhone(normalizedPhone), inbound_source: input.source ?? "mock", provider_message_id: input.provider_message_id ?? null },
     });
     return { ok: true, action: "stop" };
   }
@@ -515,7 +562,7 @@ export async function handleInboundSmsKeyword(input: {
     actor: { userId: actorUserId, role: "system", systemRoles: ["system" as any], authSource: "anonymous" },
     action: "sms_inbound_help_requested",
     object: { type: "participant", id: preference.participant_id },
-    details: { masked_phone: maskPhone(normalizedPhone), simulated_inbound: true, support_ticket_required: true },
+    details: { masked_phone: maskPhone(normalizedPhone), inbound_source: input.source ?? "mock", provider_message_id: input.provider_message_id ?? null, support_ticket_required: true },
   });
   return { ok: true, action: "help" };
 }
