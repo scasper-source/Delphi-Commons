@@ -24,15 +24,15 @@ Mock/sandbox is the default posture. Real provider behavior is gated and deferre
 
 ## Repository Validation Snapshot
 
-Local follow-up validation on 2026-05-15 covers repository-verifiable evidence only.
+Local follow-up validation on 2026-05-15 covers repository-verifiable evidence only. Commands are shown in portable form for Windows, macOS, and Linux shells; Windows PowerShell may resolve `npm` through the `npm.cmd` shim.
 
 | Command | Result | Evidence interpretation |
 | --- | --- | --- |
-| `npm.cmd --prefix server run build` | PASS | TypeScript/server build evidence for SMS/Twilio code paths. |
-| `node scripts\run-tests.mjs "server/tests/smsMagicLink.test.mjs"` | PASS | Mock SMS outbox, neutral copy, opt-in gates, opaque link, one-use token, audit redaction, STOP/HELP simulation, rate limits, role gates, and per-recipient Twilio link-config failure handling. |
-| `node scripts\run-tests.mjs "server/tests/twilioSmsProvider.test.mjs"` | PASS | Twilio real-SMS gates, Messaging Service send shape, webhook parsers/signature checks, setup-status no-secret/no-SID response behavior. |
-| `npm.cmd --prefix server test` | PASS | Full server regression suite; deployment verifier warning/failure fixtures are expected inside tests and the overall command exited 0. |
-| `npm.cmd --prefix server run security:audit` | PASS | Server high-severity npm audit reported 0 vulnerabilities. |
+| `npm --prefix server run build` | PASS | TypeScript/server build evidence for SMS/Twilio code paths. |
+| `node scripts/run-tests.mjs "server/tests/smsMagicLink.test.mjs"` | PASS | Mock SMS outbox, neutral copy, opt-in gates, opaque link, one-use token, audit redaction, STOP/HELP simulation, rate limits, role gates, and per-recipient Twilio link-config failure handling. |
+| `node scripts/run-tests.mjs "server/tests/twilioSmsProvider.test.mjs"` | PASS | Twilio real-SMS gates, Messaging Service send shape, webhook parsers/signature checks, setup-status no-secret/no-SID response behavior. |
+| `npm --prefix server test` | PASS | Full server regression suite; deployment verifier warning/failure fixtures are expected inside tests and the overall command exited 0. |
+| `npm --prefix server run security:audit` | PASS | Server high-severity npm audit reported 0 vulnerabilities. |
 | `git diff --check` | PASS | Whitespace check passed; Windows checkout may emit LF/CRLF warnings only. |
 
 This snapshot does not include provider dashboard evidence, real provider sends, carrier approval, real-device evidence, accessibility evidence, or human reviewer signoff.
