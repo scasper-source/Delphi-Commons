@@ -44,6 +44,8 @@ const { createConsentVersion, activateConsentVersion, recordConsent } = await im
 const { upsertRoundConfig } = await import("../dist/stores/roundConfigStore.js");
 const { mockSmsOutbox, clearMockSmsOutbox } = await import("../dist/core/smsProvider.js");
 const { getDatabase } = await import("../dist/core/database.js");
+const { hashSecret, sendRoundOpenSmsNotifications } = await import("../dist/core/smsNotifications.js");
+const { listSmsNotifications, markPhoneVerified, upsertContactPreference, upsertStudySmsPolicy } = await import("../dist/stores/smsStore.js");
 
 const owner = { "x-user-id": "owner-1", "x-user-role": "owner" };
 const analyst = { "x-user-id": "analyst-1", "x-user-role": "analyst" };
@@ -300,6 +302,139 @@ test("round_open_sms_magic_link_mobile_entry sends neutral opt-in SMS and uses o
   assert.doesNotMatch(auditRaw, /\"participantId\"\s*:/);
   assert.doesNotMatch(auditRaw, /\"participant_id\"\s*:/);
 
+});
+
+test("twilio public link configuration failures mark each SMS notification failed", async (t) => {
+  const originalSmsProvider = process.env.EDELPHI_SMS_PROVIDER;
+  const originalPublicParticipantOrigin = process.env.EDELPHI_PUBLIC_PARTICIPANT_ORIGIN;
+  process.env.EDELPHI_SMS_PROVIDER = "twilio";
+  delete process.env.EDELPHI_PUBLIC_PARTICIPANT_ORIGIN;
+  t.after(() => {
+    if (originalSmsProvider === undefined) delete process.env.EDELPHI_SMS_PROVIDER;
+    else process.env.EDELPHI_SMS_PROVIDER = originalSmsProvider;
+    if (originalPublicParticipantOrigin === undefined) delete process.env.EDELPHI_PUBLIC_PARTICIPANT_ORIGIN;
+    else process.env.EDELPHI_PUBLIC_PARTICIPANT_ORIGIN = originalPublicParticipantOrigin;
+  });
+
+  const now = new Date().toISOString();
+  const studyId = "sms-study-twilio-link-config";
+  const versionId = "sms-version-twilio-link-config";
+  await createStudy(
+    {
+      id: studyId,
+      title: "Twilio Link Config Study",
+      description: "Synthetic SMS fanout failure handling test.",
+      created_by: "owner-1",
+      created_at: now,
+    },
+    { study_id: studyId, user_id: "owner-1", role: "Owner", created_at: now },
+  );
+  await createStudyVersion({
+    id: versionId,
+    study_id: studyId,
+    version_number: 1,
+    status: "Active",
+    study_format: "ModifiedDelphi",
+    planned_round_count: 1,
+    terminal_round_number: 1,
+    method_rationale: "test",
+    consensus_rule_json: { threshold: 80, agreement_min_rating: 7 },
+    feedback_config_json: null,
+    retention_policy_json: null,
+    study_design_packet_json: { researchQuestion: "q", researchQuestions: [] },
+    config_hash: "twilio-link-config",
+    opened_round1_at: null,
+    created_by: "owner-1",
+    created_at: now,
+  });
+  upsertRoundConfig({
+    study_id: studyId,
+    version_id: versionId,
+    round_number: 1,
+    task_type: "open_text",
+    title: "R1",
+    prompt: "prompt",
+    participant_instructions: "instructions",
+    response_window_days: 7,
+    reminder_subject: "s",
+    reminder_body: "b",
+    controlled_feedback_enabled: false,
+    ai_curation_enabled: false,
+    feedback_config: null,
+    status: "Open",
+  });
+  const consentVersion = createConsentVersion({ study_id: studyId, version_id: versionId, text_md: "consent" });
+  activateConsentVersion({ study_id: studyId, version_id: versionId, consent_version_id: consentVersion.consent_version_id });
+  upsertStudySmsPolicy({
+    study_id: studyId,
+    version_id: versionId,
+    sms_enabled: true,
+    notification_safe_name: "Config Test",
+    magic_link_ttl_minutes: 60,
+    updated_by_user_id: "owner-1",
+  });
+
+  for (const suffix of ["1010", "2020"]) {
+    const participant = createParticipantMaster({
+      name: `Twilio Config ${suffix}`,
+      email: `twilio-config-${suffix}@example.test`,
+      created_by_user_id: "owner-1",
+    });
+    ensureParticipantEnrollment({
+      study_id: studyId,
+      version_id: versionId,
+      participant_id: participant.participant_id,
+      created_by_user_id: "owner-1",
+    });
+    recordConsent({
+      participant_id: participant.participant_id,
+      study_id: studyId,
+      version_id: versionId,
+      consent_version_id: consentVersion.consent_version_id,
+    });
+    const phone = `+1555010${suffix}`;
+    upsertContactPreference({
+      participant_id: participant.participant_id,
+      notification_preference: "both",
+      phone_e164: phone,
+      phone_hash: hashSecret(phone),
+      phone_last_four: suffix,
+      sms_consent_granted: true,
+      sms_consent_version: "sms-study-texts-v1",
+      updated_by_user_id: "owner-1",
+    });
+    markPhoneVerified({
+      participant_id: participant.participant_id,
+      method: "test",
+      updated_by_user_id: "owner-1",
+    });
+  }
+
+  const outboxCountBefore = mockSmsOutbox.length;
+  const result = await sendRoundOpenSmsNotifications({
+    study_id: studyId,
+    version_id: versionId,
+    round_number: 1,
+    actor_user_id: "owner-1",
+    frontend_origin: "http://127.0.0.1:5173",
+  });
+
+  assert.equal(result.eligible_checked, 2);
+  assert.equal(result.sent, 0);
+  assert.equal(result.skipped, 2);
+  assert.equal(result.notifications.length, 2);
+  assert.deepEqual(
+    result.notifications.map((notification) => notification.status),
+    ["failed", "failed"],
+  );
+  assert.deepEqual(
+    result.notifications.map((notification) => notification.failure_code),
+    ["public_participant_origin_required_for_twilio_sms", "public_participant_origin_required_for_twilio_sms"],
+  );
+  const persisted = listSmsNotifications({ study_id: studyId, version_id: versionId, round_number: 1 });
+  assert.equal(persisted.length, 2);
+  assert.ok(persisted.every((notification) => notification.status === "failed"));
+  assert.equal(mockSmsOutbox.length, outboxCountBefore);
 });
 
 test("sms governance candidate controls enforce opt-in gates, stop/help simulation, rate limits, and role gates", async (t) => {
