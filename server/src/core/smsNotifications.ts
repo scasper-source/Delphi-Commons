@@ -462,9 +462,6 @@ export async function sendRoundOpenSmsNotifications(input: {
         : study?.title && study.title.length <= 50 && !policy.safe_name_is_sensitive
           ? study.title
           : "your Delphi study";
-    const link = `${publicParticipantOrigin(input.frontend_origin)}/m/${encodeURIComponent(token)}`;
-    const body = buildNeutralSmsBody({ safeName, magicLinkUrl: link });
-
     await writeAuditEvent({
       actor: { userId: input.actor_user_id, role: "owner", systemRoles: ["owner"], authSource: "legacy-dev-header" },
       action: "magic_link_created",
@@ -473,6 +470,8 @@ export async function sendRoundOpenSmsNotifications(input: {
     });
 
     try {
+      const link = `${publicParticipantOrigin(input.frontend_origin)}/m/${encodeURIComponent(token)}`;
+      const body = buildNeutralSmsBody({ safeName, magicLinkUrl: link });
       const result = await provider.sendSms({
         to: preference.phone_e164,
         body,
