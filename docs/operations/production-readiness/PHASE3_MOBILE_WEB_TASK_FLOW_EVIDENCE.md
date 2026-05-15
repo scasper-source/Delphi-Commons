@@ -30,6 +30,16 @@ Recorded as PASS/PARTIAL/FAIL per run. Current local PASS coverage:
 - withdrawal from future participation
 
 
+
+## Manual device evidence companion
+
+For iPhone/Safari and Android/Chrome human-observed capture procedures, use:
+
+- `PHASE3_MOBILE_DEVICE_EVIDENCE_RUNBOOK.md`
+- `PHASE3_MOBILE_EVIDENCE_TEMPLATES.md`
+
+The local scaffold output below remains **browser/viewport automation evidence only** and not real-device evidence.
+
 ## Evidence state classification
 
 - Local scaffold execution state: **COMPLETE FOR MOCK/SANDBOX ONLY**.

@@ -251,6 +251,11 @@ async function inspectMobile(label, url, options = {}) {
         }
       }
 
+      const screenshotResult = await send('Page.captureScreenshot', { format: 'png' });
+      const screenshotName = `phase3-mobile-viewport-${slug}-${label.replace(/[^a-z0-9_-]/gi, '-').toLowerCase()}.png`;
+      const screenshotPath = path.join(artifactDir, screenshotName);
+      await fs.writeFile(screenshotPath, Buffer.from(screenshotResult.data, 'base64'));
+
       ws.close();
       proc.kill();
       await fs.rm(userData, { recursive: true, force: true }).catch(() => undefined);
@@ -260,8 +265,10 @@ async function inspectMobile(label, url, options = {}) {
         status: 'PASS',
         expected: expected.map((pattern) => String(pattern)),
         text_sample: textSample(text),
+        screenshot_path: path.relative(repoRoot, screenshotPath),
+        evidence_classification: 'browser_viewport_only_not_real_device',
       });
-      return { executable, text };
+      return { executable, text, screenshotPath };
     } catch (error) {
       lastError = error;
       proc.kill();
@@ -389,7 +396,7 @@ async function writeArtifacts() {
 ${evidence.steps.map((entry) => `- ${entry.status} ${entry.name}: ${entry.reason}`).join('\n')}
 
 ## Mobile Browser Observations
-${evidence.browser.observations.map((entry) => `- ${entry.status} ${entry.label}: ${entry.expected.join(', ')}`).join('\n') || '- Not run'}
+${evidence.browser.observations.map((entry) => `- ${entry.status} ${entry.label}: ${entry.expected.join(', ')} (${entry.evidence_classification ?? 'browser_viewport_only_not_real_device'})\n  - Screenshot: ${entry.screenshot_path ?? 'not-captured'}`).join('\n') || '- Not run'}
 `;
 
   const out = path.join(artifactDir, `phase3-mobile-task-flow-scaffold-${slug}.md`);

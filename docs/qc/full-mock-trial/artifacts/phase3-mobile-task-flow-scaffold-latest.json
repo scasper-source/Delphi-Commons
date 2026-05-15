@@ -1,6 +1,6 @@
 {
-  "run_at": "2026-05-13T21:32:09.080Z",
-  "commit": "e98d52c9a8f43b6ac36949c646c097dcba7b5a2c",
+  "run_at": "2026-05-15T15:48:20.375Z",
+  "commit": "bca7ebc286f214aeca1041e2793185c1e718b8e1",
   "boundary": "Local synthetic/internal mobile-browser automation evidence only; not production/pilot/human-subject/real-SMS/accessibility/real-device evidence.",
   "environment": {
     "api_url": "http://127.0.0.1:3001",
@@ -12,134 +12,25 @@
     }
   },
   "synthetic": {
-    "marker": "PMTF-mp4krxtk",
-    "study_id": "1faf3c0b-a323-4cfd-8d35-a5d99a8a7460",
-    "version_id": "590896e0-2ca8-44c5-bda8-a5203b5e086d",
-    "flow_participant_ref": "4236408a...",
-    "withdrawal_participant_ref": "ec1ed92d...",
-    "flow_invitation_token": "redacted:06BCXI...mR80",
-    "withdrawal_invitation_token": "redacted:4_KG_9...Mm9A"
+    "marker": "PMTF-mp73dhy0",
+    "study_id": null,
+    "version_id": null,
+    "flow_participant_ref": null,
+    "withdrawal_participant_ref": null,
+    "flow_invitation_token": null,
+    "withdrawal_invitation_token": null
   },
   "browser": {
-    "executable": "C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe",
-    "observations": [
-      {
-        "label": "consent_mobile_view",
-        "status": "PASS",
-        "expected": [
-          "/Consent information/i",
-          "/Participant Rights/i",
-          "/withdraw/i"
-        ],
-        "text_sample": "About Participant Portal Closeout Glossary ACTIVE STUDY Synthetic Phase 3 Mobile Task Flow PMTF-mp4krxtk PARTICIPANT PORTAL Consent, confidentiality, rights, and current task Confidentiality Responses are confidential to research team members with approved access and are linked across rounds through participant IDs. Invitation link active You do not need an account, password, API key, or access code. This private invitation link identifies your study task. Save and resume Draft responses are not"
-      },
-      {
-        "label": "round1_mobile_submission",
-        "status": "PASS",
-        "expected": [
-          "/Round 1 response submitted|What was submitted/i"
-        ],
-        "text_sample": "About Participant Portal Closeout Glossary ACTIVE STUDY Synthetic Phase 3 Mobile Task Flow PMTF-mp4krxtk PARTICIPANT PORTAL Consent, confidentiality, rights, and current task Confidentiality Responses are confidential to research team members with approved access and are linked across rounds through participant IDs. Invitation link active You do not need an account, password, API key, or access code. This private invitation link identifies your study task. Save and resume Draft responses are not"
-      },
-      {
-        "label": "support_mobile_issue_submission",
-        "status": "PASS",
-        "expected": [
-          "/Issue note sent|Issue note updates|Having trouble/i"
-        ],
-        "text_sample": "About Participant Portal Closeout Glossary ACTIVE STUDY Synthetic Phase 3 Mobile Task Flow PMTF-mp4krxtk PARTICIPANT PORTAL Consent, confidentiality, rights, and current task Confidentiality Responses are confidential to research team members with approved access and are linked across rounds through participant IDs. Invitation link active You do not need an account, password, API key, or access code. This private invitation link identifies your study task. Save and resume Draft responses are not"
-      },
-      {
-        "label": "no_active_task_mobile_view",
-        "status": "PASS",
-        "expected": [
-          "/No round task is currently open/i",
-          "/Waiting for study team/i"
-        ],
-        "text_sample": "About Participant Portal Closeout Glossary ACTIVE STUDY Synthetic Phase 3 Mobile Task Flow PMTF-mp4krxtk PARTICIPANT PORTAL Consent, confidentiality, rights, and current task Confidentiality Responses are confidential to research team members with approved access and are linked across rounds through participant IDs. Invitation link active You do not need an account, password, API key, or access code. This private invitation link identifies your study task. Save and resume Draft responses are not"
-      },
-      {
-        "label": "later_round_mobile_submission",
-        "status": "PASS",
-        "expected": [
-          "/Round 2 responses submitted|What was submitted|Retain submitted responses/i"
-        ],
-        "text_sample": "About Participant Portal Closeout Glossary ACTIVE STUDY Synthetic Phase 3 Mobile Task Flow PMTF-mp4krxtk PARTICIPANT PORTAL Consent, confidentiality, rights, and current task Confidentiality Responses are confidential to research team members with approved access and are linked across rounds through participant IDs. Invitation link active You do not need an account, password, API key, or access code. This private invitation link identifies your study task. Save and resume Draft responses are not"
-      },
-      {
-        "label": "closeout_mobile_view",
-        "status": "PASS",
-        "expected": [
-          "/Thank you.*Delphi study is complete/i",
-          "/Consensus indicates agreement/i"
-        ],
-        "text_sample": "About Participant Portal Closeout Glossary ACTIVE STUDY Synthetic Phase 3 Mobile Task Flow PMTF-mp4krxtk FINAL RESULTS Thank you - this Delphi study is complete The planned final round has closed. There are no more rating rounds. How to read these results Consensus indicates agreement among this panel; it does not establish correctness. Disagreement is part of the result. How to read this Reached consensus 1 Met the pre-set rule. Near consensus 0 Shown separately from formal consensus. Did not r"
-      },
-      {
-        "label": "withdrawal_mobile_action",
-        "status": "PASS",
-        "expected": [
-          "/Withdrawal recorded|Withdrawn from future participation/i"
-        ],
-        "text_sample": "About Participant Portal Closeout Glossary ACTIVE STUDY Synthetic Phase 3 Mobile Task Flow PMTF-mp4krxtk PARTICIPANT PORTAL Consent, confidentiality, rights, and current task Confidentiality Responses are confidential to research team members with approved access and are linked across rounds through participant IDs. Invitation link active You do not need an account, password, API key, or access code. This private invitation link identifies your study task. Save and resume Draft responses are not"
-      }
-    ]
+    "executable": null,
+    "observations": []
   },
   "steps": [
     {
       "name": "precondition_backend_frontend",
-      "status": "PASS",
-      "reason": "Local API and frontend are reachable."
-    },
-    {
-      "name": "provision_synthetic_study_version",
-      "status": "PASS",
-      "reason": "Created active three-round Modified Delphi synthetic study/version."
-    },
-    {
-      "name": "create_synthetic_participants",
-      "status": "PASS",
-      "reason": "Created synthetic invitation tokens and redacted them in evidence."
-    },
-    {
-      "name": "consent",
-      "status": "PASS",
-      "reason": "Mobile browser observed consent information, participant rights, and withdrawal language."
-    },
-    {
-      "name": "round_1",
-      "status": "PASS",
-      "reason": "Mobile browser submitted Round 1 through the participant invitation flow."
-    },
-    {
-      "name": "support",
-      "status": "PASS",
-      "reason": "Mobile browser submitted the participant support issue path."
-    },
-    {
-      "name": "no_active_task",
-      "status": "PASS",
-      "reason": "Mobile browser observed the waiting/no-active-task state between rounds."
-    },
-    {
-      "name": "later_round",
-      "status": "PASS",
-      "reason": "Mobile browser submitted a later-round structured judgment task."
-    },
-    {
-      "name": "closeout_completed",
-      "status": "PASS",
-      "reason": "Mobile browser observed released participant closeout/final-results state."
-    },
-    {
-      "name": "withdrawal",
-      "status": "PASS",
-      "reason": "Mobile browser executed the participant withdrawal path with a synthetic invitation."
-    },
-    {
-      "name": "privacy_redaction_boundary",
-      "status": "PASS",
-      "reason": "Artifacts retain only redacted token and participant references; browser observations omit raw URLs."
+      "status": "FAIL",
+      "reason": "Local API/frontend prerequisites are not reachable; start both services and rerun for task-flow evidence.",
+      "api_up": false,
+      "frontend_up": false
     }
   ]
 }
