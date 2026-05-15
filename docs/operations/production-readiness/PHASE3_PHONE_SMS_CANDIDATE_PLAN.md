@@ -48,7 +48,7 @@ Define the implementation and evidence plan for a phone-openable participant exp
 | --- | --- | --- |
 | iPhone/Safari real-device or simulator | Timestamped run evidence covering open-link, consent, task completion, support/withdrawal navigation. | NOT RUN |
 | Android/Chrome real-device or emulator | Timestamped run evidence covering open-link, consent, task completion, support/withdrawal navigation. | NOT RUN |
-| SMS mock/sandbox outbox evidence | Outbox log/test transcript proving invitation/reminder dispatch path with synthetic/internal test data. | **COMPLETE FOR MOCK/SANDBOX ONLY.** Server regression coverage passes with redacted artifacts. |
+| SMS mock/sandbox outbox evidence | Outbox log/test transcript proving invitation/reminder dispatch path with synthetic/internal test data. | **COMPLETE FOR MOCK/SANDBOX ONLY.** Server regression coverage passes with redacted artifacts. See `PHASE3_SMS_EVIDENCE_PACKET.md`. |
 | Provider sandbox evidence | Provider-side transcript/log proving controlled sandbox send and callback behavior without production outreach. | **NOT RUN / PROVIDER_REQUIRED.** See `PHASE3_SMS_EVIDENCE_PACKET.md` and `PHASE3_TWILIO_REAL_SMS_TRACK.md`. |
 | Real provider production evidence | Approved sender route + real callback/inbound evidence for governed human testing progression. | **DEFERRED / PROVIDER_REQUIRED.** Must remain blocked until external approvals and reviewer signoffs close. |
 | SMS copy review | Reviewer-marked copy set showing neutral language and prohibited-content checks; governance baseline documented in `PHASE3_SMS_COPY_GOVERNANCE.md`. | **PARTIAL - governance baseline and automated copy checks recorded; human reviewer signoff not run.** |
@@ -131,3 +131,8 @@ This plan does **not** claim:
 - Phone verification OTP is sent through Twilio when the Twilio provider is enabled; development OTP echo is disabled for Twilio.
 - Real-SMS evidence remains **NOT RUN**. Twilio registration/sender approval, opt-out configuration, provider logs, privacy/security review, Data Custodian review, copy review, and human-use approval remain open.
 - Detailed track note: `PHASE3_TWILIO_REAL_SMS_TRACK.md`.
+
+## Phase 3 SMS evidence packet follow-up (2026-05-15)
+- Consolidated mock/sandbox SMS evidence, provider evidence templates, setup-status checks, and explicit NOT RUN / PROVIDER_REQUIRED placeholders in `PHASE3_SMS_EVIDENCE_PACKET.md`.
+- Recorded local validation commands for focused SMS/magic-link coverage, focused Twilio provider coverage, full server tests, and server security audit.
+- Boundary: this follow-up does not add provider account evidence, real SMS sends, device evidence, human copy review, privacy/security signoff, Data Custodian signoff, or human-testing approval.
