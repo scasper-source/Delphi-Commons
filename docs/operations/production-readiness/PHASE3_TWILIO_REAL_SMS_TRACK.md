@@ -4,6 +4,8 @@ Status: **IMPLEMENTATION GATED / NOT ENABLED BY DEFAULT / NOT READY FOR REAL PAR
 
 Date basis: 2026-05-14.
 
+Phase 3 classification source: `PHASE3_CLOSEOUT_INDEX.md`.
+
 ## Boundary
 
 This track adds a controlled Twilio integration path for future governed testing. It does not approve real participant outreach, human-subjects use, pilot use, production use, telecom compliance, legal approval, IRB/ethics approval, security certification, or accessibility certification.

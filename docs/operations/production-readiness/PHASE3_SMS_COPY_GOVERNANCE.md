@@ -4,6 +4,8 @@ Status: **SMS COPY GOVERNANCE RECORDED + MOCK CONTROL EVIDENCE UPDATED (2026-05-
 
 Decision label: **NOT READY FOR HUMAN TESTING**.
 
+Phase 3 classification source: `PHASE3_CLOSEOUT_INDEX.md`.
+
 ## Scope and boundary
 
 This note records copy governance for **mock/sandbox SMS-linked participant entry** in Phase 3.
