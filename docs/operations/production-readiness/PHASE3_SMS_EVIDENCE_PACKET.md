@@ -22,11 +22,26 @@ Mock/sandbox is the default posture. Real provider behavior is gated and deferre
 - **PROVIDER_REQUIRED**: Requires external provider account/configuration/logs.
 - **NOT RUN**: Not executed in this repository evidence capture cycle.
 
+## Repository Validation Snapshot
+
+Local follow-up validation on 2026-05-15 covers repository-verifiable evidence only.
+
+| Command | Result | Evidence interpretation |
+| --- | --- | --- |
+| `npm.cmd --prefix server run build` | PASS | TypeScript/server build evidence for SMS/Twilio code paths. |
+| `node scripts\run-tests.mjs "server/tests/smsMagicLink.test.mjs"` | PASS | Mock SMS outbox, neutral copy, opt-in gates, opaque link, one-use token, audit redaction, STOP/HELP simulation, rate limits, role gates, and per-recipient Twilio link-config failure handling. |
+| `node scripts\run-tests.mjs "server/tests/twilioSmsProvider.test.mjs"` | PASS | Twilio real-SMS gates, Messaging Service send shape, webhook parsers/signature checks, setup-status no-secret/no-SID response behavior. |
+| `npm.cmd --prefix server test` | PASS | Full server regression suite; deployment verifier warning/failure fixtures are expected inside tests and the overall command exited 0. |
+| `npm.cmd --prefix server run security:audit` | PASS | Server high-severity npm audit reported 0 vulnerabilities. |
+| `git diff --check` | PASS | Whitespace check passed; Windows checkout may emit LF/CRLF warnings only. |
+
+This snapshot does not include provider dashboard evidence, real provider sends, carrier approval, real-device evidence, accessibility evidence, or human reviewer signoff.
+
 ## A) Mock/Sandbox Evidence Packet
 
 | Evidence item | Status | Source / notes |
 | --- | --- | --- |
-| Mock SMS outbox evidence | COMPLETE FOR MOCK/SANDBOX ONLY | Automated regression asserts outbox send behavior, neutral copy, and opaque link format. |
+| Mock SMS outbox evidence | COMPLETE FOR MOCK/SANDBOX ONLY | `server/tests/smsMagicLink.test.mjs` asserts outbox send behavior, neutral copy, and opaque link format. |
 | Neutral SMS copy evidence | COMPLETE FOR MOCK/SANDBOX ONLY | Copy checks enforce neutral language and STOP/HELP notice. |
 | Opt-in status evidence | COMPLETE FOR MOCK/SANDBOX ONLY | Send eligibility checks enforce SMS preference + consent + active enrollment/consent state. |
 | Phone verification / mock OTP behavior | COMPLETE FOR MOCK/SANDBOX ONLY | Local OTP start/verify flow is exercised for mock provider path. |
@@ -34,7 +49,7 @@ Mock/sandbox is the default posture. Real provider behavior is gated and deferre
 | Resend/reminder rate limits | COMPLETE FOR MOCK/SANDBOX ONLY | Cooldown and cap suppression reasons asserted in tests. |
 | Permission-gated staff controls | COMPLETE FOR MOCK/SANDBOX ONLY | Non-privileged role access to SMS policy/contact/send/verification controls is denied. |
 | STOP/HELP mock handling | COMPLETE FOR MOCK/SANDBOX ONLY | Staff-gated mock inbound endpoint records HELP and processes STOP consent revocation. |
-| Audit redaction evidence | COMPLETE FOR MOCK/SANDBOX ONLY | Tests assert no raw token, OTP, full phone, or direct participant IDs in SMS/magic-link audit payloads. |
+| Audit redaction evidence | COMPLETE FOR MOCK/SANDBOX ONLY | Tests assert no raw token, OTP, full phone, direct participant IDs, participant/study/email/phone/role query parameters, or sensitive SMS body leakage in the covered paths. |
 
 ## B) Provider (Twilio) Evidence Template
 
@@ -54,6 +69,7 @@ Complete this section only after gated provider setup in a non-production enviro
 
 - Status: **COMPLETE FOR MOCK/SANDBOX ONLY** for non-secret readiness flags.
 - Status for real provider execution: **PROVIDER_REQUIRED**.
+- Repository test coverage confirms the setup-status response does not expose Twilio Account SID, Auth Token, Messaging Service SID, configured raw sender number, OTP, or token fields.
 - Capture template:
   - Date/time UTC:
   - Operator role used:
@@ -91,6 +107,8 @@ Complete this section only after gated provider setup in a non-production enviro
   - No raw sender number exposure.
   - No OTP/token exposure in setup status or provider evidence artifacts.
 
+Repository evidence covers `/sms/setup-status` response shape only. Live-provider screenshots, dashboard exports, and callback transcripts must be reviewed separately before they are attached.
+
 ### B6. Provider Dashboard Screenshots
 
 - Status: **NOT RUN** unless manually attached.
@@ -114,6 +132,7 @@ for provider-only checks/transcripts.
 2. Provider callback/inbound STOP/HELP transcript evidence.
 3. Human reviewer signoffs (SMS copy, privacy/security, Data Custodian).
 4. Real-device phone evidence (iPhone/Safari and Android/Chrome).
+5. Human-observed synthetic phone walkthrough using the selected laptop package.
 
 ## Non-Claims
 
