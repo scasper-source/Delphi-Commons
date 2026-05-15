@@ -2,7 +2,7 @@
 
 Status: planning document. This is not a production-readiness claim.
 
-Date basis: 2026-05-14.
+Date basis: 2026-05-15.
 
 This document resets the near-term readiness plan around the project's actual next goal:
 
@@ -68,7 +68,7 @@ Use existing evidence as baseline. Do not rerun mock-trial work unless a change 
 | Export privacy/provenance | Governed packages include reviewer provenance metadata; focused export privacy/provenance tests exist. | Data Custodian/reviewer signoff still required. |
 | External collaborator smoke | External collaborator reported successful client/server build and start. | Build/start smoke only; not workflow validation. |
 | Human/deployment closeout | Evidence-gap binders/templates exist or are being prepared. | Gaps remain open until human testing is performed against a candidate. |
-| Phase 3 SMS candidate controls | Local mock STOP/HELP simulation, opt-in gates, resend limits, and staff permission tests added in server automated coverage. | Engineering-only local evidence; still not telecom/pilot/production readiness. |
+| Phase 3 SMS candidate controls | Local mock STOP/HELP simulation, opt-in gates, resend limits, and staff permission tests added in server automated coverage. A gated Twilio setup/provider track and operator SMS setup prompt are now merged. | Engineering-only local evidence; still not real-SMS, telecom, pilot, production, or human-testing readiness. |
 | Readiness claim controls | Packaging overclaim scanner now covers production/pilot/human-testing, IRB/ethics/legal/security/accessibility approval, real-SMS/PWA/native/public-release, installer/updater/signing/notarization, and Windows/macOS support-readiness language. | Guardrail only; it prevents overclaims in package evidence surfaces but does not replace human review. |
 
 ## Product Tracks
@@ -90,7 +90,7 @@ This plan focuses on `human_testing_candidate`.
 | Windows laptop operator package | In scope now. | Primary first human testing path. | Clean install/start/stop/reset, local data directory policy, backup/export paths, smoke test, uninstall/reset notes, Defender/SmartScreen limitation notes if unsigned. |
 | macOS laptop operator package | In scope now if a Mac tester is available. | Secondary laptop support path. | Clean install/start/stop/reset, Intel/Apple Silicon statement, Gatekeeper/signing limitation notes, local data directory policy, smoke test. |
 | Phone participant mobile web | In scope now. | Primary phone experience for participants. | iOS Safari and Android Chrome open-link evidence, responsive active task checks, consent/Round 1/later round/support/withdrawal checks, real-device accessibility notes. |
-| SMS magic-link entry | In scope now. | Primary invitation/reminder entry path for phone testing. | Neutral SMS copy, opt-in/verification rules, opaque expiring links, rate limits, audit events, no sensitive content in SMS, STOP/HELP or documented simulated equivalent. |
+| SMS magic-link entry | In scope now. | Primary invitation/reminder entry path for phone testing. | Neutral SMS copy, opt-in/verification rules, opaque expiring links, rate limits, audit events, no sensitive content in SMS, STOP/HELP or documented simulated equivalent. If a real provider is used, provider setup, sender approval/sandbox status, callback behavior, and reviewer approval must be evidenced separately. |
 | PWA install-to-home-screen | Deferred for Phase 3 by charter-based scope decision. | Later convenience path only if mobile web is insufficient and a separate ADR approves cache/storage/session policy. | Not required for Phase 3. Future PWA scope requires manifest/service-worker review, cache/storage privacy proof, logout/session revocation, and iOS/Android behavior notes. |
 | Native iOS app | Deferred unless explicitly approved. | Later distribution path only if mobile web is insufficient. | TestFlight/App Store plan, permissions, secure storage, privacy labels, SDK review, push notification governance. |
 | Native Android app | Deferred unless explicitly approved. | Later distribution path only if mobile web is insufficient. | Internal testing/Play plan, permissions, secure storage, Data Safety inputs, SDK review, push notification governance. |
@@ -145,7 +145,7 @@ Locked decisions:
 - Windows laptop operator path: **included** as the primary laptop operator path.
 - macOS laptop operator path: **included, evidence-dependent**; one 2026-05-14 Apple Silicon post-fix lifecycle rerun is recorded, but broad macOS support/readiness is not claimed.
 - Phone participant path: **mobile web required**.
-- SMS path: **mock/simulated/sandbox only** for the current candidate; real production SMS credentials and delivery operations are deferred.
+- SMS path: **mock/simulated/sandbox by default** for the current candidate; PR #85 adds a gated Twilio real-SMS setup track, but real provider credentials and delivery operations remain deferred until Twilio sender approval/sandbox evidence, privacy/security review, Data Custodian review, SMS copy review, device evidence, and human-use approval are recorded.
 - PWA path: **deferred / disabled by default** for Phase 3; future PWA work requires a separate privacy ADR.
 - Native iOS/Android: **excluded/deferred unless separately approved**.
 - External AI mode: **No External AI unless a named connector is separately approved**.
@@ -231,22 +231,22 @@ SMS copy governance note: [PHASE3_SMS_COPY_GOVERNANCE.md](./PHASE3_SMS_COPY_GOVE
 Magic-link privacy review: [PHASE3_MAGIC_LINK_PRIVACY_REVIEW.md](./PHASE3_MAGIC_LINK_PRIVACY_REVIEW.md).
 Twilio real-SMS track: [PHASE3_TWILIO_REAL_SMS_TRACK.md](./PHASE3_TWILIO_REAL_SMS_TRACK.md).
 
-Current Phase 3 status as of 2026-05-14: **PARTIAL IMPLEMENTATION / INTERNAL EVIDENCE RECORDED** and **NOT READY FOR HUMAN TESTING**.
+Current Phase 3 status as of 2026-05-15: **PARTIAL IMPLEMENTATION / INTERNAL EVIDENCE RECORDED / GATED TWILIO SETUP TRACK MERGED** and **NOT READY FOR HUMAN TESTING**.
 
 Completion snapshot:
 
-- Required implementation matrix items: 10 complete for local mock/sandbox scope, with PWA deferred for Phase 3 and native iOS/Android excluded unless separately approved.
-- Required evidence items: SMS mock/sandbox automation, SMS copy governance, link/token privacy remediation, and mobile task-flow automation are recorded for internal engineering use only; iPhone/Safari and Android/Chrome real-device evidence remain NOT RUN.
+- Required implementation matrix items: 10 complete for local mock/sandbox scope, with PWA deferred for Phase 3 and native iOS/Android excluded unless separately approved. PR #85 adds gated Twilio provider plumbing, setup-status reporting, delivery callback handling, inbound STOP/HELP handling, and an operator setup prompt for the real-provider track.
+- Required evidence items: SMS mock/sandbox automation, SMS copy governance, link/token privacy remediation, and mobile task-flow automation are recorded for internal engineering use only; iPhone/Safari, Android/Chrome, real provider/sandbox, and human-observed evidence remain NOT RUN.
 - PWA decision: deferred for Phase 3. The charter requires device-agnostic participation, accessibility, secure defaults, data minimization, and low-waste operation; it does not require installable/offline PWA behavior. Mobile web is the Phase 3 phone surface.
-- Targeted verification: Phase 3 server build, focused SMS/magic-link regression tests, and full server tests passed on 2026-05-13 in the merged Phase 3 PRs.
+- Targeted verification: Phase 3 server build, focused SMS/magic-link regression tests, and full server tests passed on 2026-05-13 in the merged Phase 3 PRs. The gated Twilio setup track merged on 2026-05-15 with app/server builds, focused Twilio and SMS magic-link tests, full server tests, and server security audit passing.
 - Optional browser scaffolds: `npm --prefix server run test:phase3-magic-link-browser-scaffold` passed locally on 2026-05-13 with live backend/frontend prerequisites and Microsoft Edge headless; `npm --prefix server run test:phase3-mobile-task-flow-scaffold` passed locally on 2026-05-13 and recorded consent, Round 1, support, no-active-task, later round, closeout, and withdrawal observations. Cloud runs without backend/frontend prerequisites can only produce precondition evidence.
-- Exit gate remains open because phone-device evidence, real SMS/provider evidence, accessibility evidence, and human reviewer/signoff work are still outstanding.
+- Exit gate remains open because phone-device evidence, real SMS/provider evidence, telecom/provider setup evidence, accessibility evidence, and human reviewer/signoff work are still outstanding.
 
 Phase 3 blocker interpretation:
 
-- SMS remains mock/sandbox/internal-only. Real provider credentials, telecom/compliance readiness, and production SMS operations remain deferred.
-- Twilio real-SMS plumbing now has a gated implementation track, but it remains disabled by default and does not close real-SMS readiness, telecom compliance, privacy/security review, or human-testing approval.
-- Downloaded-package operators now receive an SMS setup choice in the UI and can be directed to Twilio setup/Connect before study SMS policy configuration; the setup check returns readiness flags only, not secrets.
+- SMS remains mock/sandbox/internal-only by default. Real provider credentials, telecom/compliance readiness, and production SMS operations remain deferred.
+- Twilio real-SMS plumbing now has a gated implementation track, but it remains disabled by default and does not close real-SMS readiness, telecom compliance, privacy/security review, Data Custodian review, copy review, device evidence, or human-testing approval.
+- Downloaded-package operators now receive an SMS setup choice in the UI and can be directed to Twilio setup guidance before study SMS policy configuration; the setup check returns readiness flags only, not secrets.
 - Opaque-link, token-privacy, and SMS audit boundaries are implemented for engineering scope, but these controls still require human-observed phone evidence and signoff artifacts.
 - Mobile web is the required phone path for this candidate; PWA install/offline behavior and native mobile app paths remain out of scope unless separately approved.
 
@@ -257,6 +257,7 @@ Required implementation:
 - Mobile participant entry route works from an opaque link.
 - SMS copy remains neutral and does not reveal study-sensitive content.
 - SMS is optional and opt-in.
+- Real-provider SMS setup, if enabled, is surfaced as an operator choice and remains feature-gated until provider setup and review evidence are recorded.
 - Phone verification or clearly documented mock/sandbox equivalent exists.
 - Magic links are opaque, expiring, single-use or otherwise risk-controlled, and do not include participant ID, study ID, email, phone, or role in the URL.
 - SMS send/reminder attempts are audited without raw token, OTP, full phone number, or sensitive message content.
@@ -270,6 +271,7 @@ Required evidence:
 - iPhone/Safari real-device or simulator evidence.
 - Android/Chrome real-device or emulator evidence.
 - SMS mock/sandbox outbox evidence or provider sandbox evidence.
+- For Twilio or another real provider: sender/Messaging Service approval or sandbox status, delivery callback evidence, inbound STOP/HELP evidence, setup-status evidence, and no-secret/no-SID exposure checks.
 - Copy review for SMS messages.
 - Privacy review of link/token behavior.
 - Mobile screenshots or screen recordings for active tasks.
@@ -372,6 +374,7 @@ Rules:
 - Reminder frequency must be rate-limited and documented.
 - STOP/HELP handling must be implemented before real SMS use, or clearly simulated/disabled in the human testing candidate.
 - Real SMS provider credentials must not be committed.
+- Operator setup/status surfaces may expose readiness flags only; they must not expose Account SID, auth tokens, Messaging Service SID, raw sender numbers, message bodies, raw OTPs, or raw magic-link tokens.
 - Real SMS provider use requires Security & Privacy Lead and Data Custodian review before any real participant use.
 
 ## Evidence Requirements By Candidate Surface
@@ -405,6 +408,7 @@ Latest repo-verifiable validation snapshot:
 
 - 2026-05-14, merged main at `121a526`: `npm.cmd --prefix app run build` passed after rerun outside the local sandbox; `npm.cmd --prefix app run test` passed 28/28; `npm.cmd --prefix server test` passed; packaging/claim-scan tests passed 18/18; `powershell -ExecutionPolicy Bypass -File .\scripts\windows\portable-bundled-runtime.ps1 verify` passed; app and server `npm audit --audit-level=high` reported 0 vulnerabilities; `git diff --check` passed. `npm.cmd --prefix app run lint` produced two existing React Hook dependency warnings and no errors.
 - 2026-05-14, merged main at `121a526`: claim-scan follow-up coverage catches standalone `IRB approval`, combined `IRB/ethics approval`, and standalone `ethics approval` package overclaims.
+- 2026-05-15, merged main at `eb4bacb`: PR #85 added the gated Twilio setup/provider track and operator SMS setup prompt. Validation recorded in the PR: `npm.cmd --prefix server run build` passed; `npm.cmd --prefix app run build` passed; `node scripts\run-tests.mjs "server/tests/twilioSmsProvider.test.mjs"` passed; `node scripts\run-tests.mjs "server/tests/smsMagicLink.test.mjs"` passed; `npm.cmd --prefix server test` passed; `npm.cmd --prefix server run security:audit` passed with 0 vulnerabilities.
 
 Minimum manual preflight checks:
 
@@ -451,7 +455,7 @@ These blockers cannot be closed by Codex alone:
 | HTC-WP3 | Build macOS operator run path. | macOS install/start/stop/reset docs and smoke evidence, if in scope. |
 | HTC-WP4 | Build synthetic demo study setup. | One documented setup path creates a repeatable human testing study. |
 | HTC-WP5 | Harden phone participant flow. | Phone URL flow covers consent, active rounds, support, withdrawal, and closeout on mobile. |
-| HTC-WP6 | Harden SMS magic-link path. | Neutral SMS, opaque link, opt-in, mock/sandbox evidence, audit/privacy checks. |
+| HTC-WP6 | Harden SMS magic-link path. | Neutral SMS, opaque link, opt-in, mock/sandbox evidence, audit/privacy checks, and gated Twilio setup/provider track with real-provider evidence still open. |
 | HTC-WP7 | Decide PWA scope. | **Done for Phase 3:** PWA is deferred by charter-based scope decision; future PWA requires separate ADR plus cache/storage/session-revocation evidence. |
 | HTC-WP8 | Assemble human testing binder. | Binder contains checklists, transcript, screenshot/log index, defect rubric, signoffs, and blocker table. |
 | HTC-WP9 | Run candidate smoke evidence. | Build/tests/smoke/mobile/export/backup/security checks are recorded. |
@@ -507,3 +511,10 @@ Public open-source release remains separate and requires repository hygiene, lic
 - Covered when run with prerequisites: consent information, Round 1 submission, participant support issue submission, no-active-task waiting state, later-round structured judgment submission, released closeout/final-results view, withdrawal action, and redacted evidence output.
 - Local run evidence: `docs/qc/full-mock-trial/artifacts/phase3-mobile-task-flow-scaffold-2026-05-13T21-32-09-080Z.md`.
 - Non-claim boundary: this scaffold is not iPhone/Safari or Android/Chrome real-device evidence, not accessibility evidence, not human-observed testing, not real-SMS/provider evidence, and not production readiness evidence.
+
+## Phase 3 Twilio setup track update (2026-05-15)
+- Implemented: gated Twilio provider plumbing with mock SMS remaining the default path unless the real-provider environment is explicitly configured.
+- Implemented: operator SMS setup prompt and setup-status check that reports readiness flags without exposing provider secrets or sensitive identifiers.
+- Implemented: Twilio delivery callback handling, inbound STOP/HELP handling, and Twilio-backed phone verification behavior with development OTP disclosure disabled for the real provider path.
+- Added regression checks for Twilio provider behavior and existing SMS magic-link privacy controls.
+- Non-claim boundary: this update does not establish Twilio account readiness, carrier approval, telecom compliance, real participant texting approval, device evidence, human-observed testing, pilot readiness, or production readiness.
