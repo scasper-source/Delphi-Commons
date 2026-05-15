@@ -238,6 +238,8 @@ test("round_open_sms_magic_link_mobile_entry sends neutral opt-in SMS and uses o
   const token = linkMatch[1];
   assert.doesNotMatch(token, new RegExp(participant.participant_id));
   assert.doesNotMatch(sms.body, new RegExp(`${studyId}|${versionId}|${participant.email}`));
+  assert.doesNotMatch(sms.body, /[?&](participant|study|email|phone|role)=/i);
+  assert.doesNotMatch(sms.body, /5550101234|\+15550101234/);
 
   const tokenRows = getDatabase().prepare("SELECT token_hash FROM magic_link_tokens").all();
   assert.equal(tokenRows.length, 1);
