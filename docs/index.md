@@ -54,6 +54,7 @@ Current readiness: controlled mock-participant MVP testing with synthetic or low
 - [Phase 3 SMS copy governance](./operations/production-readiness/PHASE3_SMS_COPY_GOVERNANCE.md)
 - [Phase 3 magic-link privacy review](./operations/production-readiness/PHASE3_MAGIC_LINK_PRIVACY_REVIEW.md)
 - [Phase 3 Twilio real-SMS track](./operations/production-readiness/PHASE3_TWILIO_REAL_SMS_TRACK.md)
+- [Phase 3 SMS evidence packet](./operations/production-readiness/PHASE3_SMS_EVIDENCE_PACKET.md)
 - [Phase 3 mobile web task-flow local evidence](./operations/production-readiness/PHASE3_MOBILE_WEB_TASK_FLOW_EVIDENCE.md)
 - [Open-source release checklist](./OPEN_SOURCE_RELEASE_CHECKLIST.md)
 - [License rationale](./LICENSE_RATIONALE.md)

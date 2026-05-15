@@ -28,7 +28,9 @@ function resetTwilioEnv() {
   delete process.env.TWILIO_ACCOUNT_SID;
   delete process.env.TWILIO_AUTH_TOKEN;
   delete process.env.TWILIO_MESSAGING_SERVICE_SID;
+  delete process.env.TWILIO_PHONE_NUMBER;
 }
+
 
 function setBaseTwilioEnv() {
   process.env.EDELPHI_SMS_PROVIDER = "twilio";
@@ -37,7 +39,9 @@ function setBaseTwilioEnv() {
   process.env.TWILIO_MESSAGING_SERVICE_SID = messagingServiceSid;
   process.env.EDELPHI_TWILIO_WEBHOOK_BASE_URL = "https://hooks.example.test";
   process.env.EDELPHI_PUBLIC_PARTICIPANT_ORIGIN = "https://participant.example.test";
+  process.env.TWILIO_PHONE_NUMBER = "+15558675309";
 }
+
 
 function twilioSignature(url, params, token) {
   const payload = Object.keys(params)
@@ -169,4 +173,6 @@ test("sms setup status exposes Twilio connection readiness without secrets", asy
   assert.doesNotMatch(serialized, new RegExp(authToken));
   assert.doesNotMatch(serialized, new RegExp(accountSid));
   assert.doesNotMatch(serialized, new RegExp(messagingServiceSid));
+  assert.doesNotMatch(serialized, /\+15558675309|15558675309/);
+  assert.doesNotMatch(serialized.toLowerCase(), /\"otp\"\s*:|\"token\"\s*:/);
 });
