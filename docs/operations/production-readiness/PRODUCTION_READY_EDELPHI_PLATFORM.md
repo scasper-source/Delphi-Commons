@@ -232,16 +232,23 @@ SMS mock/sandbox and provider evidence packet: [PHASE3_SMS_EVIDENCE_PACKET.md](.
 Magic-link privacy review: [PHASE3_MAGIC_LINK_PRIVACY_REVIEW.md](./PHASE3_MAGIC_LINK_PRIVACY_REVIEW.md).
 Twilio real-SMS track: [PHASE3_TWILIO_REAL_SMS_TRACK.md](./PHASE3_TWILIO_REAL_SMS_TRACK.md).
 
-Current Phase 3 status as of 2026-05-15: **PARTIAL IMPLEMENTATION / INTERNAL EVIDENCE RECORDED / GATED TWILIO SETUP TRACK MERGED** and **NOT READY FOR HUMAN TESTING**.
+Current Phase 3 status as of 2026-05-15: **LOCAL MOCK/SANDBOX IMPLEMENTATION AND EVIDENCE-PREP SUBSTANTIALLY COMPLETE; DEVICE/PROVIDER/HUMAN EVIDENCE GATES OPEN** and **NOT READY FOR HUMAN TESTING**.
 
 Completion snapshot:
 
+- Codex-doable Phase 3 materials are complete for the current local mock/sandbox scope: implementation matrix, SMS evidence packet, SMS copy reviewer packet, magic-link privacy reviewer packet, mobile task-flow scaffold, mobile device runbooks/templates, and PWA deferral record are in place.
 - Required implementation matrix items: 10 complete for local mock/sandbox scope, with PWA deferred for Phase 3 and native iOS/Android excluded unless separately approved. PR #85 adds gated Twilio provider plumbing, setup-status reporting, delivery callback handling, inbound STOP/HELP handling, and an operator setup prompt for the real-provider track.
-- Required evidence items: SMS mock/sandbox automation, SMS evidence packet, SMS copy governance, link/token privacy remediation, and mobile task-flow automation are recorded for internal engineering use only; iPhone/Safari, Android/Chrome, real provider/sandbox, and human-observed evidence remain NOT RUN.
+- Required evidence items: SMS mock/sandbox automation, SMS evidence packet, SMS copy governance, link/token privacy remediation, and mobile task-flow automation are recorded for internal engineering use only; iPhone/Safari, Android/Chrome, real provider/sandbox, accessibility, reviewer signoff, and human-observed evidence remain NOT RUN / HUMAN_REQUIRED / PROVIDER_REQUIRED.
 - PWA decision: deferred for Phase 3. The charter requires device-agnostic participation, accessibility, secure defaults, data minimization, and low-waste operation; it does not require installable/offline PWA behavior. Mobile web is the Phase 3 phone surface.
 - Targeted verification: Phase 3 server build, focused SMS/magic-link regression tests, and full server tests passed on 2026-05-13 in the merged Phase 3 PRs. The gated Twilio setup track merged on 2026-05-15 with app/server builds, focused Twilio and SMS magic-link tests, full server tests, and server security audit passing. A 2026-05-15 local follow-up completed the SMS evidence packet and reran focused SMS/Twilio tests plus full server tests.
 - Optional browser scaffolds: `npm --prefix server run test:phase3-magic-link-browser-scaffold` passed locally on 2026-05-13 with live backend/frontend prerequisites and Microsoft Edge headless; `npm --prefix server run test:phase3-mobile-task-flow-scaffold` passed locally on 2026-05-13 and recorded consent, Round 1, support, no-active-task, later round, closeout, and withdrawal observations. Cloud runs without backend/frontend prerequisites can only produce precondition evidence.
 - Exit gate remains open because phone-device evidence, real SMS/provider evidence, telecom/provider setup evidence, accessibility evidence, and human reviewer/signoff work are still outstanding.
+
+Phase 3 closeout interpretation:
+
+- **Closed from here:** local mock/sandbox implementation, repository-verifiable SMS/magic-link/Twilio guardrail tests, evidence packet scaffolding, reviewer packet scaffolding, mobile runbooks/templates, and PWA deferral documentation.
+- **Still open:** actual iPhone/Safari and Android/Chrome evidence, real provider/sandbox Twilio evidence if SMS provider testing is in scope, accessibility review, SMS copy review, privacy/security review, Data Custodian review, and human-observed phone walkthrough.
+- Therefore Phase 3 is ready for evidence collection, not closed for the Production Ready exit gate.
 
 Phase 3 blocker interpretation:
 
