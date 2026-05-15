@@ -27,7 +27,7 @@ Date basis: 2026-05-15.
 | STOP/HELP behavior | COMPLETE FOR MOCK/SANDBOX ONLY | `PHASE3_PHONE_SMS_CANDIDATE_PLAN.md`, `PHASE3_TWILIO_REAL_SMS_TRACK.md` | Simulated locally and Twilio endpoints implemented; carrier/provider proof not run. |
 | Resend/reminder permission + cooldown/cap behavior | COMPLETE FOR MOCK/SANDBOX ONLY | `PHASE3_PHONE_SMS_CANDIDATE_PLAN.md`, `PHASE3_SMS_COPY_GOVERNANCE.md` | Local policy enforcement evidence only. |
 | Audit redaction (no raw token/OTP/full phone/SMS body in reviewer-facing artifacts) | COMPLETE FOR MOCK/SANDBOX ONLY | `PHASE3_PHONE_SMS_CANDIDATE_PLAN.md`, `PHASE3_MAGIC_LINK_PRIVACY_REVIEW.md` | Data Custodian signoff is still required. |
-| Local mobile task-flow scaffold (consent/round/support/wait/closeout/withdrawal) | COMPLETE FOR MOCK/SANDBOX ONLY | `PHASE3_MOBILE_WEB_TASK_FLOW_EVIDENCE.md` | Headless local browser evidence only (390px). |
+| Local mobile task-flow scaffold (consent/round/support/wait/closeout/withdrawal) | COMPLETE FOR MOCK/SANDBOX ONLY | `PHASE3_MOBILE_WEB_TASK_FLOW_EVIDENCE.md`, `PHASE3_MOBILE_DEVICE_EVIDENCE_RUNBOOK.md`, `PHASE3_MOBILE_EVIDENCE_TEMPLATES.md` | Headless local browser evidence only (390px) plus manual device runbook/templates. |
 | iPhone/Safari device evidence | NOT RUN | `PHASE3_PHONE_SMS_CANDIDATE_PLAN.md` | Must be timestamped and attached before exit gate closure. |
 | Android/Chrome device evidence | NOT RUN | `PHASE3_PHONE_SMS_CANDIDATE_PLAN.md` | Must be timestamped and attached before exit gate closure. |
 | Accessibility review evidence for phone flow | NOT RUN | `PHASE3_PHONE_SMS_CANDIDATE_PLAN.md` | No accessibility certification/readiness claim. |
@@ -51,3 +51,10 @@ Date basis: 2026-05-15.
 ## Explicit non-claims
 
 This index does **not** claim production readiness, pilot readiness, real human-subjects readiness, real SMS readiness, telecom compliance approval, IRB/legal/security/accessibility certification, or PWA/native mobile readiness.
+
+
+## Phase 3 device evidence runbook/templates
+
+- Runbook: `PHASE3_MOBILE_DEVICE_EVIDENCE_RUNBOOK.md`
+- Templates: `PHASE3_MOBILE_EVIDENCE_TEMPLATES.md`
+- Current status of real iPhone/Android execution in this repository: **NOT RUN** (human/device-required).
