@@ -6,7 +6,13 @@ Decision label: **NOT READY FOR HUMAN TESTING**.
 
 Phase 3 status: **PARTIALLY IMPLEMENTED IN LOCAL MOCK/SANDBOX; PHONE DEVICE AND HUMAN TESTING EVIDENCE NOT RUN**.
 
-Date basis: 2026-05-13.
+Date basis: 2026-05-15.
+
+
+## Phase 3 closeout index
+
+Primary Phase 3 closeout register: `PHASE3_CLOSEOUT_INDEX.md`.
+The index is the authoritative classification source for COMPLETE, COMPLETE FOR MOCK/SANDBOX ONLY, NOT RUN, HUMAN_REQUIRED, PROVIDER_REQUIRED, and BLOCKED items.
 
 ## Purpose
 

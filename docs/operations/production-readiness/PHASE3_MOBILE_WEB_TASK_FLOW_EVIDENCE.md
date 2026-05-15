@@ -29,6 +29,15 @@ Recorded as PASS/PARTIAL/FAIL per run. Current local PASS coverage:
 - released closeout/final-results view
 - withdrawal from future participation
 
+
+## Evidence state classification
+
+- Local scaffold execution state: **COMPLETE FOR MOCK/SANDBOX ONLY**.
+- iPhone/Safari evidence: **NOT RUN**.
+- Android/Chrome evidence: **NOT RUN**.
+- Human-observed walkthrough evidence: **HUMAN_REQUIRED**.
+- Accessibility review evidence: **NOT RUN**.
+
 ## Privacy/Redaction Boundary
 
 - Token evidence is redacted to prefix/suffix snippets only.
