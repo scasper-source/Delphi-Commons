@@ -129,6 +129,7 @@ Stage 1 Windows portable package prototype note: [WINDOWS_OPERATOR_PORTABLE_PACK
 Local Windows portable package evidence note: [WINDOWS_OPERATOR_PORTABLE_PACKAGE_LOCAL_EVIDENCE.md](./WINDOWS_OPERATOR_PORTABLE_PACKAGE_LOCAL_EVIDENCE.md).
 Extracted zip evidence note: [WINDOWS_OPERATOR_PORTABLE_PACKAGE_EXTRACTED_ZIP_EVIDENCE.md](./WINDOWS_OPERATOR_PORTABLE_PACKAGE_EXTRACTED_ZIP_EVIDENCE.md).
 Windows bundled-runtime release asset smoke evidence note: [WINDOWS_PORTABLE_BUNDLED_RUNTIME_RELEASE_ASSET_EVIDENCE_2026-05-14.md](./WINDOWS_PORTABLE_BUNDLED_RUNTIME_RELEASE_ASSET_EVIDENCE_2026-05-14.md).
+Windows Phase 2 sanity pass report: [PHASE2_WINDOWS_SANITY_PASS_REPORT.md](./PHASE2_WINDOWS_SANITY_PASS_REPORT.md).
 Windows signing/distribution limitations note: [WINDOWS_SIGNING_DISTRIBUTION_LIMITATIONS.md](./WINDOWS_SIGNING_DISTRIBUTION_LIMITATIONS.md).
 macOS operator portable/internal package planning ADR: [MACOS_OPERATOR_PORTABLE_PACKAGE_ADR.md](./MACOS_OPERATOR_PORTABLE_PACKAGE_ADR.md).
 macOS operator portable package prototype note: [MACOS_OPERATOR_PORTABLE_PACKAGE.md](./MACOS_OPERATOR_PORTABLE_PACKAGE.md).
@@ -185,11 +186,12 @@ Current progress:
 - **RECORDED (2026-05-14):** Windows bundled-runtime package build, package verification, focused packaging tests, and staged lifecycle commands passed locally with packaged Node 24.15.0. This is not second-machine, clean-profile, signing, SmartScreen, Defender, or platform-support evidence.
 - **RECORDED (2026-05-14):** Prompt 7 documentation/claim-scan cleanup was merged and then locally validated on main at `121a526`: app build passed, app tests passed 28/28, server tests passed, packaging/claim-scan tests passed 18/18, bundled-runtime package verification passed, app/server high-severity npm audits reported 0 vulnerabilities, and `git diff --check` passed. App lint had two existing React Hook dependency warnings and no errors.
 - **RECORDED (2026-05-14):** Windows `r2` GitHub release asset smoke passed from a downloaded zip extracted under a path with spaces. Start, browser UI reachability at `http://127.0.0.1:4173`, status, smoke, and stop passed. Evidence: [WINDOWS_PORTABLE_BUNDLED_RUNTIME_RELEASE_ASSET_EVIDENCE_2026-05-14.md](./WINDOWS_PORTABLE_BUNDLED_RUNTIME_RELEASE_ASSET_EVIDENCE_2026-05-14.md). This remains one-machine/local-user evidence only and does not establish clean-profile, second-machine, signing, SmartScreen, Defender, installer, or platform-support readiness.
+- **RECORDED (2026-05-15):** Windows 11 development/setup/startup sanity pass recorded in [PHASE2_WINDOWS_SANITY_PASS_REPORT.md](./PHASE2_WINDOWS_SANITY_PASS_REPORT.md). This pass confirmed clone/pull, Node.js/npm installation and PATH setup, frontend Vite startup at `http://localhost:5173`, backend startup at `127.0.0.1:3001`, and resolution of initial browser API connection errors after backend startup. It also observed that the backend required build/install before `npm start` because `server/dist/index.js` was initially missing. This is useful Windows setup evidence, but it is **not** a substitute for packaged Windows operator/release-asset verification on a second machine or clean Windows profile.
 - **RECORDED:** Repeatable synthetic study setup baseline exists in [SYNTHETIC_STUDY_SETUP.md](../../qc/full-mock-trial/SYNTHETIC_STUDY_SETUP.md), but package-specific operator walkthrough evidence remains a downstream Phase 2/4 task.
 
 Remaining Phase 2 blockers before the downloadable laptop operator candidate gate can close:
 
-- Verify the Windows package on a second Windows machine or clean Windows user profile.
+- Verify the Windows package on a second Windows machine or clean Windows user profile. The 2026-05-15 Windows sanity pass is supporting setup/startup evidence, but because it followed a development-style Node/npm path rather than the packaged operator/release-asset path, it does not close this blocker by itself.
 - Runtime posture reconciled for current Phase 2 work: local Node/npm remain required at build time; the Windows bundled-runtime package now stages packaged Node and production dependencies for runtime lifecycle commands. Downloaded release-asset smoke evidence is recorded for one local Windows profile; clean-profile or second-machine confirmation remains required before the Phase 2 gate closes.
 - **UPDATED (2026-05-14):** Portable bundled-runtime foundation ADR accepted for internal package hardening; shared packaging core exists and Windows runtime wiring has local branch evidence.
 - Capture or explicitly accept unsigned-package behavior for the intended Windows and macOS distribution channel. Limitation notes are recorded; signing/notarization/installer work remains deferred unless separately approved. The 2026-05-14 Apple Silicon rerun recorded no Gatekeeper/quarantine observations.
@@ -200,6 +202,7 @@ Remaining Phase 2 blockers before the downloadable laptop operator candidate gat
 Recorded Phase 2 implementation:
 
 - Windows install/start/stop/reset/backup/smoke paths are documented in [WINDOWS_OPERATOR_PORTABLE_PACKAGE.md](./WINDOWS_OPERATOR_PORTABLE_PACKAGE.md) and related evidence notes.
+- Windows development/setup/startup sanity evidence is documented in [PHASE2_WINDOWS_SANITY_PASS_REPORT.md](./PHASE2_WINDOWS_SANITY_PASS_REPORT.md), including the observed need to run backend build/install before `npm start` when `server/dist/index.js` is missing.
 - macOS install/start/stop/reset/backup/smoke paths are documented in [MACOS_OPERATOR_PORTABLE_PACKAGE.md](./MACOS_OPERATOR_PORTABLE_PACKAGE.md) and [MACOS_OPERATOR_PORTABLE_RUNBOOK.md](./MACOS_OPERATOR_PORTABLE_RUNBOOK.md).
 - Local runtime directory policy for database, audit logs, exports, backups, evidence artifacts, logs, and state is documented for Windows and macOS package paths.
 - Safe repository/package posture is documented: generated package evidence checks for no committed `.env`, secrets, runtime database, logs, backups, evidence artifacts, or package-root `node_modules`.
@@ -211,6 +214,7 @@ Recorded Phase 2 evidence:
 
 - Windows extracted-zip package run result is recorded in [WINDOWS_OPERATOR_PORTABLE_PACKAGE_EXTRACTED_ZIP_EVIDENCE.md](./WINDOWS_OPERATOR_PORTABLE_PACKAGE_EXTRACTED_ZIP_EVIDENCE.md), with commit hash, package identifier, smoke output, runtime path evidence, known limitations, and package-root sensitive-material checks.
 - Windows bundled-runtime `r2` GitHub release asset smoke result is recorded in [WINDOWS_PORTABLE_BUNDLED_RUNTIME_RELEASE_ASSET_EVIDENCE_2026-05-14.md](./WINDOWS_PORTABLE_BUNDLED_RUNTIME_RELEASE_ASSET_EVIDENCE_2026-05-14.md), with release tag, asset URL, checksum, commit hash, path-with-spaces extraction, start/status/browser/smoke/stop output, and remaining limitations.
+- Windows 11 development/setup/startup sanity pass result is recorded in [PHASE2_WINDOWS_SANITY_PASS_REPORT.md](./PHASE2_WINDOWS_SANITY_PASS_REPORT.md), with Node.js/npm setup, frontend/backend startup, browser-console observation, backend build/install quirk, and screenshot summary. This evidence strengthens the Windows setup record but does not establish packaged operator second-machine or clean-profile readiness.
 - macOS Apple Silicon post-fix lifecycle run result is recorded in [MACOS_OPERATOR_PORTABLE_POST_FIX_LIFECYCLE_EVIDENCE_2026-05-14.md](./MACOS_OPERATOR_PORTABLE_POST_FIX_LIFECYCLE_EVIDENCE_2026-05-14.md), with commit hash, package identifier, smoke output, clean-worktree packaging evidence, runtime lifecycle evidence, and known limitations.
 - Prompt 7 local validation on 2026-05-14 recorded app build/test, server test, packaging/claim-scan tests, bundled-runtime package verification, app/server high-severity npm audit, and diff-check results on merged main.
 - Windows and macOS signing/distribution limitation notes are recorded, but they do not provide signed installer, notarization, SmartScreen, Gatekeeper, enterprise distribution, or support-matrix evidence.
@@ -219,7 +223,7 @@ Exit gate result:
 
 - **NOT YET SATISFIED.**
 - Study Owner/operator launch from docs on a clean laptop profile remains to be evidenced.
-- The package path is close to controlled synthetic walkthrough readiness, and one Windows downloaded release-asset smoke is now recorded, but Phase 2 remains open until the remaining Windows clean-profile or second-machine, distribution-scope, macOS support-scope, and operator walkthrough evidence is recorded.
+- The package path is close to controlled synthetic walkthrough readiness, and one Windows downloaded release-asset smoke plus one Windows development/setup/startup sanity pass are now recorded, but Phase 2 remains open until the remaining Windows clean-profile or second-machine packaged-operator verification, distribution-scope, macOS support-scope, and operator walkthrough evidence is recorded.
 - Even after Phase 2 closes, the result is readiness for controlled synthetic walkthrough only, not pilot or production.
 
 ### Phase 3: Phone Participant And SMS Candidate
