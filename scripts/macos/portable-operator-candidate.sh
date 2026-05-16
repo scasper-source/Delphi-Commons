@@ -3,7 +3,7 @@ set -euo pipefail
 
 COMMAND="${1:-start}"
 case "$COMMAND" in
-  start|stop|restart|status|smoke|backup|reset) ;;
+  start|stop|restart|status|smoke|backup|restore|reset|uninstall) ;;
   *) echo "Unsupported command: $COMMAND" >&2; exit 2 ;;
 esac
 
@@ -464,6 +464,27 @@ reset_flow() {
   echo "Reset complete. Snapshot: $snapshot"
 }
 
+restore_flow() {
+  ensure_dirs
+  local src="${2:-}"
+  if [[ -z "$src" ]]; then
+    src="$(ls -1dt "$BACKUPS_DIR"/backup-* 2>/dev/null | head -n 1 || true)"
+  fi
+  [[ -n "$src" && -d "$src" ]] || { echo "No backup found to restore." >&2; exit 1; }
+  clear_runtime_dir_contents "$DB_DIR"; clear_runtime_dir_contents "$AUDIT_DIR"; clear_runtime_dir_contents "$EXPORTS_DIR"
+  cp -R "$src/"* "$RUNTIME_ROOT/" 2>/dev/null || true
+  write_evidence "Restore completed from $src"
+  echo "Restore complete: $src"
+}
+
+uninstall_flow() {
+  ensure_dirs
+  stop_if_running
+  echo "Uninstall is manual for internal package candidates."
+  echo "Remove /Applications/Delphi Commons and optionally remove runtime data at: $RUNTIME_ROOT"
+  write_evidence "Uninstall guidance shown"
+}
+
 case "$COMMAND" in
   status) status_flow ;;
   start) start_flow ;;
@@ -471,5 +492,7 @@ case "$COMMAND" in
   restart) ensure_dirs; stop_if_running; start_flow ;;
   smoke) smoke_flow ;;
   backup) backup_flow ;;
+  restore) restore_flow "$@" ;;
   reset) reset_flow ;;
+  uninstall) uninstall_flow ;;
 esac

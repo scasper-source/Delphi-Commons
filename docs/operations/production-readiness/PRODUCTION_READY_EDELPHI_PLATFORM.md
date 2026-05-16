@@ -530,3 +530,9 @@ Public open-source release remains separate and requires repository hygiene, lic
 - Implemented: Twilio delivery callback handling, inbound STOP/HELP handling, and Twilio-backed phone verification behavior with development OTP disclosure disabled for the real provider path.
 - Added regression checks for Twilio provider behavior and existing SMS magic-link privacy controls.
 - Non-claim boundary: this update does not establish Twilio account readiness, carrier approval, telecom compliance, real participant texting approval, device evidence, human-observed testing, pilot readiness, or production readiness.
+
+## Phase 2 macOS installable candidate track (new, parallel)
+- Added a thin macOS installer adapter (`scripts/packaging/macos-installer.mjs`) that reuses shared packaging core and existing macOS portable package staging.
+- This does **not** replace the existing macOS portable flow; it is a parallel internal-candidate track.
+- Current branch status: installer packaging logic implemented; real-Mac `.pkg` build/install lifecycle evidence is NOT RUN in this Linux environment.
+- Non-claims remain: no signing/notarization/Gatekeeper claim, no broad macOS support claim, no production/pilot/human-subjects readiness claim.
