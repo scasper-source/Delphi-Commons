@@ -2,7 +2,7 @@
 
 Status: planning document. This is not a production-readiness claim.
 
-Date basis: 2026-05-15.
+Date basis: 2026-05-17.
 
 This document resets the near-term readiness plan around the project's actual next goal:
 
@@ -68,6 +68,7 @@ Use existing evidence as baseline. Do not rerun mock-trial work unless a change 
 | Export privacy/provenance | Governed packages include reviewer provenance metadata; focused export privacy/provenance tests exist. | Data Custodian/reviewer signoff still required. |
 | External collaborator smoke | External collaborator reported successful client/server build and start. | Build/start smoke only; not workflow validation. |
 | Human/deployment closeout | Evidence-gap binders/templates exist or are being prepared. | Gaps remain open until human testing is performed against a candidate. |
+| Laptop installer candidates | Windows installer adapter and macOS installer adapter are merged. Windows payload build/verification reaches the missing-Inno-tool gate; macOS `.pkg` build evidence exists. | Installer packaging is structurally improving, but installed lifecycle, signing, reputation/Gatekeeper, and clean-profile evidence remain open. |
 | Phase 3 SMS candidate controls | Local mock STOP/HELP simulation, opt-in gates, resend limits, and staff permission tests added in server automated coverage. A gated Twilio setup/provider track and operator SMS setup prompt are now merged. | Engineering-only local evidence; still not real-SMS, telecom, pilot, production, or human-testing readiness. |
 | Readiness claim controls | Packaging overclaim scanner now covers production/pilot/human-testing, IRB/ethics/legal/security/accessibility approval, real-SMS/PWA/native/public-release, installer/updater/signing/notarization, and Windows/macOS support-readiness language. | Guardrail only; it prevents overclaims in package evidence surfaces but does not replace human review. |
 
@@ -131,6 +132,10 @@ Extracted zip evidence note: [WINDOWS_OPERATOR_PORTABLE_PACKAGE_EXTRACTED_ZIP_EV
 Windows bundled-runtime release asset smoke evidence note: [WINDOWS_PORTABLE_BUNDLED_RUNTIME_RELEASE_ASSET_EVIDENCE_2026-05-14.md](./WINDOWS_PORTABLE_BUNDLED_RUNTIME_RELEASE_ASSET_EVIDENCE_2026-05-14.md).
 Windows Phase 2 sanity pass report: [PHASE2_WINDOWS_SANITY_PASS_REPORT.md](./PHASE2_WINDOWS_SANITY_PASS_REPORT.md).
 Windows signing/distribution limitations note: [WINDOWS_SIGNING_DISTRIBUTION_LIMITATIONS.md](./WINDOWS_SIGNING_DISTRIBUTION_LIMITATIONS.md).
+Windows installer candidate ADR: [WINDOWS_INSTALLER_CANDIDATE_ADR.md](./WINDOWS_INSTALLER_CANDIDATE_ADR.md).
+Windows installer candidate runbook: [WINDOWS_INSTALLER_CANDIDATE_RUNBOOK.md](./WINDOWS_INSTALLER_CANDIDATE_RUNBOOK.md).
+Windows installer candidate evidence: [WINDOWS_INSTALLER_CANDIDATE_EVIDENCE_2026-05-17.md](./WINDOWS_INSTALLER_CANDIDATE_EVIDENCE_2026-05-17.md).
+Windows installer candidate hardening note: [WINDOWS_INSTALLER_CANDIDATE_HARDENING_2026-05-17.md](./WINDOWS_INSTALLER_CANDIDATE_HARDENING_2026-05-17.md).
 macOS operator portable/internal package planning ADR: [MACOS_OPERATOR_PORTABLE_PACKAGE_ADR.md](./MACOS_OPERATOR_PORTABLE_PACKAGE_ADR.md).
 macOS operator portable package prototype note: [MACOS_OPERATOR_PORTABLE_PACKAGE.md](./MACOS_OPERATOR_PORTABLE_PACKAGE.md).
 macOS operator portable package static review evidence: [MACOS_OPERATOR_PORTABLE_PACKAGE_STATIC_REVIEW.md](./MACOS_OPERATOR_PORTABLE_PACKAGE_STATIC_REVIEW.md).
@@ -143,7 +148,7 @@ Local Windows supervisor evidence note: [WINDOWS_OPERATOR_CANDIDATE_LOCAL_SUPERV
 
 Locked decisions:
 
-- Windows laptop operator path: **included** as the primary laptop operator path.
+- Windows laptop operator path: **included** as the primary laptop operator path. The portable bundled-runtime path has local/release-asset smoke evidence; the Inno Setup installer-candidate path is implemented but still lacks final `.exe` and installed lifecycle evidence.
 - macOS laptop operator path: **included, evidence-dependent**; one 2026-05-14 Apple Silicon post-fix lifecycle rerun is recorded, but broad macOS support/readiness is not claimed.
 - Phone participant path: **mobile web required**.
 - SMS path: **mock/simulated/sandbox by default** for the current candidate; PR #85 adds a gated Twilio real-SMS setup track, but real provider credentials and delivery operations remain deferred until Twilio sender approval/sandbox evidence, privacy/security review, Data Custodian review, SMS copy review, device evidence, and human-use approval are recorded.
@@ -177,7 +182,7 @@ Current progress:
 - **DONE:** Stage 1 Windows portable/internal package local evidence recorded.
 - **DONE:** Stage 1 Windows portable/internal package extracted-zip local evidence recorded.
 - **DONE:** Windows signing/distribution limitations recorded.
-- **DONE:** Runtime posture reconciled for the current Phase 2 candidate: local Node.js/npm remain build-time prerequisites; Windows bundled-runtime hardening now stages packaged Node and production dependencies for runtime lifecycle commands; Tauri, installers, signing, and updater tracks remain deferred.
+- **DONE:** Runtime posture reconciled for the current Phase 2 candidate: local Node.js/npm remain build-time prerequisites; Windows bundled-runtime hardening now stages packaged Node and production dependencies for runtime lifecycle commands. Tauri, signing, and updater tracks remain deferred; the Windows installer-candidate track is implemented but not yet final-artifact/lifecycle verified.
 - **DONE:** macOS operator portable planning, prototype, static review, runbook, and signing/distribution limitation notes recorded.
 - **RECORDED (2026-05-13):** One Apple Silicon macOS internal engineering runtime run produced partial package/build/start evidence but exposed lifecycle supervision defects; this does **not** establish macOS support readiness or human-testing readiness.
 - **DONE:** macOS Apple Silicon package defects fixed and internal engineering verification recorded.
@@ -187,29 +192,32 @@ Current progress:
 - **RECORDED (2026-05-14):** Prompt 7 documentation/claim-scan cleanup was merged and then locally validated on main at `121a526`: app build passed, app tests passed 28/28, server tests passed, packaging/claim-scan tests passed 18/18, bundled-runtime package verification passed, app/server high-severity npm audits reported 0 vulnerabilities, and `git diff --check` passed. App lint had two existing React Hook dependency warnings and no errors.
 - **RECORDED (2026-05-14):** Windows `r2` GitHub release asset smoke passed from a downloaded zip extracted under a path with spaces. Start, browser UI reachability at `http://127.0.0.1:4173`, status, smoke, and stop passed. Evidence: [WINDOWS_PORTABLE_BUNDLED_RUNTIME_RELEASE_ASSET_EVIDENCE_2026-05-14.md](./WINDOWS_PORTABLE_BUNDLED_RUNTIME_RELEASE_ASSET_EVIDENCE_2026-05-14.md). This remains one-machine/local-user evidence only and does not establish clean-profile, second-machine, signing, SmartScreen, Defender, installer, or platform-support readiness.
 - **RECORDED (2026-05-15):** Windows 11 development/setup/startup sanity pass recorded in [PHASE2_WINDOWS_SANITY_PASS_REPORT.md](./PHASE2_WINDOWS_SANITY_PASS_REPORT.md). This pass confirmed clone/pull, Node.js/npm installation and PATH setup, frontend Vite startup at `http://localhost:5173`, backend startup at `127.0.0.1:3001`, and resolution of initial browser API connection errors after backend startup. It also observed that the backend required build/install before `npm start` because `server/dist/index.js` was initially missing. This is useful Windows setup evidence, but it is **not** a substitute for packaged Windows operator/release-asset verification on a second machine or clean Windows profile.
+- **RECORDED (2026-05-17):** Windows installer-candidate adapter and hardening are merged on main. Evidence is recorded in [WINDOWS_INSTALLER_CANDIDATE_EVIDENCE_2026-05-17.md](./WINDOWS_INSTALLER_CANDIDATE_EVIDENCE_2026-05-17.md) and [WINDOWS_INSTALLER_CANDIDATE_HARDENING_2026-05-17.md](./WINDOWS_INSTALLER_CANDIDATE_HARDENING_2026-05-17.md). The adapter reuses the Windows bundled-runtime payload, fixes launcher package-root/runtime routing, selectively stages `node.exe`/`LICENSE` from the pinned Windows Node ZIP, passes package verification, and reaches the expected `ISCC.exe` unavailable gate on this Windows host. It does **not** yet produce a final `.exe`, code-signed installer, SmartScreen/Defender evidence, or real install/start/stop/uninstall evidence.
 - **RECORDED (2026-05-16):** Real Apple Silicon macOS installer build evidence is recorded in [MACOS_INSTALLER_REAL_MAC_BUILD_EVIDENCE_2026-05-16.md](./MACOS_INSTALLER_REAL_MAC_BUILD_EVIDENCE_2026-05-16.md). The run produced `build/macos-installer/delphi-commons-macos-installer-internal.pkg` with checksum `4fade93b8d7b2e48fd58df22da8f279b37e9bbb2e0398757c1cb2e3c77388b13`, package verification passed, and the expanded payload used packaged Node `v24.15.0` with runtime data configured for `~/Library/Application Support/DelphiCommons/macos-installer-candidate`. Local install/lifecycle evidence remains **BLOCKED / NOT RUN** because `sudo -n installer` required a password in the Codex session; signing, notarization, and Gatekeeper remain **NOT RUN**.
 - **RECORDED:** Repeatable synthetic study setup baseline exists in [SYNTHETIC_STUDY_SETUP.md](../../qc/full-mock-trial/SYNTHETIC_STUDY_SETUP.md), but package-specific operator walkthrough evidence remains a downstream Phase 2/4 task.
 
 Remaining Phase 2 blockers before the downloadable laptop operator candidate gate can close:
 
 - Verify the Windows package on a second Windows machine or clean Windows user profile. The 2026-05-15 Windows sanity pass is supporting setup/startup evidence, but because it followed a development-style Node/npm path rather than the packaged operator/release-asset path, it does not close this blocker by itself.
-- Runtime posture reconciled for current Phase 2 work: local Node/npm remain required at build time; the Windows bundled-runtime package now stages packaged Node and production dependencies for runtime lifecycle commands. Downloaded release-asset smoke evidence is recorded for one local Windows profile; clean-profile or second-machine confirmation remains required before the Phase 2 gate closes.
+- Runtime posture reconciled for current Phase 2 work: local Node/npm remain required at build time; the Windows bundled-runtime package and installer-candidate payload now stage packaged Node and production dependencies for runtime lifecycle commands. Downloaded release-asset smoke evidence is recorded for one local Windows profile; clean-profile or second-machine confirmation remains required before the Phase 2 gate closes.
 - **UPDATED (2026-05-14):** Portable bundled-runtime foundation ADR accepted for internal package hardening; shared packaging core exists and Windows runtime wiring has local branch evidence.
-- Capture or explicitly accept unsigned-package behavior for the intended Windows and macOS distribution channel. Limitation notes are recorded; signing/notarization/installer work remains deferred unless separately approved. The 2026-05-14 Apple Silicon rerun recorded no Gatekeeper/quarantine observations.
+- Produce and verify the Windows installer executable on a Windows host with Inno Setup 6 (`ISCC.exe`) installed, then capture install/start/status/browser-open/stop/uninstall evidence from a clean Windows profile.
+- Capture or explicitly accept unsigned-package behavior for the intended Windows and macOS distribution channel. Limitation notes are recorded; Windows installer packaging now has an internal adapter but no code-signing, SmartScreen, Defender, or installer lifecycle evidence. The 2026-05-14 Apple Silicon rerun recorded no Gatekeeper/quarantine observations.
 - Decide whether one Apple Silicon Mac is enough for the current internal candidate, or whether Intel Mac / additional macOS version coverage is required before closing Phase 2.
 - Complete a package-specific Study Owner/operator walkthrough from docs, including synthetic study setup, roles, consent/invitations, rounds, curation, closeout, export, deletion/retention review, incident path, backup/restore, and support path.
 - Complete the macOS installed-path lifecycle pass after an operator-authorized local install: start, browser/UI reachability, status, smoke, restart, backup, restore, reset, stop, port-clear checks, and uninstall or uninstall dry run.
-- Preserve deferred status for Tauri, Windows NSIS/MSI installer work, updater behavior, signing/notarization, and platform support claims until separate evidence exists.
+- Preserve deferred status for Tauri, updater behavior, signing/notarization, Windows support claims, macOS support claims, and final installer readiness until separate evidence exists.
 
 Recorded Phase 2 implementation:
 
 - Windows install/start/stop/reset/backup/smoke paths are documented in [WINDOWS_OPERATOR_PORTABLE_PACKAGE.md](./WINDOWS_OPERATOR_PORTABLE_PACKAGE.md) and related evidence notes.
+- Windows installer-candidate build/install target behavior is documented in [WINDOWS_INSTALLER_CANDIDATE_RUNBOOK.md](./WINDOWS_INSTALLER_CANDIDATE_RUNBOOK.md); the candidate adapter currently builds/verifies payloads and records `INSTALLER_NOT_RUN.txt` when `ISCC.exe` is unavailable.
 - Windows development/setup/startup sanity evidence is documented in [PHASE2_WINDOWS_SANITY_PASS_REPORT.md](./PHASE2_WINDOWS_SANITY_PASS_REPORT.md), including the observed need to run backend build/install before `npm start` when `server/dist/index.js` is missing.
 - macOS install/start/stop/reset/backup/smoke paths are documented in [MACOS_OPERATOR_PORTABLE_PACKAGE.md](./MACOS_OPERATOR_PORTABLE_PACKAGE.md) and [MACOS_OPERATOR_PORTABLE_RUNBOOK.md](./MACOS_OPERATOR_PORTABLE_RUNBOOK.md).
 - Local runtime directory policy for database, audit logs, exports, backups, evidence artifacts, logs, and state is documented for Windows and macOS package paths.
 - Safe repository/package posture is documented: generated package evidence checks for no committed `.env`, secrets, runtime database, logs, backups, evidence artifacts, or package-root `node_modules`.
 - Smoke commands are documented and have internal engineering pass evidence for Windows and the 2026-05-14 Apple Silicon macOS rerun.
-- Packaging decision is recorded: current candidate uses script-based local packages; Windows bundled-runtime hardening may remove local Node/npm as a runtime prerequisite after package build, but local Node/npm still remain build-time prerequisites and installer tracks remain deferred.
+- Packaging decision is recorded: current candidate uses script-based local packages plus internal installer-candidate tracks. Windows bundled-runtime hardening removes local Node/npm as a runtime prerequisite after package build; local Node/npm still remain build-time prerequisites. Final installer artifacts and installed lifecycle evidence remain open.
 - Repeatable synthetic study setup exists as a baseline; package-specific operator walkthrough evidence is still required before closing Phase 2.
 
 Recorded Phase 2 evidence:
@@ -217,6 +225,7 @@ Recorded Phase 2 evidence:
 - Windows extracted-zip package run result is recorded in [WINDOWS_OPERATOR_PORTABLE_PACKAGE_EXTRACTED_ZIP_EVIDENCE.md](./WINDOWS_OPERATOR_PORTABLE_PACKAGE_EXTRACTED_ZIP_EVIDENCE.md), with commit hash, package identifier, smoke output, runtime path evidence, known limitations, and package-root sensitive-material checks.
 - Windows bundled-runtime `r2` GitHub release asset smoke result is recorded in [WINDOWS_PORTABLE_BUNDLED_RUNTIME_RELEASE_ASSET_EVIDENCE_2026-05-14.md](./WINDOWS_PORTABLE_BUNDLED_RUNTIME_RELEASE_ASSET_EVIDENCE_2026-05-14.md), with release tag, asset URL, checksum, commit hash, path-with-spaces extraction, start/status/browser/smoke/stop output, and remaining limitations.
 - Windows 11 development/setup/startup sanity pass result is recorded in [PHASE2_WINDOWS_SANITY_PASS_REPORT.md](./PHASE2_WINDOWS_SANITY_PASS_REPORT.md), with Node.js/npm setup, frontend/backend startup, browser-console observation, backend build/install quirk, and screenshot summary. This evidence strengthens the Windows setup record but does not establish packaged operator second-machine or clean-profile readiness.
+- Windows installer-candidate adapter and hardening evidence is recorded in [WINDOWS_INSTALLER_CANDIDATE_EVIDENCE_2026-05-17.md](./WINDOWS_INSTALLER_CANDIDATE_EVIDENCE_2026-05-17.md) and [WINDOWS_INSTALLER_CANDIDATE_HARDENING_2026-05-17.md](./WINDOWS_INSTALLER_CANDIDATE_HARDENING_2026-05-17.md), with app/server build, production dependency staging, selective pinned-runtime staging, package verification, launcher/runtime-root hardening, and missing-`ISCC.exe` boundary.
 - macOS Apple Silicon post-fix lifecycle run result is recorded in [MACOS_OPERATOR_PORTABLE_POST_FIX_LIFECYCLE_EVIDENCE_2026-05-14.md](./MACOS_OPERATOR_PORTABLE_POST_FIX_LIFECYCLE_EVIDENCE_2026-05-14.md), with commit hash, package identifier, smoke output, clean-worktree packaging evidence, runtime lifecycle evidence, and known limitations.
 - macOS installable operator candidate build evidence is recorded in [MACOS_INSTALLER_REAL_MAC_BUILD_EVIDENCE_2026-05-16.md](./MACOS_INSTALLER_REAL_MAC_BUILD_EVIDENCE_2026-05-16.md), with host facts, validation results, runtime provenance fix, `.pkg` path/checksum, manifest fields, package verification, content scan, and the blocked local install result.
 - Prompt 7 local validation on 2026-05-14 recorded app build/test, server test, packaging/claim-scan tests, bundled-runtime package verification, app/server high-severity npm audit, and diff-check results on merged main.
@@ -226,7 +235,7 @@ Exit gate result:
 
 - **NOT YET SATISFIED.**
 - Study Owner/operator launch from docs on a clean laptop profile remains to be evidenced.
-- The package path is close to controlled synthetic walkthrough readiness, and one Windows downloaded release-asset smoke plus one Windows development/setup/startup sanity pass are now recorded, but Phase 2 remains open until the remaining Windows clean-profile or second-machine packaged-operator verification, distribution-scope, macOS support-scope, and operator walkthrough evidence is recorded.
+- The package path is close to controlled synthetic walkthrough readiness, and one Windows downloaded release-asset smoke plus one Windows development/setup/startup sanity pass plus Windows installer-candidate payload verification are now recorded, but Phase 2 remains open until Windows clean-profile or second-machine packaged-operator verification, Windows installer executable/lifecycle evidence if that path is used, distribution-scope evidence, macOS support-scope evidence, and operator walkthrough evidence are recorded.
 - Even after Phase 2 closes, the result is readiness for controlled synthetic walkthrough only, not pilot or production.
 
 ### Phase 3: Phone Participant And SMS Candidate
@@ -424,6 +433,7 @@ Latest repo-verifiable validation snapshot:
 - 2026-05-14, merged main at `121a526`: `npm.cmd --prefix app run build` passed after rerun outside the local sandbox; `npm.cmd --prefix app run test` passed 28/28; `npm.cmd --prefix server test` passed; packaging/claim-scan tests passed 18/18; `powershell -ExecutionPolicy Bypass -File .\scripts\windows\portable-bundled-runtime.ps1 verify` passed; app and server `npm audit --audit-level=high` reported 0 vulnerabilities; `git diff --check` passed. `npm.cmd --prefix app run lint` produced two existing React Hook dependency warnings and no errors.
 - 2026-05-14, merged main at `121a526`: claim-scan follow-up coverage catches standalone `IRB approval`, combined `IRB/ethics approval`, and standalone `ethics approval` package overclaims.
 - 2026-05-15, merged main at `eb4bacb`: PR #85 added the gated Twilio setup/provider track and operator SMS setup prompt. Validation recorded in the PR, with portable command forms shown here: `npm --prefix server run build` passed; `npm --prefix app run build` passed; `node scripts/run-tests.mjs "server/tests/twilioSmsProvider.test.mjs"` passed; `node scripts/run-tests.mjs "server/tests/smsMagicLink.test.mjs"` passed; `npm --prefix server test` passed; `npm --prefix server run security:audit` passed with 0 vulnerabilities.
+- 2026-05-17, merged main at `6a45b6d`: Windows installer candidate cleanup and GitHub hardening reconciliation passed `node scripts/packaging/windows-installer.mjs build` through payload verification to the expected missing-`ISCC.exe` gate; `node scripts/packaging/windows-installer.mjs verify` passed; `node scripts/packaging/tests/windows-installer.test.mjs`, `node scripts/packaging/tests/windows-portable-package.test.mjs`, `node scripts/packaging/tests/packaging-core.test.mjs`, and `node scripts/packaging/tests/package-verification.test.mjs` passed; `git diff --check` passed.
 
 Minimum manual preflight checks:
 
@@ -537,5 +547,11 @@ Public open-source release remains separate and requires repository hygiene, lic
 ## Phase 2 macOS installable candidate track (new, parallel)
 - Added a thin macOS installer adapter (`scripts/packaging/macos-installer.mjs`) that reuses shared packaging core and existing macOS portable package staging.
 - This does **not** replace the existing macOS portable flow; it is a parallel internal-candidate track.
-- Current branch status: installer packaging logic implemented; real-Mac `.pkg` build/install lifecycle evidence is NOT RUN in this Linux environment.
+- Current merged status: installer packaging logic is implemented, and real-Mac `.pkg` build/package-verification evidence is recorded. Install and installed-path lifecycle remain **BLOCKED / NOT RUN** until an operator-authorized macOS install is performed.
 - Non-claims remain: no signing/notarization/Gatekeeper claim, no broad macOS support claim, no production/pilot/human-subjects readiness claim.
+
+## Phase 2 Windows installer candidate track (new, parallel)
+- Added an Inno Setup installer-candidate adapter (`scripts/packaging/windows-installer.mjs`) that reuses the Windows portable bundled-runtime payload and shared packaging verification.
+- Added installer-specific launcher/runtime routing through `scripts/windows/installer-candidate-bundled-runtime.ps1`, with runtime data under `%LOCALAPPDATA%\DelphiCommons\windows-installer-candidate`.
+- Current merged status: app/server build, production dependency staging, selective pinned-runtime staging, package verification, and launcher hardening tests pass. Final `.exe` generation remains **NOT RUN** on this host because Inno Setup `ISCC.exe` is unavailable.
+- Non-claims remain: no code-signing/SmartScreen/Defender claim, no clean-profile or second-machine installer lifecycle claim, no broad Windows support claim, no production/pilot/human-subjects readiness claim.

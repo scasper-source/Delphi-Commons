@@ -1,6 +1,7 @@
 # Windows Installer Candidate Evidence (2026-05-17)
 
 - Commit tested: `6fa4d4d`
+- Merged main cleanup commit: `6a45b6d`
 - Host: Linux (Codex container)
 - Goal: Phase 1 installer-candidate adapter proof, not production readiness.
 
