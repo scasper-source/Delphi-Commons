@@ -8,7 +8,7 @@ case "$COMMAND" in
 esac
 
 PACKAGE_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
-RUNTIME_ROOT="$HOME/Library/Application Support/DelphiCommons/macos-operator-portable-candidate"
+RUNTIME_ROOT="${EDELPHI_RUNTIME_ROOT:-$HOME/Library/Application Support/DelphiCommons/macos-operator-portable-candidate}"
 STATE_DIR="$RUNTIME_ROOT/state"
 LOGS_DIR="$RUNTIME_ROOT/logs"
 EVIDENCE_DIR="$RUNTIME_ROOT/evidence"

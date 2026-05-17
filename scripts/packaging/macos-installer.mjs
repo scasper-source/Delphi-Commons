@@ -17,14 +17,43 @@ const repoRoot = process.cwd();
 const outRoot = path.join(repoRoot, 'build/macos-installer');
 const buildId = `run-${Date.now()}-${process.pid}`;
 const packageName = 'delphi-commons-macos-installer-internal';
-const packageRoot = path.join(outRoot, 'staging', buildId, packageName);
+const latestPackageRootFile = path.join(outRoot, 'latest-package-root.txt');
 const command = process.argv[2] ?? 'build';
+const packageRoot = command === 'build'
+  ? path.join(outRoot, 'staging', buildId, packageName)
+  : fs.existsSync(latestPackageRootFile)
+    ? fs.readFileSync(latestPackageRootFile, 'utf8').trim()
+    : path.join(outRoot, 'staging', packageName);
 
 const run = (file, args, cwd = repoRoot) => execFileSync(file, args, { stdio: 'inherit', cwd });
 const copyPath = (src, dst) => {
   fs.mkdirSync(path.dirname(dst), { recursive: true });
   fs.cpSync(src, dst, { recursive: true, force: true });
 };
+const installerRuntimeRoot = '~/Library/Application Support/DelphiCommons/macos-installer-candidate';
+const installLocation = '/Applications/Delphi Commons/package';
+
+function writeInstallerWrapper(destination) {
+  fs.mkdirSync(path.dirname(destination), { recursive: true });
+  fs.writeFileSync(
+    destination,
+    `#!/usr/bin/env bash
+set -euo pipefail
+if [[ "$#" -eq 0 ]]; then
+  set -- status
+fi
+SCRIPT_DIR="$(cd "$(dirname "\${BASH_SOURCE[0]}")" && pwd)"
+PACKAGE_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
+export EDELPHI_RUNTIME_ROOT="$HOME/Library/Application Support/DelphiCommons/macos-installer-candidate"
+export EDELPHI_PORTABLE_NODE_EXE="$PACKAGE_ROOT/runtime/node/bin/node"
+export EDELPHI_SERVER_NODE_MODULES_SOURCE="$PACKAGE_ROOT/server/node_modules"
+export EDELPHI_SKIP_RUNTIME_NPM_INSTALL=1
+exec "$PACKAGE_ROOT/scripts/macos/portable-operator-candidate.sh" "$@"
+`,
+    'utf8'
+  );
+  fs.chmodSync(destination, 0o755);
+}
 
 function buildRuntimeMetadataFromAdr() {
   const meta = JSON.parse(fs.readFileSync(path.join(repoRoot, 'docs/adr/runtime/node-macos-arm64.json'), 'utf8'));
@@ -49,10 +78,8 @@ function stagePackage() {
   const latestPortableRoot = fs.readFileSync(path.join(repoRoot, 'build/macos-portable-bundled-runtime-internal/latest-package-root.txt'), 'utf8').trim();
   fs.mkdirSync(packageRoot, { recursive: true });
   copyPath(latestPortableRoot, packageRoot);
-  copyPath(path.join(repoRoot, 'scripts/macos/portable-bundled-runtime.sh'), path.join(packageRoot, 'scripts/macos/delphi-commons'));
-  fs.chmodSync(path.join(packageRoot, 'scripts/macos/delphi-commons'), 0o755);
+  writeInstallerWrapper(path.join(packageRoot, 'scripts/macos/delphi-commons'));
 
-  const installerRuntimeRoot = '~/Library/Application Support/DelphiCommons/macos-installer-candidate';
   const config = buildMacosAdapterConfig('macos-installer-candidate-internal');
   const inventory = generateInventory(packageRoot).filter((item) => item !== 'package-manifest.json');
   const checksums = buildChecksums(packageRoot, inventory);
@@ -78,6 +105,10 @@ function stagePackage() {
   manifest.buildTimestampUtc = new Date().toISOString();
   manifest.buildTimeDependencies = 'Node/npm required at build time';
   manifest.runtimeDependencies = 'No local Node/npm required at runtime; packaged runtime used';
+  manifest.installLocation = installLocation;
+  manifest.runtimeDataLocation = installerRuntimeRoot;
+  manifest.pkgbuildAvailable = process.platform === 'darwin' && fs.existsSync('/usr/bin/pkgbuild');
+  manifest.productbuildAvailable = process.platform === 'darwin' && fs.existsSync('/usr/bin/productbuild');
   manifest.signingStatus = 'NOT RUN / CREDENTIALS UNAVAILABLE';
   manifest.notarizationStatus = 'NOT RUN / CREDENTIALS UNAVAILABLE';
   manifest.gatekeeperStatus = 'NOT RUN';
@@ -85,6 +116,15 @@ function stagePackage() {
   if (scanForbiddenMaterial(inventory).length) throw new Error('Forbidden material detected in staged package.');
   if (scanOverclaimText(JSON.stringify(manifest)).length) throw new Error('Overclaim scan failed for installer manifest.');
   fs.writeFileSync(path.join(packageRoot, 'package-manifest.json'), JSON.stringify(manifest, null, 2));
+  const verification = verifyPackageEvidence({
+    packageRoot,
+    runtimeRoot: path.join(process.env.HOME || '/tmp', 'Library/Application Support/DelphiCommons/macos-installer-candidate'),
+    overclaimFiles: ['package-manifest.json', 'README.txt', 'evidence-template.md']
+  });
+  fs.mkdirSync(outRoot, { recursive: true });
+  fs.writeFileSync(path.join(outRoot, 'package-verification.json'), JSON.stringify(verification, null, 2));
+  if (!verification.ok) throw new Error(verification.failures.join('\n'));
+  fs.writeFileSync(latestPackageRootFile, packageRoot);
 }
 
 function buildInstallerArtifact() {
@@ -109,7 +149,7 @@ function buildInstallerArtifact() {
 
 function verify() {
   const runtimeRoot = path.join(process.env.HOME || '/tmp', 'Library/Application Support/DelphiCommons/macos-installer-candidate');
-  const result = verifyPackageEvidence({ packageRoot, runtimeRoot, overclaimFiles: ['package-manifest.json', 'README.txt'] });
+  const result = verifyPackageEvidence({ packageRoot, runtimeRoot, overclaimFiles: ['package-manifest.json', 'README.txt', 'evidence-template.md'] });
   if (!result.ok) throw new Error(result.failures.join('\n'));
 }
 
