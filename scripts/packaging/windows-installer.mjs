@@ -1,6 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { execFileSync, execSync } from 'node:child_process';
+import { pathToFileURL } from 'node:url';
 import {
   buildChecksums,
   buildManifest,
@@ -12,6 +13,9 @@ import {
 } from './core/index.mjs';
 import { verifyPackageEvidence } from './core/verification.mjs';
 import { buildWindowsAdapterConfig } from './adapters/windows.mjs';
+
+export const installerRuntimeSubdir = 'windows-installer-candidate';
+export const installerWrapperRelativePath = 'scripts/windows/installer-candidate-bundled-runtime.ps1';
 
 const repoRoot = process.cwd();
 const outRoot = path.join(repoRoot, 'build/windows-installer');
@@ -33,6 +37,33 @@ const copyPath = (src, dst) => {
   fs.mkdirSync(path.dirname(dst), { recursive: true });
   fs.cpSync(src, dst, { recursive: true, force: true });
 };
+
+export function renderInstallerLauncherVbs(command) {
+  const installerWrapperWindowsPath = installerWrapperRelativePath.replaceAll('/', '\\');
+  return `Option Explicit
+Dim fso, scriptPath, packageRoot, psScript, shell, lifecycleCommand
+Set fso = CreateObject("Scripting.FileSystemObject")
+scriptPath = WScript.ScriptFullName
+packageRoot = fso.GetParentFolderName(fso.GetParentFolderName(fso.GetParentFolderName(fso.GetParentFolderName(scriptPath))))
+psScript = fso.BuildPath(packageRoot, "${installerWrapperWindowsPath}")
+lifecycleCommand = "${command}"
+Set shell = CreateObject("WScript.Shell")
+shell.Run "powershell.exe -NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File """ & psScript & """ " & lifecycleCommand, 0, False
+`;
+}
+
+export function writeInstallerCandidateLaunchers(root) {
+  const launcherDir = path.join(root, 'scripts/windows/installer-candidate');
+  fs.mkdirSync(launcherDir, { recursive: true });
+  const launchers = new Map([
+    ['start', 'delphi-commons-launch.vbs'],
+    ['stop', 'delphi-commons-stop.vbs'],
+    ['status', 'delphi-commons-status.vbs']
+  ]);
+  for (const [lifecycleCommand, filename] of launchers) {
+    fs.writeFileSync(path.join(launcherDir, filename), renderInstallerLauncherVbs(lifecycleCommand), 'utf8');
+  }
+}
 
 function buildRuntimeMetadataFromAdr() {
   const meta = JSON.parse(fs.readFileSync(path.join(repoRoot, 'docs/adr/runtime/node-windows-x64.json'), 'utf8'));
@@ -57,69 +88,11 @@ function stagePortablePayload() {
   const latestPortableRoot = fs.readFileSync(path.join(repoRoot, 'build/windows-portable-bundled-runtime-internal/latest-package-root.txt'), 'utf8').trim();
   fs.mkdirSync(packageRoot, { recursive: true });
   copyPath(latestPortableRoot, packageRoot);
+  copyPath(path.join(repoRoot, installerWrapperRelativePath), path.join(packageRoot, installerWrapperRelativePath));
 }
 
 function writeInnoFiles() {
-  const launcherDir = path.join(packageRoot, 'scripts/windows/installer-candidate');
-  fs.mkdirSync(launcherDir, { recursive: true });
-
-  fs.writeFileSync(path.join(launcherDir, 'delphi-commons-installer.ps1'), `param(
-  [ValidateSet('start','stop','restart','status','reset','backup','smoke')]
-  [string]$Command = 'start'
-)
-
-$ErrorActionPreference = 'Stop'
-
-$LauncherDir = Split-Path -Parent $PSCommandPath
-$PackageRoot = Split-Path -Parent (Split-Path -Parent (Split-Path -Parent $LauncherDir))
-$LifecycleScript = Join-Path $PackageRoot 'scripts\\windows\\portable-operator-candidate.ps1'
-$NodeExe = Join-Path $PackageRoot 'runtime\\node\\node.exe'
-$ServerNodeModules = Join-Path $PackageRoot 'server\\node_modules'
-$RuntimeRoot = Join-Path $env:LOCALAPPDATA 'DelphiCommons\\windows-installer-candidate'
-
-foreach ($path in @($LifecycleScript, $NodeExe, $ServerNodeModules)) {
-  if (!(Test-Path -LiteralPath $path)) {
-    throw "Required installer runtime path missing: $path"
-  }
-}
-
-$previousEnv = @{}
-foreach ($entry in @{
-  EDELPHI_PORTABLE_NODE_EXE = $NodeExe
-  EDELPHI_SERVER_NODE_MODULES_SOURCE = $ServerNodeModules
-  EDELPHI_SKIP_RUNTIME_NPM_INSTALL = '1'
-  EDELPHI_RUNTIME_ROOT = $RuntimeRoot
-}.GetEnumerator()) {
-  $previousEnv[$entry.Key] = [Environment]::GetEnvironmentVariable($entry.Key, 'Process')
-  [Environment]::SetEnvironmentVariable($entry.Key, $entry.Value, 'Process')
-}
-
-try {
-  powershell.exe -NoProfile -ExecutionPolicy Bypass -File $LifecycleScript $Command
-  exit $LASTEXITCODE
-}
-finally {
-  foreach ($key in $previousEnv.Keys) {
-    [Environment]::SetEnvironmentVariable($key, $previousEnv[$key], 'Process')
-  }
-}
-`, 'utf8');
-
-  fs.writeFileSync(path.join(launcherDir, 'delphi-commons-launch.vbs'), `Set shell = CreateObject("WScript.Shell")
-Set fso = CreateObject("Scripting.FileSystemObject")
-launcherDir = fso.GetParentFolderName(WScript.ScriptFullName)
-psScript = Chr(34) & launcherDir & "\\delphi-commons-installer.ps1" & Chr(34)
-cmd = "powershell.exe -NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File " & psScript & " start"
-shell.Run cmd, 0, False
-`, 'utf8');
-
-  fs.writeFileSync(path.join(launcherDir, 'delphi-commons-stop.vbs'), `Set shell = CreateObject("WScript.Shell")
-Set fso = CreateObject("Scripting.FileSystemObject")
-launcherDir = fso.GetParentFolderName(WScript.ScriptFullName)
-psScript = Chr(34) & launcherDir & "\\delphi-commons-installer.ps1" & Chr(34)
-cmd = "powershell.exe -NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File " & psScript & " stop"
-shell.Run cmd, 0, False
-`, 'utf8');
+  writeInstallerCandidateLaunchers(packageRoot);
 
   fs.writeFileSync(path.join(packageRoot, 'installer.iss'), `[Setup]
 AppName=Delphi Commons
@@ -142,6 +115,7 @@ Source: "*"; DestDir: "{app}"; Excludes: "installer.iss,Output\\*"; Flags: recur
 [Icons]
 Name: "{group}\\Delphi Commons"; Filename: "{app}\\scripts\\windows\\installer-candidate\\delphi-commons-launch.vbs"
 Name: "{group}\\Delphi Commons Stop"; Filename: "{app}\\scripts\\windows\\installer-candidate\\delphi-commons-stop.vbs"
+Name: "{group}\\Delphi Commons Status"; Filename: "{app}\\scripts\\windows\\installer-candidate\\delphi-commons-status.vbs"
 Name: "{userdesktop}\\Delphi Commons"; Filename: "{app}\\scripts\\windows\\installer-candidate\\delphi-commons-launch.vbs"; Tasks: desktopicon
 
 [Run]
@@ -163,7 +137,7 @@ function buildMetadataAndVerify() {
     commitHash: execSync('git rev-parse HEAD', { cwd: repoRoot }).toString().trim(),
     limitations: [
       'Internal engineering installer candidate only.',
-      'This Linux run cannot execute or validate Inno Setup (ISCC); installer build can be NOT RUN with reason.',
+      'Inno Setup (ISCC) must be available on Windows to build the installer executable.',
       'Visible or hidden command-window behavior must be validated on real Windows hardware.'
     ],
     nonClaims: [
@@ -229,14 +203,19 @@ function buildInstallerArtifact() {
   fs.writeFileSync(path.join(outRoot, 'installer-sha256.txt'), `${sha256File(path.join(outRoot, 'delphi-commons-windows-installer-candidate-internal.exe'))}  delphi-commons-windows-installer-candidate-internal.exe\n`);
 }
 
-if (command === 'build') {
-  stagePortablePayload();
-  writeInnoFiles();
-  buildMetadataAndVerify();
-  buildInstallerArtifact();
-  fs.writeFileSync(latestPackageRootFile, packageRoot);
-} else if (command === 'verify') {
-  buildMetadataAndVerify();
-} else {
-  throw new Error(`Unsupported command: ${command}`);
+function main() {
+  if (command === 'build') {
+    stagePortablePayload();
+    writeInnoFiles();
+    buildMetadataAndVerify();
+    buildInstallerArtifact();
+    fs.writeFileSync(latestPackageRootFile, packageRoot);
+  } else if (command === 'verify') {
+    buildMetadataAndVerify();
+  } else {
+    throw new Error(`Unsupported command: ${command}`);
+  }
 }
+
+const isDirectRun = process.argv[1] && pathToFileURL(path.resolve(process.argv[1])).href === import.meta.url;
+if (isDirectRun) main();

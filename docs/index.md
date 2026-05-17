@@ -44,6 +44,7 @@ Current readiness: controlled mock-participant MVP testing with synthetic or low
 - [Windows installer candidate ADR](./operations/production-readiness/WINDOWS_INSTALLER_CANDIDATE_ADR.md)
 - [Windows installer candidate runbook](./operations/production-readiness/WINDOWS_INSTALLER_CANDIDATE_RUNBOOK.md)
 - [Windows installer candidate evidence (2026-05-17)](./operations/production-readiness/WINDOWS_INSTALLER_CANDIDATE_EVIDENCE_2026-05-17.md)
+- [Windows installer candidate hardening (2026-05-17)](./operations/production-readiness/WINDOWS_INSTALLER_CANDIDATE_HARDENING_2026-05-17.md)
 - [macOS signing/distribution limitations (Phase 2)](./operations/production-readiness/MACOS_SIGNING_DISTRIBUTION_LIMITATIONS.md)
 - [macOS operator portable/internal package ADR (Phase 2 planning)](./operations/production-readiness/MACOS_OPERATOR_PORTABLE_PACKAGE_ADR.md)
 - [macOS operator portable package prototype + 2026-05-13 Apple Silicon internal engineering evidence](./operations/production-readiness/MACOS_OPERATOR_PORTABLE_PACKAGE.md)

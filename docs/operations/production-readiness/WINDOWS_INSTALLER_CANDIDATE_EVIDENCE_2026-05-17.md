@@ -45,6 +45,7 @@
 - Optional desktop shortcut generation targets the current user's desktop for the per-user installer path.
 - Windows runtime staging now extracts only the required `node.exe` and `LICENSE` from the pinned Node ZIP, avoiding full-archive `Expand-Archive` failures under long workspace paths.
 - Static cleanup checks run locally: `node --check scripts/packaging/windows-installer.mjs`, `node scripts/packaging/tests/packaging-core.test.mjs`, and `node scripts/packaging/tests/package-verification.test.mjs` passed.
+- Post-GitHub-reconciliation checks also passed: `node scripts/packaging/tests/windows-installer.test.mjs`, `node scripts/packaging/tests/windows-portable-package.test.mjs`, and `node scripts/packaging/windows-installer.mjs verify`.
 - Real Windows Inno Setup build/install/start/stop/uninstall evidence remains **NOT RUN** until executed on a Windows host with `ISCC.exe`.
 
 ## Sensitive-material posture
