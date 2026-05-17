@@ -132,33 +132,29 @@ async function ensureRuntimeArchive(runtimeMetaJson) {
   return archivePath;
 }
 
-function extractRuntimeArchive(archivePath, destination) {
+function extractRuntimeArchive(archivePath, destination, entries = []) {
   fs.rmSync(destination, { recursive: true, force: true });
   fs.mkdirSync(destination, { recursive: true });
+  const normalizedEntries = entries.map((entry) => entry.split(path.sep).join('/'));
   if (process.platform === 'win32') {
-    const quotePowerShellString = (value) => `'${String(value).replaceAll("'", "''")}'`;
-    run(
-      'powershell',
-      [
-        '-NoProfile',
-        '-ExecutionPolicy',
-        'Bypass',
-        '-Command',
-        `Expand-Archive -LiteralPath ${quotePowerShellString(archivePath)} -DestinationPath ${quotePowerShellString(destination)} -Force`
-      ],
-      repoRoot
-    );
+    run('tar', ['-xf', archivePath, '-C', destination, ...normalizedEntries], repoRoot);
     return;
   }
-  run('unzip', ['-q', archivePath, '-d', destination], repoRoot);
+  const unzipArgs = ['-q', archivePath, ...normalizedEntries, '-d', destination];
+  run('unzip', unzipArgs, repoRoot);
 }
 
 async function stageNodeRuntime(runtimeMetaJson) {
   const archivePath = await ensureRuntimeArchive(runtimeMetaJson);
   const extractRoot = path.join(runtimeCache, 'extracted', buildRunId);
-  extractRuntimeArchive(archivePath, extractRoot);
 
-  const expectedRoot = path.join(extractRoot, `node-v${runtimeMetaJson.nodeVersion}-win-x64`);
+  const expectedRootName = `node-v${runtimeMetaJson.nodeVersion}-win-x64`;
+  extractRuntimeArchive(archivePath, extractRoot, [
+    `${expectedRootName}/node.exe`,
+    `${expectedRootName}/LICENSE`
+  ]);
+
+  const expectedRoot = path.join(extractRoot, expectedRootName);
   const nodeSource = path.join(expectedRoot, 'node.exe');
   const licenseSource = path.join(expectedRoot, 'LICENSE');
   if (!fs.existsSync(nodeSource)) {
