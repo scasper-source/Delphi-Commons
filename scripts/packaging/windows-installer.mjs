@@ -62,11 +62,12 @@ function stagePortablePayload() {
 function writeInnoFiles() {
   const launcherDir = path.join(packageRoot, 'scripts/windows/installer-candidate');
   fs.mkdirSync(launcherDir, { recursive: true });
+  const installerRuntimeWrapper = 'scripts\\windows\\installer-candidate-bundled-runtime.ps1';
 
   fs.writeFileSync(path.join(launcherDir, 'delphi-commons-launch.vbs'), `Set shell = CreateObject("WScript.Shell")
 Set fso = CreateObject("Scripting.FileSystemObject")
-packageRoot = fso.GetParentFolderName(fso.GetParentFolderName(fso.GetParentFolderName(WScript.ScriptFullName)))
-psScript = Chr(34) & packageRoot & "\\scripts\\windows\\portable-bundled-runtime.ps1" & Chr(34)
+packageRoot = fso.GetParentFolderName(fso.GetParentFolderName(fso.GetParentFolderName(fso.GetParentFolderName(WScript.ScriptFullName))))
+psScript = Chr(34) & packageRoot & "\\${installerRuntimeWrapper}" & Chr(34)
 cmd = "powershell -NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File " & psScript & " start"
 shell.Run cmd, 0, False
 WScript.Sleep 400
@@ -75,8 +76,8 @@ shell.Run "http://127.0.0.1:4173", 0, False
 
   fs.writeFileSync(path.join(launcherDir, 'delphi-commons-stop.vbs'), `Set shell = CreateObject("WScript.Shell")
 Set fso = CreateObject("Scripting.FileSystemObject")
-packageRoot = fso.GetParentFolderName(fso.GetParentFolderName(fso.GetParentFolderName(WScript.ScriptFullName)))
-psScript = Chr(34) & packageRoot & "\\scripts\\windows\\portable-bundled-runtime.ps1" & Chr(34)
+packageRoot = fso.GetParentFolderName(fso.GetParentFolderName(fso.GetParentFolderName(fso.GetParentFolderName(WScript.ScriptFullName))))
+psScript = Chr(34) & packageRoot & "\\${installerRuntimeWrapper}" & Chr(34)
 cmd = "powershell -NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File " & psScript & " stop"
 shell.Run cmd, 0, False
 `, 'utf8');
@@ -102,10 +103,19 @@ Source: "*"; DestDir: "{app}"; Flags: recursesubdirs ignoreversion
 [Icons]
 Name: "{group}\\Delphi Commons"; Filename: "{app}\\scripts\\windows\\installer-candidate\\delphi-commons-launch.vbs"
 Name: "{group}\\Delphi Commons Stop"; Filename: "{app}\\scripts\\windows\\installer-candidate\\delphi-commons-stop.vbs"
+Name: "{group}\\Delphi Commons Status"; Filename: "{app}\\scripts\\windows\\installer-candidate\\delphi-commons-status.vbs"
 Name: "{commondesktop}\\Delphi Commons"; Filename: "{app}\\scripts\\windows\\installer-candidate\\delphi-commons-launch.vbs"; Tasks: desktopicon
 
 [Run]
 Filename: "{app}\\scripts\\windows\\installer-candidate\\delphi-commons-launch.vbs"; Description: "Launch Delphi Commons"; Flags: postinstall nowait skipifsilent
+`, 'utf8');
+
+  fs.writeFileSync(path.join(launcherDir, 'delphi-commons-status.vbs'), `Set shell = CreateObject("WScript.Shell")
+Set fso = CreateObject("Scripting.FileSystemObject")
+packageRoot = fso.GetParentFolderName(fso.GetParentFolderName(fso.GetParentFolderName(fso.GetParentFolderName(WScript.ScriptFullName))))
+psScript = Chr(34) & packageRoot & "\\${installerRuntimeWrapper}" & Chr(34)
+cmd = "powershell -NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File " & psScript & " status"
+shell.Run cmd, 0, False
 `, 'utf8');
 }
 
