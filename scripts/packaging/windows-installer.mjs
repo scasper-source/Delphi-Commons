@@ -63,21 +63,61 @@ function writeInnoFiles() {
   const launcherDir = path.join(packageRoot, 'scripts/windows/installer-candidate');
   fs.mkdirSync(launcherDir, { recursive: true });
 
+  fs.writeFileSync(path.join(launcherDir, 'delphi-commons-installer.ps1'), `param(
+  [ValidateSet('start','stop','restart','status','reset','backup','smoke')]
+  [string]$Command = 'start'
+)
+
+$ErrorActionPreference = 'Stop'
+
+$LauncherDir = Split-Path -Parent $PSCommandPath
+$PackageRoot = Split-Path -Parent (Split-Path -Parent (Split-Path -Parent $LauncherDir))
+$LifecycleScript = Join-Path $PackageRoot 'scripts\\windows\\portable-operator-candidate.ps1'
+$NodeExe = Join-Path $PackageRoot 'runtime\\node\\node.exe'
+$ServerNodeModules = Join-Path $PackageRoot 'server\\node_modules'
+$RuntimeRoot = Join-Path $env:LOCALAPPDATA 'DelphiCommons\\windows-installer-candidate'
+
+foreach ($path in @($LifecycleScript, $NodeExe, $ServerNodeModules)) {
+  if (!(Test-Path -LiteralPath $path)) {
+    throw "Required installer runtime path missing: $path"
+  }
+}
+
+$previousEnv = @{}
+foreach ($entry in @{
+  EDELPHI_PORTABLE_NODE_EXE = $NodeExe
+  EDELPHI_SERVER_NODE_MODULES_SOURCE = $ServerNodeModules
+  EDELPHI_SKIP_RUNTIME_NPM_INSTALL = '1'
+  EDELPHI_RUNTIME_ROOT = $RuntimeRoot
+}.GetEnumerator()) {
+  $previousEnv[$entry.Key] = [Environment]::GetEnvironmentVariable($entry.Key, 'Process')
+  [Environment]::SetEnvironmentVariable($entry.Key, $entry.Value, 'Process')
+}
+
+try {
+  powershell.exe -NoProfile -ExecutionPolicy Bypass -File $LifecycleScript $Command
+  exit $LASTEXITCODE
+}
+finally {
+  foreach ($key in $previousEnv.Keys) {
+    [Environment]::SetEnvironmentVariable($key, $previousEnv[$key], 'Process')
+  }
+}
+`, 'utf8');
+
   fs.writeFileSync(path.join(launcherDir, 'delphi-commons-launch.vbs'), `Set shell = CreateObject("WScript.Shell")
 Set fso = CreateObject("Scripting.FileSystemObject")
-packageRoot = fso.GetParentFolderName(fso.GetParentFolderName(fso.GetParentFolderName(WScript.ScriptFullName)))
-psScript = Chr(34) & packageRoot & "\\scripts\\windows\\portable-bundled-runtime.ps1" & Chr(34)
-cmd = "powershell -NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File " & psScript & " start"
+launcherDir = fso.GetParentFolderName(WScript.ScriptFullName)
+psScript = Chr(34) & launcherDir & "\\delphi-commons-installer.ps1" & Chr(34)
+cmd = "powershell.exe -NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File " & psScript & " start"
 shell.Run cmd, 0, False
-WScript.Sleep 400
-shell.Run "http://127.0.0.1:4173", 0, False
 `, 'utf8');
 
   fs.writeFileSync(path.join(launcherDir, 'delphi-commons-stop.vbs'), `Set shell = CreateObject("WScript.Shell")
 Set fso = CreateObject("Scripting.FileSystemObject")
-packageRoot = fso.GetParentFolderName(fso.GetParentFolderName(fso.GetParentFolderName(WScript.ScriptFullName)))
-psScript = Chr(34) & packageRoot & "\\scripts\\windows\\portable-bundled-runtime.ps1" & Chr(34)
-cmd = "powershell -NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File " & psScript & " stop"
+launcherDir = fso.GetParentFolderName(WScript.ScriptFullName)
+psScript = Chr(34) & launcherDir & "\\delphi-commons-installer.ps1" & Chr(34)
+cmd = "powershell.exe -NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File " & psScript & " stop"
 shell.Run cmd, 0, False
 `, 'utf8');
 
@@ -97,12 +137,12 @@ UninstallDisplayIcon={app}\\scripts\\windows\\installer-candidate\\delphi-common
 Name: "desktopicon"; Description: "Create a desktop shortcut"; GroupDescription: "Additional shortcuts:";
 
 [Files]
-Source: "*"; DestDir: "{app}"; Flags: recursesubdirs ignoreversion
+Source: "*"; DestDir: "{app}"; Excludes: "installer.iss,Output\\*"; Flags: recursesubdirs ignoreversion
 
 [Icons]
 Name: "{group}\\Delphi Commons"; Filename: "{app}\\scripts\\windows\\installer-candidate\\delphi-commons-launch.vbs"
 Name: "{group}\\Delphi Commons Stop"; Filename: "{app}\\scripts\\windows\\installer-candidate\\delphi-commons-stop.vbs"
-Name: "{commondesktop}\\Delphi Commons"; Filename: "{app}\\scripts\\windows\\installer-candidate\\delphi-commons-launch.vbs"; Tasks: desktopicon
+Name: "{userdesktop}\\Delphi Commons"; Filename: "{app}\\scripts\\windows\\installer-candidate\\delphi-commons-launch.vbs"; Tasks: desktopicon
 
 [Run]
 Filename: "{app}\\scripts\\windows\\installer-candidate\\delphi-commons-launch.vbs"; Description: "Launch Delphi Commons"; Flags: postinstall nowait skipifsilent
@@ -146,11 +186,21 @@ function buildMetadataAndVerify() {
     runtimeRoot: runtimeRootForVerification,
     overclaimFiles: ['package-manifest.json', 'README.txt', 'evidence-template.md']
   });
+  fs.mkdirSync(outRoot, { recursive: true });
+  fs.writeFileSync(path.join(outRoot, 'package-verification.json'), JSON.stringify(verification, null, 2));
   if (!verification.ok) throw new Error(verification.failures.join('\n'));
 }
 
 function buildInstallerArtifact() {
   fs.mkdirSync(outRoot, { recursive: true });
+  for (const rel of [
+    'INSTALLER_NOT_RUN.txt',
+    'installer-sha256.txt',
+    'delphi-commons-windows-installer-candidate-internal.exe'
+  ]) {
+    fs.rmSync(path.join(outRoot, rel), { force: true });
+  }
+
   const isWindows = process.platform === 'win32';
   if (!isWindows) {
     fs.writeFileSync(path.join(outRoot, 'INSTALLER_NOT_RUN.txt'), 'NOT RUN: Inno Setup build requires Windows host with ISCC.exe.');
@@ -172,10 +222,11 @@ function buildInstallerArtifact() {
 
   run(iscc, [path.join(packageRoot, 'installer.iss')], packageRoot);
   const outputExe = path.join(packageRoot, 'Output', 'delphi-commons-windows-installer-candidate-internal.exe');
-  if (fs.existsSync(outputExe)) {
-    copyPath(outputExe, path.join(outRoot, 'delphi-commons-windows-installer-candidate-internal.exe'));
-    fs.writeFileSync(path.join(outRoot, 'installer-sha256.txt'), `${sha256File(path.join(outRoot, 'delphi-commons-windows-installer-candidate-internal.exe'))}  delphi-commons-windows-installer-candidate-internal.exe\n`);
+  if (!fs.existsSync(outputExe)) {
+    throw new Error(`ISCC did not produce expected installer artifact: ${outputExe}`);
   }
+  copyPath(outputExe, path.join(outRoot, 'delphi-commons-windows-installer-candidate-internal.exe'));
+  fs.writeFileSync(path.join(outRoot, 'installer-sha256.txt'), `${sha256File(path.join(outRoot, 'delphi-commons-windows-installer-candidate-internal.exe'))}  delphi-commons-windows-installer-candidate-internal.exe\n`);
 }
 
 if (command === 'build') {

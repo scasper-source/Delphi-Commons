@@ -31,7 +31,7 @@ Status: template only until executed with attached artifacts.
 - Sensitive artifact scan (no `.env`, DB, logs, tokens, identity maps in installer payload): NOT RUN
 
 ## Limitations / NOT RUN
-- 
+- TODO: record host-specific limitations and failed steps.
 
 ## Non-claims
 - No code-signing/SmartScreen/Defender readiness claim.
