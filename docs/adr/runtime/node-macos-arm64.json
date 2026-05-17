@@ -6,7 +6,7 @@
   "nodeVersion": "24.15.0",
   "npmVersion": "11.12.1",
   "source": "https://nodejs.org/dist/v24.15.0/node-v24.15.0-darwin-arm64.tar.gz",
-  "sha256": "c4f40f9f6d44df7f35a3f251f4e7f962f662cce9ff0caef9f6b8e44c8f4f6b5b",
+  "sha256": "372331b969779ab5d15b949884fc6eaf88d5afe87bde8ba881d6400b9100ffc4",
   "license": "Node.js license (MIT-like, see bundled LICENSE)",
   "bundledRuntimeLocation": "runtime/node",
   "nodeExecutable": "runtime/node/bin/node",
