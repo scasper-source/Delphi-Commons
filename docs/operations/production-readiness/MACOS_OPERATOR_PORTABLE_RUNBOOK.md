@@ -3,7 +3,7 @@
 Status: **MACOS OPERATOR PORTABLE RUNBOOK RECORDED / INTERNAL ENGINEERING EVIDENCE ONLY**.
 Decision label: **NOT READY FOR HUMAN TESTING**.
 Phase status: **Phase 2 Downloadable Laptop Operator Candidate remains IN PROGRESS**.
-Date basis: **2026-05-14**.
+Date basis: **2026-05-18**.
 Track: **`human_testing_candidate`**.
 
 ## Scope and Safety Boundary
@@ -19,7 +19,7 @@ This runbook remains the operator procedure/checklist. The evidence record is se
 ## Prerequisites
 
 - macOS shell access with permission to run local scripts from Terminal.
-- Local Node.js and npm available on PATH (current dependency posture is local runtime prerequisite, not bundled runtime).
+- For the current bundled-runtime package candidate, local Node.js/npm should not be required after packaging; if a source-only prototype is used instead, record local Node/npm as a prerequisite and do not treat it as bundled-runtime evidence.
 - A produced package artifact from the repository packaging flow.
 - Localhost ports expected for operator flow are available (`3001` backend API, `4173` static UI) unless changed by future package scripts.
 
@@ -80,15 +80,33 @@ Expected runtime subdirectories (target shape):
 - `evidence`
 - `state`
 
-## Lifecycle Commands (Planned Operator Flow)
+## Normal Launch Path
 
-From extracted package root, expected command pattern:
+From extracted package root, the single normal launch command is:
+
+```bash
+./scripts/macos/portable-bundled-runtime.sh
+```
+
+The launcher starts local services, attempts to open `http://127.0.0.1:4173`, and prints the same localhost URL. If the browser does not show Delphi Commons, open `http://127.0.0.1:4173` manually while the supervised run is active. This fallback guidance must remain before any shutdown/close-window guidance.
+
+macOS lifecycle gap: closing the visible browser/app window is **IMPLEMENTATION_REQUIRED / HUMAN_REQUIRED** and is **not proven** to stop the local runtime. For supervised internal runs only, end the runtime with:
+
+```bash
+./scripts/macos/portable-bundled-runtime.sh stop
+```
+
+Do not present Stop or Status as ordinary user shortcuts. They are admin/debug lifecycle commands.
+
+## Admin Lifecycle Evidence Sequence
+
+From extracted package root, admin/debug command pattern is:
 
 ```bash
 bash ./scripts/macos/portable-operator-candidate.sh <command>
 ```
 
-Run in this sequence:
+For evidence collection, run this sequence:
 
 1. `status`
 2. `start`

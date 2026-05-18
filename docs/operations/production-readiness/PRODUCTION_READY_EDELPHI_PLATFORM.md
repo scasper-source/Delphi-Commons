@@ -558,6 +558,7 @@ Public open-source release remains separate and requires repository hygiene, lic
 - Added a thin macOS installer adapter (`scripts/packaging/macos-installer.mjs`) that reuses shared packaging core and existing macOS portable package staging.
 - This does **not** replace the existing macOS portable flow; it is a parallel internal-candidate track.
 - Current merged status: installer packaging logic is implemented, and real-Mac `.pkg` build/package-verification evidence is recorded. Install and installed-path lifecycle remain **BLOCKED / NOT RUN** until an operator-authorized macOS install is performed.
+- 2026-05-18 operator-model cleanup status: macOS remains an **internal package candidate / NOT READY FOR HUMAN TESTING**. The intended normal surface is one launch path with browser fallback to `http://127.0.0.1:4173`; Stop/Status are admin/debug lifecycle commands, not ordinary user shortcuts. Closing the visible browser/app window stopping the macOS runtime remains **IMPLEMENTATION_REQUIRED / HUMAN_REQUIRED** until proven on macOS. Downloaded-asset README verification for the current macOS GitHub asset is **NOT RUN**.
 - Non-claims remain: no signing/notarization/Gatekeeper claim, no broad macOS support claim, no production/pilot/human-subjects readiness claim.
 
 ## Phase 2 Windows installer candidate track (new, parallel)

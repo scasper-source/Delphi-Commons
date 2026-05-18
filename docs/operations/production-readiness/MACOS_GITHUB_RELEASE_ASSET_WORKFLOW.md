@@ -1,6 +1,6 @@
 # macOS GitHub Release Asset Workflow
 
-Status: **WORKFLOW PREPARED / RELEASE RUN SUCCEEDED FOR 2026-05-18 TAG**.
+Status: **WORKFLOW PREPARED / 2026-05-18 TAG SUCCEEDED / CORRECTED SUCCESSOR RELEASE HUMAN_REQUIRED**.
 
 Date basis: 2026-05-18.
 
@@ -26,4 +26,4 @@ Intel Mac/x64 packaging remains deferred until separately implemented and eviden
 
 The 2026-05-18 workflow result and release assets are recorded in [MACOS_GITHUB_RELEASE_ASSET_EVIDENCE_2026-05-18.md](./MACOS_GITHUB_RELEASE_ASSET_EVIDENCE_2026-05-18.md).
 
-Any install/start/stop evidence still requires a separate human/operator run.
+Any corrected release after the macOS operator-model cleanup requires a separate workflow run, downloaded-asset inspection, checksum verification, and human/operator run before old tags/assets are deleted or readiness claims are upgraded.

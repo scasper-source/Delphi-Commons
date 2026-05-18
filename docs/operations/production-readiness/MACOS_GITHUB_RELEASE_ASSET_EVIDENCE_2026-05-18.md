@@ -1,6 +1,6 @@
 # macOS GitHub Release Asset Evidence - 2026-05-18
 
-Status: **MACOS INTERNAL RELEASE ASSETS AVAILABLE / NOT READY FOR HUMAN TESTING**.
+Status: **MACOS INTERNAL RELEASE ASSETS AVAILABLE / NOT READY FOR HUMAN TESTING / DOWNLOAD-INSTRUCTION VERIFICATION GAP OPEN**.
 
 Date/time basis: 2026-05-18 GitHub Actions release workflow run.
 
@@ -18,7 +18,7 @@ c847a023d1b188bc1dab635e154df5563353cd21
 
 ## Scope
 
-This document records that GitHub now has macOS Apple Silicon internal package candidate assets available for download.
+This document records that GitHub had macOS Apple Silicon internal package candidate assets available for download for tag `internal-macos-package-candidate-2026-05-18`. It is not evidence that the downloaded asset README matched the later operator-model cleanup unless a separate downloaded-asset inspection is attached.
 
 These assets are internal synthetic/low-risk package candidates only. They do not close Phase 2 by themselves and do not create production, pilot, real human-subjects, broad macOS support, App Store, signing, notarization, Gatekeeper, security-certification, accessibility-certification, legal, ethics/IRB, real-SMS, PWA, native-mobile, external-AI, or final human-testing readiness evidence.
 
@@ -57,10 +57,24 @@ Package verification metadata:
 }
 ```
 
+## Downloaded-Asset Instruction Verification
+
+Status: **NOT RUN** for this recorded release asset.
+
+The repository docs and packaging scripts were reviewed after this release, but this evidence file does not contain an extraction of `delphi-commons-macos-arm64-portable-bundled-runtime-internal-internal-macos-package-candidate-2026-05-18-c847a02.zip` proving that its bundled `README.txt` contains the intended operator instructions. Treat this tag as an internal package candidate with a downloaded-asset README verification gap until a corrected successor tag is built and the actual downloaded asset is inspected.
+
+## Superseded Release/Tag Cleanup Status
+
+Status: **HUMAN_REQUIRED**. The container has no configured git remote, `gh` is not installed, and unauthenticated GitHub API access was blocked, so no release/tag/asset deletion was performed. Delete superseded macOS releases only after a corrected successor candidate has succeeded and its downloaded asset has been verified.
+
 ## Remaining Open Gates
 
 - The macOS `.pkg` is unsigned and not notarized.
 - Gatekeeper/quarantine behavior remains `NOT RUN`.
-- Installed-path lifecycle evidence remains `NOT RUN` until a human operator installs and exercises start/status/browser-open/smoke/restart/backup/restore/reset/stop/uninstall or uninstall dry run.
+- Clean-profile Mac execution remains `NOT RUN`.
+- Second-machine Mac execution remains `NOT RUN`.
+- Phone/operator walkthrough remains `NOT RUN`.
+- Installed-path lifecycle evidence remains `NOT RUN` until a human operator installs and exercises launch/browser-open/fallback/smoke/admin stop/uninstall or uninstall dry run.
+- Closing the visible browser/app window stopping the macOS runtime remains `IMPLEMENTATION_REQUIRED / HUMAN_REQUIRED`; do not claim it works without evidence.
 - Intel Mac/x64 packaging remains deferred.
 - This does not close Phase 1 human evidence, Phase 2 laptop candidate evidence, Phase 4 binder signoff, or Phase 5 final human testing.

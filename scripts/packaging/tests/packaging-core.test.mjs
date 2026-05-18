@@ -63,6 +63,11 @@ test('overclaim scan detects readiness overclaims', () => {
   assert.ok(hits.length >= 4);
 });
 
+test('overclaim scan permits explicit negative readiness boundaries', () => {
+  assert.deepEqual(scanOverclaimText('Status: NOT READY FOR HUMAN TESTING.'), []);
+  assert.deepEqual(scanOverclaimText('This package is not production-ready and not pilot-ready.'), []);
+});
+
 test('overclaim scan detects standalone IRB approval claims', () => {
   assert.ok(scanOverclaimText('This package has IRB approval.').length >= 1);
   assert.ok(scanOverclaimText('This package has IRB/ethics approval.').length >= 1);
