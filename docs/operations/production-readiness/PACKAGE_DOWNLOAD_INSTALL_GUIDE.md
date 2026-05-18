@@ -30,8 +30,8 @@ The GitHub repository is private, so operators need repository access before the
 2. Unzip it to a local folder path you control.
 3. Run the included installer EXE.
 4. Launch **Delphi Commons** from the Desktop or Start Menu.
-5. Close the Delphi Commons browser app window when finished; this stops the local runtime.
-6. If the browser does not open, open `http://127.0.0.1:4173` while the app is running.
+5. If the browser does not open, open `http://127.0.0.1:4173` while the app is running.
+6. When finished, close the Delphi Commons browser app window; this stops the local runtime.
 
 ## Windows Portable ZIP Flow
 

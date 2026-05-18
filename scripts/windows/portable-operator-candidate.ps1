@@ -122,16 +122,25 @@ function Stop-IfRunning {
   Remove-Item -LiteralPath $LockFile -Force -ErrorAction SilentlyContinue
 }
 
-function Get-EdgeBrowserPath {
+function Get-AttachedBrowserPath {
   $candidates = @(
     (Join-Path ${env:ProgramFiles(x86)} 'Microsoft\Edge\Application\msedge.exe'),
     (Join-Path $env:ProgramFiles 'Microsoft\Edge\Application\msedge.exe'),
-    (Join-Path $env:LOCALAPPDATA 'Microsoft\Edge\Application\msedge.exe')
+    (Join-Path $env:LOCALAPPDATA 'Microsoft\Edge\Application\msedge.exe'),
+    (Join-Path ${env:ProgramFiles(x86)} 'Google\Chrome\Application\chrome.exe'),
+    (Join-Path $env:ProgramFiles 'Google\Chrome\Application\chrome.exe'),
+    (Join-Path $env:LOCALAPPDATA 'Google\Chrome\Application\chrome.exe')
   )
   foreach ($candidate in $candidates) {
     if ($candidate -and (Test-Path -LiteralPath $candidate)) { return $candidate }
   }
   return $null
+}
+
+function Assert-AttachedLifecycleBrowserAvailable {
+  if (!$StopOnBrowserClose -or $env:EDELPHI_SKIP_OPEN_BROWSER -eq '1') { return }
+  if (Get-AttachedBrowserPath) { return }
+  throw 'Attached lifecycle requires Microsoft Edge or Google Chrome so the app can stop when the browser window closes.'
 }
 
 function Get-AttachedBrowserProcesses([string]$profileDir) {
@@ -171,13 +180,13 @@ function Open-OperatorUi([string]$url = $UiUrl, [switch]$AttachedLifecycle) {
   if ([string]::IsNullOrWhiteSpace($url)) { $url = $UiUrl }
   if ($env:EDELPHI_SKIP_OPEN_BROWSER -ne '1') {
     if ($AttachedLifecycle) {
-      $edge = Get-EdgeBrowserPath
-      if (!$edge) {
-        throw 'Attached lifecycle requires Microsoft Edge so the app can stop when the browser window closes.'
+      $browserPath = Get-AttachedBrowserPath
+      if (!$browserPath) {
+        throw 'Attached lifecycle requires Microsoft Edge or Google Chrome so the app can stop when the browser window closes.'
       }
       $profileDir = Join-Path $RuntimeRoot 'browser-profile'
       if (!(Test-Path -LiteralPath $profileDir)) { New-Item -ItemType Directory -Path $profileDir | Out-Null }
-      $browser = Start-Process -FilePath $edge -ArgumentList (ConvertTo-ProcessArgumentList @("--user-data-dir=$profileDir",'--no-first-run',"--app=$url")) -PassThru
+      $browser = Start-Process -FilePath $browserPath -ArgumentList (ConvertTo-ProcessArgumentList @("--user-data-dir=$profileDir",'--no-first-run',"--app=$url")) -PassThru
       Write-Host "Operator UI: $url"
       Write-Host "Operator localhost URL (default, safe): $url"
       return @{
@@ -289,7 +298,16 @@ function Start-Prototype {
     if ($backendRunning -and $uiRunning) {
       $existingUrl = if ($existing.uiUrl) { $existing.uiUrl } else { $UiUrl }
       Write-Evidence "Start requested while already running; reopening browser url=$existingUrl"
-      $attachedBrowser = Open-OperatorUi $existingUrl -AttachedLifecycle:$StopOnBrowserClose
+      try {
+        Assert-AttachedLifecycleBrowserAvailable
+        $attachedBrowser = Open-OperatorUi $existingUrl -AttachedLifecycle:$StopOnBrowserClose
+      } catch {
+        if ($StopOnBrowserClose) {
+          Write-Evidence "Attached lifecycle browser unavailable during relaunch; stopping runtime before surfacing error: $($_.Exception.Message)"
+          Stop-IfRunning
+        }
+        throw
+      }
       Write-Host "Health check: $($existing.healthUrl)"
       if ($StopOnBrowserClose -and $attachedBrowser) {
         Wait-ForAttachedBrowserClose -profileDir $attachedBrowser.ProfileDir -starterProcessId $attachedBrowser.StarterProcessId
@@ -302,6 +320,7 @@ function Start-Prototype {
 
   Assert-PortFree -port $ApiPort
   Assert-PortFree -port $UiPort
+  Assert-AttachedLifecycleBrowserAvailable
   Assert-NodeRuntime
   Sync-RuntimeServer
   Ensure-ServerDependencies
@@ -359,7 +378,15 @@ function Start-Prototype {
     nodeExecutable = $NodeCommand
   }
   Write-Evidence "Started portable prototype backendPid=$($backend.Id) uiPid=$($ui.Id) url=$UiUrl"
-  $attachedBrowser = Open-OperatorUi $UiUrl -AttachedLifecycle:$StopOnBrowserClose
+  try {
+    $attachedBrowser = Open-OperatorUi $UiUrl -AttachedLifecycle:$StopOnBrowserClose
+  } catch {
+    if ($StopOnBrowserClose) {
+      Write-Evidence "Attached lifecycle browser launch failed; stopping runtime before surfacing error: $($_.Exception.Message)"
+      Stop-IfRunning
+    }
+    throw
+  }
   if ($LanParticipantMode) {
     if (!$LanAcknowledged) {
       Stop-ProcessTree -processId $backend.Id -name 'backend'
