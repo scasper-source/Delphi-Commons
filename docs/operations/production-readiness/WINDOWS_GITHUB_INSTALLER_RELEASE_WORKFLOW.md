@@ -27,8 +27,9 @@ These assets are internal package candidates only. They do not create production
 
 | Item | Value |
 | --- | --- |
-| Release tag | [`internal-windows-installer-candidate-2026-05-18-r2`](https://github.com/scasper-source/Delphi-Commons/releases/tag/internal-windows-installer-candidate-2026-05-18-r2) |
-| Workflow run | [`26057445547`](https://github.com/scasper-source/Delphi-Commons/actions/runs/26057445547) |
+| Release tag | [`internal-windows-installer-candidate-2026-05-18-r3`](https://github.com/scasper-source/Delphi-Commons/releases/tag/internal-windows-installer-candidate-2026-05-18-r3) |
+| Workflow run | [`26058602892`](https://github.com/scasper-source/Delphi-Commons/actions/runs/26058602892) |
 | Result | `completed` / `success` |
 | Recommended asset | Windows x64 installer ZIP bundle |
-| Remaining evidence | Clean-profile or second-machine install/start/stop/uninstall remains `NOT RUN` |
+| Superseded asset | `r2` deleted after user-reported Windows code 193 post-install launch failure |
+| Remaining evidence | Clean-profile or second-machine install/start/stop/uninstall on `r3` remains `NOT RUN` |
