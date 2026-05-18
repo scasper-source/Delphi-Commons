@@ -3,7 +3,12 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { renderInstallerLauncherVbs, writeInstallerCandidateLaunchers, installerWrapperRelativePath } from '../windows-installer.mjs';
+import {
+  renderInnoSetupScript,
+  renderInstallerLauncherVbs,
+  writeInstallerCandidateLaunchers,
+  installerWrapperRelativePath
+} from '../windows-installer.mjs';
 
 const installerWrapper = path.join(process.cwd(), installerWrapperRelativePath);
 
@@ -39,4 +44,13 @@ test('generated launchers target existing lifecycle wrapper in package layout', 
     const launcher = fs.readFileSync(launcherPath, 'utf8');
     assert.match(launcher, /installer-candidate-bundled-runtime\.ps1/);
   }
+});
+
+test('Inno setup script launches VBS files through Windows Script Host', () => {
+  const script = renderInnoSetupScript();
+  assert.match(script, /\[Icons\]/);
+  assert.match(script, /\[Run\]/);
+  assert.match(script, /Filename: "\{sys\}\\wscript\.exe"; Parameters: """\{app\}\\scripts\\windows\\installer-candidate\\delphi-commons-launch\.vbs"""/);
+  assert.match(script, /Filename: "\{sys\}\\wscript\.exe"; Parameters: """\{app\}\\scripts\\windows\\installer-candidate\\delphi-commons-stop\.vbs"""/);
+  assert.doesNotMatch(script, /Filename: "\{app\}\\scripts\\windows\\installer-candidate\\delphi-commons-[^"]+\.vbs"/);
 });
