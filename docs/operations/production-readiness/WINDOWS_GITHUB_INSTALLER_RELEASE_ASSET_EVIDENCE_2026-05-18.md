@@ -6,14 +6,14 @@ Date/time basis: 2026-05-18 GitHub Actions release workflow run.
 
 Track: `human_testing_candidate`.
 
-Release tag: [`internal-windows-installer-candidate-2026-05-18-r3`](https://github.com/scasper-source/Delphi-Commons/releases/tag/internal-windows-installer-candidate-2026-05-18-r3).
+Release tag: [`internal-windows-installer-candidate-2026-05-18-r4`](https://github.com/scasper-source/Delphi-Commons/releases/tag/internal-windows-installer-candidate-2026-05-18-r4).
 
-Workflow run: [`26058602892`](https://github.com/scasper-source/Delphi-Commons/actions/runs/26058602892).
+Workflow run: [`26059709643`](https://github.com/scasper-source/Delphi-Commons/actions/runs/26059709643).
 
 Commit hash:
 
 ```text
-43be65b45f98ad59224f47ef9d0df107d4180f1a
+3e42de42b2d1681665eaaf4e06f055d83ddb70b8
 ```
 
 ## Scope
@@ -32,27 +32,29 @@ No real participant data was used.
 | --- | --- |
 | Workflow name | `Build Windows internal installer release` |
 | Event | `push` tag |
-| Tag | `internal-windows-installer-candidate-2026-05-18-r3` |
-| Head SHA | `43be65b45f98ad59224f47ef9d0df107d4180f1a` |
+| Tag | `internal-windows-installer-candidate-2026-05-18-r4` |
+| Head SHA | `3e42de42b2d1681665eaaf4e06f055d83ddb70b8` |
 | Status | `completed` |
 | Conclusion | `success` |
-| Created at | `2026-05-18T20:29:04Z` |
-| Updated at | `2026-05-18T20:31:02Z` |
+| Created at | `2026-05-18T20:50:35Z` |
+| Updated at | `2026-05-18T20:52:30Z` |
 
 Superseded first attempt: workflow run [`26057075184`](https://github.com/scasper-source/Delphi-Commons/actions/runs/26057075184) failed before packaging because the workflow invoked `iscc /?` as a gate and Inno Setup returned a non-zero help-command exit. The workflow was fixed in PR #108 and the failed `internal-windows-installer-candidate-2026-05-18` tag was deleted before the `r2` run.
 
 Superseded `r2`: the `r2` release built successfully, but a user install attempt reported Windows `CreateProcess` code 193 because the installer post-install step tried to execute `delphi-commons-launch.vbs` directly. PR #110 changed the Inno Setup script to launch VBS scripts through `wscript.exe`, and the broken `r2` release/tag was deleted after this `r3` release succeeded.
 
+Superseded `r3`: the `r3` release fixed the Windows Script Host launch route, but a user install attempt reported that closing the browser left the local app running and later Start Menu/Desktop launches did not reopen the browser. PR #112 made the start command idempotent so an already-running app reopens the browser, and made the desktop shortcut unconditional. The superseded `r3` release/tag was deleted after this `r4` release succeeded.
+
 ## Release Assets
 
 | Asset | Size | SHA256 |
 | --- | ---: | --- |
-| [`delphi-commons-windows-x64-installer-internal-internal-windows-installer-candidate-2026-05-18-r3-43be65b.zip`](https://github.com/scasper-source/Delphi-Commons/releases/download/internal-windows-installer-candidate-2026-05-18-r3/delphi-commons-windows-x64-installer-internal-internal-windows-installer-candidate-2026-05-18-r3-43be65b.zip) | 25,350,899 bytes | `3060c7b6681ddc12a8142d0834cc0f45ba26b573120b2eecd92e880676f8844b` |
-| [`delphi-commons-windows-x64-installer-internal-internal-windows-installer-candidate-2026-05-18-r3-43be65b.exe`](https://github.com/scasper-source/Delphi-Commons/releases/download/internal-windows-installer-candidate-2026-05-18-r3/delphi-commons-windows-x64-installer-internal-internal-windows-installer-candidate-2026-05-18-r3-43be65b.exe) | 25,783,147 bytes | `4aa490bb369c8508bdab6dc4aaca02517acd34381abc86099c94597547879183` |
-| [`windows-installer-package-manifest-internal-windows-installer-candidate-2026-05-18-r3-43be65b.json`](https://github.com/scasper-source/Delphi-Commons/releases/download/internal-windows-installer-candidate-2026-05-18-r3/windows-installer-package-manifest-internal-windows-installer-candidate-2026-05-18-r3-43be65b.json) | 428,177 bytes | `eac926eb482cd60dfb606403072acfb5a3ee58473de0aeccb609e06115c3e307` |
-| [`windows-installer-package-verification-internal-windows-installer-candidate-2026-05-18-r3-43be65b.json`](https://github.com/scasper-source/Delphi-Commons/releases/download/internal-windows-installer-candidate-2026-05-18-r3/windows-installer-package-verification-internal-windows-installer-candidate-2026-05-18-r3-43be65b.json) | 34 bytes | `b7ea028994d1ca087b9208093f13b2d509d4a8605587c68c2982e57d926923f6` |
-| [`RELEASE_NOTES.md`](https://github.com/scasper-source/Delphi-Commons/releases/download/internal-windows-installer-candidate-2026-05-18-r3/RELEASE_NOTES.md) | 793 bytes | Not included in generated `SHA256SUMS.txt` |
-| [`SHA256SUMS.txt`](https://github.com/scasper-source/Delphi-Commons/releases/download/internal-windows-installer-candidate-2026-05-18-r3/SHA256SUMS.txt) | 688 bytes | Self-checksum not recorded |
+| [`delphi-commons-windows-x64-installer-internal-internal-windows-installer-candidate-2026-05-18-r4-3e42de4.zip`](https://github.com/scasper-source/Delphi-Commons/releases/download/internal-windows-installer-candidate-2026-05-18-r4/delphi-commons-windows-x64-installer-internal-internal-windows-installer-candidate-2026-05-18-r4-3e42de4.zip) | 25,353,700 bytes | `43a695f5a91ab8a6b2991bb46e2941db321314fa43d430816908dddef1844bf2` |
+| [`delphi-commons-windows-x64-installer-internal-internal-windows-installer-candidate-2026-05-18-r4-3e42de4.exe`](https://github.com/scasper-source/Delphi-Commons/releases/download/internal-windows-installer-candidate-2026-05-18-r4/delphi-commons-windows-x64-installer-internal-internal-windows-installer-candidate-2026-05-18-r4-3e42de4.exe) | 25,785,946 bytes | `c62a59825ca2585931c705b16f0fe04991e6673b921b97d6b6cf362b71cd835c` |
+| [`windows-installer-package-manifest-internal-windows-installer-candidate-2026-05-18-r4-3e42de4.json`](https://github.com/scasper-source/Delphi-Commons/releases/download/internal-windows-installer-candidate-2026-05-18-r4/windows-installer-package-manifest-internal-windows-installer-candidate-2026-05-18-r4-3e42de4.json) | 428,177 bytes | `1900e26360f8ca0171c9ad8a854e6ef4439d372ed71ee4bd4f3a340065fc5706` |
+| [`windows-installer-package-verification-internal-windows-installer-candidate-2026-05-18-r4-3e42de4.json`](https://github.com/scasper-source/Delphi-Commons/releases/download/internal-windows-installer-candidate-2026-05-18-r4/windows-installer-package-verification-internal-windows-installer-candidate-2026-05-18-r4-3e42de4.json) | 34 bytes | `b7ea028994d1ca087b9208093f13b2d509d4a8605587c68c2982e57d926923f6` |
+| [`RELEASE_NOTES.md`](https://github.com/scasper-source/Delphi-Commons/releases/download/internal-windows-installer-candidate-2026-05-18-r4/RELEASE_NOTES.md) | 793 bytes | Not included in generated `SHA256SUMS.txt` |
+| [`SHA256SUMS.txt`](https://github.com/scasper-source/Delphi-Commons/releases/download/internal-windows-installer-candidate-2026-05-18-r4/SHA256SUMS.txt) | 688 bytes | Self-checksum not recorded |
 
 Package verification metadata:
 
