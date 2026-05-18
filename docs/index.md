@@ -57,6 +57,7 @@ Current readiness: controlled mock-participant MVP testing with synthetic or low
 - [macOS installer runbook](./operations/production-readiness/MACOS_INSTALLER_RUNBOOK.md)
 - [macOS installer real-Mac build evidence (2026-05-16)](./operations/production-readiness/MACOS_INSTALLER_REAL_MAC_BUILD_EVIDENCE_2026-05-16.md)
 - [macOS GitHub release asset workflow](./operations/production-readiness/MACOS_GITHUB_RELEASE_ASSET_WORKFLOW.md)
+- [macOS GitHub release asset evidence (2026-05-18)](./operations/production-readiness/MACOS_GITHUB_RELEASE_ASSET_EVIDENCE_2026-05-18.md)
 - [Windows operator candidate evidence closeout](./operations/production-readiness/WINDOWS_OPERATOR_CANDIDATE_EVIDENCE_CLOSEOUT.md)
 - [Windows operator candidate local supervisor evidence](./operations/production-readiness/WINDOWS_OPERATOR_CANDIDATE_LOCAL_SUPERVISOR_EVIDENCE.md)
 - [Phase 0 baseline preservation regression index](./operations/production-readiness/PHASE0_BASELINE_PRESERVATION_REGRESSION_INDEX.md)
