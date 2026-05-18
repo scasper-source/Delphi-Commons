@@ -27,9 +27,9 @@ These assets are internal package candidates only. They do not create production
 
 | Item | Value |
 | --- | --- |
-| Release tag | [`internal-windows-installer-candidate-2026-05-18-r4`](https://github.com/scasper-source/Delphi-Commons/releases/tag/internal-windows-installer-candidate-2026-05-18-r4) |
-| Workflow run | [`26059709643`](https://github.com/scasper-source/Delphi-Commons/actions/runs/26059709643) |
+| Release tag | [`internal-windows-installer-candidate-2026-05-18-r5`](https://github.com/scasper-source/Delphi-Commons/releases/tag/internal-windows-installer-candidate-2026-05-18-r5) |
+| Workflow run | [`26060695226`](https://github.com/scasper-source/Delphi-Commons/actions/runs/26060695226) |
 | Result | `completed` / `success` |
 | Recommended asset | Windows x64 installer ZIP bundle |
-| Superseded assets | `r2` deleted after user-reported Windows code 193 post-install launch failure; `r3` deleted after user-reported browser-reopen/desktop-shortcut launch issue |
-| Remaining evidence | Clean-profile or second-machine install/start/stop/uninstall on `r4` remains `NOT RUN` |
+| Superseded assets | `r2` deleted after user-reported Windows code 193 post-install launch failure; `r3` deleted after user-reported browser-reopen/desktop-shortcut launch issue; `r4` deleted after user-facing Stop/Status shortcuts and background-runtime lifecycle were removed |
+| Remaining evidence | Clean-profile or second-machine install/start/browser-window-close-to-stop/uninstall on `r5` remains `NOT RUN` |

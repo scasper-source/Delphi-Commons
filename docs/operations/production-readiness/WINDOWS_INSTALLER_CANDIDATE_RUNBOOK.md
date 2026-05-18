@@ -7,8 +7,9 @@ Internal engineering and mock-trial preparation only.
 1. Download installer artifact.
 2. Double-click installer.
 3. Install Delphi Commons.
-4. Open Start Menu and click **Delphi Commons**.
-5. Local services start and default browser opens to `http://127.0.0.1:4173`.
+4. Open Desktop or Start Menu and click **Delphi Commons**.
+5. Local services start and a dedicated Delphi Commons browser app window opens.
+6. Close the Delphi Commons browser app window when finished; local services stop.
 
 ## Build command (engineering)
 - `node scripts/packaging/windows-installer.mjs build`
@@ -24,10 +25,11 @@ Internal engineering and mock-trial preparation only.
 - Runtime data/logs/backups/exports: `%LOCALAPPDATA%\DelphiCommons\windows-installer-candidate`
 - Uninstall removes installed app files; runtime data is preserved unless explicitly deleted.
 
-## Start/stop/status user operations (Phase 1)
+## Installed user operation (Phase 1)
 - Start Menu shortcut: **Delphi Commons** (launch/start/browser open)
-- Start Menu shortcut: **Delphi Commons Stop** (stop local services)
-- Start Menu shortcut: **Delphi Commons Status** (status)
+- Desktop shortcut: **Delphi Commons** (launch/start/browser open)
+- Closing the Delphi Commons browser app window stops local services.
+- Stop/status scripts remain packaged for engineering troubleshooting, but they are not user-facing shortcuts.
 - Smoke for engineering fallback remains script-based today and is a Phase 2 UX gap.
 
 ## Troubleshooting
