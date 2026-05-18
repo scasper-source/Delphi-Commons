@@ -31,6 +31,7 @@ $LanParticipantMode = $env:EDELPHI_ENABLE_LAN_PARTICIPANT_URL -eq '1'
 $LanAcknowledged = $env:EDELPHI_ACK_LAN_SYNTHETIC_ONLY -eq '1'
 $TunnelMode = $env:EDELPHI_ENABLE_TUNNEL_URL -eq '1'
 $ParticipantPath = if ($env:EDELPHI_PARTICIPANT_PATH) { $env:EDELPHI_PARTICIPANT_PATH } else { '/participant' }
+$StopOnBrowserClose = $env:EDELPHI_STOP_ON_BROWSER_CLOSE -eq '1'
 
 function Ensure-Dirs {
   foreach ($path in @($RuntimeRoot,$StateDir,$LogsDir,$EvidenceDir,$DbDir,$AuditDir,$ExportsDir,$BackupsDir)) {
@@ -121,13 +122,74 @@ function Stop-IfRunning {
   Remove-Item -LiteralPath $LockFile -Force -ErrorAction SilentlyContinue
 }
 
-function Open-OperatorUi([string]$url = $UiUrl) {
+function Get-EdgeBrowserPath {
+  $candidates = @(
+    (Join-Path ${env:ProgramFiles(x86)} 'Microsoft\Edge\Application\msedge.exe'),
+    (Join-Path $env:ProgramFiles 'Microsoft\Edge\Application\msedge.exe'),
+    (Join-Path $env:LOCALAPPDATA 'Microsoft\Edge\Application\msedge.exe')
+  )
+  foreach ($candidate in $candidates) {
+    if ($candidate -and (Test-Path -LiteralPath $candidate)) { return $candidate }
+  }
+  return $null
+}
+
+function Get-AttachedBrowserProcesses([string]$profileDir) {
+  $escapedProfile = $profileDir -replace '\\', '\\'
+  Get-CimInstance Win32_Process -ErrorAction SilentlyContinue |
+    Where-Object {
+      $_.Name -match '^(msedge|chrome)\.exe$' -and
+      $_.CommandLine -and
+      $_.CommandLine -like "*$escapedProfile*"
+    }
+}
+
+function Wait-ForAttachedBrowserClose([string]$profileDir, [int]$starterProcessId) {
+  Write-Evidence "Attached browser lifecycle monitor started profile=$profileDir"
+  $deadline = (Get-Date).AddSeconds(15)
+  do {
+    $attached = @(Get-AttachedBrowserProcesses $profileDir)
+    $starterRunning = $false
+    if ($starterProcessId -gt 0) { $starterRunning = Is-Running $starterProcessId }
+    if ($attached.Count -gt 0 -or $starterRunning) { break }
+    Start-Sleep -Milliseconds 500
+  } while ((Get-Date) -lt $deadline)
+
+  while ($true) {
+    $attached = @(Get-AttachedBrowserProcesses $profileDir)
+    $starterRunning = $false
+    if ($starterProcessId -gt 0) { $starterRunning = Is-Running $starterProcessId }
+    if ($attached.Count -eq 0 -and !$starterRunning) { break }
+    Start-Sleep -Seconds 1
+  }
+
+  Write-Evidence 'Attached browser window closed; stopping Delphi Commons runtime.'
+  Stop-IfRunning
+}
+
+function Open-OperatorUi([string]$url = $UiUrl, [switch]$AttachedLifecycle) {
   if ([string]::IsNullOrWhiteSpace($url)) { $url = $UiUrl }
   if ($env:EDELPHI_SKIP_OPEN_BROWSER -ne '1') {
+    if ($AttachedLifecycle) {
+      $edge = Get-EdgeBrowserPath
+      if (!$edge) {
+        throw 'Attached lifecycle requires Microsoft Edge so the app can stop when the browser window closes.'
+      }
+      $profileDir = Join-Path $RuntimeRoot 'browser-profile'
+      if (!(Test-Path -LiteralPath $profileDir)) { New-Item -ItemType Directory -Path $profileDir | Out-Null }
+      $browser = Start-Process -FilePath $edge -ArgumentList (ConvertTo-ProcessArgumentList @("--user-data-dir=$profileDir",'--no-first-run',"--app=$url")) -PassThru
+      Write-Host "Operator UI: $url"
+      Write-Host "Operator localhost URL (default, safe): $url"
+      return @{
+        ProfileDir = $profileDir
+        StarterProcessId = $browser.Id
+      }
+    }
     Start-Process $url
   }
   Write-Host "Operator UI: $url"
   Write-Host "Operator localhost URL (default, safe): $url"
+  return $null
 }
 
 function Assert-PortFree([int]$port) {
@@ -227,8 +289,11 @@ function Start-Prototype {
     if ($backendRunning -and $uiRunning) {
       $existingUrl = if ($existing.uiUrl) { $existing.uiUrl } else { $UiUrl }
       Write-Evidence "Start requested while already running; reopening browser url=$existingUrl"
-      Open-OperatorUi $existingUrl
+      $attachedBrowser = Open-OperatorUi $existingUrl -AttachedLifecycle:$StopOnBrowserClose
       Write-Host "Health check: $($existing.healthUrl)"
+      if ($StopOnBrowserClose -and $attachedBrowser) {
+        Wait-ForAttachedBrowserClose -profileDir $attachedBrowser.ProfileDir -starterProcessId $attachedBrowser.StarterProcessId
+      }
       return
     }
     Write-Evidence 'Detected stale or partial lock; cleaning stale state before start.'
@@ -294,7 +359,7 @@ function Start-Prototype {
     nodeExecutable = $NodeCommand
   }
   Write-Evidence "Started portable prototype backendPid=$($backend.Id) uiPid=$($ui.Id) url=$UiUrl"
-  Open-OperatorUi $UiUrl
+  $attachedBrowser = Open-OperatorUi $UiUrl -AttachedLifecycle:$StopOnBrowserClose
   if ($LanParticipantMode) {
     if (!$LanAcknowledged) {
       Stop-ProcessTree -processId $backend.Id -name 'backend'
@@ -315,6 +380,9 @@ function Start-Prototype {
     Write-Host 'WARNING: Keep tunnel OFF by default; do not expose participant traffic to public internet.'
   }
   Write-Host "Health check: $HealthUrl"
+  if ($StopOnBrowserClose -and $attachedBrowser) {
+    Wait-ForAttachedBrowserClose -profileDir $attachedBrowser.ProfileDir -starterProcessId $attachedBrowser.StarterProcessId
+  }
 }
 
 function Reset-Prototype {
