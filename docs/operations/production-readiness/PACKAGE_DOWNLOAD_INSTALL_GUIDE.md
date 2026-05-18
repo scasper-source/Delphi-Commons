@@ -10,10 +10,19 @@ This guide is the simple operator-facing path for internal package candidates. U
 
 | Platform | Recommended internal path | Operator flow | Current status |
 | --- | --- | --- | --- |
-| Windows x64 | Installer ZIP bundle | Download the ZIP, unzip it, run the included EXE, launch Delphi Commons from the Start Menu. | Workflow prepared; release run required |
+| Windows x64 | Installer ZIP bundle | Download the ZIP, unzip it, run the included EXE, launch Delphi Commons from the Start Menu. | Available as internal GitHub release asset |
 | Windows x64 fallback | Portable bundled-runtime ZIP | Download the ZIP, unzip it, run `scripts/windows/portable-bundled-runtime.ps1 start`. | Available as internal GitHub release asset |
 | macOS Apple Silicon | Installer PKG | Download the PKG, install it, launch with the installed package command/shortcut path documented in the macOS runbook. | Available as internal GitHub release asset |
 | macOS Apple Silicon fallback | Portable bundled-runtime ZIP | Download the ZIP, unzip it, run `scripts/macos/portable-bundled-runtime.sh start`. | Available as internal GitHub release asset |
+
+## Current Release Pages
+
+| Platform | Release page |
+| --- | --- |
+| Windows x64 installer | [`internal-windows-installer-candidate-2026-05-18-r2`](https://github.com/scasper-source/Delphi-Commons/releases/tag/internal-windows-installer-candidate-2026-05-18-r2) |
+| macOS Apple Silicon package | [`internal-macos-package-candidate-2026-05-18`](https://github.com/scasper-source/Delphi-Commons/releases/tag/internal-macos-package-candidate-2026-05-18) |
+
+The GitHub repository is private, so operators need repository access before these links can be used.
 
 ## Windows Installer Flow
 

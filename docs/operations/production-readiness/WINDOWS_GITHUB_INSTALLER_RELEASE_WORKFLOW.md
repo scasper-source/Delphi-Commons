@@ -1,10 +1,12 @@
 # Windows GitHub Installer Release Workflow
 
-Status: **WORKFLOW PREPARED / RELEASE RUN REQUIRED**.
+Status: **WINDOWS INTERNAL INSTALLER RELEASE ASSETS AVAILABLE / NOT READY FOR HUMAN TESTING**.
 
 Date basis: 2026-05-18.
 
 This records the GitHub Actions workflow used to make a Windows internal installer executable available from GitHub.
+
+Release asset evidence: [WINDOWS_GITHUB_INSTALLER_RELEASE_ASSET_EVIDENCE_2026-05-18.md](./WINDOWS_GITHUB_INSTALLER_RELEASE_ASSET_EVIDENCE_2026-05-18.md).
 
 ## Workflow
 
@@ -21,6 +23,12 @@ This records the GitHub Actions workflow used to make a Windows internal install
 
 These assets are internal package candidates only. They do not create production readiness, pilot readiness, real human-subjects readiness, code-signing trust, SmartScreen approval, Defender approval, enterprise deployment readiness, security certification, accessibility certification, real-SMS readiness, or public release readiness.
 
-## Required Follow-Up After Workflow Run
+## Current Release
 
-Record the actual GitHub release tag, asset names, checksums, workflow run status, and any install/start/stop/uninstall evidence in a separate evidence note after the workflow succeeds.
+| Item | Value |
+| --- | --- |
+| Release tag | [`internal-windows-installer-candidate-2026-05-18-r2`](https://github.com/scasper-source/Delphi-Commons/releases/tag/internal-windows-installer-candidate-2026-05-18-r2) |
+| Workflow run | [`26057445547`](https://github.com/scasper-source/Delphi-Commons/actions/runs/26057445547) |
+| Result | `completed` / `success` |
+| Recommended asset | Windows x64 installer ZIP bundle |
+| Remaining evidence | Clean-profile or second-machine install/start/stop/uninstall remains `NOT RUN` |
