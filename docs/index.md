@@ -6,6 +6,7 @@ Current readiness: controlled mock-participant MVP testing with synthetic or low
 
 ## Start Here
 
+- [Current project status](./CURRENT_STATUS.md)
 - [Getting started](./getting-started.md)
 - [Windows install notes](./install/windows.md)
 - [macOS install notes](./install/macos.md)

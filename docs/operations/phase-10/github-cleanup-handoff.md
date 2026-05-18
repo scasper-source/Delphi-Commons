@@ -1,50 +1,60 @@
 # GitHub Cleanup Handoff
 
-Boundary statement: “Delphi Commons is suitable only for controlled mock-trial use with synthetic or low-risk test data in local, development, or staging environments. It is not approved or ready for production deployment or real human-subjects research.”
+Boundary statement: Delphi Commons is suitable only for controlled mock-trial use with synthetic or low-risk test data in local, development, or staging environments. It is not approved or ready for production deployment or real human-subjects research.
 
-Status: READY FOR CLEAN-HISTORY PRIVATE IMPORT. This handoff records the selected GitHub migration strategy and remaining non-production limitations.
+Status: CLEAN-HISTORY PRIVATE IMPORT COMPLETE; GITHUB HOUSEKEEPING CURRENT AS OF 2026-05-18.
 
-Selected migration strategy: create a new private GitHub repository from the sanitized current tree as a clean first commit. Do not push the existing local Git history to GitHub unless maintainers later approve a separate private archival plan.
+The selected clean-history migration strategy has been executed for the private GitHub repository `scasper-source/Delphi-Commons`. This handoff now records the current GitHub state, the post-cleanup verification, and the remaining non-production limitations.
 
-## Revisit Before GitHub Migration
+## Current GitHub State
 
-- `README.md`: readiness language, install commands, and no-production/no-human-subjects limits reviewed during final cleanup.
-- `LICENSE`: Apache-2.0 text present.
-- `NOTICE`: attribution present.
-- `SECURITY.md`: updated with GitHub private vulnerability reporting guidance and no public exploit details.
-- `CONTRIBUTING.md`: updated to reject real participant data, secrets, runtime databases, private logs, and backup/archive artifacts.
-- `GOVERNANCE.md`: updated to distinguish open-source code from private study data and to prevent consensus-as-truth framing.
-- `CODE_OF_CONDUCT.md`: NOT FOUND; decide whether to add.
-- Issue templates: added security/privacy-safe bug and documentation templates.
-- Pull request template: added checks for tests, docs, privacy, AI governance, and no real data.
-- Release checklist: existing [Open Source Release Checklist](../../OPEN_SOURCE_RELEASE_CHECKLIST.md) updated after Phase 10 rehearsal and final cleanup evidence.
-- `.env.example`: added with local/dev placeholders only.
-- GitHub Security Advisories: configure privately before broad open-source visibility.
-- Screenshots: add only synthetic/local screenshots with no private paths or real data.
-- Release tag readiness: do not tag a production or human-subjects-ready release without separate evidence.
+| Item | Status |
+| --- | --- |
+| Private clean-history repository | COMPLETE |
+| Default branch | `main` |
+| Verified application-code snapshot before documentation refresh | `61f9506 Remove SMS setup browser storage` |
+| Open pull requests | NONE at this snapshot |
+| Remote branches | `main` only at this snapshot |
+| Stale `codex/*` branches | REMOVED after review of merged, superseded, and closed-PR branches |
+| Public release | NOT CREATED |
+| DOI/archive release | NOT CREATED |
 
-## Clean-History Import Procedure
+## Post-Cleanup Validation
 
-Use this approach for the new private GitHub repository:
+The following repository-verifiable checks passed after the final cleanup merge:
 
-1. Confirm the local working tree is clean.
-2. Create the new GitHub repository as private.
-3. Export the sanitized current tree from the final cleanup commit.
-4. Initialize a fresh local Git repository from that exported tree.
-5. Make one initial commit, such as `Initial clean import of Delphi Commons`.
-6. Add the private GitHub repository as `origin`.
-7. Push only the clean-import repository.
-8. Run the documented build/test checks from the new clone.
+- `npm --prefix app test`
+- `npm --prefix app run lint`
+- `npm --prefix app run build`
+- `npm --prefix app run security:audit`
+- `npm --prefix server test`
+- `npm --prefix server run security:audit`
+- `git diff --check`
 
-Do not copy `.git`, local runtime directories, backups, audit logs, databases, private exports, or ignored artifacts into the clean-import repository.
+The final cleanup PR removed SMS setup browser-storage persistence so the frontend policy gate no longer detects `localStorage` or `sessionStorage` use in `app/src`.
 
-## Local Runtime Data Cleanup
+## Remaining GitHub/Open-Source Work
 
-Before repository migration:
+- Add `CODEOWNERS` if maintainers want required review routing.
+- Select an initial public release version.
+- Decide whether and when to make the repository public.
+- Update `CITATION.cff` after the final public repository URL and archive/DOI are known.
+- Create a public release only after the release boundary and non-claims are re-reviewed.
+- Keep GitHub Security Advisories/private reporting enabled before broad visibility.
+
+## Historical Repository Boundary
+
+The older local development repository and its full Git history should not be pushed to GitHub unless maintainers approve a separate private archival plan. The private GitHub repository should remain the clean-history source of truth for collaborative work.
+
+Do not copy local runtime directories, backups, audit logs, databases, private exports, ignored artifacts, or old `.git` history into the clean-history repository.
+
+## Local Runtime Data Reminder
+
+Before any future release or visibility change:
 
 1. Confirm `server/data/`, `server/audit/`, and `server/backups/` contain no real or sensitive data.
-2. Confirm they are not tracked by git.
-3. Remove or archive local runtime artifacts outside the public repo if needed.
+2. Confirm runtime artifacts remain untracked.
+3. Remove or archive local runtime artifacts outside the repository if needed.
 4. Re-run `git status --short`.
 
 Open-source code does not mean open study data.

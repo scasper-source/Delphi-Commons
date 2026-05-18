@@ -4,6 +4,8 @@ Boundary statement: “Delphi Commons is suitable only for controlled mock-trial
 
 Final Phase 10 status: Phase 10 synthetic/dev/staging rehearsal partially completed for the tested environment.
 
+Current repository snapshot: private GitHub cleanup is complete as of 2026-05-18. The latest verified application-code snapshot before this documentation refresh is `61f9506`, there were no open PRs, stale `codex/*` branches had been removed, and current app/server tests plus high-severity npm audits passed in the GitHub-connected checkout.
+
 Documentation may be COMPLETE while operational rehearsal remains NOT RUN or PARTIAL. Phase 10 operational readiness is NOT achieved unless the synthetic dry run, migration rehearsal, backup/restore rehearsal, and incident response drill have actually been performed and evidenced.
 
 Latest rehearsal evidence: [Phase 10 rehearsal results](./PHASE_10_REHEARSAL_RESULTS.md).
@@ -15,6 +17,8 @@ Latest rehearsal evidence: [Phase 10 rehearsal results](./PHASE_10_REHEARSAL_RES
 | Documentation set created | COMPLETE | This `docs/operations/phase-10/` package exists and is linked from the Phase 10 index. |
 | Procedures documented | COMPLETE | Non-production deployment, environment, migration, backup/restore, incident response, escalation, admin onboarding, disclosure, dry-run, and GitHub handoff are documented. |
 | Commands identified | COMPLETE | [Command inventory](./command-inventory.md) is based on `app/package.json`, `server/package.json`, source routes, and existing QC scripts. |
+| Private GitHub cleanup | PASS | Clean-history private repository exists; stale `codex/*` branches were removed; no open PRs were found; only `main` remained at the 2026-05-18 snapshot. |
+| Current repo-verifiable checks | PASS | On `61f9506`, app tests, app lint, app build, app audit, server tests, server audit, and `git diff --check` passed in the GitHub-connected checkout. |
 | Fresh deploy from docs | PARTIAL | Install/build commands passed, backend health returned development from disposable runtime, and frontend smoke returned HTTP 200 on an alternate port. A true fresh clone and retained `npm.cmd start` terminal rehearsal remain unperformed. |
 | Full test-study dry run performed for Phase 10 | PARTIAL | Backend road-test lifecycle, exports, backup/restore, invitations, and AI gates passed in disposable runtime. A 2026-05-06 API-driven rerun completed 8/8 through Round 4 with backend/frontend health confirmed and fresh artifact output. A 2026-05-06 local browser UI automation pass completed 8 synthetic participants through 4 Classical Delphi rounds with export privacy scan failures at 0. Study setup, curation, round progression, staff support response, final release, and exports still used local APIs, and the pass was automated rather than human-observed. A 2026-05-06 Windows mobile closeout remediation rerun passed 320px, 390px, and 414px with required limitation language visible, identifiers redacted, and no page-level horizontal overflow. |
 | Migration/init rehearsal performed for Phase 10 | PASS | Disposable SQLite runtime initialized and migrations were exercised by backend road test and storage checks. No standalone migration CLI exists. |
@@ -33,7 +37,7 @@ Latest rehearsal evidence: [Phase 10 rehearsal results](./PHASE_10_REHEARSAL_RES
 
 ## Current Interpretation
 
-Phase 10 documentation is prepared and the first synthetic/dev rehearsal is partially completed for the tested environment. This does not authorize production deployment, real human-subjects research, IRB launch, or use of sensitive participant data.
+Phase 10 documentation is prepared, private GitHub cleanup is complete, and the first synthetic/dev rehearsal is partially completed for the tested environment. Current repo-verifiable tests/audits pass, but this does not authorize production deployment, real human-subjects research, IRB launch, or use of sensitive participant data.
 
 ## Required Evidence Before Upgrading Status
 

@@ -1,8 +1,10 @@
 # Open Source Release Checklist
 
-Boundary statement: “Delphi Commons is suitable only for controlled mock-trial use with synthetic or low-risk test data in local, development, or staging environments. It is not approved or ready for production deployment or real human-subjects research.”
+Boundary statement: "Delphi Commons is suitable only for controlled mock-trial use with synthetic or low-risk test data in local, development, or staging environments. It is not approved or ready for production deployment or real human-subjects research."
 
 This checklist supports GitHub migration/open-source preparation. It does not certify production readiness, human-subjects readiness, IRB readiness, legal compliance, completed accessibility conformance, completed security review, or security certification.
+
+Current snapshot: the private clean-history GitHub repository exists at `scasper-source/Delphi-Commons`. As of the 2026-05-18 pre-documentation-refresh verification, the latest verified application-code snapshot was `61f9506`, there were no open PRs, stale `codex/*` branches had been removed, and app/server high-severity npm audits reported 0 vulnerabilities in the GitHub-connected checkout. Public release, DOI/archive, independent security review, and human-subjects readiness remain open.
 
 ## Licensing
 
@@ -45,7 +47,7 @@ This checklist supports GitHub migration/open-source preparation. It does not ce
 - [x] Environment files checked
 - [x] Example environment file uses placeholders only
 - [x] Lightweight Git history risk check reviewed for migration planning
-- [x] Clean-history import into a new private GitHub repository selected before public GitHub migration
+- [x] Clean-history import into a new private GitHub repository completed
 - [ ] Independent security/ASVS review completed
 
 ## GitHub Readiness
@@ -53,7 +55,7 @@ This checklist supports GitHub migration/open-source preparation. It does not ce
 - [x] Repository builds locally in final pre-migration gate
 - [x] Tests pass locally in final pre-migration gate
 - [x] Private GitHub clean-environment install/build/test check passed
-- [ ] Security audit check completed in GitHub/cloud environment; latest attempt blocked by npm advisory endpoint HTTP 403
+- [x] Current app/server high-severity security audits completed in the GitHub-connected checkout with 0 vulnerabilities
 - [x] README has setup instructions
 - [x] CONTRIBUTING.md exists
 - [x] GOVERNANCE.md exists
@@ -61,6 +63,8 @@ This checklist supports GitHub migration/open-source preparation. It does not ce
 - [x] DCO.md exists if contributor certification will be used
 - [x] Issue templates added
 - [x] Pull request template added
+- [x] Stale remote `codex/*` branches removed after merge/supersession/closed-PR review
+- [x] Open PR queue checked empty at latest snapshot
 - [ ] Code owners planned
 - [ ] Initial release version selected
 - [ ] CITATION.cff GitHub URL updated after the public repository URL is known
@@ -78,9 +82,9 @@ This checklist supports GitHub migration/open-source preparation. It does not ce
 - [x] Phase 10 documentation package prepared
 - [x] Phase 10 synthetic/dev/staging rehearsal partially completed for the tested environment
 - [ ] Incident response drill completed
-- [ ] True fresh-clone deployment rehearsal completed
-- [ ] Full manual browser dry run completed
-- [ ] Production backup/restore rehearsal completed
+- [x] Private GitHub clean-history clone/build/test evidence recorded
+- [ ] Human-observed full browser dry run completed
+- [ ] Production-like backup/restore rehearsal completed
 - [ ] Human accessibility conformance review completed
 
 ## GitHub Migration Readiness
@@ -89,6 +93,6 @@ This checklist supports GitHub migration/open-source preparation. It does not ce
 - [x] No tracked runtime/sensitive files found
 - [x] Full-history migration risk addressed by selected clean-history import strategy
 - [x] Build/test checks passing or explicitly deferred with acceptable rationale
-- [ ] Remaining production/human-subjects/IRB/security/accessibility limitations remain visible
+- [x] Remaining production/human-subjects/IRB/security/accessibility limitations remain visible
 
-Selected migration strategy: create a new private GitHub repository from the sanitized current tree as a clean first commit. Do not push the existing local Git history to GitHub unless maintainers later approve a separate private archival plan.
+Completed migration strategy: the sanitized tree was imported into a private clean-history GitHub repository. Do not push the older local historical Git repository to GitHub unless maintainers later approve a separate private archival plan.

@@ -1,8 +1,8 @@
 # Phase 10 Operational Readiness Index
 
-Boundary statement: “Delphi Commons is suitable only for controlled mock-trial use with synthetic or low-risk test data in local, development, or staging environments. It is not approved or ready for production deployment or real human-subjects research.”
+Boundary statement: "Delphi Commons is suitable only for controlled mock-trial use with synthetic or low-risk test data in local, development, or staging environments. It is not approved or ready for production deployment or real human-subjects research."
 
-Status: Phase 10 documentation package prepared.
+Status: Phase 10 documentation package prepared; private GitHub cleanup complete as of 2026-05-18; operational readiness remains not achieved.
 
 This folder collects operational runbooks for Delphi Commons. The package is documentation/readiness work only. A procedure can be documented while its operational rehearsal remains NOT RUN.
 
@@ -24,6 +24,7 @@ Open-source code does not mean open study data. Study data, consent records, ide
 - [Known limitations and real-launch blockers](./known-limitations-and-real-launch-blockers.md)
 - [Test study dry-run script and operator checklist](./test-study-dry-run-script-and-checklist.md)
 - [GitHub cleanup handoff](./github-cleanup-handoff.md)
+- [Current project status](../../CURRENT_STATUS.md)
 
 ## Existing Related Docs
 
@@ -51,4 +52,3 @@ Open-source code does not mean open study data. Study data, consent records, ide
 - PARTIAL: The capability exists only in limited form or requires manual/operator judgment.
 - NOT RUN: The procedure, rehearsal, drill, or road test has not been executed for Phase 10.
 - NOT READY: The item is not sufficient for production or real human-subjects use.
-

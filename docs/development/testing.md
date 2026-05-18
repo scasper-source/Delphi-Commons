@@ -59,6 +59,8 @@ cd server
 npm run security:audit
 ```
 
+Latest documented status: app and server high-severity npm audits passed with 0 vulnerabilities on the GitHub-connected checkout at `61f9506` on 2026-05-18.
+
 ## Governance Tests
 
 Governance-oriented tests should protect:
@@ -84,7 +86,7 @@ AI governance tests should verify:
 
 ## Known Testing Gaps
 
-- Full manual 8-participant browser rehearsal has not yet been completed.
+- Automated 8-participant browser rehearsal evidence exists for controlled synthetic testing; a human-observed manual browser walkthrough has not yet been completed.
 - Cross-browser testing is limited.
 - Mobile testing is represented by UI expectations and screenshots, but still needs real-device rehearsal.
 - Accessibility needs additional screen-reader and keyboard review.
