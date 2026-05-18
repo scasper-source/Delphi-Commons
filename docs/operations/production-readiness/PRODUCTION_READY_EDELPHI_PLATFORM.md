@@ -310,6 +310,16 @@ Exit gate:
 
 Goal: assemble everything needed for final human testing.
 
+Status: **BINDER ASSEMBLED / HUMAN_REQUIRED ITEMS OPEN / NOT READY FOR HUMAN TESTING**.
+
+Phase 4 binder package:
+
+- [Phase 4 human testing binder index](./phase4-human-testing-binder/README.md)
+- [Versioned candidate record](./phase4-human-testing-binder/CANDIDATE_RECORD.md)
+- [Human testing candidate checklist](./phase4-human-testing-binder/HUMAN_TESTING_CANDIDATE_CHECKLIST.md)
+- [Repository hygiene checklist](./phase4-human-testing-binder/REPOSITORY_HYGIENE_CHECKLIST.md)
+- [Final P0 blocker table](./phase4-human-testing-binder/FINAL_P0_BLOCKER_TABLE.md)
+
 Required implementation:
 
 - Human testing binder with:
@@ -341,7 +351,7 @@ Required implementation:
 Required evidence:
 
 - Binder committed or attached.
-- Candidate checklist marked ready for human testing.
+- Candidate checklist created and marked with the current readiness decision. The current mark remains **NOT READY FOR HUMAN TESTING** until laptop and phone run evidence is attached.
 - All remaining human-required evidence marked NOT RUN / HUMAN_REQUIRED until testing occurs.
 
 Exit gate:
@@ -437,6 +447,7 @@ Latest repo-verifiable validation snapshot:
 - 2026-05-15, merged main at `eb4bacb`: PR #85 added the gated Twilio setup/provider track and operator SMS setup prompt. Validation recorded in the PR, with portable command forms shown here: `npm --prefix server run build` passed; `npm --prefix app run build` passed; `node scripts/run-tests.mjs "server/tests/twilioSmsProvider.test.mjs"` passed; `node scripts/run-tests.mjs "server/tests/smsMagicLink.test.mjs"` passed; `npm --prefix server test` passed; `npm --prefix server run security:audit` passed with 0 vulnerabilities.
 - 2026-05-17, merged main at `6a45b6d`: Windows installer candidate cleanup and GitHub hardening reconciliation passed `node scripts/packaging/windows-installer.mjs build` through payload verification to the expected missing-`ISCC.exe` gate; `node scripts/packaging/windows-installer.mjs verify` passed; `node scripts/packaging/tests/windows-installer.test.mjs`, `node scripts/packaging/tests/windows-portable-package.test.mjs`, `node scripts/packaging/tests/packaging-core.test.mjs`, and `node scripts/packaging/tests/package-verification.test.mjs` passed; `git diff --check` passed.
 - 2026-05-18, merged main at `61f9506`: GitHub cleanup follow-up removed SMS setup browser-storage persistence and merged PR #100. Validation on the GitHub-connected checkout passed `npm.cmd --prefix app test` (28/28), `npm.cmd --prefix app run lint`, `npm.cmd --prefix app run build`, `npm.cmd --prefix app run security:audit` (0 vulnerabilities), `npm.cmd --prefix server test`, `npm.cmd --prefix server run security:audit` (0 vulnerabilities), and `git diff --check`. GitHub branch cleanup left only `main`, and the open PR queue was empty.
+- 2026-05-18, Phase 4 binder assembly at source snapshot `2a71d6c`: `npm.cmd --prefix app test` passed 28/28; `npm.cmd --prefix app run lint` passed; `npm.cmd --prefix app run build` passed after rerun outside the local sandbox file-access limit; `npm.cmd --prefix server test` passed 28/28; `npm.cmd --prefix server run security:audit` passed with 0 vulnerabilities; `npm.cmd --prefix app run security:audit` passed the high-severity threshold while reporting one moderate `brace-expansion` advisory; heuristic secret scan returned no matches; `git diff --check` passed with CRLF warnings only.
 
 Minimum manual preflight checks:
 
