@@ -312,41 +312,31 @@ Goal: assemble everything needed for final human testing.
 
 Status: **BINDER ASSEMBLED / HUMAN_REQUIRED ITEMS OPEN / NOT READY FOR HUMAN TESTING**.
 
-Phase 4 binder package:
+Phase 4 binder package status:
 
-- [Phase 4 human testing binder index](./phase4-human-testing-binder/README.md)
-- [Versioned candidate record](./phase4-human-testing-binder/CANDIDATE_RECORD.md)
-- [Human testing candidate checklist](./phase4-human-testing-binder/HUMAN_TESTING_CANDIDATE_CHECKLIST.md)
-- [Repository hygiene checklist](./phase4-human-testing-binder/REPOSITORY_HYGIENE_CHECKLIST.md)
-- [Final P0 blocker table](./phase4-human-testing-binder/FINAL_P0_BLOCKER_TABLE.md)
+| Requirement | Phase 4 artifact | Status |
+| --- | --- | --- |
+| Binder index | [Phase 4 human testing binder index](./phase4-human-testing-binder/README.md) | ASSEMBLED |
+| Operator checklist | [Operator checklist](./phase4-human-testing-binder/OPERATOR_CHECKLIST.md) | ASSEMBLED; execution remains `NOT RUN` / `HUMAN_REQUIRED` |
+| Observer transcript | [Observer transcript](./phase4-human-testing-binder/OBSERVER_TRANSCRIPT.md) | ASSEMBLED; execution remains `NOT RUN` / `HUMAN_REQUIRED` |
+| Screenshot/log evidence index | [Screenshot/log evidence index](./phase4-human-testing-binder/SCREENSHOT_LOG_EVIDENCE_INDEX.md) | ASSEMBLED; evidence attachment remains `HUMAN_REQUIRED` |
+| Defect severity rubric | [Defect severity rubric](./phase4-human-testing-binder/DEFECT_SEVERITY_RUBRIC.md) | ASSEMBLED |
+| Accessibility checklist | [Accessibility checklist](./phase4-human-testing-binder/ACCESSIBILITY_CHECKLIST.md) | ASSEMBLED; review remains `NOT RUN` / `HUMAN_REQUIRED` |
+| Backup/restore rehearsal sheet | [Backup/restore rehearsal sheet](./phase4-human-testing-binder/BACKUP_RESTORE_REHEARSAL_SHEET.md) | ASSEMBLED; rehearsal remains `NOT RUN` / `HUMAN_REQUIRED` |
+| Retention/deletion rehearsal sheet | [Retention/deletion rehearsal sheet](./phase4-human-testing-binder/RETENTION_DELETION_REHEARSAL_SHEET.md) | ASSEMBLED; rehearsal remains `NOT RUN` / `HUMAN_REQUIRED` |
+| Incident drill sheet | [Incident drill sheet](./phase4-human-testing-binder/INCIDENT_DRILL_SHEET.md) | ASSEMBLED; drill remains `NOT RUN` / `HUMAN_REQUIRED` |
+| Data Custodian export review sheet | [Data Custodian export review sheet](./phase4-human-testing-binder/DATA_CUSTODIAN_EXPORT_REVIEW_SHEET.md) | ASSEMBLED; signoff remains `HUMAN_REQUIRED` |
+| Security review/signoff sheet | [Security review/signoff sheet](./phase4-human-testing-binder/SECURITY_REVIEW_SIGNOFF_SHEET.md) | ASSEMBLED; signoff remains `HUMAN_REQUIRED` |
+| Final P0 blocker table | [Final P0 blocker table](./phase4-human-testing-binder/FINAL_P0_BLOCKER_TABLE.md) | ASSEMBLED; P0 readiness blockers remain open |
+| Versioned candidate record | [Versioned candidate record](./phase4-human-testing-binder/CANDIDATE_RECORD.md) | ASSEMBLED with commit hash, branch/tag/package fields, supported/unsupported surfaces, test commands, and known limitations |
+| Human testing candidate checklist | [Human testing candidate checklist](./phase4-human-testing-binder/HUMAN_TESTING_CANDIDATE_CHECKLIST.md) | CREATED; current mark remains `NOT READY FOR HUMAN TESTING` |
+| Repository hygiene | [Repository hygiene checklist](./phase4-human-testing-binder/REPOSITORY_HYGIENE_CHECKLIST.md) | ASSEMBLED; automated checks refreshed, human no-real-data/no-sensitive-export review remains required |
 
-Required implementation:
+Required implementation status:
 
-- Human testing binder with:
-  - operator checklist,
-  - observer transcript,
-  - screenshot/log evidence index,
-  - defect severity rubric,
-  - accessibility checklist,
-  - backup/restore rehearsal sheet,
-  - retention/deletion rehearsal sheet,
-  - incident drill sheet,
-  - Data Custodian export review sheet,
-  - security review/signoff sheet,
-  - final P0 blocker table.
-- Versioned candidate record:
-  - commit hash,
-  - branch/tag/package identifier,
-  - supported surfaces,
-  - unsupported surfaces,
-  - test commands,
-  - known limitations.
-- Repository hygiene:
-  - no secrets,
-  - no real participant data,
-  - no sensitive exports,
-  - public/private boundary notes,
-  - dependency/security audit result or documented endpoint limitation.
+- **COMPLETE FOR BINDER ASSEMBLY:** All Phase 4 binder documents listed above have been created and linked.
+- **PARTIAL FOR RELEASE HYGIENE:** Automated hygiene checks are recorded. Human review remains required for no-real-participant-data and no-sensitive-export confirmation.
+- **NOT COMPLETE FOR HUMAN TESTING READINESS:** Laptop and phone candidate run evidence, reviewer signoffs, and P0 blocker closure remain open.
 
 Required evidence:
 
