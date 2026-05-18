@@ -10,7 +10,7 @@ This guide is the simple operator-facing path for internal package candidates. U
 
 | Platform | Recommended internal path | Operator flow | Current status |
 | --- | --- | --- | --- |
-| Windows x64 | Installer ZIP bundle | Download the ZIP, unzip it, run the included EXE, launch Delphi Commons from the Start Menu. | Available as internal GitHub release asset |
+| Windows x64 | Installer ZIP bundle | Download the ZIP, unzip it, run the included EXE, launch Delphi Commons from the Desktop or Start Menu, and close the Delphi Commons window when finished. | Available as internal GitHub release asset |
 | Windows x64 fallback | Portable bundled-runtime ZIP | Download the ZIP, unzip it, run `scripts/windows/portable-bundled-runtime.ps1 start`. | Available as internal GitHub release asset |
 | macOS Apple Silicon | Installer PKG | Download the PKG, install it, launch with the installed package command/shortcut path documented in the macOS runbook. | Available as internal GitHub release asset |
 | macOS Apple Silicon fallback | Portable bundled-runtime ZIP | Download the ZIP, unzip it, run `scripts/macos/portable-bundled-runtime.sh start`. | Available as internal GitHub release asset |
@@ -19,7 +19,7 @@ This guide is the simple operator-facing path for internal package candidates. U
 
 | Platform | Release page |
 | --- | --- |
-| Windows x64 installer | [`internal-windows-installer-candidate-2026-05-18-r4`](https://github.com/scasper-source/Delphi-Commons/releases/tag/internal-windows-installer-candidate-2026-05-18-r4) |
+| Windows x64 installer | [`internal-windows-installer-candidate-2026-05-18-r5`](https://github.com/scasper-source/Delphi-Commons/releases/tag/internal-windows-installer-candidate-2026-05-18-r5) |
 | macOS Apple Silicon package | [`internal-macos-package-candidate-2026-05-18`](https://github.com/scasper-source/Delphi-Commons/releases/tag/internal-macos-package-candidate-2026-05-18) |
 
 The GitHub repository is private, so operators need repository access before these links can be used.
@@ -29,9 +29,9 @@ The GitHub repository is private, so operators need repository access before the
 1. Download the Windows installer ZIP bundle from the current internal GitHub release.
 2. Unzip it to a local folder path you control.
 3. Run the included installer EXE.
-4. Launch **Delphi Commons** from the Start Menu.
-5. If the browser does not open, open `http://127.0.0.1:4173`.
-6. Use **Delphi Commons Stop** from the Start Menu when finished.
+4. Launch **Delphi Commons** from the Desktop or Start Menu.
+5. Close the Delphi Commons browser app window when finished; this stops the local runtime.
+6. If the browser does not open, open `http://127.0.0.1:4173` while the app is running.
 
 ## Windows Portable ZIP Flow
 
