@@ -52,7 +52,7 @@ jobs:
           if (-not $iscc) {
             throw "ISCC.exe not found after Inno Setup installation."
           }
-          & $iscc /?
+          Write-Host "ISCC.exe found at $iscc"
 
       - name: Resolve release metadata
         id: meta
