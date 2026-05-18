@@ -19,7 +19,7 @@ This guide is the simple operator-facing path for internal package candidates. U
 
 | Platform | Release page |
 | --- | --- |
-| Windows x64 installer | [`internal-windows-installer-candidate-2026-05-18-r5`](https://github.com/scasper-source/Delphi-Commons/releases/tag/internal-windows-installer-candidate-2026-05-18-r5) |
+| Windows x64 installer | [`internal-windows-installer-candidate-2026-05-18-r7`](https://github.com/scasper-source/Delphi-Commons/releases/tag/internal-windows-installer-candidate-2026-05-18-r7) |
 | macOS Apple Silicon package | [`internal-macos-package-candidate-2026-05-18`](https://github.com/scasper-source/Delphi-Commons/releases/tag/internal-macos-package-candidate-2026-05-18) |
 
 The GitHub repository is private, so operators need repository access before these links can be used.
