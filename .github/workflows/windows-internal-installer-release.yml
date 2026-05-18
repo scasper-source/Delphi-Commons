@@ -1,0 +1,204 @@
+name: Build Windows internal installer release
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: "Internal release tag, for example internal-windows-installer-candidate-2026-05-18"
+        required: true
+        type: string
+      publish_release:
+        description: "Create or update the GitHub prerelease with package assets"
+        required: true
+        default: true
+        type: boolean
+  push:
+    tags:
+      - "internal-windows-installer-candidate-*"
+
+permissions:
+  contents: write
+
+jobs:
+  build-windows-internal-installer:
+    name: Build Windows internal installer assets
+    runs-on: windows-latest
+    timeout-minutes: 60
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24.15.0"
+          cache: npm
+          cache-dependency-path: |
+            app/package-lock.json
+            server/package-lock.json
+
+      - name: Install Inno Setup
+        shell: pwsh
+        run: |
+          choco install innosetup --no-progress --yes
+          $isccCandidates = @(
+            "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe",
+            "$env:ProgramFiles\Inno Setup 6\ISCC.exe"
+          )
+          $iscc = $isccCandidates | Where-Object { Test-Path -LiteralPath $_ } | Select-Object -First 1
+          if (-not $iscc) {
+            throw "ISCC.exe not found after Inno Setup installation."
+          }
+          & $iscc /?
+
+      - name: Resolve release metadata
+        id: meta
+        shell: pwsh
+        run: |
+          if ($env:GITHUB_REF_TYPE -eq "tag") {
+            $tag = $env:GITHUB_REF_NAME
+          } else {
+            $tag = "${{ inputs.release_tag }}"
+          }
+          if ($tag -notmatch '^internal-windows-installer-candidate-[0-9]{4}-[0-9]{2}-[0-9]{2}(-[A-Za-z0-9._-]+)?$') {
+            throw "Invalid release tag: $tag"
+          }
+          $shortSha = (git rev-parse --short HEAD).Trim()
+          "tag=$tag" >> $env:GITHUB_OUTPUT
+          "short_sha=$shortSha" >> $env:GITHUB_OUTPUT
+
+      - name: Install dependencies
+        shell: pwsh
+        run: |
+          npm.cmd --prefix app ci
+          npm.cmd --prefix server ci
+
+      - name: Run packaging tests
+        shell: pwsh
+        run: |
+          node scripts/packaging/tests/packaging-core.test.mjs
+          node scripts/packaging/tests/package-verification.test.mjs
+          node scripts/packaging/tests/windows-portable-package.test.mjs
+          node scripts/packaging/tests/windows-installer.test.mjs
+
+      - name: Build Windows installer package
+        shell: pwsh
+        run: |
+          node scripts/packaging/windows-installer.mjs build
+          node scripts/packaging/windows-installer.mjs verify
+          if (Test-Path -LiteralPath "build/windows-installer/INSTALLER_NOT_RUN.txt") {
+            Get-Content -LiteralPath "build/windows-installer/INSTALLER_NOT_RUN.txt"
+            throw "Installer executable was not produced."
+          }
+          if (-not (Test-Path -LiteralPath "build/windows-installer/delphi-commons-windows-installer-candidate-internal.exe")) {
+            throw "Expected installer executable is missing."
+          }
+
+      - name: Prepare release assets
+        id: assets
+        shell: pwsh
+        run: |
+          $tag = "${{ steps.meta.outputs.tag }}"
+          $shortSha = "${{ steps.meta.outputs.short_sha }}"
+          $distDir = "build/release-assets/windows"
+          New-Item -ItemType Directory -Force -Path $distDir | Out-Null
+
+          $installerName = "delphi-commons-windows-x64-installer-internal-$tag-$shortSha.exe"
+          $installerBundleName = "delphi-commons-windows-x64-installer-internal-$tag-$shortSha.zip"
+          $verificationName = "windows-installer-package-verification-$tag-$shortSha.json"
+          $manifestName = "windows-installer-package-manifest-$tag-$shortSha.json"
+
+          Copy-Item -LiteralPath "build/windows-installer/delphi-commons-windows-installer-candidate-internal.exe" -Destination (Join-Path $distDir $installerName)
+          Copy-Item -LiteralPath "build/windows-installer/package-verification.json" -Destination (Join-Path $distDir $verificationName)
+          $packageRoot = (Get-Content -LiteralPath "build/windows-installer/latest-package-root.txt" -Raw).Trim()
+          Copy-Item -LiteralPath (Join-Path $packageRoot "package-manifest.json") -Destination (Join-Path $distDir $manifestName)
+
+          $bundleDir = "build/windows-installer-release-bundle"
+          if (Test-Path -LiteralPath $bundleDir) {
+            Remove-Item -LiteralPath $bundleDir -Recurse -Force
+          }
+          New-Item -ItemType Directory -Force -Path $bundleDir | Out-Null
+          Copy-Item -LiteralPath (Join-Path $distDir $installerName) -Destination (Join-Path $bundleDir $installerName)
+          Copy-Item -LiteralPath (Join-Path $distDir $verificationName) -Destination (Join-Path $bundleDir $verificationName)
+          Copy-Item -LiteralPath (Join-Path $distDir $manifestName) -Destination (Join-Path $bundleDir $manifestName)
+          @"
+          Delphi Commons Windows internal installer candidate
+
+          Install flow:
+          1. Run $installerName.
+          2. Launch Delphi Commons from the Start Menu.
+          3. If the browser does not open, open http://127.0.0.1:4173.
+          4. Use Delphi Commons Stop from the Start Menu when finished.
+
+          Boundary:
+          Internal synthetic/low-risk testing only. This unsigned package does not establish production, pilot, real human-subjects, SmartScreen, Defender, enterprise deployment, security certification, accessibility certification, or real-SMS readiness.
+          "@ | Set-Content -Encoding utf8 -LiteralPath (Join-Path $bundleDir "README_INSTALL_WINDOWS.txt")
+          Compress-Archive -Path (Join-Path $bundleDir "*") -DestinationPath (Join-Path $distDir $installerBundleName) -Force
+
+          Get-ChildItem -LiteralPath $distDir -File |
+            Sort-Object Name |
+            ForEach-Object {
+              $hash = Get-FileHash -Algorithm SHA256 -LiteralPath $_.FullName
+              "$($hash.Hash.ToLowerInvariant())  $($_.Name)"
+            } | Set-Content -Encoding utf8 -LiteralPath (Join-Path $distDir "SHA256SUMS.txt")
+
+          "installer=$((Resolve-Path -LiteralPath (Join-Path $distDir $installerName)).Path)" >> $env:GITHUB_OUTPUT
+          "installer_bundle=$((Resolve-Path -LiteralPath (Join-Path $distDir $installerBundleName)).Path)" >> $env:GITHUB_OUTPUT
+          "dist_dir=$((Resolve-Path -LiteralPath $distDir).Path)" >> $env:GITHUB_OUTPUT
+
+      - name: Write release notes
+        shell: pwsh
+        run: |
+          $tag = "${{ steps.meta.outputs.tag }}"
+          $shortSha = "${{ steps.meta.outputs.short_sha }}"
+          $notes = @"
+          # Delphi Commons Windows internal installer candidate
+
+          Tag: ``$tag``
+          Commit: ``$env:GITHUB_SHA``
+          Short commit: ``$shortSha``
+
+          Assets:
+          - Windows x64 unsigned internal installer ZIP bundle for download, unzip, install flow.
+          - Windows x64 unsigned internal installer EXE.
+          - SHA256 checksums, package manifest, and package verification metadata.
+
+          Operator flow:
+          - Download the ZIP.
+          - Unzip it.
+          - Run the included EXE.
+          - Launch Delphi Commons from the Start Menu shortcut.
+
+          Boundary:
+          - Internal synthetic/low-risk testing only.
+          - No production, pilot, real human-subjects, code-signing, SmartScreen, Defender, enterprise deployment, security certification, accessibility certification, or real-SMS readiness claim.
+          "@
+          $notes | Set-Content -Encoding utf8 -LiteralPath "build/release-assets/windows/RELEASE_NOTES.md"
+
+      - name: Upload workflow artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-internal-installer-assets-${{ steps.meta.outputs.tag }}-${{ steps.meta.outputs.short_sha }}
+          path: build/release-assets/windows/*
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Publish GitHub prerelease assets
+        if: ${{ github.ref_type == 'tag' || inputs.publish_release }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: pwsh
+        run: |
+          $tag = "${{ steps.meta.outputs.tag }}"
+          $notes = "build/release-assets/windows/RELEASE_NOTES.md"
+          gh release view $tag *> $null
+          if ($LASTEXITCODE -eq 0) {
+            gh release edit $tag --title $tag --notes-file $notes --prerelease
+          } else {
+            gh release create $tag --target $env:GITHUB_SHA --title $tag --notes-file $notes --prerelease
+          }
+          $assets = Get-ChildItem -LiteralPath "build/release-assets/windows" -File | ForEach-Object { $_.FullName }
+          gh release upload $tag @assets --clobber
