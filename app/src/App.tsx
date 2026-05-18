@@ -117,7 +117,6 @@ const roleOrder: UserRole[] = [
 ];
 
 const DEMO_PARTICIPANT_ID = "demo-panelist-001";
-const SMS_SETUP_CHOICE_KEY = "edelphi.smsSetupChoice.v1";
 const TWILIO_SETUP_FALLBACK_URL = "https://console.twilio.com/us1/develop/sms/services";
 
 type SmsSetupChoice = "undecided" | "off" | "twilio";
@@ -134,27 +133,6 @@ function participantInviteTokenFromLocation() {
 
   const hash = window.location.hash.startsWith("#") ? window.location.hash.slice(1) : window.location.hash;
   return new URLSearchParams(hash).get("invite");
-}
-
-function readSmsSetupChoice(): SmsSetupChoice {
-  try {
-    const stored = window.localStorage.getItem(SMS_SETUP_CHOICE_KEY);
-    return stored === "off" || stored === "twilio" ? stored : "undecided";
-  } catch {
-    return "undecided";
-  }
-}
-
-function storeSmsSetupChoice(choice: SmsSetupChoice) {
-  try {
-    if (choice === "undecided") {
-      window.localStorage.removeItem(SMS_SETUP_CHOICE_KEY);
-    } else {
-      window.localStorage.setItem(SMS_SETUP_CHOICE_KEY, choice);
-    }
-  } catch {
-    // Local storage can be unavailable in locked-down browser profiles.
-  }
 }
 
 function smsSetupProgress(setup: SmsSetupStatus | null): string {
@@ -620,7 +598,7 @@ function App() {
   const [finalResultSnapshot, setFinalResultSnapshot] = useState<FinalResultSnapshot | null>(null);
   const [finalResultBlockers, setFinalResultBlockers] = useState<string[]>(["final_result_snapshot_missing"]);
   const [participantFinalResponses, setParticipantFinalResponses] = useState<ParticipantFinalResponse[]>([]);
-  const [smsSetupChoice, setSmsSetupChoice] = useState<SmsSetupChoice>(readSmsSetupChoice);
+  const [smsSetupChoice, setSmsSetupChoice] = useState<SmsSetupChoice>("undecided");
   const [smsSetupStatus, setSmsSetupStatus] = useState<SmsSetupStatus | null>(null);
   const [smsSetupError, setSmsSetupError] = useState<string | null>(null);
   const [smsSetupBusy, setSmsSetupBusy] = useState(false);
@@ -660,7 +638,6 @@ function App() {
 
   function chooseSmsSetup(choice: SmsSetupChoice) {
     setSmsSetupChoice(choice);
-    storeSmsSetupChoice(choice);
     if (choice === "twilio") {
       setActiveModule("admin-security");
       void loadSmsSetupStatus();
@@ -710,6 +687,8 @@ function App() {
 
   useEffect(() => {
     void loadSavedStudies();
+    // Loading is keyed by role; loadSavedStudies is kept as a local helper for callbacks.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [role]);
 
   useEffect(() => {
@@ -853,6 +832,8 @@ function App() {
       setFinalResultBlockers(["final_result_snapshot_missing"]);
       setParticipantFinalResponses([]);
     }
+    // Runtime refresh is keyed by the active study/version identity and entry-token mode.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [role, workflow.study?.id, workflow.version?.id, participantInviteToken, magicToken]);
 
   function openSavedStudy(record: SavedStudyRecord) {
