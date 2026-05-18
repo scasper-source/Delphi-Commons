@@ -11,6 +11,7 @@ import {
 } from '../windows-installer.mjs';
 
 const installerWrapper = path.join(process.cwd(), installerWrapperRelativePath);
+const releaseWorkflow = path.join(process.cwd(), '.github/workflows/windows-internal-installer-release.yml');
 
 test('installer launcher resolves package root from four parent levels', () => {
   const vbs = renderInstallerLauncherVbs('start');
@@ -67,4 +68,14 @@ test('Inno setup script exposes only the main user launcher shortcut', () => {
   assert.doesNotMatch(script, /Name: "\{group\}\\Delphi Commons Status"/);
   assert.doesNotMatch(script, /\[Tasks\]/);
   assert.doesNotMatch(script, /Tasks: desktopicon/);
+});
+
+test('release ZIP README keeps browser fallback before shutdown instruction', () => {
+  const workflow = fs.readFileSync(releaseWorkflow, 'utf8');
+  const fallback = workflow.indexOf('If the browser does not open, open http://127.0.0.1:4173 while the app is running.');
+  const shutdown = workflow.indexOf('When finished, close the Delphi Commons browser app window; this stops the local runtime.');
+  assert.ok(fallback > -1, 'browser fallback instruction is present');
+  assert.ok(shutdown > -1, 'shutdown instruction is present');
+  assert.ok(fallback < shutdown, 'fallback appears before shutdown');
+  assert.doesNotMatch(workflow, /Use Delphi Commons Stop/);
 });

@@ -9,7 +9,8 @@ Internal engineering and mock-trial preparation only.
 3. Install Delphi Commons.
 4. Open Desktop or Start Menu and click **Delphi Commons**.
 5. Local services start and a dedicated Delphi Commons browser app window opens.
-6. Close the Delphi Commons browser app window when finished; local services stop.
+6. If the browser app window does not open, open `http://127.0.0.1:4173` while the app is running.
+7. When finished, close the Delphi Commons browser app window; local services stop.
 
 ## Build command (engineering)
 - `node scripts/packaging/windows-installer.mjs build`
