@@ -1,5 +1,5 @@
 param(
-  [ValidateSet('build','start','stop','status','restart','backup','reset','smoke','verify')]
+  [ValidateSet('build','start','launch','stop','status','restart','backup','reset','smoke','verify')]
   [string]$Command = 'status'
 )
 $ErrorActionPreference = 'Stop'
@@ -14,13 +14,20 @@ if (!(Test-Path -LiteralPath $PortableWrapper)) {
 
 $previousSubdir = [Environment]::GetEnvironmentVariable('EDELPHI_RUNTIME_SUBDIR', 'Process')
 $previousRoot = [Environment]::GetEnvironmentVariable('EDELPHI_RUNTIME_ROOT', 'Process')
+$previousStopOnBrowserClose = [Environment]::GetEnvironmentVariable('EDELPHI_STOP_ON_BROWSER_CLOSE', 'Process')
 try {
   [Environment]::SetEnvironmentVariable('EDELPHI_RUNTIME_SUBDIR', $InstallerRuntimeSubdir, 'Process')
   [Environment]::SetEnvironmentVariable('EDELPHI_RUNTIME_ROOT', $InstallerRuntimeRoot, 'Process')
-  powershell -NoProfile -ExecutionPolicy Bypass -File $PortableWrapper $Command
+  $portableCommand = $Command
+  if ($Command -eq 'launch') {
+    [Environment]::SetEnvironmentVariable('EDELPHI_STOP_ON_BROWSER_CLOSE', '1', 'Process')
+    $portableCommand = 'start'
+  }
+  powershell -NoProfile -ExecutionPolicy Bypass -File $PortableWrapper $portableCommand
   exit $LASTEXITCODE
 }
 finally {
   [Environment]::SetEnvironmentVariable('EDELPHI_RUNTIME_SUBDIR', $previousSubdir, 'Process')
   [Environment]::SetEnvironmentVariable('EDELPHI_RUNTIME_ROOT', $previousRoot, 'Process')
+  [Environment]::SetEnvironmentVariable('EDELPHI_STOP_ON_BROWSER_CLOSE', $previousStopOnBrowserClose, 'Process')
 }

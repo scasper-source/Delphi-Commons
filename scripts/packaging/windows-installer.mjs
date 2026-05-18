@@ -56,7 +56,7 @@ export function writeInstallerCandidateLaunchers(root) {
   const launcherDir = path.join(root, 'scripts/windows/installer-candidate');
   fs.mkdirSync(launcherDir, { recursive: true });
   const launchers = new Map([
-    ['start', 'delphi-commons-launch.vbs'],
+    ['launch', 'delphi-commons-launch.vbs'],
     ['stop', 'delphi-commons-stop.vbs'],
     ['status', 'delphi-commons-status.vbs']
   ]);
@@ -83,8 +83,6 @@ Source: "*"; DestDir: "{app}"; Excludes: "installer.iss,Output\\*"; Flags: recur
 
 [Icons]
 Name: "{group}\\Delphi Commons"; Filename: "{sys}\\wscript.exe"; Parameters: """{app}\\scripts\\windows\\installer-candidate\\delphi-commons-launch.vbs"""; WorkingDir: "{app}"
-Name: "{group}\\Delphi Commons Stop"; Filename: "{sys}\\wscript.exe"; Parameters: """{app}\\scripts\\windows\\installer-candidate\\delphi-commons-stop.vbs"""; WorkingDir: "{app}"
-Name: "{group}\\Delphi Commons Status"; Filename: "{sys}\\wscript.exe"; Parameters: """{app}\\scripts\\windows\\installer-candidate\\delphi-commons-status.vbs"""; WorkingDir: "{app}"
 Name: "{userdesktop}\\Delphi Commons"; Filename: "{sys}\\wscript.exe"; Parameters: """{app}\\scripts\\windows\\installer-candidate\\delphi-commons-launch.vbs"""; WorkingDir: "{app}"
 
 [Run]

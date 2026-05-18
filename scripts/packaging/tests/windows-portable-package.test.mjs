@@ -65,6 +65,16 @@ test('portable lifecycle start reopens browser when already running', () => {
   assert.doesNotMatch(lifecycle, /Prototype already running with backend pid/);
 });
 
+test('portable lifecycle can stop when an attached browser closes', () => {
+  const lifecycle = fs.readFileSync(lifecyclePath, 'utf8');
+  assert.match(lifecycle, /EDELPHI_STOP_ON_BROWSER_CLOSE/);
+  assert.match(lifecycle, /function Get-EdgeBrowserPath/);
+  assert.match(lifecycle, /--app=\$url/);
+  assert.match(lifecycle, /function Wait-ForAttachedBrowserClose/);
+  assert.match(lifecycle, /Attached browser window closed; stopping Delphi Commons runtime/);
+  assert.match(lifecycle, /Wait-ForAttachedBrowserClose -profileDir \$attachedBrowser\.ProfileDir -starterProcessId \$attachedBrowser\.StarterProcessId/);
+});
+
 test('manifest and checksums integrity when package exists', { skip: !fs.existsSync(manifestForPkgRoot) }, () => {
   const manifestPath = manifestForPkgRoot;
   assert.ok(fs.existsSync(manifestPath));
