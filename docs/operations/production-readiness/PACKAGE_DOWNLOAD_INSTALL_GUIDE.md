@@ -12,8 +12,8 @@ This guide is the simple operator-facing path for internal package candidates. U
 | --- | --- | --- | --- |
 | Windows x64 | Installer ZIP bundle | Download the ZIP, unzip it, run the included EXE, launch Delphi Commons from the Desktop or Start Menu, and close the Delphi Commons window when finished. | Available as internal GitHub release asset |
 | Windows x64 fallback | Portable bundled-runtime ZIP | Download the ZIP, unzip it, run `scripts/windows/portable-bundled-runtime.ps1 start`. | Available as internal GitHub release asset |
-| macOS Apple Silicon | Installer PKG | Download the PKG, install it, launch with the installed package command/shortcut path documented in the macOS runbook. | Available as internal GitHub release asset |
-| macOS Apple Silicon fallback | Portable bundled-runtime ZIP | Download the ZIP, unzip it, run `scripts/macos/portable-bundled-runtime.sh start`. | Available as internal GitHub release asset |
+| macOS Apple Silicon | Installer PKG | Download the PKG, install it, launch Delphi Commons with the single installed launch command documented in the macOS runbook. Browser fallback is `http://127.0.0.1:4173`. Closing the browser window is **not proven** to stop macOS runtime. | Available as internal GitHub release asset |
+| macOS Apple Silicon fallback | Portable bundled-runtime ZIP | Download the ZIP, unzip it, run `./scripts/macos/portable-bundled-runtime.sh`. Browser fallback is `http://127.0.0.1:4173`. Closing the browser window is **not proven** to stop macOS runtime. | Available as internal GitHub release asset |
 
 ## Current Release Pages
 
@@ -55,27 +55,29 @@ powershell -ExecutionPolicy Bypass -File .\scripts\windows\portable-bundled-runt
 
 1. Download the macOS Apple Silicon installer PKG from the current internal GitHub release.
 2. Install the PKG.
-3. Start Delphi Commons using the installed package command documented in [MACOS_INSTALLER_RUNBOOK.md](./MACOS_INSTALLER_RUNBOOK.md).
-4. Open `http://127.0.0.1:4173` if the browser does not open automatically.
-5. Stop Delphi Commons using the installed package stop command.
+3. Launch Delphi Commons using the single installed launch command documented in [MACOS_INSTALLER_RUNBOOK.md](./MACOS_INSTALLER_RUNBOOK.md).
+4. If the browser does not show Delphi Commons, open `http://127.0.0.1:4173` while the supervised run is active.
+5. macOS lifecycle gap: closing the visible browser/app window is **IMPLEMENTATION_REQUIRED / HUMAN_REQUIRED** and is **not proven** to stop the local runtime. For supervised internal runs only, end the runtime with the admin stop command documented in the macOS runbook. Do not present Stop or Status as normal user shortcuts.
 
 ## macOS Portable ZIP Flow
 
 1. Download the macOS Apple Silicon portable bundled-runtime ZIP.
 2. Unzip it to a local folder path you control.
 3. Open Terminal in the unzipped package root.
-4. Run:
+4. Run the single normal launch command:
 
 ```bash
-./scripts/macos/portable-bundled-runtime.sh start
+./scripts/macos/portable-bundled-runtime.sh
 ```
 
-5. Open `http://127.0.0.1:4173` if the browser does not open automatically.
-6. Stop with:
+5. If the browser does not show Delphi Commons, open `http://127.0.0.1:4173` while the supervised run is active.
+6. macOS lifecycle gap: closing the visible browser/app window is **IMPLEMENTATION_REQUIRED / HUMAN_REQUIRED** and is **not proven** to stop the local runtime. For supervised internal runs only, end the runtime with this admin command:
 
 ```bash
 ./scripts/macos/portable-bundled-runtime.sh stop
 ```
+
+Do not present Stop or Status as normal user shortcuts.
 
 ## Non-Claims
 

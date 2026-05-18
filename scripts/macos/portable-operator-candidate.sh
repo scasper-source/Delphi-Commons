@@ -278,6 +278,14 @@ wait_for_ui_head() {
   return 1
 }
 
+open_operator_browser() {
+  if command -v open >/dev/null 2>&1; then
+    open "$UI_URL" >/dev/null 2>&1
+    return $?
+  fi
+  return 127
+}
+
 write_lock() {
   local backend_pid="$1" ui_pid="$2"
   cat > "$LOCK_FILE" <<LOCK
@@ -364,9 +372,20 @@ start_flow() {
   fi
 
   write_lock "$verified_backend" "$verified_ui"
-  write_evidence "Started portable prototype backendPid=$verified_backend uiPid=$verified_ui"
+
+  if ! open_operator_browser; then
+    stop_if_running
+    echo "Started services, but macOS could not open the operator browser/app window." >&2
+    echo "Runtime was stopped so Delphi Commons is not left running invisibly." >&2
+    echo "To retry, run this launcher again. If browser opening keeps failing, ask an operator to open $UI_URL during a supervised run." >&2
+    exit 1
+  fi
+
+  write_evidence "Started portable prototype backendPid=$verified_backend uiPid=$verified_ui browserOpen=attempted"
   echo "Operator UI: $UI_URL"
   echo "Operator localhost URL (default, safe): $UI_URL"
+  echo "If the browser does not show Delphi Commons, open $UI_URL manually while this run is active."
+  echo "macOS lifecycle limitation: closing the visible browser/app window has NOT been proven to stop the runtime; use the admin stop command when ending a supervised run."
   if [[ "$LAN_PARTICIPANT_MODE" == "1" ]]; then
     if [[ "$LAN_ACKNOWLEDGED" != "1" ]]; then
       stop_if_running

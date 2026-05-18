@@ -128,9 +128,9 @@ export function scanForbiddenMaterial(
 
 export function scanOverclaimText(text) {
   const patterns = [
-    /production[- ]ready/i,
-    /pilot[- ]ready/i,
-    /ready for human testing/i,
+    /(?<!not )(?<!no )production[- ]ready/i,
+    /(?<!not )(?<!no )pilot[- ]ready/i,
+    /(?<!not )ready for human testing/i,
     /\b(irb(?:\/ethics)?|ethics) approval\b/i,
     /legal approval/i,
     /security certification/i,
@@ -138,7 +138,7 @@ export function scanOverclaimText(text) {
     /real sms readiness/i,
     /pwa readiness/i,
     /native mobile readiness/i,
-    /public release readiness/i,
+    /(?<!not )(?<!no )public release readiness/i,
     /(installer|updater|signing|notarization) readiness/i,
     /(windows|macos) support readiness/i,
     /support readiness/i
