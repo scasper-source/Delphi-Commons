@@ -2,7 +2,7 @@
 
 Status: planning document. This is not a production-readiness claim.
 
-Date basis: 2026-05-17.
+Date basis: 2026-05-18.
 
 This document resets the near-term readiness plan around the project's actual next goal:
 
@@ -70,6 +70,8 @@ Use existing evidence as baseline. Do not rerun mock-trial work unless a change 
 | Human/deployment closeout | Evidence-gap binders/templates exist or are being prepared. | Gaps remain open until human testing is performed against a candidate. |
 | Laptop installer candidates | Windows installer adapter and macOS installer adapter are merged. Windows payload build/verification reaches the missing-Inno-tool gate; macOS `.pkg` build evidence exists. | Installer packaging is structurally improving, but installed lifecycle, signing, reputation/Gatekeeper, and clean-profile evidence remain open. |
 | Phase 3 SMS candidate controls | Local mock STOP/HELP simulation, opt-in gates, resend limits, and staff permission tests added in server automated coverage. A gated Twilio setup/provider track and operator SMS setup prompt are now merged. | Engineering-only local evidence; still not real-SMS, telecom, pilot, production, or human-testing readiness. |
+| GitHub repository hygiene | Private clean-history repository exists; stale `codex/*` branches were removed; open PR queue was empty at the latest snapshot; latest verified application-code basis before this documentation refresh was `61f9506`. | Repository collaboration surface is clean, but this does not close product, security, accessibility, or human-testing gates. |
+| Current repo-verifiable checks | On 2026-05-18, app tests, app lint, app production build, app high-severity npm audit, server tests, server high-severity npm audit, and `git diff --check` passed on the GitHub-connected checkout. | Useful current-main health signal only; not a substitute for human-required evidence. |
 | Readiness claim controls | Packaging overclaim scanner now covers production/pilot/human-testing, IRB/ethics/legal/security/accessibility approval, real-SMS/PWA/native/public-release, installer/updater/signing/notarization, and Windows/macOS support-readiness language. | Guardrail only; it prevents overclaims in package evidence surfaces but does not replace human review. |
 
 ## Product Tracks
@@ -248,7 +250,7 @@ SMS mock/sandbox and provider evidence packet: [PHASE3_SMS_EVIDENCE_PACKET.md](.
 Magic-link privacy review: [PHASE3_MAGIC_LINK_PRIVACY_REVIEW.md](./PHASE3_MAGIC_LINK_PRIVACY_REVIEW.md).
 Twilio real-SMS track: [PHASE3_TWILIO_REAL_SMS_TRACK.md](./PHASE3_TWILIO_REAL_SMS_TRACK.md).
 
-Current Phase 3 status as of 2026-05-15: **LOCAL MOCK/SANDBOX IMPLEMENTATION AND EVIDENCE-PREP SUBSTANTIALLY COMPLETE; DEVICE/PROVIDER/HUMAN EVIDENCE GATES OPEN** and **NOT READY FOR HUMAN TESTING**.
+Current Phase 3 status as of 2026-05-18: **LOCAL MOCK/SANDBOX IMPLEMENTATION AND EVIDENCE-PREP SUBSTANTIALLY COMPLETE; DEVICE/PROVIDER/HUMAN EVIDENCE GATES OPEN** and **NOT READY FOR HUMAN TESTING**.
 
 Completion snapshot:
 
@@ -270,7 +272,7 @@ Phase 3 blocker interpretation:
 
 - SMS remains mock/sandbox/internal-only by default. Real provider credentials, telecom/compliance readiness, and production SMS operations remain deferred.
 - Twilio real-SMS plumbing now has a gated implementation track, but it remains disabled by default and does not close real-SMS readiness, telecom compliance, privacy/security review, Data Custodian review, copy review, device evidence, or human-testing approval.
-- Downloaded-package operators now receive an SMS setup choice in the UI and can be directed to Twilio setup guidance before study SMS policy configuration; the setup check returns readiness flags only, not secrets.
+- Downloaded-package operators now receive an SMS setup choice in the UI and can be directed to Twilio setup guidance before study SMS policy configuration; the setup check returns readiness flags only, not secrets. The first-run SMS setup choice is in-memory UI state only and is not persisted in browser storage.
 - Opaque-link, token-privacy, and SMS audit boundaries are implemented for engineering scope, but these controls still require human-observed phone evidence and signoff artifacts.
 - Mobile web is the required phone path for this candidate; PWA install/offline behavior and native mobile app paths remain out of scope unless separately approved.
 
@@ -434,6 +436,7 @@ Latest repo-verifiable validation snapshot:
 - 2026-05-14, merged main at `121a526`: claim-scan follow-up coverage catches standalone `IRB approval`, combined `IRB/ethics approval`, and standalone `ethics approval` package overclaims.
 - 2026-05-15, merged main at `eb4bacb`: PR #85 added the gated Twilio setup/provider track and operator SMS setup prompt. Validation recorded in the PR, with portable command forms shown here: `npm --prefix server run build` passed; `npm --prefix app run build` passed; `node scripts/run-tests.mjs "server/tests/twilioSmsProvider.test.mjs"` passed; `node scripts/run-tests.mjs "server/tests/smsMagicLink.test.mjs"` passed; `npm --prefix server test` passed; `npm --prefix server run security:audit` passed with 0 vulnerabilities.
 - 2026-05-17, merged main at `6a45b6d`: Windows installer candidate cleanup and GitHub hardening reconciliation passed `node scripts/packaging/windows-installer.mjs build` through payload verification to the expected missing-`ISCC.exe` gate; `node scripts/packaging/windows-installer.mjs verify` passed; `node scripts/packaging/tests/windows-installer.test.mjs`, `node scripts/packaging/tests/windows-portable-package.test.mjs`, `node scripts/packaging/tests/packaging-core.test.mjs`, and `node scripts/packaging/tests/package-verification.test.mjs` passed; `git diff --check` passed.
+- 2026-05-18, merged main at `61f9506`: GitHub cleanup follow-up removed SMS setup browser-storage persistence and merged PR #100. Validation on the GitHub-connected checkout passed `npm.cmd --prefix app test` (28/28), `npm.cmd --prefix app run lint`, `npm.cmd --prefix app run build`, `npm.cmd --prefix app run security:audit` (0 vulnerabilities), `npm.cmd --prefix server test`, `npm.cmd --prefix server run security:audit` (0 vulnerabilities), and `git diff --check`. GitHub branch cleanup left only `main`, and the open PR queue was empty.
 
 Minimum manual preflight checks:
 

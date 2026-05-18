@@ -4,13 +4,15 @@ Boundary statement: Delphi Commons is suitable only for controlled mock-trial us
 
 ## Summary
 
-Status: PASS WITH SECURITY AUDIT INCONCLUSIVE
+Status: PASS WITH CURRENT SECURITY AUDITS COMPLETED
 
-The private GitHub clean-history repository was checked in a clean Codex cloud environment. App and server install, build, and test commands passed from the documented `app/` and `server/` directories. Security audit commands were blocked by the npm advisory endpoint returning HTTP 403 in that environment.
+The private GitHub clean-history repository was originally checked in a clean Codex cloud environment. App and server install, build, and test commands passed from the documented `app/` and `server/` directories. The original cloud security audit attempt was blocked by the npm advisory endpoint returning HTTP 403.
 
-This result confirms clean-environment install/build/test readiness for the private GitHub repository only. It does not claim production readiness, human-subjects readiness, IRB readiness, legal compliance, completed accessibility conformance, completed security review, or security certification.
+Follow-up verification on 2026-05-18 in the GitHub-connected checkout completed the app and server high-severity npm audits successfully with 0 vulnerabilities. The same follow-up also confirmed app tests, app lint, app production build, server tests, `git diff --check`, no open PRs, and only the `main` remote branch after cleanup.
 
-## Repository Checked
+This result confirms repository install/build/test/audit readiness for the private GitHub clean-history repository only. It does not claim production readiness, human-subjects readiness, IRB readiness, legal compliance, completed accessibility conformance, completed independent security review, or security certification.
+
+## Historical Clean-Environment Check
 
 - Repository: `scasper-source/Delphi-Commons`
 - Commit checked: `d81b706e5ef6ea701ef7eecb92911417630d6337`
@@ -18,7 +20,7 @@ This result confirms clean-environment install/build/test readiness for the priv
 - Working tree: clean for tracked files
 - Evidence source: Codex cloud fresh clone/build/test readiness check reported by the maintainer on 2026-05-05
 
-## Commands Reported
+### Commands Reported
 
 ```bash
 git rev-parse HEAD
@@ -39,33 +41,49 @@ cd app && npm run security:audit
 cd server && npm run security:audit
 ```
 
-## Results
+### Historical Results
 
 | Area | Result | Notes |
-|---|---|---|
+| --- | --- | --- |
 | App install | PASS | `cd app && npm install` completed. |
 | App build | PASS | `cd app && npm run build` completed. |
 | App tests | PASS | `cd app && npm test` completed using `node ../scripts/run-tests.mjs "tests/*.test.mjs"`. |
 | Server install | PASS | `cd server && npm install` completed. |
 | Server build | PASS | `cd server && npm run build` completed. |
 | Server tests | PASS | `cd server && npm test` completed; server test script includes build first. |
-| App security audit | BLOCKED / INCONCLUSIVE | `npm audit` advisory endpoint returned HTTP 403. |
-| Server security audit | BLOCKED / INCONCLUSIVE | `npm audit` advisory endpoint returned HTTP 403. |
+| App security audit | BLOCKED / SUPERSEDED | Original cloud `npm audit` advisory endpoint returned HTTP 403; later local GitHub-connected audit passed. |
+| Server security audit | BLOCKED / SUPERSEDED | Original cloud `npm audit` advisory endpoint returned HTTP 403; later local GitHub-connected audit passed. |
 | Documentation match | PASS | README, getting-started, testing docs, and package scripts aligned with observed command behavior. |
 
-## Documentation Findings
+## Current GitHub-Connected Follow-Up
 
-- No substantive mismatch was found between `README.md`, `docs/getting-started.md`, `docs/development/testing.md`, `app/package.json`, `server/package.json`, and observed command behavior.
-- The repository intentionally has no root-level npm workspace command.
-- Commands are documented and expected to run from `app/` and `server/`.
-- The testing guide documents `scripts/run-tests.mjs`, matching the package scripts and successful test execution.
+- Date: 2026-05-18
+- Repository: `scasper-source/Delphi-Commons`
+- Commit checked: `61f950647177d91d01f37b88c4f277b1c0e08c36`
+- Expected short commit: `61f9506`
+- Open PRs: none at time of check
+- Remote branches: `main` only at time of check
+
+| Area | Result | Notes |
+| --- | --- | --- |
+| App tests | PASS | 28/28 tests passed. |
+| App lint | PASS | 0 errors. |
+| App production build | PASS | `npm.cmd run build` completed. |
+| App security audit | PASS | 0 vulnerabilities. |
+| Server tests | PASS | Full server test script completed. |
+| Server security audit | PASS | 0 vulnerabilities. |
+| Browser-storage policy gate | PASS | SMS setup `localStorage` persistence removed; source scan no longer detects browser storage in `app/src`. |
+| GitHub branch cleanup | PASS | Stale `codex/*` branches removed; only `main` remains. |
+| Open PR queue | PASS | No open PRs. |
+| Diff check | PASS | `git diff --check` completed. |
 
 ## Remaining Public/Open-Source Visibility Conditions
 
-- Security audit verification remains inconclusive until `npm audit` can reach the advisory endpoint or another approved dependency review is performed.
-- Manual multi-participant browser rehearsal remains incomplete.
+- Independent security/ASVS review remains incomplete.
+- Human-observed multi-participant browser rehearsal remains incomplete.
 - Broader cross-browser/device validation remains incomplete.
 - Additional accessibility review remains incomplete.
-- Production hardening, operational readiness, security review, legal/compliance review, and institutional/IRB readiness remain incomplete.
+- Production hardening, operational readiness, legal/compliance review, and institutional/IRB readiness remain incomplete.
+- Public release and DOI/archive steps remain incomplete.
 
 Open-source code does not mean open study data.

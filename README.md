@@ -10,11 +10,15 @@ Delphi Commons is for researchers, study owners, methods stewards, open-source m
 
 ## Current Status
 
-Current readiness: controlled mock-participant MVP testing with synthetic or low-risk data only.
+Current readiness: controlled mock-participant MVP testing and internal engineering evidence with synthetic or low-risk data only.
 
-“Delphi Commons is suitable only for controlled mock-trial use with synthetic or low-risk test data in local, development, or staging environments. It is not approved or ready for production deployment or real human-subjects research.”
+"Delphi Commons is suitable only for controlled mock-trial use with synthetic or low-risk test data in local, development, or staging environments. It is not approved or ready for production deployment or real human-subjects research."
 
-This repository is not yet approved for real human-subjects studies, production deployments, regulated data, institutional data, or sensitive participant data. Before real use, the project still needs production security review, backup/restore verification, retention automation, accessibility review, incident response, deployment hardening, and IRB/institutional approval where applicable.
+This repository is not yet approved for real human-subjects studies, production deployments, regulated data, institutional data, or sensitive participant data. Before real use, the project still needs production security review, production-like backup/restore verification, retention/incident rehearsals, accessibility review, deployment hardening, human testing evidence, and IRB/institutional approval where applicable.
+
+Current GitHub `main` is clean for tracked files and has no open PRs or stale `codex/*` branches at the latest documentation snapshot. The app and server test/build/audit checks pass on the GitHub-connected checkout, including the frontend policy gate that forbids browser storage for sensitive data.
+
+See [Current Project Status](./docs/CURRENT_STATUS.md) for the latest repository, validation, and readiness snapshot.
 
 ## What It Is Not Ready For
 
@@ -133,6 +137,7 @@ npm run security:audit
 ## Documentation
 
 - [Documentation index](./docs/index.md)
+- [Current project status](./docs/CURRENT_STATUS.md)
 - [Getting started](./docs/getting-started.md)
 - [Classical Delphi tutorial](./docs/tutorials/classical-delphi.md)
 - [Modified Delphi tutorial](./docs/tutorials/modified-delphi.md)
