@@ -121,6 +121,15 @@ function Stop-IfRunning {
   Remove-Item -LiteralPath $LockFile -Force -ErrorAction SilentlyContinue
 }
 
+function Open-OperatorUi([string]$url = $UiUrl) {
+  if ([string]::IsNullOrWhiteSpace($url)) { $url = $UiUrl }
+  if ($env:EDELPHI_SKIP_OPEN_BROWSER -ne '1') {
+    Start-Process $url
+  }
+  Write-Host "Operator UI: $url"
+  Write-Host "Operator localhost URL (default, safe): $url"
+}
+
 function Assert-PortFree([int]$port) {
   $taken = Get-NetTCPConnection -LocalPort $port -State Listen -ErrorAction SilentlyContinue
   if ($taken) { throw "Port $port already in use. Stop conflicting process and retry." }
@@ -212,11 +221,17 @@ function Sync-RuntimeServer {
 function Start-Prototype {
   Ensure-Dirs
   $existing = Read-State
-  if ($existing -and (Is-Running $existing.backendPid)) {
-    throw "Prototype already running with backend pid $($existing.backendPid)."
-  }
   if ($existing) {
-    Write-Evidence 'Detected stale lock; cleaning stale state.'
+    $backendRunning = Is-Running $existing.backendPid
+    $uiRunning = Is-Running $existing.uiPid
+    if ($backendRunning -and $uiRunning) {
+      $existingUrl = if ($existing.uiUrl) { $existing.uiUrl } else { $UiUrl }
+      Write-Evidence "Start requested while already running; reopening browser url=$existingUrl"
+      Open-OperatorUi $existingUrl
+      Write-Host "Health check: $($existing.healthUrl)"
+      return
+    }
+    Write-Evidence 'Detected stale or partial lock; cleaning stale state before start.'
     Stop-IfRunning
   }
 
@@ -279,11 +294,7 @@ function Start-Prototype {
     nodeExecutable = $NodeCommand
   }
   Write-Evidence "Started portable prototype backendPid=$($backend.Id) uiPid=$($ui.Id) url=$UiUrl"
-  if ($env:EDELPHI_SKIP_OPEN_BROWSER -ne '1') {
-    Start-Process $UiUrl
-  }
-  Write-Host "Operator UI: $UiUrl"
-  Write-Host "Operator localhost URL (default, safe): $UiUrl"
+  Open-OperatorUi $UiUrl
   if ($LanParticipantMode) {
     if (!$LanAcknowledged) {
       Stop-ProcessTree -processId $backend.Id -name 'backend'

@@ -78,9 +78,6 @@ Compression=lzma
 SolidCompression=yes
 UninstallDisplayIcon={sys}\\wscript.exe
 
-[Tasks]
-Name: "desktopicon"; Description: "Create a desktop shortcut"; GroupDescription: "Additional shortcuts:";
-
 [Files]
 Source: "*"; DestDir: "{app}"; Excludes: "installer.iss,Output\\*"; Flags: recursesubdirs ignoreversion
 
@@ -88,7 +85,7 @@ Source: "*"; DestDir: "{app}"; Excludes: "installer.iss,Output\\*"; Flags: recur
 Name: "{group}\\Delphi Commons"; Filename: "{sys}\\wscript.exe"; Parameters: """{app}\\scripts\\windows\\installer-candidate\\delphi-commons-launch.vbs"""; WorkingDir: "{app}"
 Name: "{group}\\Delphi Commons Stop"; Filename: "{sys}\\wscript.exe"; Parameters: """{app}\\scripts\\windows\\installer-candidate\\delphi-commons-stop.vbs"""; WorkingDir: "{app}"
 Name: "{group}\\Delphi Commons Status"; Filename: "{sys}\\wscript.exe"; Parameters: """{app}\\scripts\\windows\\installer-candidate\\delphi-commons-status.vbs"""; WorkingDir: "{app}"
-Name: "{userdesktop}\\Delphi Commons"; Filename: "{sys}\\wscript.exe"; Parameters: """{app}\\scripts\\windows\\installer-candidate\\delphi-commons-launch.vbs"""; WorkingDir: "{app}"; Tasks: desktopicon
+Name: "{userdesktop}\\Delphi Commons"; Filename: "{sys}\\wscript.exe"; Parameters: """{app}\\scripts\\windows\\installer-candidate\\delphi-commons-launch.vbs"""; WorkingDir: "{app}"
 
 [Run]
 Filename: "{sys}\\wscript.exe"; Parameters: """{app}\\scripts\\windows\\installer-candidate\\delphi-commons-launch.vbs"""; WorkingDir: "{app}"; Description: "Launch Delphi Commons"; Flags: postinstall nowait skipifsilent

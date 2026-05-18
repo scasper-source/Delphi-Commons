@@ -58,6 +58,13 @@ test('portable lifecycle script quotes Start-Process arguments for paths with sp
   assert.match(lifecycle, /\$ui = Start-Process[\s\S]*-ArgumentList \(ConvertTo-ProcessArgumentList @\(\$staticServer,'--root',\$uiRoot/);
 });
 
+test('portable lifecycle start reopens browser when already running', () => {
+  const lifecycle = fs.readFileSync(lifecyclePath, 'utf8');
+  assert.match(lifecycle, /function Open-OperatorUi/);
+  assert.match(lifecycle, /if \(\$backendRunning -and \$uiRunning\) \{[\s\S]*Open-OperatorUi \$existingUrl[\s\S]*return/);
+  assert.doesNotMatch(lifecycle, /Prototype already running with backend pid/);
+});
+
 test('manifest and checksums integrity when package exists', { skip: !fs.existsSync(manifestForPkgRoot) }, () => {
   const manifestPath = manifestForPkgRoot;
   assert.ok(fs.existsSync(manifestPath));
