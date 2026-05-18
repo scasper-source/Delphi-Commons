@@ -65,6 +65,36 @@ export function writeInstallerCandidateLaunchers(root) {
   }
 }
 
+export function renderInnoSetupScript() {
+  return `[Setup]
+AppName=Delphi Commons
+AppVersion=0.0.0-internal
+DefaultDirName={localappdata}\\Programs\\DelphiCommons
+DefaultGroupName=Delphi Commons
+DisableProgramGroupPage=yes
+PrivilegesRequired=lowest
+OutputBaseFilename=delphi-commons-windows-installer-candidate-internal
+Compression=lzma
+SolidCompression=yes
+UninstallDisplayIcon={sys}\\wscript.exe
+
+[Tasks]
+Name: "desktopicon"; Description: "Create a desktop shortcut"; GroupDescription: "Additional shortcuts:";
+
+[Files]
+Source: "*"; DestDir: "{app}"; Excludes: "installer.iss,Output\\*"; Flags: recursesubdirs ignoreversion
+
+[Icons]
+Name: "{group}\\Delphi Commons"; Filename: "{sys}\\wscript.exe"; Parameters: """{app}\\scripts\\windows\\installer-candidate\\delphi-commons-launch.vbs"""; WorkingDir: "{app}"
+Name: "{group}\\Delphi Commons Stop"; Filename: "{sys}\\wscript.exe"; Parameters: """{app}\\scripts\\windows\\installer-candidate\\delphi-commons-stop.vbs"""; WorkingDir: "{app}"
+Name: "{group}\\Delphi Commons Status"; Filename: "{sys}\\wscript.exe"; Parameters: """{app}\\scripts\\windows\\installer-candidate\\delphi-commons-status.vbs"""; WorkingDir: "{app}"
+Name: "{userdesktop}\\Delphi Commons"; Filename: "{sys}\\wscript.exe"; Parameters: """{app}\\scripts\\windows\\installer-candidate\\delphi-commons-launch.vbs"""; WorkingDir: "{app}"; Tasks: desktopicon
+
+[Run]
+Filename: "{sys}\\wscript.exe"; Parameters: """{app}\\scripts\\windows\\installer-candidate\\delphi-commons-launch.vbs"""; WorkingDir: "{app}"; Description: "Launch Delphi Commons"; Flags: postinstall nowait skipifsilent
+`;
+}
+
 function buildRuntimeMetadataFromAdr() {
   const meta = JSON.parse(fs.readFileSync(path.join(repoRoot, 'docs/adr/runtime/node-windows-x64.json'), 'utf8'));
   return buildRuntimeMetadata({
@@ -94,33 +124,7 @@ function stagePortablePayload() {
 function writeInnoFiles() {
   writeInstallerCandidateLaunchers(packageRoot);
 
-  fs.writeFileSync(path.join(packageRoot, 'installer.iss'), `[Setup]
-AppName=Delphi Commons
-AppVersion=0.0.0-internal
-DefaultDirName={localappdata}\\Programs\\DelphiCommons
-DefaultGroupName=Delphi Commons
-DisableProgramGroupPage=yes
-PrivilegesRequired=lowest
-OutputBaseFilename=delphi-commons-windows-installer-candidate-internal
-Compression=lzma
-SolidCompression=yes
-UninstallDisplayIcon={app}\\scripts\\windows\\installer-candidate\\delphi-commons-launch.vbs
-
-[Tasks]
-Name: "desktopicon"; Description: "Create a desktop shortcut"; GroupDescription: "Additional shortcuts:";
-
-[Files]
-Source: "*"; DestDir: "{app}"; Excludes: "installer.iss,Output\\*"; Flags: recursesubdirs ignoreversion
-
-[Icons]
-Name: "{group}\\Delphi Commons"; Filename: "{app}\\scripts\\windows\\installer-candidate\\delphi-commons-launch.vbs"
-Name: "{group}\\Delphi Commons Stop"; Filename: "{app}\\scripts\\windows\\installer-candidate\\delphi-commons-stop.vbs"
-Name: "{group}\\Delphi Commons Status"; Filename: "{app}\\scripts\\windows\\installer-candidate\\delphi-commons-status.vbs"
-Name: "{userdesktop}\\Delphi Commons"; Filename: "{app}\\scripts\\windows\\installer-candidate\\delphi-commons-launch.vbs"; Tasks: desktopicon
-
-[Run]
-Filename: "{app}\\scripts\\windows\\installer-candidate\\delphi-commons-launch.vbs"; Description: "Launch Delphi Commons"; Flags: postinstall nowait skipifsilent
-`, 'utf8');
+  fs.writeFileSync(path.join(packageRoot, 'installer.iss'), renderInnoSetupScript(), 'utf8');
 }
 
 function buildMetadataAndVerify() {
