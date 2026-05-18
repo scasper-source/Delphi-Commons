@@ -33,6 +33,7 @@ Current readiness: controlled mock-participant MVP testing with synthetic or low
 - [Human-subjects readiness plan](../documents/compliance/human-subjects-readiness/HUMAN_SUBJECTS_READINESS.md)
 - [Phase 10 operational readiness documentation](./operations/phase-10/README.md)
 - [Product readiness and human testing candidate plan](./operations/production-readiness/PRODUCTION_READY_EDELPHI_PLATFORM.md)
+- [Phase 4 human testing binder](./operations/production-readiness/phase4-human-testing-binder/README.md)
 - [Phase 1 product surface lock](./operations/production-readiness/PHASE1_PRODUCT_SURFACE_LOCK.md)
 - [Phase 1 product surface lock closeout](./operations/production-readiness/PHASE1_PRODUCT_SURFACE_LOCK_CLOSEOUT.md)
 - [Backend packaging and process supervision ADR](./operations/production-readiness/BACKEND_PACKAGING_PROCESS_SUPERVISION_ADR.md)
