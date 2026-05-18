@@ -41,7 +41,7 @@ Status: INTERNAL PACKAGE CANDIDATE / NOT READY FOR HUMAN TESTING
 
 Boundary:
 - Use synthetic or low-risk test data only.
-- This package is not production-ready, pilot-ready, public-release-ready, or ready for real human-subjects data.
+- This package is not production-ready, not pilot-ready, not public-release-ready, and not ready for real human-subjects data.
 - Signing, notarization, Gatekeeper/quarantine behavior, clean-profile Mac execution, second-machine execution, and phone/operator walkthrough evidence are NOT RUN unless separate evidence is attached.
 
 Normal launch path:

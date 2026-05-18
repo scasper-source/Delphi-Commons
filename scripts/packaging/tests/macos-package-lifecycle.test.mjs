@@ -34,6 +34,8 @@ test('macOS bundled README keeps browser fallback before shutdown limitation and
   assert.notEqual(ending, -1);
   assert.ok(fallback < ending, 'browser fallback must appear before final shutdown instructions');
   assert.match(packager, /NOT READY FOR HUMAN TESTING/);
+  assert.match(packager, /not production-ready, not pilot-ready, not public-release-ready/);
+  assert.doesNotMatch(packager, /not production-ready, pilot-ready/);
   assert.match(packager, /IMPLEMENTATION_REQUIRED \/ HUMAN_REQUIRED/);
   assert.match(packager, /Do not present Stop or Status as ordinary operator shortcuts/);
 });
