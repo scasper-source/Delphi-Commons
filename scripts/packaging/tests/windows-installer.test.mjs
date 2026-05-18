@@ -54,3 +54,10 @@ test('Inno setup script launches VBS files through Windows Script Host', () => {
   assert.match(script, /Filename: "\{sys\}\\wscript\.exe"; Parameters: """\{app\}\\scripts\\windows\\installer-candidate\\delphi-commons-stop\.vbs"""/);
   assert.doesNotMatch(script, /Filename: "\{app\}\\scripts\\windows\\installer-candidate\\delphi-commons-[^"]+\.vbs"/);
 });
+
+test('Inno setup script always creates a desktop launcher shortcut', () => {
+  const script = renderInnoSetupScript();
+  assert.match(script, /Name: "\{userdesktop\}\\Delphi Commons"; Filename: "\{sys\}\\wscript\.exe"/);
+  assert.doesNotMatch(script, /\[Tasks\]/);
+  assert.doesNotMatch(script, /Tasks: desktopicon/);
+});
