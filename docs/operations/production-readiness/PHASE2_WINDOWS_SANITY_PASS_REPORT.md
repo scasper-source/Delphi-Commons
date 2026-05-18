@@ -1,11 +1,13 @@
 # Phase 2 Windows Sanity Pass Report
 
 **Date:** 15 May, 2026  
-**Environment:** Windows 11; Node.js v24.15.0
+**Environment:** Windows 10; Node.js v24.15.0
+
+Correction note, 2026-05-18: the original PDF evidence label said Windows 11, but the operator clarified that the sanity pass was performed on Windows 10. This tracked report uses the corrected OS basis.
 
 ## Summary
 
-A quick Windows 11 sanity pass was completed successfully for the Phase 2 application setup and startup path. After Node.js/npm were installed and added to `PATH`, both frontend and backend setup proceeded normally. The frontend launched with Vite at `http://localhost:5173`, and the backend started successfully on `127.0.0.1:3001`. Initial browser console API connection errors disappeared once the backend was running. No major blockers, crashes, broken flows, path separator issues, or line-ending issues were observed during the quick pass.
+A quick Windows 10 sanity pass was completed successfully for the Phase 2 application setup and startup path. After Node.js/npm were installed and added to `PATH`, both frontend and backend setup proceeded normally. The frontend launched with Vite at `http://localhost:5173`, and the backend started successfully on `127.0.0.1:3001`. Initial browser console API connection errors disappeared once the backend was running. No major blockers, crashes, broken flows, path separator issues, or line-ending issues were observed during the quick pass.
 
 ## Fresh setup
 
