@@ -1,0 +1,156 @@
+name: Build macOS internal package release
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: "Internal release tag, for example internal-macos-package-candidate-2026-05-18"
+        required: true
+        type: string
+      publish_release:
+        description: "Create or update the GitHub prerelease with package assets"
+        required: true
+        default: true
+        type: boolean
+  push:
+    tags:
+      - "internal-macos-package-candidate-*"
+
+permissions:
+  contents: write
+
+jobs:
+  build-macos-internal-package:
+    name: Build macOS internal package assets
+    runs-on: macos-15
+    timeout-minutes: 45
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24.15.0"
+          cache: npm
+          cache-dependency-path: |
+            app/package-lock.json
+            server/package-lock.json
+
+      - name: Resolve release metadata
+        id: meta
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ "${GITHUB_REF_TYPE}" == "tag" ]]; then
+            tag="${GITHUB_REF_NAME}"
+          else
+            tag="${{ inputs.release_tag }}"
+          fi
+          if [[ ! "$tag" =~ ^internal-macos-package-candidate-[0-9]{4}-[0-9]{2}-[0-9]{2}(-[A-Za-z0-9._-]+)?$ ]]; then
+            echo "Invalid release tag: $tag" >&2
+            exit 1
+          fi
+          short_sha="$(git rev-parse --short HEAD)"
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+          echo "short_sha=$short_sha" >> "$GITHUB_OUTPUT"
+
+      - name: Install dependencies
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm --prefix app ci
+          npm --prefix server ci
+
+      - name: Run packaging tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          node scripts/packaging/tests/packaging-core.test.mjs
+          node scripts/packaging/tests/package-verification.test.mjs
+
+      - name: Build macOS portable and installer packages
+        shell: bash
+        run: |
+          set -euo pipefail
+          node scripts/packaging/macos-portable.mjs build
+          node scripts/packaging/macos-portable.mjs verify
+          node scripts/packaging/macos-installer.mjs build
+          node scripts/packaging/macos-installer.mjs verify
+
+      - name: Prepare release assets
+        id: assets
+        shell: bash
+        run: |
+          set -euo pipefail
+          tag="${{ steps.meta.outputs.tag }}"
+          short_sha="${{ steps.meta.outputs.short_sha }}"
+          dist_dir="build/release-assets/macos"
+          mkdir -p "$dist_dir"
+
+          portable_root="$(cat build/macos-portable-bundled-runtime-internal/latest-package-root.txt)"
+          portable_zip="$dist_dir/delphi-commons-macos-arm64-portable-bundled-runtime-internal-${tag}-${short_sha}.zip"
+          installer_pkg="$dist_dir/delphi-commons-macos-arm64-installer-internal-${tag}-${short_sha}.pkg"
+
+          ditto -c -k --sequesterRsrc --keepParent "$portable_root" "$portable_zip"
+          cp build/macos-installer/delphi-commons-macos-installer-internal.pkg "$installer_pkg"
+          cp build/macos-installer/package-verification.json "$dist_dir/macos-installer-package-verification-${tag}-${short_sha}.json"
+          cp build/macos-installer/checksums.json "$dist_dir/macos-installer-checksums-${tag}-${short_sha}.json"
+          (cd "$dist_dir" && shasum -a 256 * > SHA256SUMS.txt)
+
+          {
+            echo "portable_zip=$portable_zip"
+            echo "installer_pkg=$installer_pkg"
+            echo "dist_dir=$dist_dir"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Write release notes
+        shell: bash
+        run: |
+          set -euo pipefail
+          tag="${{ steps.meta.outputs.tag }}"
+          short_sha="${{ steps.meta.outputs.short_sha }}"
+          cat > build/release-assets/macos/RELEASE_NOTES.md <<EOF
+          # Delphi Commons macOS internal package candidate
+
+          Tag: \`$tag\`
+          Commit: \`${GITHUB_SHA}\`
+          Short commit: \`$short_sha\`
+
+          Assets:
+          - Apple Silicon portable bundled-runtime ZIP.
+          - Apple Silicon unsigned internal installer PKG.
+          - SHA256 checksums and package verification metadata.
+
+          Boundary:
+          - Internal synthetic/low-risk testing only.
+          - No production, pilot, real human-subjects, broad macOS support, App Store, signing, notarization, Gatekeeper, security certification, accessibility certification, or real-SMS readiness claim.
+          - Intel Mac/x64 packaging remains deferred unless separately implemented and evidenced.
+          EOF
+
+      - name: Upload workflow artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: macos-internal-package-assets-${{ steps.meta.outputs.tag }}-${{ steps.meta.outputs.short_sha }}
+          path: build/release-assets/macos/*
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Publish GitHub prerelease assets
+        if: ${{ github.ref_type == 'tag' || inputs.publish_release }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          tag="${{ steps.meta.outputs.tag }}"
+          notes="build/release-assets/macos/RELEASE_NOTES.md"
+          if gh release view "$tag" >/dev/null 2>&1; then
+            gh release edit "$tag" --title "$tag" --notes-file "$notes" --prerelease
+          else
+            gh release create "$tag" --target "$GITHUB_SHA" --title "$tag" --notes-file "$notes" --prerelease
+          fi
+          gh release upload "$tag" build/release-assets/macos/* --clobber
