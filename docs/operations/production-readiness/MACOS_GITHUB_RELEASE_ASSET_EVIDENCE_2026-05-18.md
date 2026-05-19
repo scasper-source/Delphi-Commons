@@ -59,13 +59,70 @@ Package verification metadata:
 
 ## Downloaded-Asset Instruction Verification
 
-Status: **NOT RUN** for this recorded release asset.
+Status: **PASSED** for corrected release `internal-macos-package-candidate-2026-05-18-r4`; **NOT RUN / SUPERSEDED** for the original split release asset.
 
-The repository docs and packaging scripts were reviewed after this release, but this evidence file does not contain an extraction of the split release assets proving that the operator would see one coherent installer package and current instructions. Treat this tag as superseded for macOS installer/operator testing until a corrected single-bundle successor tag is built and the actual downloaded asset is inspected.
+The repository docs and packaging scripts were reviewed after the original split release, but this evidence file does not contain an extraction of those split release assets proving that the operator would see one coherent installer package and current instructions. Treat the original split tag as superseded for macOS installer/operator testing. The corrected single-bundle successor is recorded below.
+
+## Corrected Current Release
+
+Tag: [`internal-macos-package-candidate-2026-05-18-r4`](https://github.com/scasper-source/Delphi-Commons/releases/tag/internal-macos-package-candidate-2026-05-18-r4).
+
+Workflow run: [`26068696741`](https://github.com/scasper-source/Delphi-Commons/actions/runs/26068696741).
+
+Commit hash:
+
+```text
+60479a10585654f66b50cf2b7a9b57e066af17aa
+```
+
+Published assets:
+
+| Asset | Size | SHA256 |
+| --- | ---: | --- |
+| [`delphi-commons-macos-arm64-installer-internal-internal-macos-package-candidate-2026-05-18-r4-60479a1.zip`](https://github.com/scasper-source/Delphi-Commons/releases/download/internal-macos-package-candidate-2026-05-18-r4/delphi-commons-macos-arm64-installer-internal-internal-macos-package-candidate-2026-05-18-r4-60479a1.zip) | 40,486,737 bytes | `d953fd00e8f4da41853f82379f829f9e256e91d9889c9daf7b42dbec041e3d94` |
+| [`RELEASE_NOTES.md`](https://github.com/scasper-source/Delphi-Commons/releases/download/internal-macos-package-candidate-2026-05-18-r4/RELEASE_NOTES.md) | 1,403 bytes | `041090bc70e0fa7ed3a31dff97935c8a3126e676acd10e1733dbf9f3781af65c` |
+| [`SHA256SUMS.txt`](https://github.com/scasper-source/Delphi-Commons/releases/download/internal-macos-package-candidate-2026-05-18-r4/SHA256SUMS.txt) | 171 bytes | `690be1e4ad623c08c505e70d9c1b12199d2940e3676e1fe3dbcd2fadca2097d7` |
+
+Downloaded ZIP checksum verification:
+
+```text
+delphi-commons-macos-arm64-installer-internal-internal-macos-package-candidate-2026-05-18-r4-60479a1.zip: OK
+```
+
+Extracted bundle contents:
+
+| Bundled item | Size | SHA256 |
+| --- | ---: | --- |
+| `README_INSTALL_MACOS.txt` | 1,032 bytes | `0f00bf17cd8ea3878e57577cf5cad7ab2296cfc1895a3ddbc5e8853585f6fc55` |
+| `delphi-commons-macos-arm64-installer-internal-internal-macos-package-candidate-2026-05-18-r4-60479a1.pkg` | 40,763,899 bytes | `fda25282bed3dca1b901388abe1d2d2245a95103327d2370cea0f904ad7377bd` |
+| `macos-installer-checksums-internal-macos-package-candidate-2026-05-18-r4-60479a1.json` | 827,077 bytes | `1574017097561ea302fa58423384e7c4b43f79f240e0e67e4e11cc6e0b85f884` |
+| `macos-installer-package-verification-internal-macos-package-candidate-2026-05-18-r4-60479a1.json` | 34 bytes | `b7ea028994d1ca087b9208093f13b2d509d4a8605587c68c2982e57d926923f6` |
+
+Downloaded-asset inspection evidence:
+
+- `README_INSTALL_MACOS.txt` says to run the included PKG, open `/Applications/Delphi Commons/Delphi Commons.app`, use `http://127.0.0.1:4173` as the browser fallback, and treats window-close shutdown as not proven.
+- `pkgutil --payload-files` showed `./Applications/Delphi Commons/Delphi Commons.app`, `./Applications/Delphi Commons/Delphi Commons.app/Contents/MacOS/Delphi Commons`, `./Applications/Delphi Commons/package/scripts/macos/delphi-commons`, and `./Applications/Delphi Commons/package/README.txt`.
+- `pkgutil --expand-full` confirmed the installed app launcher executes `"$INSTALL_ROOT/package/scripts/macos/delphi-commons"`.
+- The installed package `README.txt` says to install the release PKG, open `/Applications/Delphi Commons/Delphi Commons.app`, manually open `http://127.0.0.1:4173` if needed, and use the admin stop command only for supervised internal runs.
+- `pkgutil --check-signature` reported `Status: no signature`, as expected for the unsigned internal package candidate.
 
 ## Superseded Release/Tag Cleanup Status
 
-Status: **HUMAN_REQUIRED** until the corrected single-bundle successor candidate has succeeded and its downloaded asset has been verified. Delete superseded macOS releases only after that verification is recorded.
+Status: **DONE** after corrected release `internal-macos-package-candidate-2026-05-18-r4` succeeded and the downloaded asset was verified.
+
+Deleted superseded releases/tags:
+
+| Release/tag | Reason superseded | Corrected successor |
+| --- | --- | --- |
+| `internal-macos-package-candidate-2026-05-18` | Published split raw PKG plus portable ZIP, not one macOS installer package. | `internal-macos-package-candidate-2026-05-18-r4` |
+| `internal-macos-package-candidate-2026-05-18-r2` | Published split raw PKG plus portable ZIP, not one macOS installer package. | `internal-macos-package-candidate-2026-05-18-r4` |
+| `internal-macos-package-candidate-2026-05-18-r3` | Published one installer bundle, but the installed package README still described portable ZIP extraction. | `internal-macos-package-candidate-2026-05-18-r4` |
+
+Remote tag check after cleanup showed only:
+
+```text
+60479a10585654f66b50cf2b7a9b57e066af17aa refs/tags/internal-macos-package-candidate-2026-05-18-r4
+```
 
 ## Remaining Open Gates
 
