@@ -56,6 +56,33 @@ exec "$PACKAGE_ROOT/scripts/macos/portable-operator-candidate.sh" "$@"
   fs.chmodSync(destination, 0o755);
 }
 
+function buildInstallerReadme() {
+  return `macOS Apple Silicon installer internal package
+
+Status: INTERNAL PACKAGE CANDIDATE / NOT READY FOR HUMAN TESTING
+
+Boundary:
+- Use synthetic or low-risk test data only.
+- This package is not production-ready, not pilot-ready, not public-release-ready, and not ready for real human-subjects data.
+- Signing, notarization, Gatekeeper/quarantine behavior, clean-profile Mac execution, second-machine execution, and phone/operator walkthrough evidence are NOT RUN unless separate evidence is attached.
+
+Normal launch path:
+1. Install the release PKG.
+2. Open /Applications/Delphi Commons/Delphi Commons.app.
+3. The launcher starts local services and attempts to open http://127.0.0.1:4173 in the default browser.
+4. If the browser does not show Delphi Commons, open http://127.0.0.1:4173 manually while the supervised run is active.
+5. If Delphi Commons is already running, opening /Applications/Delphi Commons/Delphi Commons.app again reopens the operator browser against the existing runtime.
+
+Ending the run:
+- macOS app-window-close lifecycle is IMPLEMENTATION_REQUIRED / HUMAN_REQUIRED: closing the visible browser/app window has NOT been proven to stop the local runtime.
+- For supervised internal runs, stop the runtime with: /Applications/Delphi\\ Commons/package/scripts/macos/delphi-commons stop
+
+Admin/debug commands:
+- status, stop, restart, smoke, backup, restore, reset, and uninstall are lifecycle/admin commands, not separate normal-user launch shortcuts.
+- Do not present Stop or Status as ordinary operator shortcuts in package instructions.
+`;
+}
+
 function writeAppLauncherBundle(destination) {
   const contents = path.join(destination, 'Contents');
   const macos = path.join(contents, 'MacOS');
@@ -124,6 +151,7 @@ function stagePackage() {
   fs.mkdirSync(packageRoot, { recursive: true });
   copyPath(latestPortableRoot, packageRoot);
   writeInstallerWrapper(path.join(packageRoot, 'scripts/macos/delphi-commons'));
+  fs.writeFileSync(path.join(packageRoot, 'README.txt'), buildInstallerReadme(), 'utf8');
 
   const config = buildMacosAdapterConfig('macos-installer-candidate-internal');
   const inventory = generateInventory(packageRoot).filter((item) => item !== 'package-manifest.json');

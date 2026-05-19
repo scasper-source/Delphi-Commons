@@ -57,6 +57,14 @@ test('macOS installer package includes a real app launcher bundle', () => {
   assert.match(installer, /package\/scripts\/macos\/delphi-commons/);
 });
 
+test('macOS installer bundled README describes the installed app path, not portable extraction', () => {
+  const installer = read(installerPackagerPath);
+  assert.match(installer, /Open \/Applications\/Delphi Commons\/Delphi Commons\.app/);
+  assert.match(installer, /opening \/Applications\/Delphi Commons\/Delphi Commons\.app again reopens/);
+  assert.match(installer, /NOT READY FOR HUMAN TESTING/);
+  assert.doesNotMatch(installer, /Extract the ZIP into a clean, user-controlled folder/);
+});
+
 test('macOS release publishes one installer bundle as the operator package', () => {
   const workflow = read(releaseWorkflowPath);
   assert.match(workflow, /installer_bundle="\$dist_dir\/delphi-commons-macos-arm64-installer-internal-\$\{tag\}-\$\{short_sha\}\.zip"/);
