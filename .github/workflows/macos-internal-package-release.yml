@@ -71,6 +71,7 @@ jobs:
           set -euo pipefail
           node scripts/packaging/tests/packaging-core.test.mjs
           node scripts/packaging/tests/package-verification.test.mjs
+          node scripts/packaging/tests/macos-package-lifecycle.test.mjs
 
       - name: Build macOS portable and installer packages
         shell: bash
@@ -91,19 +92,42 @@ jobs:
           dist_dir="build/release-assets/macos"
           mkdir -p "$dist_dir"
 
-          portable_root="$(cat build/macos-portable-bundled-runtime-internal/latest-package-root.txt)"
-          portable_zip="$dist_dir/delphi-commons-macos-arm64-portable-bundled-runtime-internal-${tag}-${short_sha}.zip"
           installer_pkg="$dist_dir/delphi-commons-macos-arm64-installer-internal-${tag}-${short_sha}.pkg"
+          installer_bundle="$dist_dir/delphi-commons-macos-arm64-installer-internal-${tag}-${short_sha}.zip"
+          verification_name="macos-installer-package-verification-${tag}-${short_sha}.json"
+          checksums_name="macos-installer-checksums-${tag}-${short_sha}.json"
 
-          ditto -c -k --sequesterRsrc --keepParent "$portable_root" "$portable_zip"
           cp build/macos-installer/delphi-commons-macos-installer-internal.pkg "$installer_pkg"
-          cp build/macos-installer/package-verification.json "$dist_dir/macos-installer-package-verification-${tag}-${short_sha}.json"
-          cp build/macos-installer/checksums.json "$dist_dir/macos-installer-checksums-${tag}-${short_sha}.json"
+          cp build/macos-installer/package-verification.json "$dist_dir/$verification_name"
+          cp build/macos-installer/checksums.json "$dist_dir/$checksums_name"
+
+          bundle_dir="build/macos-installer-release-bundle"
+          rm -rf "$bundle_dir"
+          mkdir -p "$bundle_dir"
+          cp "$installer_pkg" "$bundle_dir/"
+          cp "$dist_dir/$verification_name" "$bundle_dir/"
+          cp "$dist_dir/$checksums_name" "$bundle_dir/"
+          cat > "$bundle_dir/README_INSTALL_MACOS.txt" <<README
+          Delphi Commons macOS Apple Silicon internal installer candidate
+
+          Status: internal package candidate; NOT READY FOR HUMAN TESTING unless separate clean-profile, second-machine, phone/operator, signing/notarization, and Gatekeeper evidence is recorded.
+
+          Install flow:
+          1. Run ${installer_pkg##*/}.
+          2. Open /Applications/Delphi Commons/Delphi Commons.app.
+          3. If the browser does not show Delphi Commons, open http://127.0.0.1:4173 manually while the supervised run is active.
+          4. Closing the visible browser/app window is not proven to stop the macOS runtime. For supervised internal runs, stop with:
+             /Applications/Delphi\\ Commons/package/scripts/macos/delphi-commons stop
+
+          Boundary:
+          Internal synthetic/low-risk testing only. This unsigned package does not establish production, pilot, real human-subjects, broad macOS support, App Store, signing, notarization, Gatekeeper, security certification, accessibility certification, or real-SMS readiness.
+          README
+          ditto -c -k --sequesterRsrc --keepParent "$bundle_dir" "$installer_bundle"
+          rm "$installer_pkg" "$dist_dir/$verification_name" "$dist_dir/$checksums_name"
           (cd "$dist_dir" && shasum -a 256 * > SHA256SUMS.txt)
 
           {
-            echo "portable_zip=$portable_zip"
-            echo "installer_pkg=$installer_pkg"
+            echo "installer_bundle=$installer_bundle"
             echo "dist_dir=$dist_dir"
           } >> "$GITHUB_OUTPUT"
 
@@ -121,18 +145,20 @@ jobs:
           Short commit: \`$short_sha\`
 
           Assets:
-          - Apple Silicon portable bundled-runtime ZIP.
-          - Apple Silicon unsigned internal installer PKG.
-          - SHA256 checksums and package verification metadata.
+          - Apple Silicon unsigned internal installer ZIP bundle.
+          - The bundle contains the PKG installer, package verification metadata, installer checksums, and README_INSTALL_MACOS.txt.
+          - SHA256 checksums for the published bundle.
 
           Operator model:
-          - Use one normal launch path.
+          - Download the ZIP bundle, unzip it, and run the included PKG.
+          - Open /Applications/Delphi Commons/Delphi Commons.app.
           - If the browser does not show Delphi Commons, open http://127.0.0.1:4173 manually while the supervised run is active.
           - macOS app-window-close lifecycle is IMPLEMENTATION_REQUIRED / HUMAN_REQUIRED; closing the visible browser/app window is not evidence that the local runtime stopped.
           - Stop/Status are admin/debug lifecycle commands, not ordinary user shortcuts.
 
           Boundary:
           - Internal synthetic/low-risk testing only.
+          - NOT READY FOR HUMAN TESTING unless separate clean-profile, second-machine, phone/operator, signing/notarization, and Gatekeeper evidence is recorded.
           - No production, pilot, real human-subjects, broad macOS support, App Store, signing, notarization, Gatekeeper, security certification, accessibility certification, or real-SMS readiness claim.
           - Intel Mac/x64 packaging remains deferred unless separately implemented and evidenced.
           EOF

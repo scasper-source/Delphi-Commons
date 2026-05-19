@@ -12,15 +12,14 @@ This guide is the simple operator-facing path for internal package candidates. U
 | --- | --- | --- | --- |
 | Windows x64 | Installer ZIP bundle | Download the ZIP, unzip it, run the included EXE, launch Delphi Commons from the Desktop or Start Menu, and close the Delphi Commons window when finished. | Available as internal GitHub release asset |
 | Windows x64 fallback | Portable bundled-runtime ZIP | Download the ZIP, unzip it, run `scripts/windows/portable-bundled-runtime.ps1 start`. | Available as internal GitHub release asset |
-| macOS Apple Silicon | Installer PKG | Download the PKG, install it, launch Delphi Commons with the single installed launch command documented in the macOS runbook. Browser fallback is `http://127.0.0.1:4173`. Closing the browser window is **not proven** to stop macOS runtime. | Available as internal GitHub release asset |
-| macOS Apple Silicon fallback | Portable bundled-runtime ZIP | Download the ZIP, unzip it, run `./scripts/macos/portable-bundled-runtime.sh`. Browser fallback is `http://127.0.0.1:4173`. Closing the browser window is **not proven** to stop macOS runtime. | Available as internal GitHub release asset |
+| macOS Apple Silicon | Installer ZIP bundle | Download the ZIP bundle, unzip it, run the included PKG, then open `/Applications/Delphi Commons/Delphi Commons.app`. Browser fallback is `http://127.0.0.1:4173`. Closing the browser window is **not proven** to stop macOS runtime. | Corrected single-bundle release required before tester use |
 
 ## Current Release Pages
 
 | Platform | Release page |
 | --- | --- |
 | Windows x64 installer | [`internal-windows-installer-candidate-2026-05-18-r7`](https://github.com/scasper-source/Delphi-Commons/releases/tag/internal-windows-installer-candidate-2026-05-18-r7) |
-| macOS Apple Silicon package | [`internal-macos-package-candidate-2026-05-18`](https://github.com/scasper-source/Delphi-Commons/releases/tag/internal-macos-package-candidate-2026-05-18) |
+| macOS Apple Silicon package | Corrected single-bundle successor to `internal-macos-package-candidate-2026-05-18-r2`; do not use the split portable/PKG releases for this test |
 
 The GitHub repository is private, so operators need repository access before these links can be used.
 
@@ -51,27 +50,28 @@ powershell -ExecutionPolicy Bypass -File .\scripts\windows\portable-bundled-runt
 powershell -ExecutionPolicy Bypass -File .\scripts\windows\portable-bundled-runtime.ps1 stop
 ```
 
-## macOS Installer PKG Flow
+## macOS Installer Bundle Flow
 
-1. Download the macOS Apple Silicon installer PKG from the current internal GitHub release.
-2. Install the PKG.
-3. Launch Delphi Commons using the single installed launch command documented in [MACOS_INSTALLER_RUNBOOK.md](./MACOS_INSTALLER_RUNBOOK.md).
-4. If the browser does not show Delphi Commons, open `http://127.0.0.1:4173` while the supervised run is active.
-5. macOS lifecycle gap: closing the visible browser/app window is **IMPLEMENTATION_REQUIRED / HUMAN_REQUIRED** and is **not proven** to stop the local runtime. For supervised internal runs only, end the runtime with the admin stop command documented in the macOS runbook. Do not present Stop or Status as normal user shortcuts.
-
-## macOS Portable ZIP Flow
-
-1. Download the macOS Apple Silicon portable bundled-runtime ZIP.
+1. Download the macOS Apple Silicon installer ZIP bundle from the corrected internal GitHub release.
 2. Unzip it to a local folder path you control.
-3. Open Terminal in the unzipped package root.
-4. Run the single normal launch command:
+3. Run the included PKG.
+4. Open `/Applications/Delphi Commons/Delphi Commons.app`.
+5. If the browser does not show Delphi Commons, open `http://127.0.0.1:4173` while the supervised run is active.
+6. macOS lifecycle gap: closing the visible browser/app window is **IMPLEMENTATION_REQUIRED / HUMAN_REQUIRED** and is **not proven** to stop the local runtime. For supervised internal runs only, end the runtime with the admin stop command documented in the macOS runbook. Do not present Stop or Status as normal user shortcuts.
+
+## macOS Developer/Admin Portable Flow
+
+The macOS portable bundled-runtime wrapper remains developer/admin package machinery. Do not present it as the normal operator release package.
+
+For local engineering work only, open Terminal in a staged package root and run:
 
 ```bash
 ./scripts/macos/portable-bundled-runtime.sh
 ```
 
-5. If the browser does not show Delphi Commons, open `http://127.0.0.1:4173` while the supervised run is active.
-6. macOS lifecycle gap: closing the visible browser/app window is **IMPLEMENTATION_REQUIRED / HUMAN_REQUIRED** and is **not proven** to stop the local runtime. For supervised internal runs only, end the runtime with this admin command:
+If the browser does not show Delphi Commons, open `http://127.0.0.1:4173` while the supervised run is active.
+
+For supervised internal runs only, end the runtime with this admin command:
 
 ```bash
 ./scripts/macos/portable-bundled-runtime.sh stop

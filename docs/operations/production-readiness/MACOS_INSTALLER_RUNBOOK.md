@@ -4,13 +4,16 @@ Internal testing only; synthetic/low-risk data only.
 
 ## Artifact
 - Build output: `build/macos-installer/`
-- Verify checksum: `shasum -a 256 delphi-commons-macos-installer-internal.pkg`
+- GitHub release output: one macOS Apple Silicon installer ZIP bundle.
+- The release ZIP bundle contains the unsigned internal PKG, package verification metadata, installer checksums, and `README_INSTALL_MACOS.txt`.
+- Verify checksum from the release page `SHA256SUMS.txt` before installing.
 
 ## Install
-- `sudo installer -pkg delphi-commons-macos-installer-internal.pkg -target /`
+- Unzip the macOS installer bundle.
+- Run the included `delphi-commons-macos-arm64-installer-internal-<tag>-<short_sha>.pkg`.
 
 ## First launch / lifecycle
-- Normal launch path: `/Applications/Delphi\ Commons/package/scripts/macos/delphi-commons`
+- Normal launch path: open `/Applications/Delphi Commons/Delphi Commons.app`.
 - The launcher starts local services and attempts to open `http://127.0.0.1:4173`.
 - Browser fallback: if the browser does not show Delphi Commons, open `http://127.0.0.1:4173` manually while the supervised run is active.
 - Lifecycle gap: closing the visible browser/app window is **IMPLEMENTATION_REQUIRED / HUMAN_REQUIRED** and is **not proven** to stop the macOS runtime.

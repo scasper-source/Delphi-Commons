@@ -286,6 +286,14 @@ open_operator_browser() {
   return 127
 }
 
+print_operator_guidance() {
+  echo "Operator UI: $UI_URL"
+  echo "Operator localhost URL (default, safe): $UI_URL"
+  echo "If the browser does not show Delphi Commons, open $UI_URL manually while this run is active."
+  echo "macOS lifecycle limitation: closing the visible browser/app window has NOT been proven to stop the runtime; use the admin stop command when ending a supervised run."
+  echo "Health check: $HEALTH_URL"
+}
+
 write_lock() {
   local backend_pid="$1" ui_pid="$2"
   cat > "$LOCK_FILE" <<LOCK
@@ -306,7 +314,19 @@ start_flow() {
   existing_backend="$(backend_running_pid || true)"
   existing_ui="$(ui_running_pid || true)"
   if [[ -n "$existing_backend" || -n "$existing_ui" ]]; then
-    echo "Prototype already running backend=${existing_backend:-unknown} ui=${existing_ui:-unknown}" >&2
+    if [[ -n "$existing_backend" && -n "$existing_ui" ]] && health_ok && ui_head_ok; then
+      write_lock "$existing_backend" "$existing_ui"
+      if ! open_operator_browser; then
+        echo "Delphi Commons is already running, but macOS could not open the operator browser/app window." >&2
+        echo "Open $UI_URL manually while this run is active." >&2
+        print_operator_guidance
+        exit 1
+      fi
+      write_evidence "Reopened operator browser for existing portable prototype backendPid=$existing_backend uiPid=$existing_ui"
+      print_operator_guidance
+      exit 0
+    fi
+    echo "Prototype already running or degraded backend=${existing_backend:-stopped} ui=${existing_ui:-stopped}" >&2
     exit 1
   fi
 
@@ -382,10 +402,7 @@ start_flow() {
   fi
 
   write_evidence "Started portable prototype backendPid=$verified_backend uiPid=$verified_ui browserOpen=attempted"
-  echo "Operator UI: $UI_URL"
-  echo "Operator localhost URL (default, safe): $UI_URL"
-  echo "If the browser does not show Delphi Commons, open $UI_URL manually while this run is active."
-  echo "macOS lifecycle limitation: closing the visible browser/app window has NOT been proven to stop the runtime; use the admin stop command when ending a supervised run."
+  print_operator_guidance
   if [[ "$LAN_PARTICIPANT_MODE" == "1" ]]; then
     if [[ "$LAN_ACKNOWLEDGED" != "1" ]]; then
       stop_if_running
@@ -405,7 +422,6 @@ start_flow() {
     echo "WARNING: Tunnel mode flag is ON, but tunnel support is intentionally not provisioned in package runtime."
     echo "WARNING: Keep tunnel OFF by default; do not expose participant traffic to public internet."
   fi
-  echo "Health check: $HEALTH_URL"
 }
 
 status_flow() {
