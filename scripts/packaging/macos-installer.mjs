@@ -32,6 +32,7 @@ const copyPath = (src, dst) => {
 };
 const installerRuntimeRoot = '~/Library/Application Support/DelphiCommons/macos-installer-candidate';
 const installLocation = '/Applications/Delphi Commons/package';
+const appBundleName = 'Delphi Commons.app';
 
 function writeInstallerWrapper(destination) {
   fs.mkdirSync(path.dirname(destination), { recursive: true });
@@ -53,6 +54,50 @@ exec "$PACKAGE_ROOT/scripts/macos/portable-operator-candidate.sh" "$@"
     'utf8'
   );
   fs.chmodSync(destination, 0o755);
+}
+
+function writeAppLauncherBundle(destination) {
+  const contents = path.join(destination, 'Contents');
+  const macos = path.join(contents, 'MacOS');
+  fs.mkdirSync(macos, { recursive: true });
+  fs.writeFileSync(
+    path.join(contents, 'Info.plist'),
+    `<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>CFBundleDisplayName</key>
+  <string>Delphi Commons</string>
+  <key>CFBundleExecutable</key>
+  <string>Delphi Commons</string>
+  <key>CFBundleIdentifier</key>
+  <string>org.delphi.commons.internal</string>
+  <key>CFBundleName</key>
+  <string>Delphi Commons</string>
+  <key>CFBundlePackageType</key>
+  <string>APPL</string>
+  <key>CFBundleShortVersionString</key>
+  <string>0.0.0-internal</string>
+  <key>CFBundleVersion</key>
+  <string>0.0.0</string>
+  <key>LSMinimumSystemVersion</key>
+  <string>13.0</string>
+</dict>
+</plist>
+`,
+    'utf8'
+  );
+  fs.writeFileSync(
+    path.join(macos, 'Delphi Commons'),
+    `#!/usr/bin/env bash
+set -euo pipefail
+APP_DIR="$(cd "$(dirname "\${BASH_SOURCE[0]}")/../.." && pwd)"
+INSTALL_ROOT="$(cd "$APP_DIR/.." && pwd)"
+exec "$INSTALL_ROOT/package/scripts/macos/delphi-commons"
+`,
+    'utf8'
+  );
+  fs.chmodSync(path.join(macos, 'Delphi Commons'), 0o755);
 }
 
 function buildRuntimeMetadataFromAdr() {
@@ -133,6 +178,7 @@ function buildInstallerArtifact() {
   fs.rmSync(payloadRoot, { recursive: true, force: true });
   fs.mkdirSync(path.join(payloadRoot, 'Applications', 'Delphi Commons'), { recursive: true });
   copyPath(packageRoot, path.join(payloadRoot, 'Applications', 'Delphi Commons', 'package'));
+  writeAppLauncherBundle(path.join(payloadRoot, 'Applications', 'Delphi Commons', appBundleName));
 
   const isMac = process.platform === 'darwin';
   const hasPkgbuild = isMac && fs.existsSync('/usr/bin/pkgbuild');

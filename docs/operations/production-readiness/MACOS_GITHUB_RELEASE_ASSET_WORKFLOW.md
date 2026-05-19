@@ -1,6 +1,6 @@
 # macOS GitHub Release Asset Workflow
 
-Status: **WORKFLOW PREPARED / 2026-05-18 TAG SUCCEEDED / CORRECTED SUCCESSOR RELEASE HUMAN_REQUIRED**.
+Status: **WORKFLOW PREPARED / SINGLE INSTALLER BUNDLE REQUIRED / CORRECTED SUCCESSOR RELEASE HUMAN_REQUIRED**.
 
 Date basis: 2026-05-18.
 
@@ -13,8 +13,8 @@ This records the GitHub Actions workflow used to make macOS internal package ass
 | Workflow file | `.github/workflows/macos-internal-package-release.yml` |
 | Trigger | Push a tag matching `internal-macos-package-candidate-*`, or run the workflow manually |
 | Runner | GitHub-hosted `macos-15` arm64 runner |
-| Package outputs | Apple Silicon portable bundled-runtime ZIP and unsigned internal installer PKG |
-| Release behavior | Creates or updates a GitHub prerelease and uploads package assets, checksums, and verification metadata |
+| Package outputs | Apple Silicon unsigned internal installer ZIP bundle |
+| Release behavior | Creates or updates a GitHub prerelease and uploads the installer ZIP bundle, release notes, and SHA256 checksums |
 
 ## Boundary
 
@@ -24,6 +24,6 @@ Intel Mac/x64 packaging remains deferred until separately implemented and eviden
 
 ## Required Follow-Up After Workflow Run
 
-The 2026-05-18 workflow result and release assets are recorded in [MACOS_GITHUB_RELEASE_ASSET_EVIDENCE_2026-05-18.md](./MACOS_GITHUB_RELEASE_ASSET_EVIDENCE_2026-05-18.md).
+The original 2026-05-18 workflow result and split release assets are recorded in [MACOS_GITHUB_RELEASE_ASSET_EVIDENCE_2026-05-18.md](./MACOS_GITHUB_RELEASE_ASSET_EVIDENCE_2026-05-18.md). Those split assets are superseded for installer/operator testing.
 
-Any corrected release after the macOS operator-model cleanup requires a separate workflow run, downloaded-asset inspection, checksum verification, and human/operator run before old tags/assets are deleted or readiness claims are upgraded.
+Any corrected release after the single-bundle macOS cleanup requires a separate workflow run, downloaded-asset inspection, checksum verification, and human/operator run before old tags/assets are deleted or readiness claims are upgraded.

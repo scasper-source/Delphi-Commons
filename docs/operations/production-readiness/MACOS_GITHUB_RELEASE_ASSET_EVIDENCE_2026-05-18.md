@@ -1,6 +1,6 @@
 # macOS GitHub Release Asset Evidence - 2026-05-18
 
-Status: **MACOS INTERNAL RELEASE ASSETS AVAILABLE / NOT READY FOR HUMAN TESTING / DOWNLOAD-INSTRUCTION VERIFICATION GAP OPEN**.
+Status: **SUPERSEDED SPLIT MACOS RELEASE ASSETS / NOT READY FOR HUMAN TESTING / SINGLE-BUNDLE SUCCESSOR REQUIRED**.
 
 Date/time basis: 2026-05-18 GitHub Actions release workflow run.
 
@@ -18,7 +18,7 @@ c847a023d1b188bc1dab635e154df5563353cd21
 
 ## Scope
 
-This document records that GitHub had macOS Apple Silicon internal package candidate assets available for download for tag `internal-macos-package-candidate-2026-05-18`. It is not evidence that the downloaded asset README matched the later operator-model cleanup unless a separate downloaded-asset inspection is attached.
+This document records that GitHub had macOS Apple Silicon internal package candidate assets available for download for tag `internal-macos-package-candidate-2026-05-18`. This tag published a split operator surface: a raw unsigned installer PKG and a separate portable bundled-runtime ZIP. It is superseded for macOS installer/operator testing by the single-bundle release workflow, which must publish one installer ZIP bundle containing the PKG, verification metadata, checksums, and install instructions.
 
 These assets are internal synthetic/low-risk package candidates only. They do not close Phase 2 by themselves and do not create production, pilot, real human-subjects, broad macOS support, App Store, signing, notarization, Gatekeeper, security-certification, accessibility-certification, legal, ethics/IRB, real-SMS, PWA, native-mobile, external-AI, or final human-testing readiness evidence.
 
@@ -61,11 +61,11 @@ Package verification metadata:
 
 Status: **NOT RUN** for this recorded release asset.
 
-The repository docs and packaging scripts were reviewed after this release, but this evidence file does not contain an extraction of `delphi-commons-macos-arm64-portable-bundled-runtime-internal-internal-macos-package-candidate-2026-05-18-c847a02.zip` proving that its bundled `README.txt` contains the intended operator instructions. Treat this tag as an internal package candidate with a downloaded-asset README verification gap until a corrected successor tag is built and the actual downloaded asset is inspected.
+The repository docs and packaging scripts were reviewed after this release, but this evidence file does not contain an extraction of the split release assets proving that the operator would see one coherent installer package and current instructions. Treat this tag as superseded for macOS installer/operator testing until a corrected single-bundle successor tag is built and the actual downloaded asset is inspected.
 
 ## Superseded Release/Tag Cleanup Status
 
-Status: **HUMAN_REQUIRED**. The container has no configured git remote, `gh` is not installed, and unauthenticated GitHub API access was blocked, so no release/tag/asset deletion was performed. Delete superseded macOS releases only after a corrected successor candidate has succeeded and its downloaded asset has been verified.
+Status: **HUMAN_REQUIRED** until the corrected single-bundle successor candidate has succeeded and its downloaded asset has been verified. Delete superseded macOS releases only after that verification is recorded.
 
 ## Remaining Open Gates
 
