@@ -48,7 +48,7 @@ Delphi Commons has strong controlled synthetic/mock-trial and internal engineeri
 | --- | --- |
 | Phase 0 baseline preservation | Baseline mock-trial/regression evidence is preserved. |
 | Phase 1 product surface lock | Complete as scope lock only. It does not authorize human testing. |
-| Phase 2 downloadable laptop operator candidate | In progress. Windows internal portable ZIP, Windows internal installer ZIP/EXE, and macOS Apple Silicon internal release assets are available on GitHub. Clean-profile/second-machine, final installed lifecycle, signing/notarization/reputation, and operator walkthrough evidence remain open. |
+| Phase 2 downloadable laptop operator candidate | In progress. Windows internal portable ZIP, Windows internal installer ZIP/EXE, and macOS Apple Silicon single installer ZIP bundle are available on GitHub. Clean-profile/second-machine, final installed lifecycle, signing/notarization/reputation, and operator walkthrough evidence remain open. |
 | Phase 3 phone/SMS candidate | Local mock/sandbox implementation and evidence-prep are substantially complete. Real iOS/Android device evidence, real provider/sandbox evidence if in scope, accessibility review, privacy/copy/Data Custodian review, and human-observed phone walkthrough remain open. |
 | Phase 4 human testing binder | Binder package is assembled for final human-testing preparation; candidate remains not ready until laptop/phone run evidence and required signoffs are attached. |
 | Phase 5 final human testing | Not run. |

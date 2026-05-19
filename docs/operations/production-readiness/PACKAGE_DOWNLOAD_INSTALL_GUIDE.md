@@ -12,14 +12,14 @@ This guide is the simple operator-facing path for internal package candidates. U
 | --- | --- | --- | --- |
 | Windows x64 | Installer ZIP bundle | Download the ZIP, unzip it, run the included EXE, launch Delphi Commons from the Desktop or Start Menu, and close the Delphi Commons window when finished. | Available as internal GitHub release asset |
 | Windows x64 fallback | Portable bundled-runtime ZIP | Download the ZIP, unzip it, run `scripts/windows/portable-bundled-runtime.ps1 start`. | Available as internal GitHub release asset |
-| macOS Apple Silicon | Installer ZIP bundle | Download the ZIP bundle, unzip it, run the included PKG, then open `/Applications/Delphi Commons/Delphi Commons.app`. Browser fallback is `http://127.0.0.1:4173`. Closing the browser window is **not proven** to stop macOS runtime. | Corrected single-bundle release required before tester use |
+| macOS Apple Silicon | Installer ZIP bundle | Download the ZIP bundle, unzip it, run the included PKG, then open `/Applications/Delphi Commons/Delphi Commons.app`. Browser fallback is `http://127.0.0.1:4173`. Closing the browser window is **not proven** to stop macOS runtime. | Available as corrected internal GitHub release asset |
 
 ## Current Release Pages
 
 | Platform | Release page |
 | --- | --- |
 | Windows x64 installer | [`internal-windows-installer-candidate-2026-05-18-r7`](https://github.com/scasper-source/Delphi-Commons/releases/tag/internal-windows-installer-candidate-2026-05-18-r7) |
-| macOS Apple Silicon package | Corrected single-bundle successor to `internal-macos-package-candidate-2026-05-18-r2`; do not use the split portable/PKG releases for this test |
+| macOS Apple Silicon package | [`internal-macos-package-candidate-2026-05-18-r4`](https://github.com/scasper-source/Delphi-Commons/releases/tag/internal-macos-package-candidate-2026-05-18-r4) |
 
 The GitHub repository is private, so operators need repository access before these links can be used.
 
@@ -52,7 +52,7 @@ powershell -ExecutionPolicy Bypass -File .\scripts\windows\portable-bundled-runt
 
 ## macOS Installer Bundle Flow
 
-1. Download the macOS Apple Silicon installer ZIP bundle from the corrected internal GitHub release.
+1. Download `delphi-commons-macos-arm64-installer-internal-internal-macos-package-candidate-2026-05-18-r4-60479a1.zip` from the corrected internal GitHub release.
 2. Unzip it to a local folder path you control.
 3. Run the included PKG.
 4. Open `/Applications/Delphi Commons/Delphi Commons.app`.

@@ -1,6 +1,6 @@
 # macOS GitHub Release Asset Workflow
 
-Status: **WORKFLOW PREPARED / SINGLE INSTALLER BUNDLE REQUIRED / CORRECTED SUCCESSOR RELEASE HUMAN_REQUIRED**.
+Status: **WORKFLOW SUCCEEDED / SINGLE INSTALLER BUNDLE AVAILABLE / NOT READY FOR HUMAN TESTING**.
 
 Date basis: 2026-05-18.
 
@@ -26,4 +26,4 @@ Intel Mac/x64 packaging remains deferred until separately implemented and eviden
 
 The original 2026-05-18 workflow result and split release assets are recorded in [MACOS_GITHUB_RELEASE_ASSET_EVIDENCE_2026-05-18.md](./MACOS_GITHUB_RELEASE_ASSET_EVIDENCE_2026-05-18.md). Those split assets are superseded for installer/operator testing.
 
-Any corrected release after the single-bundle macOS cleanup requires a separate workflow run, downloaded-asset inspection, checksum verification, and human/operator run before old tags/assets are deleted or readiness claims are upgraded.
+The corrected single-bundle release is `internal-macos-package-candidate-2026-05-18-r4`. Downloaded-asset inspection and checksum verification are recorded in [MACOS_GITHUB_RELEASE_ASSET_EVIDENCE_2026-05-18.md](./MACOS_GITHUB_RELEASE_ASSET_EVIDENCE_2026-05-18.md). Human/operator install/open/reopen, clean-profile, second-machine, signing/notarization, and Gatekeeper evidence are still required before readiness claims are upgraded.
