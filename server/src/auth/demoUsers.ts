@@ -52,8 +52,14 @@ const demoUsers: Array<{
 
 let seeded = false;
 
+function allowInternalSyntheticBootstrap(): boolean {
+  return process.env.EDELPHI_ENABLE_INTERNAL_SYNTHETIC_AUTH_BOOTSTRAP === "1"
+    && process.env.EDELPHI_INTERNAL_SYNTHETIC_AUTH_ACK === "INTERNAL_SYNTHETIC_ONLY";
+}
+
 export function ensureDemoUsers(): void {
-  if (seeded || process.env.NODE_ENV === "production" || process.env.EDELPHI_SEED_DEMO_USERS === "false") {
+  const productionBlocked = process.env.NODE_ENV === "production" && !allowInternalSyntheticBootstrap();
+  if (seeded || productionBlocked || process.env.EDELPHI_SEED_DEMO_USERS === "false") {
     return;
   }
 
@@ -63,4 +69,3 @@ export function ensureDemoUsers(): void {
 
   seeded = true;
 }
-
