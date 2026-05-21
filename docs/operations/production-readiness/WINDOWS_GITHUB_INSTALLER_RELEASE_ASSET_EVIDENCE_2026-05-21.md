@@ -106,3 +106,30 @@ A clean Windows retest is still required after publishing `r8`, including:
 - attached-browser close => runtime stop confirmation,
 - restart, uninstall, and smoke checks,
 - capture of human-observed evidence before any readiness advancement.
+
+
+## Clean Windows Retest Checklist (Required for `r8` Closure)
+
+Use this checklist on a clean Windows profile or second Windows machine. Attach screenshots/logs to the Phase 4 binder evidence index.
+
+| # | Requirement to prove | Evidence required | Status | Evidence link/path | Notes |
+| --- | --- | --- | --- | --- | --- |
+| 1 | Windows version/build captured | `winver` screenshot and `systeminfo` excerpt with OS name/version/build | NOT RUN | HUMAN_REQUIRED | Record exact edition and build number |
+| 2 | Correct fixed release ZIP downloaded | Screenshot/log showing exact `r8` ZIP filename downloaded from release page | NOT RUN | HUMAN_REQUIRED | Must match superseding `r8` asset name |
+| 3 | ZIP extracted | Screenshot of extracted folder contents including installer EXE and README | NOT RUN | HUMAN_REQUIRED | Use default extractor or equivalent |
+| 4 | SmartScreen behavior captured if shown | Screenshot of SmartScreen prompt (or explicit note that no prompt appeared) | NOT RUN | HUMAN_REQUIRED | Unsigned-candidate behavior must be documented |
+| 5 | Installer starts and completes | Installer start + completion screenshots | NOT RUN | HUMAN_REQUIRED | Include successful completion state |
+| 6 | Delphi Commons opens after install | First successful launch screenshot | NOT RUN | HUMAN_REQUIRED | Must launch installed app, not dev server |
+| 7 | Desktop shortcut exists | Screenshot showing desktop shortcut present | NOT RUN | HUMAN_REQUIRED | Capture icon/title clearly |
+| 8 | Study Builder can create and save a synthetic study | Screenshots showing create + save flow completion | NOT RUN | HUMAN_REQUIRED | Synthetic-only study name |
+| 9 | Dashboard lists the saved study | Dashboard screenshot with saved study visible | NOT RUN | HUMAN_REQUIRED | Must be same saved study from step 8 |
+| 10 | Saved study can be reopened | Screenshot/video proving reopen of saved study from dashboard | NOT RUN | HUMAN_REQUIRED | **Required for auth/session blocker closure** |
+| 11 | Closing Delphi Commons stops the runtime | Runtime/process evidence before/after close (Task Manager or scripted check) | NOT RUN | HUMAN_REQUIRED | Must show no lingering runtime after close |
+| 12 | Desktop relaunch works | Screenshot of successful relaunch via desktop shortcut | NOT RUN | HUMAN_REQUIRED | After step 11 stop confirmation |
+| 13 | Start Menu relaunch works | Screenshot of successful relaunch via Start Menu entry | NOT RUN | HUMAN_REQUIRED | Confirm equivalent behavior |
+| 14 | Uninstall completes cleanly | Uninstall completion screenshot + post-uninstall check | NOT RUN | HUMAN_REQUIRED | Include removal confirmation |
+| 15 | No real data/credentials/secrets used | Explicit operator attestation in evidence packet | NOT RUN | HUMAN_REQUIRED | No real participants, no real credentials, no sensitive exports |
+
+### Blocker closure condition
+
+The Windows auth/session blocker may be marked closed only when checklist steps **8, 9, and 10** include attached evidence proving save/list/reopen continuity for the same synthetic study in the installed package session.
