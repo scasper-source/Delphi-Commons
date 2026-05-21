@@ -21,6 +21,8 @@ export type ServerConfig = {
   realSmsEnabled: boolean;
   realSmsAcknowledged: boolean;
   publicParticipantOrigin: string | null;
+  lanParticipantOrigin: string | null;
+  lanParticipantModeEnabled: boolean;
   twilioAccountSid: string | null;
   twilioAuthToken: string | null;
   twilioMessagingServiceSid: string | null;
@@ -67,6 +69,17 @@ function nonEmpty(value: string | undefined): string | null {
   return trimmed ? trimmed : null;
 }
 
+function parseLanParticipantMode(): { enabled: boolean; origin: string | null } {
+  const enabled = process.env.EDELPHI_ENABLE_LAN_PARTICIPANT_URL === "1"
+    && process.env.EDELPHI_ACK_LAN_SYNTHETIC_ONLY === "1";
+  if (!enabled) return { enabled: false, origin: null };
+  const origin = nonEmpty(process.env.EDELPHI_LAN_PARTICIPANT_ORIGIN);
+  if (!origin) throw new Error("lan_participant_origin_required");
+  const parsed = new URL(origin);
+  if (!/^https?:$/.test(parsed.protocol)) throw new Error("lan_participant_origin_invalid_protocol");
+  return { enabled: true, origin: parsed.toString().replace(/\/$/, "") };
+}
+
 export function getServerConfig(): ServerConfig {
   const environment = process.env.NODE_ENV === "production"
     ? "production"
@@ -74,10 +87,14 @@ export function getServerConfig(): ServerConfig {
       ? "test"
       : "development";
 
+  const lanMode = parseLanParticipantMode();
+  const host = lanMode.enabled ? "0.0.0.0" : process.env.HOST ?? "127.0.0.1";
+  const allowedOrigins = parseAllowedOrigins(process.env.EDELPHI_ALLOWED_ORIGINS);
+  if (lanMode.origin) allowedOrigins.push(lanMode.origin);
   return {
     port: parsePort(process.env.PORT),
-    host: process.env.HOST ?? "127.0.0.1",
-    allowedOrigins: parseAllowedOrigins(process.env.EDELPHI_ALLOWED_ORIGINS),
+    host,
+    allowedOrigins: Array.from(new Set(allowedOrigins)),
     environment,
     bodyLimitBytes: parsePositiveInt(process.env.EDELPHI_BODY_LIMIT_BYTES, 256 * 1024, "body_limit_bytes"),
     rateLimitWindowMs: parsePositiveInt(process.env.EDELPHI_RATE_LIMIT_WINDOW_MS, 60 * 1000, "rate_limit_window_ms"),
@@ -95,6 +112,8 @@ export function getServerConfig(): ServerConfig {
     realSmsEnabled: process.env.EDELPHI_ENABLE_REAL_SMS === "true",
     realSmsAcknowledged: process.env.EDELPHI_REAL_SMS_ACK === "TWILIO_REAL_SMS_REVIEWED_AND_APPROVED",
     publicParticipantOrigin: nonEmpty(process.env.EDELPHI_PUBLIC_PARTICIPANT_ORIGIN),
+    lanParticipantOrigin: lanMode.origin,
+    lanParticipantModeEnabled: lanMode.enabled,
     twilioAccountSid: nonEmpty(process.env.TWILIO_ACCOUNT_SID),
     twilioAuthToken: nonEmpty(process.env.TWILIO_AUTH_TOKEN),
     twilioMessagingServiceSid: nonEmpty(process.env.TWILIO_MESSAGING_SERVICE_SID),

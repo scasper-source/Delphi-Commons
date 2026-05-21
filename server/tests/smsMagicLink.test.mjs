@@ -306,6 +306,53 @@ test("round_open_sms_magic_link_mobile_entry sends neutral opt-in SMS and uses o
 
 });
 
+test("synthetic phone handoff is LAN-gated and audit-safe", async (t) => {
+  delete process.env.EDELPHI_ENABLE_LAN_PARTICIPANT_URL;
+  delete process.env.EDELPHI_ACK_LAN_SYNTHETIC_ONLY;
+  delete process.env.EDELPHI_LAN_PARTICIPANT_ORIGIN;
+  let app = await buildApp();
+  t.after(async () => {
+    await app.close();
+  });
+
+  const blocked = await injectJson(app, {
+    method: "POST",
+    url: "/studies/s1/versions/v1/participants/p1/rounds/1/synthetic-phone-handoff",
+    headers: owner,
+    body: {},
+  });
+  assert.equal(blocked.response.statusCode, 403);
+
+  await app.close();
+  process.env.EDELPHI_ENABLE_LAN_PARTICIPANT_URL = "1";
+  process.env.EDELPHI_ACK_LAN_SYNTHETIC_ONLY = "1";
+  process.env.EDELPHI_LAN_PARTICIPANT_ORIGIN = "http://192.168.0.8:5173";
+  app = await buildApp();
+
+  const deniedRole = await injectJson(app, {
+    method: "POST",
+    url: "/studies/s1/versions/v1/participants/p1/rounds/1/synthetic-phone-handoff",
+    headers: analyst,
+    body: {},
+  });
+  assert.equal(deniedRole.response.statusCode, 403);
+
+  const created = await expectStatus(app, {
+    method: "POST",
+    url: "/studies/s1/versions/v1/participants/p1/rounds/1/synthetic-phone-handoff",
+    headers: owner,
+    body: {},
+  }, 201);
+  const handoffUrl = created.body.handoff.handoff_url;
+  assert.match(handoffUrl, /^http:\/\/192\.168\.0\.8:5173\/m\/[A-Za-z0-9_-]+$/);
+  const rawToken = handoffUrl.split("/m/")[1];
+
+  const events = getDatabase().prepare("SELECT event_json FROM audit_events WHERE action = ? ORDER BY ts DESC LIMIT 1").all("synthetic_phone_handoff_created");
+  assert.equal(events.length, 1);
+  assert.doesNotMatch(events[0].event_json, new RegExp(rawToken));
+  assert.match(events[0].event_json, /handoff_url_redacted/);
+});
+
 test("twilio public link configuration failures mark each SMS notification failed", async (t) => {
   const originalSmsProvider = process.env.EDELPHI_SMS_PROVIDER;
   const originalPublicParticipantOrigin = process.env.EDELPHI_PUBLIC_PARTICIPANT_ORIGIN;

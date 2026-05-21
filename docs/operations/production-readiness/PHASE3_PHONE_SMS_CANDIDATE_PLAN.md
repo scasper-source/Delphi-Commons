@@ -136,3 +136,10 @@ This plan does **not** claim:
 - Consolidated mock/sandbox SMS evidence, provider evidence templates, setup-status checks, and explicit NOT RUN / PROVIDER_REQUIRED placeholders in `PHASE3_SMS_EVIDENCE_PACKET.md`.
 - Recorded local validation commands for focused SMS/magic-link coverage, focused Twilio provider coverage, full server tests, and server security audit.
 - Boundary: this follow-up does not add provider account evidence, real SMS sends, device evidence, human copy review, privacy/security signoff, Data Custodian signoff, or human-testing approval.
+
+## Phase 3 synthetic phone rehearsal LAN mode (governed)
+
+- Default installed posture remains localhost-only for UI/API.
+- LAN participant rehearsal mode is opt-in and only activates when both `EDELPHI_ENABLE_LAN_PARTICIPANT_URL=1` and `EDELPHI_ACK_LAN_SYNTHETIC_ONLY=1` are set, with an explicit `EDELPHI_LAN_PARTICIPANT_ORIGIN`.
+- This mode prepares local trusted-network real-device (iPhone/Android) evidence capture, but remains synthetic/mock-only for link handoff and does **not** claim real SMS readiness.
+- This mode does **not** replace required human iPhone/Android evidence, accessibility review, reviewer signoff, or real provider evidence before any production or pilot readiness claim.
