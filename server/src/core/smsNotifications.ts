@@ -160,6 +160,47 @@ export function createMagicToken(): string {
   return crypto.randomBytes(32).toString("base64url");
 }
 
+export async function createSyntheticPhoneHandoffLink(input: {
+  study_id: string;
+  version_id: string;
+  participant_id: string;
+  round_number: number;
+  actor_user_id: string;
+  frontend_origin: string;
+}): Promise<{ handoff_url: string; expires_at: string }> {
+  const config = getServerConfig();
+  if (!config.lanParticipantModeEnabled || !config.lanParticipantOrigin) throw new Error("lan_synthetic_mode_not_enabled");
+  const policy = getStudySmsPolicy(input, input.actor_user_id, config.magicLinkTtlMinutes);
+  const ttlMinutes = Math.min(Math.max(1, policy.magic_link_ttl_minutes), 24 * 60);
+  const expiresAt = new Date(Date.now() + ttlMinutes * 60_000).toISOString();
+  const token = createMagicToken();
+  const tokenHash = hashSecret(token);
+  revokeActiveMagicLinksForParticipantRound(input);
+  createMagicLinkToken({
+    token_hash: tokenHash,
+    participant_id: input.participant_id,
+    study_id: input.study_id,
+    version_id: input.version_id,
+    round_number: input.round_number,
+    expires_at: expiresAt,
+    metadata: { source: "synthetic_phone_handoff", actor_user_id: input.actor_user_id },
+  });
+  await writeAuditEvent({
+    actor: { userId: input.actor_user_id, role: "owner", systemRoles: ["owner"], authSource: "legacy-dev-header" },
+    action: "synthetic_phone_handoff_created",
+    object: { type: "participant", id: input.participant_id },
+    details: {
+      study_id: input.study_id,
+      version_id: input.version_id,
+      round_number: input.round_number,
+      expires_at: expiresAt,
+      lan_synthetic_only: true,
+      handoff_url_redacted: `${input.frontend_origin.replace(/\/$/, "")}/m/[REDACTED]`,
+    },
+  });
+  return { handoff_url: `${input.frontend_origin.replace(/\/$/, "")}/m/${token}`, expires_at: expiresAt };
+}
+
 export async function updateParticipantSmsPreference(input: {
   participant_id: string;
   notification_preference: unknown;

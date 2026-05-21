@@ -12,6 +12,7 @@ import {
   auditSmsPolicyChange,
   buildMagicRoundContext,
   consumeMagicLinkToken,
+  createSyntheticPhoneHandoffLink,
   magicSessionFromCookie,
   setMagicSessionCookie,
   sendRoundOpenSmsNotifications,
@@ -180,6 +181,28 @@ export async function smsRoutes(app: FastifyInstance) {
       } catch (error) {
         return reply.code(400).send({ error: error instanceof Error ? error.message : "contact_preference_update_failed" });
       }
+    },
+  );
+
+  app.post(
+    "/studies/:studyId/versions/:versionId/participants/:participantId/rounds/:roundNumber/synthetic-phone-handoff",
+    { preHandler: allowStaff },
+    async (req, reply) => {
+      const config = getServerConfig();
+      if (!config.lanParticipantModeEnabled) return reply.code(403).send({ error: "lan_synthetic_mode_not_enabled" });
+      const { studyId, versionId, participantId, roundNumber: rawRoundNumber } = req.params as any;
+      const roundNumber = Number(rawRoundNumber);
+      if (!Number.isInteger(roundNumber) || roundNumber < 1) return reply.code(400).send({ error: "round_number_required" });
+      const actor = getActor(req);
+      const handoff = await createSyntheticPhoneHandoffLink({
+        study_id: studyId,
+        version_id: versionId,
+        participant_id: participantId,
+        round_number: roundNumber,
+        actor_user_id: actor.userId,
+        frontend_origin: config.lanParticipantOrigin ?? frontendOrigin(req),
+      });
+      return reply.code(201).send({ handoff });
     },
   );
 

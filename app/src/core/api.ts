@@ -824,8 +824,14 @@ export type BackendRole =
   | "admin"
   | "participant";
 
+function deriveDefaultApiBaseUrl(): string {
+  if (import.meta.env.VITE_API_BASE_URL) return import.meta.env.VITE_API_BASE_URL;
+  if (typeof window === "undefined") return "http://127.0.0.1:3001";
+  return `${window.location.protocol}//${window.location.hostname}:3001`;
+}
+
 export const apiBoundary: ApiBoundary = {
-  baseUrl: import.meta.env.VITE_API_BASE_URL ?? "http://127.0.0.1:3001",
+  baseUrl: deriveDefaultApiBaseUrl(),
   authHeaderRole: "study_owner",
   mode: "backend-wired",
 };

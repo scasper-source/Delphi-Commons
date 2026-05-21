@@ -126,3 +126,23 @@ test("CORS blocks non-allowlisted origins", async () => {
 
   await app.close();
 });
+
+test("LAN participant mode remains disabled by default and requires dual env gates", () => {
+  delete process.env.EDELPHI_ENABLE_LAN_PARTICIPANT_URL;
+  delete process.env.EDELPHI_ACK_LAN_SYNTHETIC_ONLY;
+  delete process.env.EDELPHI_LAN_PARTICIPANT_ORIGIN;
+  process.env.EDELPHI_ALLOWED_ORIGINS = "http://localhost:5173";
+  process.env.NODE_ENV = "test";
+  let config = getServerConfig();
+  assert.equal(config.lanParticipantModeEnabled, false);
+  assert.equal(config.host, "127.0.0.1");
+
+  process.env.EDELPHI_ENABLE_LAN_PARTICIPANT_URL = "1";
+  process.env.EDELPHI_ACK_LAN_SYNTHETIC_ONLY = "1";
+  process.env.EDELPHI_LAN_PARTICIPANT_ORIGIN = "http://192.168.1.50:5173";
+  config = getServerConfig();
+  assert.equal(config.lanParticipantModeEnabled, true);
+  assert.equal(config.host, "0.0.0.0");
+  assert.ok(config.allowedOrigins.includes("http://localhost:5173"));
+  assert.ok(config.allowedOrigins.includes("http://192.168.1.50:5173"));
+});
