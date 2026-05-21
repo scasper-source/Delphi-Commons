@@ -857,6 +857,7 @@ const demoCredentials: Record<UserRole, { email: string; password: string }> = {
 };
 
 const sessionTokens = new Map<UserRole, string>();
+const sessionBootstrapErrors = new Map<UserRole, string>();
 
 async function getSessionToken(role: UserRole): Promise<string | null> {
   const cached = sessionTokens.get(role);
@@ -869,12 +870,18 @@ async function getSessionToken(role: UserRole): Promise<string | null> {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(credentials),
     });
-    if (!response.ok) return null;
+    if (!response.ok) {
+      const payload = await response.json().catch(() => null) as { error?: string } | null;
+      const errorCode = payload?.error ?? `http_${response.status}`;
+      sessionBootstrapErrors.set(role, errorCode);
+      return null;
+    }
     const payload = await response.json() as { token?: string };
     if (!payload.token) return null;
     sessionTokens.set(role, payload.token);
     return payload.token;
   } catch {
+    sessionBootstrapErrors.set(role, "bootstrap_unreachable");
     return null;
   }
 }
@@ -905,6 +912,16 @@ async function requestJson<T>(
   const payload = await response.json().catch(() => null) as unknown;
 
   if (!response.ok) {
+    if (response.status === 401 && (payload as { error?: string } | null)?.error === "session_required") {
+      const bootstrap = sessionBootstrapErrors.get(role);
+      if (bootstrap === "invalid_credentials") {
+        throw new Error("session_bootstrap_invalid_credentials");
+      }
+      if (bootstrap) {
+        throw new Error(`session_bootstrap_failed:${bootstrap}`);
+      }
+      throw new Error("session_bootstrap_failed");
+    }
     const message =
       payload && typeof payload === "object" && "error" in payload
         ? String((payload as { error: unknown }).error)

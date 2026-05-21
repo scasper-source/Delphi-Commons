@@ -380,9 +380,15 @@ function humanizeBackendMessage(message: string | null): string | null {
     source_material_required_for_synthesis: "Round 1 responses are required before drafting Round 2 candidates.",
     study_design_packet_missing: "Save the Study Builder packet before submitting for governance signoff.",
     study_version_not_active: "Activate the study version before opening rounds or collecting responses.",
+    session_required: "Session sign-in is required. In internal packaged testing, enable the synthetic operator auth bootstrap gate before launching.",
+    session_bootstrap_invalid_credentials: "Operator session bootstrap failed because built-in synthetic credentials were rejected. Verify internal synthetic bootstrap gating is enabled for this package run.",
     forbidden: "This role is not authorized for the selected study. Confirm the user has study membership for this role.",
     unassigned: "This signed-in user is not assigned to the selected study.",
   };
+
+  if (message.startsWith("session_bootstrap_failed:")) {
+    return "Operator session bootstrap failed in package-like mode. Confirm the internal synthetic auth bootstrap gate is enabled and retry.";
+  }
 
   return labels[message] ?? message.replaceAll("_", " ");
 }
