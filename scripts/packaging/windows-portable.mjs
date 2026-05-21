@@ -5,15 +5,18 @@ import { execFileSync, execSync } from 'node:child_process';
 import { buildWindowsAdapterConfig } from './adapters/windows.mjs';
 import {
   buildRuntimeMetadata,
-  generateInventory,
-  buildChecksums,
   scanForbiddenMaterial,
   scanOverclaimText,
   buildManifest,
   generateEvidenceTemplate,
   sha256File
 } from './core/index.mjs';
-import { verifyPackageEvidence } from './core/verification.mjs';
+import {
+  stageServerProductionDependencies,
+  copyCommonPortablePayload,
+  buildInventoryAndChecksums,
+  verifyPortablePackage
+} from './core/portable-shared.mjs';
 
 const repoRoot = process.cwd();
 const command = process.argv[2] ?? 'build';
@@ -58,10 +61,6 @@ function copyPath(source, destination) {
 
 function readJson(filePath) {
   return JSON.parse(fs.readFileSync(filePath, 'utf8'));
-}
-
-function packageInventory(root) {
-  return generateInventory(root).filter((item) => item !== 'package-manifest.json');
 }
 
 function buildWindowsRuntimeMetadata(raw) {
@@ -169,15 +168,6 @@ async function stageNodeRuntime(runtimeMetaJson) {
   }
 }
 
-function stageServerProductionDependencies() {
-  fs.rmSync(productionDepsRoot, { recursive: true, force: true });
-  fs.mkdirSync(productionDepsRoot, { recursive: true });
-  copyPath(path.join(repoRoot, 'server/package.json'), path.join(productionDepsRoot, 'package.json'));
-  copyPath(path.join(repoRoot, 'server/package-lock.json'), path.join(productionDepsRoot, 'package-lock.json'));
-  run(npmCommand, ['--prefix', productionDepsRoot, 'ci', '--omit=dev'], repoRoot);
-  return path.join(productionDepsRoot, 'node_modules');
-}
-
 function writePackageReadme(runtimeMetadata) {
   fs.writeFileSync(
     path.join(packageRoot, 'README.txt'),
@@ -265,30 +255,24 @@ async function buildPackage() {
 
   run(npmCommand, ['--prefix', 'app', 'run', 'build']);
   run(npmCommand, ['--prefix', 'server', 'run', 'build']);
-  const productionNodeModules = stageServerProductionDependencies();
+  fs.rmSync(productionDepsRoot, { recursive: true, force: true });
+  fs.mkdirSync(productionDepsRoot, { recursive: true });
+  const productionNodeModules = stageServerProductionDependencies({ repoRoot, productionDepsRoot, npmCommand, run, copyPath });
 
-  copyPath(path.join(repoRoot, 'app/dist'), path.join(packageRoot, 'app/dist'));
-  copyPath(path.join(repoRoot, 'server/dist'), path.join(packageRoot, 'server/dist'));
-  copyPath(path.join(repoRoot, 'server/package.json'), path.join(packageRoot, 'server/package.json'));
-  copyPath(path.join(repoRoot, 'server/package-lock.json'), path.join(packageRoot, 'server/package-lock.json'));
-  copyPath(productionNodeModules, path.join(packageRoot, 'server/node_modules'));
+  copyCommonPortablePayload({ repoRoot, packageRoot, productionNodeModules, copyPath });
   copyPath(path.join(repoRoot, 'scripts/windows/portable-bundled-runtime.ps1'), path.join(packageRoot, 'scripts/windows/portable-bundled-runtime.ps1'));
   copyPath(path.join(repoRoot, 'scripts/windows/portable-operator-candidate.ps1'), path.join(packageRoot, 'scripts/windows/portable-operator-candidate.ps1'));
-  copyPath(path.join(repoRoot, 'scripts/windows/static-file-server.mjs'), path.join(packageRoot, 'tools/static-file-server.mjs'));
-  copyPath(path.join(repoRoot, 'LICENSE'), path.join(packageRoot, 'LICENSE'));
-  copyPath(path.join(repoRoot, 'NOTICE'), path.join(packageRoot, 'NOTICE'));
   await stageNodeRuntime(runtimeMetaJson);
   writePackageReadme(runtimeMetadata);
   generateEvidenceTemplate({ platform: 'Windows', outputPath: path.join(packageRoot, 'evidence-template.md') });
   assertNoAmbientRuntimeCommands(packageRoot);
 
   const commitHash = execSync('git rev-parse HEAD', { cwd: repoRoot }).toString().trim();
-  const inventory = packageInventory(packageRoot);
+  const { inventory, checksums } = buildInventoryAndChecksums(packageRoot);
   const forbiddenHits = forbiddenPackageMaterial(inventory);
   if (forbiddenHits.length) {
     throw new Error(`Forbidden material in package: ${forbiddenHits.join(', ')}`);
   }
-  const checksums = buildChecksums(packageRoot, inventory);
   const nonClaims = [
     'No installer, updater, signing, or Tauri shell.',
     'No SmartScreen or Defender approval claim.',
@@ -323,11 +307,7 @@ async function buildPackage() {
 
 function verifyPackage() {
   const runtimeRoot = process.env.EDELPHI_RUNTIME_ROOT || path.resolve(packageRoot, '..', 'runtime-state');
-  const result = verifyPackageEvidence({
-    packageRoot,
-    runtimeRoot,
-    overclaimFiles: ['README.txt', 'evidence-template.md', 'package-manifest.json']
-  });
+  const result = verifyPortablePackage({ packageRoot, runtimeRoot });
   if (!result.ok) {
     throw new Error(`Package verification failed:\n- ${result.failures.join('\n- ')}`);
   }
