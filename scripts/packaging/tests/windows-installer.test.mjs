@@ -12,6 +12,7 @@ import {
 
 const installerWrapper = path.join(process.cwd(), installerWrapperRelativePath);
 const releaseWorkflow = path.join(process.cwd(), '.github/workflows/windows-internal-installer-release.yml');
+const portableLifecycle = path.join(process.cwd(), 'scripts/windows/portable-operator-candidate.ps1');
 
 test('installer launcher resolves package root from four parent levels', () => {
   const vbs = renderInstallerLauncherVbs('start');
@@ -35,6 +36,15 @@ test('installer candidate wrapper enforces installer runtime subdir and not port
   assert.match(content, /EDELPHI_STOP_ON_BROWSER_CLOSE', '1'/);
   assert.match(content, /\$portableCommand = 'start'/);
   assert.doesNotMatch(content, /windows-portable-bundled-runtime-internal/);
+});
+
+test('installer package backend runtime inherits internal synthetic auth bootstrap launcher env', () => {
+  const wrapper = fs.readFileSync(installerWrapper, 'utf8');
+  const lifecycle = fs.readFileSync(portableLifecycle, 'utf8');
+  assert.match(wrapper, /\$PortableWrapper/);
+  assert.match(wrapper, /powershell -NoProfile -ExecutionPolicy Bypass -File \$PortableWrapper \$portableCommand/);
+  assert.match(lifecycle, /\$backendEnv\s*=\s*@\{[\s\S]*EDELPHI_ENABLE_INTERNAL_SYNTHETIC_AUTH_BOOTSTRAP\s*=\s*'1'/);
+  assert.match(lifecycle, /\$backendEnv\s*=\s*@\{[\s\S]*EDELPHI_INTERNAL_SYNTHETIC_AUTH_ACK\s*=\s*'INTERNAL_SYNTHETIC_ONLY'/);
 });
 
 test('generated launchers target existing lifecycle wrapper in package layout', () => {

@@ -43,6 +43,12 @@ Open `http://127.0.0.1:5173/`.
 - Keep `server/data/` local and private.
 - Do not use OneDrive/Dropbox sync conflict files as source files.
 
+## Internal Package Auth Bootstrap
+
+The Windows internal portable and installer candidate launchers set the backend-only package test flags `EDELPHI_ENABLE_INTERNAL_SYNTHETIC_AUTH_BOOTSTRAP=1` and `EDELPHI_INTERNAL_SYNTHETIC_AUTH_ACK=INTERNAL_SYNTHETIC_ONLY` so the built-in demo operator can log in during controlled synthetic package testing.
+
+Those flags are not production authentication. Do not use them for real participant data, pilot work, production deployment, or any human-subjects claim.
+
 ## Readiness Warning
 
 This setup is for development and controlled synthetic mock trials only. It is not approved for real human-subjects data.

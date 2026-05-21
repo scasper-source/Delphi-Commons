@@ -175,6 +175,7 @@ function writePackageReadme(runtimeMetadata) {
 
 Boundary:
 - Internal synthetic testing package only.
+- The package launcher enables the built-in demo operator only through the explicit internal synthetic auth bootstrap flags; this is not production authentication.
 - No installer, updater, Tauri shell, signing, SmartScreen approval, Defender approval, platform-support approval, pilot approval, or production approval is claimed.
 - Do not use with real participant data unless separately approved through the governing review process.
 
@@ -218,7 +219,10 @@ function assertNoAmbientRuntimeCommands(root = packageRoot) {
   const requiredLifecycleMarkers = [
     '$NodeCommand',
     'EDELPHI_SERVER_NODE_MODULES_SOURCE',
-    'EDELPHI_SKIP_RUNTIME_NPM_INSTALL'
+    'EDELPHI_SKIP_RUNTIME_NPM_INSTALL',
+    'EDELPHI_ENABLE_INTERNAL_SYNTHETIC_AUTH_BOOTSTRAP',
+    'EDELPHI_INTERNAL_SYNTHETIC_AUTH_ACK',
+    'INTERNAL_SYNTHETIC_ONLY'
   ];
   for (const marker of requiredLifecycleMarkers) {
     if (!lifecycle.includes(marker)) {
@@ -277,10 +281,12 @@ async function buildPackage() {
     'No installer, updater, signing, or Tauri shell.',
     'No SmartScreen or Defender approval claim.',
     'No Windows platform-support approval claim.',
+    'No production authentication model claim.',
     'No pilot or production approval claim.'
   ];
   const limitations = [
     'Internal synthetic testing package only.',
+    'Internal synthetic auth bootstrap for built-in demo operator credentials only.',
     'Local Node/npm remain required to build the package.',
     'Clean-machine lifecycle evidence remains required before closing the Phase 2 laptop package gate.'
   ];

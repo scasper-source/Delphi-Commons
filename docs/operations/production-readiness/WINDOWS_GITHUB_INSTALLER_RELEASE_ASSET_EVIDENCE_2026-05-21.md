@@ -1,22 +1,27 @@
 # Windows GitHub Installer Release Asset Evidence - 2026-05-21
 
-Status: **WINDOWS INTERNAL INSTALLER CANDIDATE `r8` PREPARED / CLEAN WINDOWS RETEST REQUIRED**.
+Status: **WINDOWS INTERNAL INSTALLER CANDIDATE `r8` SCAFFOLD CORRECTED / RELEASE NOT YET VERIFIED / CLEAN WINDOWS RETEST BLOCKED**.
 
 Date/time basis: 2026-05-21 (UTC).
 
 Track: `human_testing_candidate`.
 
-Release tag: `internal-windows-installer-candidate-2026-05-21-r8`.
+Release tag: `internal-windows-installer-candidate-2026-05-21-r8` (must not be used for retest until it exists on GitHub and points at the corrected post-fix commit).
 
-Commit hash:
+Post-fix commit basis audited before this scaffold correction:
 
 ```text
-0af49757e9546b451f79eb59a87d8fa7f9bf2f7b
+9970d78e8cdfd8e214b3777a263bf5cf2304096b
 ```
+
+The previous pre-fix pointer `0af49757e9546b451f79eb59a87d8fa7f9bf2f7b` is invalid for `r8`. The final `r8` tag/release must point at a corrected commit that includes the PR #125 auth gate plus the Windows package launcher environment fix for:
+
+- `EDELPHI_ENABLE_INTERNAL_SYNTHETIC_AUTH_BOOTSTRAP=1`
+- `EDELPHI_INTERNAL_SYNTHETIC_AUTH_ACK=INTERNAL_SYNTHETIC_ONLY`
 
 ## Scope
 
-This evidence record defines the next Windows internal installer candidate that supersedes `r7` for clean-system retesting, using the existing **Build Windows internal installer release** workflow and operator flow.
+This evidence record defines the next Windows internal installer candidate that supersedes `r7`, using the existing **Build Windows internal installer release** workflow and operator flow. It is a scaffold only until the real `r8` tag/release exists and its package manifest confirms the corrected post-fix commit.
 
 Operator flow to preserve:
 
@@ -26,7 +31,7 @@ Operator flow to preserve:
 4. Launch Delphi Commons from Desktop or Start Menu.
 5. Closing the Delphi Commons app window must stop the local runtime.
 
-Release notes for this candidate must explicitly identify the fix as: **package-mode operator session / Study Builder save**.
+Release notes for this candidate must explicitly identify the fix as: **package-mode operator session / Study Builder save** and state that the built-in operator bootstrap is internal synthetic testing only, not production authentication.
 
 ## Candidate Definition
 
@@ -35,7 +40,7 @@ Release notes for this candidate must explicitly identify the fix as: **package-
 | Candidate tag | `internal-windows-installer-candidate-2026-05-21-r8` |
 | Supersedes | `internal-windows-installer-candidate-2026-05-18-r7` |
 | Source branch | `origin/main` |
-| Source commit | `0af49757e9546b451f79eb59a87d8fa7f9bf2f7b` |
+| Source commit | Corrected post-fix commit required; must include PR #125 (`9970d78e8cdfd8e214b3777a263bf5cf2304096b`) plus the Windows launcher env fix. Do not use `0af49757e9546b451f79eb59a87d8fa7f9bf2f7b`. |
 | Workflow | `Build Windows internal installer release` |
 | Trigger mode | push tag |
 
@@ -45,11 +50,11 @@ The release must include all of the following artifacts:
 
 | Asset type | Expected name |
 | --- | --- |
-| Installer ZIP | `delphi-commons-windows-x64-installer-internal-internal-windows-installer-candidate-2026-05-21-r8-0af4975.zip` |
-| Raw installer EXE | `delphi-commons-windows-x64-installer-internal-internal-windows-installer-candidate-2026-05-21-r8-0af4975.exe` |
+| Installer ZIP | `delphi-commons-windows-x64-installer-internal-internal-windows-installer-candidate-2026-05-21-r8-<corrected-short-sha>.zip` |
+| Raw installer EXE | `delphi-commons-windows-x64-installer-internal-internal-windows-installer-candidate-2026-05-21-r8-<corrected-short-sha>.exe` |
 | Checksums | `SHA256SUMS.txt` |
-| Package manifest | `windows-installer-package-manifest-internal-windows-installer-candidate-2026-05-21-r8-0af4975.json` |
-| Verification metadata | `windows-installer-package-verification-internal-windows-installer-candidate-2026-05-21-r8-0af4975.json` |
+| Package manifest | `windows-installer-package-manifest-internal-windows-installer-candidate-2026-05-21-r8-<corrected-short-sha>.json` |
+| Verification metadata | `windows-installer-package-verification-internal-windows-installer-candidate-2026-05-21-r8-<corrected-short-sha>.json` |
 | Release notes | `RELEASE_NOTES.md` |
 
 ## Release Notes Verification Requirements
@@ -58,6 +63,7 @@ The release must include all of the following artifacts:
 
 - package-mode operator session fix.
 - Study Builder save behavior fix.
+- internal synthetic bootstrap only; not production auth and not approval for real data, pilot, or human-subject use.
 
 ## Asset Evidence (to be filled from release page after publish)
 
@@ -87,11 +93,12 @@ https://github.com/scasper-source/Delphi-Commons/releases/download/internal-wind
 Current repository-state verification for `r8` preparation:
 
 - Candidate tag convention incremented from `r7` to `r8`.
-- Candidate points at post-fix commit on current mainline history.
+- Scaffold no longer points at the invalid pre-fix `0af49757e9546b451f79eb59a87d8fa7f9bf2f7b` commit.
+- The real `r8` tag/release must point at a corrected post-fix commit that includes the explicit Windows package launcher bootstrap environment.
 - Artifact set definition includes ZIP, EXE, checksums, manifest, and verification metadata.
 - Release note requirement captures package-mode operator session / Study Builder save fix.
 
-Publish/run verification status: **PENDING WORKFLOW EXECUTION**.
+Publish/run verification status: **BLOCKED UNTIL REAL `r8` TAG/RELEASE EXISTS AT THE CORRECTED COMMIT**.
 
 ## Known Limitations / Non-Claims
 
@@ -99,7 +106,7 @@ This candidate remains internal synthetic/low-risk packaging evidence only. It i
 
 ## Required Follow-up
 
-A clean Windows retest is still required after publishing `r8`, including:
+A clean Windows retest is still required, but must not start until the real GitHub `r8` tag/release exists, its assets use the corrected short SHA, and its package manifest points at the corrected post-fix commit. After that, retest must include:
 
 - fresh install on clean profile/system,
 - launch from Desktop/Start Menu,
@@ -115,7 +122,7 @@ Use this checklist on a clean Windows profile or second Windows machine. Attach 
 | # | Requirement to prove | Evidence required | Status | Evidence link/path | Notes |
 | --- | --- | --- | --- | --- | --- |
 | 1 | Windows version/build captured | `winver` screenshot and `systeminfo` excerpt with OS name/version/build | NOT RUN | HUMAN_REQUIRED | Record exact edition and build number |
-| 2 | Correct fixed release ZIP downloaded | Screenshot/log showing exact `r8` ZIP filename downloaded from release page | NOT RUN | HUMAN_REQUIRED | Must match superseding `r8` asset name |
+| 2 | Correct fixed release ZIP downloaded | Screenshot/log showing exact `r8` ZIP filename downloaded from release page | BLOCKED | HUMAN_REQUIRED | Must match real `r8` asset name and corrected commit; do not use any `0af4975` asset |
 | 3 | ZIP extracted | Screenshot of extracted folder contents including installer EXE and README | NOT RUN | HUMAN_REQUIRED | Use default extractor or equivalent |
 | 4 | SmartScreen behavior captured if shown | Screenshot of SmartScreen prompt (or explicit note that no prompt appeared) | NOT RUN | HUMAN_REQUIRED | Unsigned-candidate behavior must be documented |
 | 5 | Installer starts and completes | Installer start + completion screenshots | NOT RUN | HUMAN_REQUIRED | Include successful completion state |
