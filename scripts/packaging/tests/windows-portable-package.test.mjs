@@ -50,6 +50,13 @@ test('portable lifecycle script does not launch ambient node/npm/npx for runtime
   assert.doesNotMatch(lifecycle, /Start-Process\s+-FilePath\s+['"]?(node|npm|npx|npm\.cmd)/i);
 });
 
+test('portable package backend runtime enables internal synthetic auth bootstrap', () => {
+  const lifecycle = fs.readFileSync(lifecyclePath, 'utf8');
+  assert.match(lifecycle, /\$backendEnv\s*=\s*@\{[\s\S]*EDELPHI_ENABLE_INTERNAL_SYNTHETIC_AUTH_BOOTSTRAP\s*=\s*'1'/);
+  assert.match(lifecycle, /\$backendEnv\s*=\s*@\{[\s\S]*EDELPHI_INTERNAL_SYNTHETIC_AUTH_ACK\s*=\s*'INTERNAL_SYNTHETIC_ONLY'/);
+  assert.match(lifecycle, /Set-ProcessEnvAndStart[\s\S]*-envVars \$backendEnv/);
+});
+
 test('portable lifecycle script quotes Start-Process arguments for paths with spaces', () => {
   const lifecycle = fs.readFileSync(lifecyclePath, 'utf8');
   assert.match(lifecycle, /function ConvertTo-ProcessArgument/);
