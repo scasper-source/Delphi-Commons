@@ -1,6 +1,6 @@
 # Current Project Status
 
-Date basis: 2026-05-18.
+Date basis: 2026-05-29.
 
 Boundary statement: Delphi Commons is suitable only for controlled mock-trial use with synthetic or low-risk test data in local, development, or staging environments. It is not approved or ready for production deployment or real human-subjects research.
 
@@ -48,7 +48,7 @@ Delphi Commons has strong controlled synthetic/mock-trial and internal engineeri
 | --- | --- |
 | Phase 0 baseline preservation | Baseline mock-trial/regression evidence is preserved. |
 | Phase 1 product surface lock | Complete as scope lock only. It does not authorize human testing. |
-| Phase 2 downloadable laptop operator candidate | In progress. Windows internal portable ZIP, Windows internal installer ZIP/EXE, and macOS Apple Silicon single installer ZIP bundle are available on GitHub. Clean-profile/second-machine, final installed lifecycle, signing/notarization/reputation, and operator walkthrough evidence remain open. |
+| Phase 2 downloadable laptop operator candidate | In progress. Windows internal portable ZIP, corrected Windows internal installer `r8` ZIP/EXE, and macOS Apple Silicon single installer ZIP bundle are available on GitHub. A 2026-05-29 clean Windows `r8` operator report shows install/launch/close-window stop/relaunch/uninstall mostly passing, but saved-study reopen/new-study continuity failed or was unclear and screenshots still need attachment. |
 | Phase 3 phone/SMS candidate | Local mock/sandbox implementation and evidence-prep are substantially complete. Real iOS/Android device evidence, real provider/sandbox evidence if in scope, accessibility review, privacy/copy/Data Custodian review, and human-observed phone walkthrough remain open. |
 | Phase 4 human testing binder | Binder package is assembled for final human-testing preparation; candidate remains not ready until laptop/phone run evidence and required signoffs are attached. |
 | Phase 5 final human testing | Not run. |
@@ -56,8 +56,9 @@ Delphi Commons has strong controlled synthetic/mock-trial and internal engineeri
 ## Still Required Before Human Testing
 
 - Pin a candidate commit/package and record the exact supported surfaces.
-- Complete clean-profile or second-machine laptop package evidence for the selected Windows path.
-- Complete installed-path lifecycle evidence for any installer path used.
+- Complete clean-profile or second-machine laptop package evidence for the selected Windows path, including linked screenshot/log artifacts.
+- Fix and rerun the Windows saved-study reopen/new-study continuity path found during the 2026-05-29 `r8` retest.
+- Reproduce and fix the Study Owner plus Ethics & Methods signoff controls found during the 2026-05-29 `r8` retest.
 - Complete macOS install/lifecycle evidence if macOS is included for the candidate.
 - Complete iPhone/Safari and Android/Chrome phone-flow evidence.
 - Complete SMS copy/privacy/Data Custodian/security review for any SMS path used in human testing.
