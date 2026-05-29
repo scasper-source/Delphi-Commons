@@ -861,6 +861,29 @@ function App() {
     }
   }
 
+  function startNewStudyDraft() {
+    const confirmed = window.confirm(
+      "Start a new study draft?\n\nSaved studies remain available from the Dashboard; unsaved changes in the current draft will be cleared.",
+    );
+    if (!confirmed) return;
+
+    setWorkflow({
+      ...initialWorkflow,
+      lastMessage: "Started a new unsaved study draft.",
+    });
+    setWizard(defaultWizardState);
+    setActiveWizardStep("purpose");
+    setRoundConfigs([]);
+    setRuntimeData(emptyRuntimeStudyData);
+    setRoundTwoRatings({});
+    setRoundTwoRationales({});
+    setFinalResultSnapshot(null);
+    setFinalResultBlockers(["final_result_snapshot_missing"]);
+    setFinalResultMessage(null);
+    setFinalResultError(null);
+    setActiveModule("study-builder");
+  }
+
   async function loadRoundConfigs(studyId = workflow.study?.id, versionId = workflow.version?.id) {
     if (!studyId || !versionId) {
       setRoundConfigs([]);
@@ -2536,6 +2559,7 @@ function App() {
           savedStudiesError={savedStudiesError}
           onRefreshSavedStudies={loadSavedStudies}
           onOpenSavedStudy={openSavedStudy}
+          onStartNewStudyDraft={startNewStudyDraft}
           onArchiveSavedStudy={archiveSavedStudy}
           onArchiveSmokeTestStudies={archiveSmokeTestStudies}
           onRespondParticipantIssue={respondParticipantIssue}
@@ -2659,6 +2683,7 @@ function ModuleRenderer({
   savedStudiesError,
   onRefreshSavedStudies,
   onOpenSavedStudy,
+  onStartNewStudyDraft,
   onArchiveSavedStudy,
   onArchiveSmokeTestStudies,
   onRespondParticipantIssue,
@@ -2771,6 +2796,7 @@ function ModuleRenderer({
   savedStudiesError: string | null;
   onRefreshSavedStudies: () => void;
   onOpenSavedStudy: (record: SavedStudyRecord) => void;
+  onStartNewStudyDraft: () => void;
   onArchiveSavedStudy: (record: SavedStudyRecord) => void;
   onArchiveSmokeTestStudies: () => void;
   onRespondParticipantIssue: (issueId: string, status: ParticipantIssue["status"], responseNote: string) => void;
@@ -2801,6 +2827,7 @@ function ModuleRenderer({
           savedStudiesError={savedStudiesError}
           onRefreshSavedStudies={onRefreshSavedStudies}
           onOpenSavedStudy={onOpenSavedStudy}
+          onStartNewStudyDraft={onStartNewStudyDraft}
           onArchiveSavedStudy={onArchiveSavedStudy}
           onArchiveSmokeTestStudies={onArchiveSmokeTestStudies}
           onRespondParticipantIssue={onRespondParticipantIssue}
@@ -2816,6 +2843,7 @@ function ModuleRenderer({
           onWizardChange={onWizardChange}
           onWizardStepChange={onWizardStepChange}
           onWorkflowStep={onWorkflowStep}
+          onStartNewStudyDraft={onStartNewStudyDraft}
         />
       );
     case "governance":
@@ -3883,6 +3911,7 @@ function DashboardScreen({
   savedStudiesError,
   onRefreshSavedStudies,
   onOpenSavedStudy,
+  onStartNewStudyDraft,
   onArchiveSavedStudy,
   onArchiveSmokeTestStudies,
   onRespondParticipantIssue,
@@ -3898,6 +3927,7 @@ function DashboardScreen({
   savedStudiesError: string | null;
   onRefreshSavedStudies: () => void;
   onOpenSavedStudy: (record: SavedStudyRecord) => void;
+  onStartNewStudyDraft: () => void;
   onArchiveSavedStudy: (record: SavedStudyRecord) => void;
   onArchiveSmokeTestStudies: () => void;
   onRespondParticipantIssue: (issueId: string, status: ParticipantIssue["status"], responseNote: string) => void;
@@ -3968,12 +3998,19 @@ function DashboardScreen({
             <h3>Saved Studies</h3>
             <p className="muted">Open an existing study workspace or refresh the backend list.</p>
           </div>
-          <button className="secondary-button" onClick={onRefreshSavedStudies} type="button">
-            {savedStudiesLoading ? "Refreshing..." : "Refresh"}
-          </button>
-          <button className="secondary-button danger-button" onClick={onArchiveSmokeTestStudies} type="button">
-            Archive test workspaces
-          </button>
+          <div className="compact-actions">
+            {role === "study_owner" ? (
+              <button className="primary-button" onClick={onStartNewStudyDraft} type="button">
+                Start new study
+              </button>
+            ) : null}
+            <button className="secondary-button" onClick={onRefreshSavedStudies} type="button">
+              {savedStudiesLoading ? "Refreshing..." : "Refresh"}
+            </button>
+            <button className="secondary-button danger-button" onClick={onArchiveSmokeTestStudies} type="button">
+              Archive test workspaces
+            </button>
+          </div>
         </div>
 
         {savedStudiesError ? (
@@ -4080,6 +4117,7 @@ function StudyBuilderScreen({
   onWizardChange,
   onWizardStepChange,
   onWorkflowStep,
+  onStartNewStudyDraft,
 }: {
   role: UserRole;
   workflow: ConductorWorkflow;
@@ -4088,6 +4126,7 @@ function StudyBuilderScreen({
   onWizardChange: (state: StudyWizardState) => void;
   onWizardStepChange: (step: StudyWizardStepId) => void;
   onWorkflowStep: (step: WorkflowStep) => void;
+  onStartNewStudyDraft: () => void;
 }) {
   const selectedMethod = methodRegistry.find((method) =>
     wizard.studyFormat === "ModifiedDelphi" ? method.id === "modified-delphi" : method.id === "classic-delphi",
@@ -4294,10 +4333,17 @@ function StudyBuilderScreen({
             <span className="eyebrow">Study Builder</span>
             <h2>Design the study once, then carry it into governance and launch</h2>
           </div>
-          <button className="context-sidecar-trigger" onClick={() => setContextOpen(true)} type="button">
-            <span>Study Context & Disclosures</span>
-            <small>{contextStatusLabel}</small>
-          </button>
+          <div className="compact-actions">
+            {role === "study_owner" && workflow.study ? (
+              <button className="secondary-button" onClick={onStartNewStudyDraft} type="button">
+                Start new study
+              </button>
+            ) : null}
+            <button className="context-sidecar-trigger" onClick={() => setContextOpen(true)} type="button">
+              <span>Study Context & Disclosures</span>
+              <small>{contextStatusLabel}</small>
+            </button>
+          </div>
         </div>
         <div className="wizard-stepper" role="tablist" aria-label="Study builder steps">
           {wizardSteps.map((step, index) => {

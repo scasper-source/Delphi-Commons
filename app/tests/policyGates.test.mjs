@@ -447,6 +447,24 @@ test("Phase 1A multi-research-question setup and Round 1 capture stay lean and g
   assert.match(css, /\.round-one-question-response/);
 });
 
+test("study owner can start a new backend study without archiving saved studies", () => {
+  const source = appSource();
+  const resetSlice = sourceSlice(source, "function startNewStudyDraft()", "async function loadRoundConfigs");
+  assert.match(resetSlice, /setWorkflow\(\{\s*\.\.\.initialWorkflow,/s);
+  assert.match(resetSlice, /setWizard\(defaultWizardState\)/);
+  assert.match(resetSlice, /setActiveWizardStep\("purpose"\)/);
+  assert.match(resetSlice, /setActiveModule\("study-builder"\)/);
+
+  const dashboardSavedStudiesSlice = sourceSlice(source, "<h3>Saved Studies</h3>", "{savedStudiesError ? (");
+  assert.match(dashboardSavedStudiesSlice, /onStartNewStudyDraft/);
+  assert.match(dashboardSavedStudiesSlice, /Start new study/);
+  assert.match(dashboardSavedStudiesSlice, /onArchiveSmokeTestStudies/);
+
+  const builderHeaderSlice = sourceSlice(source, "<span className=\"eyebrow\">Study Builder</span>", "<div className=\"wizard-stepper\"");
+  assert.match(builderHeaderSlice, /workflow\.study/);
+  assert.match(builderHeaderSlice, /onStartNewStudyDraft/);
+});
+
 test("rating rationale is submitted through API and exported as redacted rationale text", () => {
   const apiSource = fs.readFileSync(path.join(appRoot, "src", "core", "api.ts"), "utf8");
   const reportsSource = fs.readFileSync(path.resolve(appRoot, "..", "server", "src", "routes", "reports.ts"), "utf8");
