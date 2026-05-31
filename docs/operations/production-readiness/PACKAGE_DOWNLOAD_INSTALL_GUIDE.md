@@ -2,7 +2,7 @@
 
 Status: **INTERNAL PACKAGE CANDIDATE GUIDE / NOT READY FOR HUMAN TESTING**.
 
-Date basis: 2026-05-18.
+Date basis: 2026-05-31.
 
 This guide is the simple operator-facing path for internal package candidates. Use synthetic or low-risk test data only.
 
@@ -18,7 +18,7 @@ This guide is the simple operator-facing path for internal package candidates. U
 
 | Platform | Release page |
 | --- | --- |
-| Windows x64 installer | [`internal-windows-installer-candidate-2026-05-18-r7`](https://github.com/scasper-source/Delphi-Commons/releases/tag/internal-windows-installer-candidate-2026-05-18-r7) |
+| Windows x64 installer | [`internal-windows-installer-candidate-2026-05-31-r10`](https://github.com/scasper-source/Delphi-Commons/releases/tag/internal-windows-installer-candidate-2026-05-31-r10) |
 | macOS Apple Silicon package | [`internal-macos-package-candidate-2026-05-18-r4`](https://github.com/scasper-source/Delphi-Commons/releases/tag/internal-macos-package-candidate-2026-05-18-r4) |
 
 The GitHub repository is private, so operators need repository access before these links can be used.

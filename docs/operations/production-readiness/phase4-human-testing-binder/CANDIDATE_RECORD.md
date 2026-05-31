@@ -1,19 +1,19 @@
 # Versioned Candidate Record
 
-Status: **PREPARED / FINAL PACKAGE PIN REQUIRED / NOT READY FOR HUMAN TESTING**.
+Status: **PREPARED / WINDOWS `r10` PACKAGE PINNED / NOT READY FOR HUMAN TESTING**.
 
-Date basis: 2026-05-18.
+Date basis: 2026-05-31.
 
 ## Candidate Identity
 
 | Field | Value |
 | --- | --- |
 | Repository | `scasper-source/Delphi-Commons` |
-| Candidate source commit | `2a71d6c` (`Correct Phase 2 Windows sanity OS version`) |
+| Candidate source commit | `2a831ee` (`Merge pull request #132 from scasper-source/codex/study-workspace-main-menu`) |
 | Candidate branch | `main` at the recorded source snapshot |
-| Phase 4 binder branch | `codex/assemble-phase4-human-testing-binder` |
-| Candidate tag | `TAG_REQUIRED_BEFORE_HUMAN_TESTING` |
-| Candidate package identifier | `PACKAGE_IDENTIFIER_REQUIRED_BEFORE_HUMAN_TESTING` |
+| Phase 4 binder branch | `main` plus follow-up evidence updates |
+| Candidate tag | `internal-windows-installer-candidate-2026-05-31-r10` |
+| Candidate package identifier | `delphi-commons-windows-x64-installer-internal-internal-windows-installer-candidate-2026-05-31-r10-2a831ee.zip` |
 | Candidate data class | Synthetic/internal test data only |
 | Decision label | `NOT READY FOR HUMAN TESTING` |
 
@@ -23,7 +23,7 @@ These are the intended candidate surfaces for final human-testing preparation. T
 
 | Surface | Candidate role | Current evidence posture |
 | --- | --- | --- |
-| Windows laptop operator path | Primary Study Owner/operator launch surface. A clean Windows laptop profile on this machine may be used if it follows the documented clean-profile run and records evidence. | Corrected `r9` package is released for retest; HUMAN_REQUIRED clean-profile or second-machine launch evidence remains open |
+| Windows laptop operator path | Primary Study Owner/operator launch surface. A clean Windows laptop profile on this machine may be used if it follows the documented clean-profile run and records evidence. | Corrected `r10` package is released for retest; HUMAN_REQUIRED clean-profile or second-machine launch evidence remains open |
 | Phone browser participant path | Primary participant mobile path using synthetic/internal data. | HUMAN_REQUIRED iOS/Android real-device or documented mobile-browser evidence remains open |
 | SMS-linked entry or simulated SMS path | Candidate entry path only if copy/privacy/Data Custodian/security review and provider/simulation boundaries are recorded. | HUMAN_REQUIRED; real provider readiness not claimed |
 | macOS laptop operator path | Optional surface if included in the final candidate scope. | Evidence-dependent; not required unless selected |
@@ -55,7 +55,7 @@ Run these against the pinned candidate before marking the candidate ready for hu
 
 ## Known Limitations
 
-- The candidate has not been tagged or packaged with a final human-testing identifier.
+- The Windows internal installer candidate has been tagged and packaged as `r10`, but clean Windows retest evidence is not yet attached.
 - Study Owner/operator launch from docs on a clean laptop profile remains `HUMAN_REQUIRED`.
 - Phone participant walkthrough evidence on real devices remains `HUMAN_REQUIRED`.
 - Accessibility evidence remains `HUMAN_REQUIRED`.
