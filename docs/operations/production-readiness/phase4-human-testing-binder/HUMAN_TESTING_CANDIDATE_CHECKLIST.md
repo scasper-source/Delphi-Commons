@@ -6,8 +6,8 @@ This checklist is the place where the candidate can later be marked ready. It is
 
 | Gate | Required evidence | Status | Evidence link/path | Notes |
 | --- | --- | --- | --- | --- |
-| Candidate commit pinned | Source commit recorded in candidate record | PASS | `CANDIDATE_RECORD.md` | Current source snapshot: `2a71d6c` |
-| Candidate tag/package pinned | Tag and package identifier recorded | NOT RUN | HUMAN_REQUIRED | Required before human testing |
+| Candidate commit pinned | Source commit recorded in candidate record | PASS | `CANDIDATE_RECORD.md` | Current source snapshot: `2a831ee` |
+| Candidate tag/package pinned | Tag and package identifier recorded | PASS | `CANDIDATE_RECORD.md`, `../WINDOWS_GITHUB_INSTALLER_RELEASE_ASSET_EVIDENCE_2026-05-31.md` | Windows `r10` tag and package identifier are pinned; clean Windows retest evidence remains open separately |
 | Binder committed or attached | Phase 4 binder present in repository | PASS | This folder | Binder package assembled for commit |
 | Repository hygiene | No-secrets/no-real-data/boundary/audit checks recorded | AUTOMATED_PASS / HUMAN_REVIEW_REQUIRED | `REPOSITORY_HYGIENE_CHECKLIST.md` | Human review still required for real-data/export absence |
 | Laptop candidate run | Operator launch from docs on clean laptop profile or second machine | PARTIAL / OPEN | `../WINDOWS_GITHUB_INSTALLER_RELEASE_ASSET_EVIDENCE_2026-05-21.md` | 2026-05-29 clean Windows `r8` report shows install/launch/lifecycle/uninstall mostly passed, but screenshots are pending and saved-study continuity failed or was unclear |
