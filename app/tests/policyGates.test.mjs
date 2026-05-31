@@ -494,11 +494,19 @@ test("study workspace launcher routes staff into backend-backed workspaces befor
   const chromeGateSource = sourceSlice(source, "const participantEntryActive", "async function runNextActionCommand");
   const launcherSource = sourceSlice(source, "function StudyWorkspaceLauncher", "function ModuleRenderer");
 
-  assert.match(workspacePathSource, /"new-study" \| "current-studies" \| "past-studies"/);
+  assert.match(workspacePathSource, /"main-menu" \| "new-study" \| "current-studies" \| "past-studies"/);
+  assert.match(workspacePathSource, /Main Menu/);
   assert.match(workspacePathSource, /New Study/);
   assert.match(workspacePathSource, /Current Studies/);
   assert.match(workspacePathSource, /Past Studies \/ Writing Up/);
   assert.match(source, /const \[workspaceLauncherOpen, setWorkspaceLauncherOpen\] = useState\(true\)/);
+  assert.match(source, /const \[workspacePath, setWorkspacePath\] = useState<WorkspacePath>\("main-menu"\)/);
+  assert.match(source, /openWorkspaceLauncherPath\("main-menu"\)/);
+  assert.match(source, /function resetLauncherNewStudyDraft\(\)/);
+  assert.match(source, /setLauncherCreateMessage\(null\)/);
+  assert.match(source, /function openWorkspaceLauncherPath\(nextPath: WorkspacePath\)/);
+  assert.match(source, /nextPath === "new-study" && \(workspacePath !== "new-study" \|\| !workspaceLauncherOpen \|\| launcherCreateMessage\)/);
+  assert.match(source, /onPathChange=\{openWorkspaceLauncherPath\}/);
   assert.match(source, /onOpenCurrentStudy=\{\(record\) => openSavedStudy\(record, "dashboard"\)\}/);
   assert.match(workspacePathSource, /record\.study\.archived_at/);
   assert.match(workspacePathSource, /status === "Draft" \|\| status === "ReadyForSignoff" \|\| status === "Active"/);
@@ -515,6 +523,7 @@ test("study workspace launcher routes staff into backend-backed workspaces befor
   assert.doesNotMatch(createWorkspaceSource, /archiveStudy/);
 
   assert.match(launcherSource, /Unsaved draft/);
+  assert.match(launcherSource, /Delphi Commons is a governed eDelphi research workspace/);
   assert.match(launcherSource, /Saved workspace/);
   assert.match(launcherSource, /Save blocked/);
   assert.match(launcherSource, /Create saved study workspace/);
@@ -527,6 +536,7 @@ test("study workspace launcher routes staff into backend-backed workspaces befor
   assert.match(launcherSource, /solo internal\/synthetic/i);
   assert.match(launcherSource, /UI selection does not replace backend authorization/);
 
+  assert.match(css, /\.workspace-path-button\.path-main-menu\.active\s*\{[^}]*background:\s*#485c61/s);
   assert.match(css, /\.workspace-path-button\.path-new-study\.active\s*\{[^}]*background:\s*#2f6f5f/s);
   assert.match(css, /\.workspace-path-button\.path-current-studies\.active\s*\{[^}]*background:\s*#345f8c/s);
   assert.match(css, /\.workspace-path-button\.path-past-studies\.active\s*\{[^}]*background:\s*#6a5b2d/s);

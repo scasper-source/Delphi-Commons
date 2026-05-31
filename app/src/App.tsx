@@ -120,7 +120,7 @@ const DEMO_PARTICIPANT_ID = "demo-panelist-001";
 const TWILIO_SETUP_FALLBACK_URL = "https://console.twilio.com/us1/develop/sms/services";
 
 type SmsSetupChoice = "undecided" | "off" | "twilio";
-type WorkspacePath = "new-study" | "current-studies" | "past-studies";
+type WorkspacePath = "main-menu" | "new-study" | "current-studies" | "past-studies";
 type LauncherRoleMode = "separate_steward" | "solo_internal";
 
 const workspacePathOptions: Array<{
@@ -128,6 +128,11 @@ const workspacePathOptions: Array<{
   label: string;
   detail: string;
 }> = [
+  {
+    id: "main-menu",
+    label: "Main Menu",
+    detail: "What Delphi Commons supports.",
+  },
   {
     id: "new-study",
     label: "New Study",
@@ -144,6 +149,8 @@ const workspacePathOptions: Array<{
     detail: "Report, export, and review closed work.",
   },
 ];
+
+const studyWorkspacePathOptions = workspacePathOptions.filter((entry) => entry.id !== "main-menu");
 
 function isCurrentStudyRecord(record: SavedStudyRecord): boolean {
   if (record.study.archived_at) return false;
@@ -598,7 +605,7 @@ function App() {
   const [role, setRole] = useState<UserRole>("study_owner");
   const [activeModule, setActiveModule] = useState<ModuleId>("dashboard");
   const [workspaceLauncherOpen, setWorkspaceLauncherOpen] = useState(true);
-  const [workspacePath, setWorkspacePath] = useState<WorkspacePath>("new-study");
+  const [workspacePath, setWorkspacePath] = useState<WorkspacePath>("main-menu");
   const [workflow, setWorkflow] = useState<ConductorWorkflow>(initialWorkflow);
   const [wizard, setWizard] = useState<StudyWizardState>(defaultWizardState);
   const [launcherDraftTitle, setLauncherDraftTitle] = useState(defaultWizardState.title);
@@ -935,6 +942,23 @@ function App() {
     setLauncherCreateError(null);
     setLauncherCreateMessage(null);
     setWorkspacePath("new-study");
+    setWorkspaceLauncherOpen(true);
+    setActiveModule("dashboard");
+  }
+
+  function resetLauncherNewStudyDraft() {
+    setLauncherDraftTitle(defaultWizardState.title);
+    setLauncherDraftDescription(defaultWizardState.description);
+    setLauncherRoleMode("separate_steward");
+    setLauncherCreateError(null);
+    setLauncherCreateMessage(null);
+  }
+
+  function openWorkspaceLauncherPath(nextPath: WorkspacePath) {
+    if (nextPath === "new-study" && (workspacePath !== "new-study" || !workspaceLauncherOpen || launcherCreateMessage)) {
+      resetLauncherNewStudyDraft();
+    }
+    setWorkspacePath(nextPath);
     setWorkspaceLauncherOpen(true);
     setActiveModule("dashboard");
   }
@@ -2518,11 +2542,7 @@ function App() {
               <button
                 className={`workspace-path-button path-${entry.id} ${workspacePath === entry.id && workspaceLauncherOpen ? "active" : ""}`}
                 key={entry.id}
-                onClick={() => {
-                  setWorkspacePath(entry.id);
-                  setWorkspaceLauncherOpen(true);
-                  setActiveModule("dashboard");
-                }}
+                onClick={() => openWorkspaceLauncherPath(entry.id)}
                 type="button"
               >
                 <strong>{entry.label}</strong>
@@ -2574,6 +2594,15 @@ function App() {
               <div className="topbar-actions">
                 <StatusBadge risk={activeStatus === "Active" ? "success" : "warning"} label={formatStatus(activeStatus)} />
                 <StatusBadge risk={consensusLocked ? "locked" : "warning"} label={consensusLocked ? "Consensus threshold locked" : "Consensus threshold draft"} />
+                {!participantEntryActive ? (
+                  <button
+                    className="secondary-button"
+                    onClick={() => openWorkspaceLauncherPath("main-menu")}
+                    type="button"
+                  >
+                    Main Menu
+                  </button>
+                ) : null}
               </div>
             </header>
 
@@ -2606,7 +2635,7 @@ function App() {
             savedStudies={savedStudies}
             savedStudiesLoading={savedStudiesLoading}
             savedStudiesError={savedStudiesError}
-            onPathChange={setWorkspacePath}
+            onPathChange={openWorkspaceLauncherPath}
             onDraftTitleChange={setLauncherDraftTitle}
             onDraftDescriptionChange={setLauncherDraftDescription}
             onRoleModeChange={setLauncherRoleMode}
@@ -2872,28 +2901,40 @@ function StudyWorkspaceLauncher({
     <div className="launcher-shell">
       <section className="launcher-hero">
         <div>
-          <span className="eyebrow">Study Workspace Launcher</span>
-          <h1>Choose the study work before opening the dashboard</h1>
-          <p>
-            Start a saved study workspace, reopen current work, or return to closed studies for writing, reporting, and evidence review.
-          </p>
+          <span className="eyebrow">{path === "main-menu" ? "Main Menu" : "Study Workspace Launcher"}</span>
+          <h1>{path === "main-menu" ? "Delphi Commons" : "Choose the study work before opening the dashboard"}</h1>
+          {path === "main-menu" ? (
+            <p>
+              Delphi Commons is a governed eDelphi research workspace for designing studies, managing accountable study roles, collecting
+              panel input, and preserving the evidence needed for review, reporting, and closeout.
+            </p>
+          ) : (
+            <p>
+              Start a saved study workspace, reopen current work, or return to closed studies for writing, reporting, and evidence review.
+            </p>
+          )}
         </div>
-        <StatusBadge risk={path === "new-study" ? saveRisk : "info"} label={path === "new-study" ? saveState : "Select a study"} />
+        <StatusBadge
+          risk={path === "new-study" ? saveRisk : "info"}
+          label={path === "new-study" ? saveState : path === "main-menu" ? "Main menu" : "Select a study"}
+        />
       </section>
 
-      <section className="launcher-path-tabs" aria-label="Study workspace path selector">
-        {workspacePathOptions.map((entry) => (
-          <button
-            className={`launcher-path-tab path-${entry.id} ${path === entry.id ? "active" : ""}`}
-            key={entry.id}
-            onClick={() => onPathChange(entry.id)}
-            type="button"
-          >
-            <strong>{entry.label}</strong>
-            <small>{entry.detail}</small>
-          </button>
-        ))}
-      </section>
+      {path !== "main-menu" ? (
+        <section className="launcher-path-tabs" aria-label="Study workspace path selector">
+          {studyWorkspacePathOptions.map((entry) => (
+            <button
+              className={`launcher-path-tab path-${entry.id} ${path === entry.id ? "active" : ""}`}
+              key={entry.id}
+              onClick={() => onPathChange(entry.id)}
+              type="button"
+            >
+              <strong>{entry.label}</strong>
+              <small>{entry.detail}</small>
+            </button>
+          ))}
+        </section>
+      ) : null}
 
       {path === "new-study" ? (
         <section className="panel wide launcher-panel">
