@@ -23,7 +23,7 @@ These are the intended candidate surfaces for final human-testing preparation. T
 
 | Surface | Candidate role | Current evidence posture |
 | --- | --- | --- |
-| Windows laptop operator path | Primary Study Owner/operator launch surface. A clean Windows laptop profile on this machine may be used if it follows the documented clean-profile run and records evidence. | HUMAN_REQUIRED clean-profile or second-machine launch evidence remains open |
+| Windows laptop operator path | Primary Study Owner/operator launch surface. A clean Windows laptop profile on this machine may be used if it follows the documented clean-profile run and records evidence. | Corrected `r9` package is released for retest; HUMAN_REQUIRED clean-profile or second-machine launch evidence remains open |
 | Phone browser participant path | Primary participant mobile path using synthetic/internal data. | HUMAN_REQUIRED iOS/Android real-device or documented mobile-browser evidence remains open |
 | SMS-linked entry or simulated SMS path | Candidate entry path only if copy/privacy/Data Custodian/security review and provider/simulation boundaries are recorded. | HUMAN_REQUIRED; real provider readiness not claimed |
 | macOS laptop operator path | Optional surface if included in the final candidate scope. | Evidence-dependent; not required unless selected |

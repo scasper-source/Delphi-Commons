@@ -1,6 +1,6 @@
 # Windows GitHub Installer Release Asset Evidence - 2026-05-21
 
-Status: **WINDOWS INTERNAL INSTALLER CANDIDATE `r8` RELEASE VERIFIED / CLEAN WINDOWS RETEST PARTIAL PASS / HUMAN USE BLOCKED**.
+Status: **WINDOWS INTERNAL INSTALLER CANDIDATE `r8` RELEASE VERIFIED / CLEAN WINDOWS RETEST PARTIAL PASS / SUPERSEDED BY `r9` / HUMAN USE BLOCKED**.
 
 Date/time basis: 2026-05-29 (UTC).
 
@@ -21,7 +21,7 @@ The previous pre-fix pointer `0af49757e9546b451f79eb59a87d8fa7f9bf2f7b` is inval
 
 ## Scope
 
-This evidence record defines the Windows internal installer candidate that supersedes `r7`, using the existing **Build Windows internal installer release** workflow and operator flow. The real `r8` tag/release exists and its package manifest confirms the corrected post-fix commit.
+This evidence record defines the Windows internal installer candidate that superseded `r7`, using the existing **Build Windows internal installer release** workflow and operator flow. The real `r8` tag/release exists and its package manifest confirms the corrected post-fix commit. `r8` is now superseded for clean Windows retesting by `internal-windows-installer-candidate-2026-05-31-r9`, recorded in [WINDOWS_GITHUB_INSTALLER_RELEASE_ASSET_EVIDENCE_2026-05-31.md](./WINDOWS_GITHUB_INSTALLER_RELEASE_ASSET_EVIDENCE_2026-05-31.md).
 
 Operator flow to preserve:
 
@@ -134,18 +134,16 @@ Interpretation:
 - The clean Windows package install, launch, save, close-window lifecycle, relaunch, and uninstall path is reported as mostly passing.
 - The package-mode auth/session blocker is **not closed** because save/list/reopen continuity was not proven for the same synthetic study. The operator reported that reopening an existing saved study and creating/saving another study are not ergonomically or functionally working as required.
 - The operator also reported a governance signoff concern: Study Owner/PI and Ethics & Methods/PI signoff appeared broken or unreachable during the walkthrough. This is a separate human-use readiness blocker until reproduced, fixed, and retested.
-- A 2026-05-31 local follow-up adds package-mode regression coverage for multiple saved studies, adds a top-level Study Workspace Launcher that creates backend-backed saved study workspaces before opening the dashboard, and verifies the Study PI/Ethics PI sequence with clearer signoff action labels, role-assignment guidance, and disabled-action reasons. This is code-level evidence only; it does not close the installed-package blocker until merged into a corrected package and retested on clean Windows.
+- A 2026-05-31 follow-up added package-mode regression coverage for multiple saved studies, added a top-level Study Workspace Launcher that creates backend-backed saved study workspaces before opening the dashboard, and verified the Study PI/Ethics PI sequence with clearer signoff action labels, role-assignment guidance, and disabled-action reasons. That follow-up is now released in superseding `r9`, but it does not close the installed-package blocker until retested on clean Windows.
 - The operator rated the result as a Phase 2 package-path pass, but not a pass for human use. This evidence record adopts that interpretation: **package lifecycle partial pass; human-testing candidate remains not ready**.
 
 Screenshot note: the operator reported screenshots for most moments, but the SmartScreen prompt/install start was not captured. Formal evidence closure still requires the actual screenshot/log artifacts to be linked in the Phase 4 evidence index.
 
 ## Required Follow-up
 
-A clean Windows retest has been attempted and produced partial pass evidence with open workflow blockers. The release gate is satisfied: the real GitHub `r8` tag/release exists, its assets use the corrected short SHA, and its package manifest points at the corrected post-fix commit. Follow-up must include:
+A clean Windows retest has been attempted and produced partial pass evidence with open workflow blockers. The original `r8` release gate is satisfied: the real GitHub `r8` tag/release exists, its assets use the corrected short SHA, and its package manifest points at the corrected post-fix commit. The follow-up code has since been merged and released as `r9`; clean Windows retesting must use the superseding `r9` package recorded in [WINDOWS_GITHUB_INSTALLER_RELEASE_ASSET_EVIDENCE_2026-05-31.md](./WINDOWS_GITHUB_INSTALLER_RELEASE_ASSET_EVIDENCE_2026-05-31.md).
 
-- merge/package the Study Workspace Launcher and saved-study reopen/new-study continuity follow-up,
-- merge/package the Study PI plus Ethics PI signoff UI/backend follow-up,
-- rerun the affected clean-Windows steps after the fixes,
+- rerun the affected clean-Windows steps against `r9`,
 - attach screenshot/log artifacts before any readiness advancement.
 
 
