@@ -99,6 +99,24 @@ test("cannot launch without governance signoff and completed checklist", () => {
   assert.equal(canLaunchStudy(draftStudy), false);
 });
 
+test("governance signoff UI names PI roles, sequence, and blocked-action reasons", () => {
+  const source = appSource();
+  const css = fs.readFileSync(path.join(appRoot, "src", "App.css"), "utf8");
+  const workflowSource = sourceSlice(source, "function ConductorWorkflowPanel", "function buildGovernanceChecklist");
+  const nextActionSource = sourceSlice(source, "if (workflow.version.status === \"ReadyForSignoff\")", "if (!roundOneConfig)");
+
+  assert.match(workflowSource, /Study PI signoff/);
+  assert.match(workflowSource, /Ethics PI signoff/);
+  assert.match(workflowSource, /Record Study PI signoff/);
+  assert.match(workflowSource, /Record Ethics PI signoff/);
+  assert.match(workflowSource, /Admin \/ Security/);
+  assert.match(workflowSource, /Activation is blocked until both Study PI and Ethics PI signoffs are recorded/);
+  assert.match(workflowSource, /workflow-disabled-reason/);
+  assert.match(nextActionSource, /Assign the Ethics PI as Ethics & Methods Steward/);
+  assert.doesNotMatch(workflowSource, /Switch role to Steward/);
+  assert.match(css, /\.workflow-disabled-reason/);
+});
+
 test("cannot publish AI suggestion without human acceptance and dual signoff", () => {
   assert.equal(
     canPublishAISuggestion({
@@ -445,6 +463,74 @@ test("Phase 1A multi-research-question setup and Round 1 capture stay lean and g
   assert.match(apiSource, /response_json:[\s\S]*responses/);
   assert.match(css, /\.research-question-manager/);
   assert.match(css, /\.round-one-question-response/);
+});
+
+test("study owner can start a new backend study without archiving saved studies", () => {
+  const source = appSource();
+  const resetSlice = sourceSlice(source, "function startNewStudyDraft()", "async function loadRoundConfigs");
+  assert.match(resetSlice, /setWorkflow\(\{\s*\.\.\.initialWorkflow,/s);
+  assert.match(resetSlice, /setWizard\(defaultWizardState\)/);
+  assert.match(resetSlice, /setActiveWizardStep\("purpose"\)/);
+  assert.match(resetSlice, /setWorkspacePath\("new-study"\)/);
+  assert.match(resetSlice, /setWorkspaceLauncherOpen\(true\)/);
+  assert.match(resetSlice, /setActiveModule\("dashboard"\)/);
+  assert.doesNotMatch(resetSlice, /archiveStudy/);
+
+  const dashboardSavedStudiesSlice = sourceSlice(source, "<h3>Saved Studies</h3>", "{savedStudiesError ? (");
+  assert.match(dashboardSavedStudiesSlice, /onStartNewStudyDraft/);
+  assert.match(dashboardSavedStudiesSlice, /Start new study/);
+  assert.match(dashboardSavedStudiesSlice, /onArchiveSmokeTestStudies/);
+
+  const builderHeaderSlice = sourceSlice(source, "<span className=\"eyebrow\">Study Builder</span>", "<div className=\"wizard-stepper\"");
+  assert.match(builderHeaderSlice, /workflow\.study/);
+  assert.match(builderHeaderSlice, /onStartNewStudyDraft/);
+});
+
+test("study workspace launcher routes staff into backend-backed workspaces before dashboard", () => {
+  const source = appSource();
+  const css = fs.readFileSync(path.join(appRoot, "src", "App.css"), "utf8");
+  const workspacePathSource = sourceSlice(source, "type WorkspacePath", "const statusLabels");
+  const createWorkspaceSource = sourceSlice(source, "async function createSavedStudyWorkspaceFromLauncher()", "async function loadRoundConfigs");
+  const chromeGateSource = sourceSlice(source, "const participantEntryActive", "async function runNextActionCommand");
+  const launcherSource = sourceSlice(source, "function StudyWorkspaceLauncher", "function ModuleRenderer");
+
+  assert.match(workspacePathSource, /"new-study" \| "current-studies" \| "past-studies"/);
+  assert.match(workspacePathSource, /New Study/);
+  assert.match(workspacePathSource, /Current Studies/);
+  assert.match(workspacePathSource, /Past Studies \/ Writing Up/);
+  assert.match(source, /const \[workspaceLauncherOpen, setWorkspaceLauncherOpen\] = useState\(true\)/);
+  assert.match(source, /onOpenCurrentStudy=\{\(record\) => openSavedStudy\(record, "dashboard"\)\}/);
+  assert.match(workspacePathSource, /record\.study\.archived_at/);
+  assert.match(workspacePathSource, /status === "Draft" \|\| status === "ReadyForSignoff" \|\| status === "Active"/);
+  assert.match(workspacePathSource, /return status === "Closed"/);
+  assert.match(chromeGateSource, /participantEntryActive/);
+  assert.match(chromeGateSource, /suppressStudyOperatingChrome = !participantEntryActive && workspaceLauncherOpen/);
+  assert.match(chromeGateSource, /showStudyWorkspaceLauncher = suppressStudyOperatingChrome && !referenceModuleSelected/);
+
+  assert.match(createWorkspaceSource, /conductorApi\.createStudy\(role, nextWizard\)/);
+  assert.match(createWorkspaceSource, /conductorApi\.createVersion\(created\.study\.id, role\)/);
+  assert.match(createWorkspaceSource, /conductorApi\.saveWizardPacket\(created\.study\.id, version\.studyVersion\.id, role, nextWizard\)/);
+  assert.match(createWorkspaceSource, /setWorkspaceLauncherOpen\(false\)/);
+  assert.match(createWorkspaceSource, /setActiveModule\("study-builder"\)/);
+  assert.doesNotMatch(createWorkspaceSource, /archiveStudy/);
+
+  assert.match(launcherSource, /Unsaved draft/);
+  assert.match(launcherSource, /Saved workspace/);
+  assert.match(launcherSource, /Save blocked/);
+  assert.match(launcherSource, /Create saved study workspace/);
+  assert.match(launcherSource, /onOpenCurrentStudy\(record\)/);
+  assert.match(launcherSource, /onOpenPastStudy\(record, "reporting"\)/);
+  assert.match(launcherSource, /Open reporting/);
+  assert.match(launcherSource, /Review closeout/);
+  assert.match(launcherSource, /Writing up is not archive/);
+  assert.match(launcherSource, /Ethics & Methods Steward/);
+  assert.match(launcherSource, /solo internal\/synthetic/i);
+  assert.match(launcherSource, /UI selection does not replace backend authorization/);
+
+  assert.match(css, /\.workspace-path-button\.path-new-study\.active\s*\{[^}]*background:\s*#2f6f5f/s);
+  assert.match(css, /\.workspace-path-button\.path-current-studies\.active\s*\{[^}]*background:\s*#345f8c/s);
+  assert.match(css, /\.workspace-path-button\.path-past-studies\.active\s*\{[^}]*background:\s*#6a5b2d/s);
+  assert.match(css, /\.launcher-path-tabs\s*\{[^}]*grid-template-columns:\s*repeat\(3, minmax\(0, 1fr\)\)/s);
 });
 
 test("rating rationale is submitted through API and exported as redacted rationale text", () => {

@@ -1,8 +1,8 @@
 # Windows GitHub Installer Release Asset Evidence - 2026-05-21
 
-Status: **WINDOWS INTERNAL INSTALLER CANDIDATE `r8` RELEASE VERIFIED / CLEAN WINDOWS RETEST REQUIRED / NOT RUN**.
+Status: **WINDOWS INTERNAL INSTALLER CANDIDATE `r8` RELEASE VERIFIED / CLEAN WINDOWS RETEST PARTIAL PASS / HUMAN USE BLOCKED**.
 
-Date/time basis: 2026-05-22 (UTC).
+Date/time basis: 2026-05-29 (UTC).
 
 Track: `human_testing_candidate`.
 
@@ -106,15 +106,47 @@ Publish/run verification status: **PASSED FOR RELEASE ASSET CREATION AND PACKAGE
 
 This candidate remains internal synthetic/low-risk packaging evidence only. It is **not** a claim of production readiness, pilot readiness, real human-subject readiness, signed installer trust, SmartScreen/Defender approval, or broad Windows support readiness.
 
+## Clean Windows Retest Evidence - 2026-05-29
+
+Operator report date: 2026-05-29.
+
+Device:
+
+- Device name: `PR2001-LEC`
+- Full device name: `PR2001-LEC.ad.clarkson.edu`
+- Processor: Intel(R) Core(TM) i5-10600 CPU @ 3.30GHz
+- Installed RAM: 16.0 GB (15.7 GB usable)
+- System type: 64-bit operating system, x64-based processor
+- Pen and touch: pen support
+- Windows edition: Windows 11 Enterprise
+- Version: 24H2
+- Installed on: 2025-08-18
+- OS build: 26100.3775
+- Experience: Windows Feature Experience Pack 1000.26100.66.0
+
+Reported release under test:
+
+- Release page: `https://github.com/scasper-source/Delphi-Commons/releases/tag/internal-windows-installer-candidate-2026-05-21-r8`
+- ZIP: `delphi-commons-windows-x64-installer-internal-internal-windows-installer-candidate-2026-05-21-r8-85fea05.zip`
+
+Interpretation:
+
+- The clean Windows package install, launch, save, close-window lifecycle, relaunch, and uninstall path is reported as mostly passing.
+- The package-mode auth/session blocker is **not closed** because save/list/reopen continuity was not proven for the same synthetic study. The operator reported that reopening an existing saved study and creating/saving another study are not ergonomically or functionally working as required.
+- The operator also reported a governance signoff concern: Study Owner/PI and Ethics & Methods/PI signoff appeared broken or unreachable during the walkthrough. This is a separate human-use readiness blocker until reproduced, fixed, and retested.
+- A 2026-05-31 local follow-up adds package-mode regression coverage for multiple saved studies, adds a top-level Study Workspace Launcher that creates backend-backed saved study workspaces before opening the dashboard, and verifies the Study PI/Ethics PI sequence with clearer signoff action labels, role-assignment guidance, and disabled-action reasons. This is code-level evidence only; it does not close the installed-package blocker until merged into a corrected package and retested on clean Windows.
+- The operator rated the result as a Phase 2 package-path pass, but not a pass for human use. This evidence record adopts that interpretation: **package lifecycle partial pass; human-testing candidate remains not ready**.
+
+Screenshot note: the operator reported screenshots for most moments, but the SmartScreen prompt/install start was not captured. Formal evidence closure still requires the actual screenshot/log artifacts to be linked in the Phase 4 evidence index.
+
 ## Required Follow-up
 
-A clean Windows retest is still required and has not been run. The release gate is satisfied: the real GitHub `r8` tag/release exists, its assets use the corrected short SHA, and its package manifest points at the corrected post-fix commit. The retest must include:
+A clean Windows retest has been attempted and produced partial pass evidence with open workflow blockers. The release gate is satisfied: the real GitHub `r8` tag/release exists, its assets use the corrected short SHA, and its package manifest points at the corrected post-fix commit. Follow-up must include:
 
-- fresh install on clean profile/system,
-- launch from Desktop/Start Menu,
-- attached-browser close => runtime stop confirmation,
-- restart, uninstall, and smoke checks,
-- capture of human-observed evidence before any readiness advancement.
+- merge/package the Study Workspace Launcher and saved-study reopen/new-study continuity follow-up,
+- merge/package the Study PI plus Ethics PI signoff UI/backend follow-up,
+- rerun the affected clean-Windows steps after the fixes,
+- attach screenshot/log artifacts before any readiness advancement.
 
 
 ## Clean Windows Retest Checklist (Required for `r8` Closure)
@@ -123,21 +155,22 @@ Use this checklist on a clean Windows profile or second Windows machine. Attach 
 
 | # | Requirement to prove | Evidence required | Status | Evidence link/path | Notes |
 | --- | --- | --- | --- | --- | --- |
-| 1 | Windows version/build captured | `winver` screenshot and `systeminfo` excerpt with OS name/version/build | NOT RUN | HUMAN_REQUIRED | Record exact edition and build number |
-| 2 | Correct fixed release ZIP downloaded | Screenshot/log showing exact `r8` ZIP filename downloaded from release page | NOT RUN | HUMAN_REQUIRED | Must match `delphi-commons-windows-x64-installer-internal-internal-windows-installer-candidate-2026-05-21-r8-85fea05.zip`; do not use any `0af4975` asset |
-| 3 | ZIP extracted | Screenshot of extracted folder contents including installer EXE and README | NOT RUN | HUMAN_REQUIRED | Use default extractor or equivalent |
-| 4 | SmartScreen behavior captured if shown | Screenshot of SmartScreen prompt (or explicit note that no prompt appeared) | NOT RUN | HUMAN_REQUIRED | Unsigned-candidate behavior must be documented |
-| 5 | Installer starts and completes | Installer start + completion screenshots | NOT RUN | HUMAN_REQUIRED | Include successful completion state |
-| 6 | Delphi Commons opens after install | First successful launch screenshot | NOT RUN | HUMAN_REQUIRED | Must launch installed app, not dev server |
-| 7 | Desktop shortcut exists | Screenshot showing desktop shortcut present | NOT RUN | HUMAN_REQUIRED | Capture icon/title clearly |
-| 8 | Study Builder can create and save a synthetic study | Screenshots showing create + save flow completion | NOT RUN | HUMAN_REQUIRED | Synthetic-only study name |
-| 9 | Dashboard lists the saved study | Dashboard screenshot with saved study visible | NOT RUN | HUMAN_REQUIRED | Must be same saved study from step 8 |
-| 10 | Saved study can be reopened | Screenshot/video proving reopen of saved study from dashboard | NOT RUN | HUMAN_REQUIRED | **Required for auth/session blocker closure** |
-| 11 | Closing Delphi Commons stops the runtime | Runtime/process evidence before/after close (Task Manager or scripted check) | NOT RUN | HUMAN_REQUIRED | Must show no lingering runtime after close |
-| 12 | Desktop relaunch works | Screenshot of successful relaunch via desktop shortcut | NOT RUN | HUMAN_REQUIRED | After step 11 stop confirmation |
-| 13 | Start Menu relaunch works | Screenshot of successful relaunch via Start Menu entry | NOT RUN | HUMAN_REQUIRED | Confirm equivalent behavior |
-| 14 | Uninstall completes cleanly | Uninstall completion screenshot + post-uninstall check | NOT RUN | HUMAN_REQUIRED | Include removal confirmation |
-| 15 | No real data/credentials/secrets used | Explicit operator attestation in evidence packet | NOT RUN | HUMAN_REQUIRED | No real participants, no real credentials, no sensitive exports |
+| 1 | Windows version/build captured | `winver` screenshot and `systeminfo` excerpt with OS name/version/build | PASS_REPORTED | Operator report 2026-05-29; screenshot artifact pending | Windows 11 Enterprise 24H2, OS build 26100.3775 on `PR2001-LEC` |
+| 2 | Correct fixed release ZIP downloaded | Screenshot/log showing exact `r8` ZIP filename downloaded from release page | PASS_REPORTED | Operator report 2026-05-29; screenshot artifact pending | Matched `delphi-commons-windows-x64-installer-internal-internal-windows-installer-candidate-2026-05-21-r8-85fea05.zip` |
+| 3 | ZIP extracted | Screenshot of extracted folder contents including installer EXE and README | PASS_REPORTED | Operator report 2026-05-29; screenshot artifact pending |  |
+| 4 | SmartScreen behavior captured if shown | Screenshot of SmartScreen prompt (or explicit note that no prompt appeared) | PASS_REPORTED_WITH_EVIDENCE_GAP | Operator report 2026-05-29 | SmartScreen/install prompt occurred, but screenshots were not captured |
+| 5 | Installer starts and completes | Installer start + completion screenshots | PASS_REPORTED | Operator report 2026-05-29; screenshot artifact pending |  |
+| 6 | Delphi Commons opens after install | First successful launch screenshot | PASS_REPORTED | Operator report 2026-05-29; screenshot artifact pending | Must launch installed app, not dev server |
+| 7 | Desktop shortcut exists | Screenshot showing desktop shortcut present | PASS_INFERRED | Operator report 2026-05-29; screenshot artifact pending | Desktop relaunch passed in step 12 |
+| 8 | Study Builder can create and save a synthetic study | Screenshots showing create + save flow completion | PASS_REPORTED | Operator report 2026-05-29; screenshot artifact pending | Synthetic-only study created and saved with no reported auth/session error |
+| 9 | Dashboard lists the saved study | Dashboard screenshot with saved study visible | PASS_REPORTED | Operator report 2026-05-29; screenshot artifact pending | Must be same saved study from step 8 |
+| 10 | Saved study can be reopened | Screenshot/video proving reopen of saved study from dashboard | FAIL_OR_INCONCLUSIVE | Operator report 2026-05-29 | Operator reported this neither passed nor cleanly failed because the product does not provide the needed close/open/reopen workflow clearly enough; required for auth/session blocker closure |
+| 11 | Closing Delphi Commons stops the runtime | Runtime/process evidence before/after close (Task Manager or scripted check) | PASS_REPORTED | Operator report 2026-05-29; screenshot artifact pending | Runtime stop behavior reported as passing |
+| 12 | Desktop relaunch works | Screenshot of successful relaunch | PASS_REPORTED | Operator report 2026-05-29; screenshot artifact pending |  |
+| 13 | Start Menu relaunch works | Screenshot of successful relaunch | PASS_REPORTED | Operator report 2026-05-29; screenshot artifact pending |  |
+| 14 | Smoke check after relaunch | Confirm saved study still listed/reopenable and a new study can be created/saved separately | FAIL_REPORTED | Operator report 2026-05-29 | Saved study appears persisted, but creating/saving another study or opening a separate saved study appears blocked or unclear |
+| 15 | Uninstall completes cleanly | Uninstall completion screenshot + post-uninstall check | PASS_REPORTED | Operator report 2026-05-29; screenshot artifact pending |  |
+| 16 | No real data/credentials/secrets used | Explicit operator attestation in evidence packet | PASS_REPORTED | Operator report 2026-05-29 | No real participant data, credentials, secrets, or sensitive exports used |
 
 ### Blocker closure condition
 

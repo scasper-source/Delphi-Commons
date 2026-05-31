@@ -120,6 +120,42 @@ const DEMO_PARTICIPANT_ID = "demo-panelist-001";
 const TWILIO_SETUP_FALLBACK_URL = "https://console.twilio.com/us1/develop/sms/services";
 
 type SmsSetupChoice = "undecided" | "off" | "twilio";
+type WorkspacePath = "new-study" | "current-studies" | "past-studies";
+type LauncherRoleMode = "separate_steward" | "solo_internal";
+
+const workspacePathOptions: Array<{
+  id: WorkspacePath;
+  label: string;
+  detail: string;
+}> = [
+  {
+    id: "new-study",
+    label: "New Study",
+    detail: "Create a saved workspace.",
+  },
+  {
+    id: "current-studies",
+    label: "Current Studies",
+    detail: "Open active setup or launch work.",
+  },
+  {
+    id: "past-studies",
+    label: "Past Studies / Writing Up",
+    detail: "Report, export, and review closed work.",
+  },
+];
+
+function isCurrentStudyRecord(record: SavedStudyRecord): boolean {
+  if (record.study.archived_at) return false;
+  const status = record.latestVersion?.status;
+  return !status || status === "Draft" || status === "ReadyForSignoff" || status === "Active";
+}
+
+function isPastStudyRecord(record: SavedStudyRecord): boolean {
+  if (record.study.archived_at) return false;
+  const status = record.latestVersion?.status;
+  return status === "Closed";
+}
 
 const statusLabels: Record<string, string> = {
   ReadyForReview: "Ready for review",
@@ -371,6 +407,8 @@ function humanizeBackendMessage(message: string | null): string | null {
     previous_round_must_be_closed: "Close the previous round before opening this round.",
     participant_orientation_required: "Complete the study orientation before beginning Round 1.",
     published_items_required_for_round: "Publish at least one traceable candidate item before opening this round.",
+    missing_required_signoffs: "Both Study PI and Ethics PI signoffs are required before activation.",
+    not_ready_for_signoff: "Submit the completed study version for governance signoff before recording approvals.",
     round_config_required: "Configure this round before opening it.",
     round_not_open: "This task is not available until the study team opens the round.",
     round1_config_required: "Configure Round 1 before collecting participant responses.",
@@ -379,6 +417,7 @@ function humanizeBackendMessage(message: string | null): string | null {
     research_question_text_required: "Each active research question needs text before governance review.",
     source_material_required_for_synthesis: "Round 1 responses are required before drafting Round 2 candidates.",
     study_design_packet_missing: "Save the Study Builder packet before submitting for governance signoff.",
+    study_title_required: "Add a study title before creating the saved workspace.",
     study_version_not_active: "Activate the study version before opening rounds or collecting responses.",
     session_required: "Session sign-in is required. In internal packaged testing, enable the synthetic operator auth bootstrap gate before launching.",
     session_bootstrap_invalid_credentials: "Operator session bootstrap failed because built-in synthetic credentials were rejected. Verify internal synthetic bootstrap gating is enabled for this package run.",
@@ -558,8 +597,16 @@ const emptyRuntimeStudyData: RuntimeStudyData = {
 function App() {
   const [role, setRole] = useState<UserRole>("study_owner");
   const [activeModule, setActiveModule] = useState<ModuleId>("dashboard");
+  const [workspaceLauncherOpen, setWorkspaceLauncherOpen] = useState(true);
+  const [workspacePath, setWorkspacePath] = useState<WorkspacePath>("new-study");
   const [workflow, setWorkflow] = useState<ConductorWorkflow>(initialWorkflow);
   const [wizard, setWizard] = useState<StudyWizardState>(defaultWizardState);
+  const [launcherDraftTitle, setLauncherDraftTitle] = useState(defaultWizardState.title);
+  const [launcherDraftDescription, setLauncherDraftDescription] = useState(defaultWizardState.description);
+  const [launcherRoleMode, setLauncherRoleMode] = useState<LauncherRoleMode>("separate_steward");
+  const [launcherCreateBusy, setLauncherCreateBusy] = useState(false);
+  const [launcherCreateError, setLauncherCreateError] = useState<string | null>(null);
+  const [launcherCreateMessage, setLauncherCreateMessage] = useState<string | null>(null);
   const [activeWizardStep, setActiveWizardStep] = useState<StudyWizardStepId>("purpose");
   const [roundOneSetup, setRoundOneSetup] = useState<RoundOneSetupState>(defaultRoundOneSetup);
   const [roundTwoSetup, setRoundTwoSetup] = useState<RoundTwoSetupState>(defaultRoundTwoSetup);
@@ -842,7 +889,7 @@ function App() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [role, workflow.study?.id, workflow.version?.id, participantInviteToken, magicToken]);
 
-  function openSavedStudy(record: SavedStudyRecord) {
+  function openSavedStudy(record: SavedStudyRecord, targetModule?: ModuleId) {
     setWizard(wizardFromBackendPacket(record.latestVersion?.study_design_packet_json, record.study));
     setWorkflow({
       study: record.study,
@@ -854,10 +901,97 @@ function App() {
         : "Opened saved study with no version yet.",
       error: null,
     });
-    setActiveModule(record.latestVersion ? "study-builder" : "dashboard");
+    setWorkspaceLauncherOpen(false);
+    setActiveModule(targetModule ?? (record.latestVersion ? "study-builder" : "dashboard"));
     if (record.latestVersion) {
       void loadRoundConfigs(record.study.id, record.latestVersion.id);
       void loadRuntimeData(record.study.id, record.latestVersion.id);
+    }
+  }
+
+  function startNewStudyDraft() {
+    const confirmed = window.confirm(
+      "Start a new study draft?\n\nSaved studies remain available from Current Studies; unsaved changes in the current draft will be cleared.",
+    );
+    if (!confirmed) return;
+
+    setWorkflow({
+      ...initialWorkflow,
+      lastMessage: "Started a new unsaved study draft.",
+    });
+    setWizard(defaultWizardState);
+    setActiveWizardStep("purpose");
+    setRoundConfigs([]);
+    setRuntimeData(emptyRuntimeStudyData);
+    setRoundTwoRatings({});
+    setRoundTwoRationales({});
+    setFinalResultSnapshot(null);
+    setFinalResultBlockers(["final_result_snapshot_missing"]);
+    setFinalResultMessage(null);
+    setFinalResultError(null);
+    setLauncherDraftTitle(defaultWizardState.title);
+    setLauncherDraftDescription(defaultWizardState.description);
+    setLauncherRoleMode("separate_steward");
+    setLauncherCreateError(null);
+    setLauncherCreateMessage(null);
+    setWorkspacePath("new-study");
+    setWorkspaceLauncherOpen(true);
+    setActiveModule("dashboard");
+  }
+
+  async function createSavedStudyWorkspaceFromLauncher() {
+    const title = launcherDraftTitle.trim();
+    const description = launcherDraftDescription.trim();
+    if (!title) {
+      setLauncherCreateError("study_title_required");
+      return;
+    }
+    if (role !== "study_owner") {
+      setLauncherCreateError("forbidden");
+      return;
+    }
+
+    const nextWizard = normalizeWizardResearchQuestions({
+      ...defaultWizardState,
+      title,
+      description,
+    });
+    setLauncherCreateBusy(true);
+    setLauncherCreateError(null);
+    setLauncherCreateMessage(null);
+
+    try {
+      const created = await conductorApi.createStudy(role, nextWizard);
+      const version = await conductorApi.createVersion(created.study.id, role);
+      const savedPacket = await conductorApi.saveWizardPacket(created.study.id, version.studyVersion.id, role, nextWizard);
+      setWizard(nextWizard);
+      setWorkflow({
+        study: { ...created.study, title, description },
+        version: savedPacket.studyVersion,
+        signoffs: [],
+        busyStep: null,
+        lastMessage: launcherRoleMode === "solo_internal"
+          ? "Saved workspace created for internal synthetic setup. Assign a separate Ethics & Methods Steward before any human-use readiness claim."
+          : "Saved workspace created. Assign the Ethics & Methods Steward before governance signoff.",
+        error: null,
+      });
+      setActiveWizardStep("purpose");
+      setRoundConfigs([]);
+      setRuntimeData(emptyRuntimeStudyData);
+      setRoundTwoRatings({});
+      setRoundTwoRationales({});
+      setFinalResultSnapshot(null);
+      setFinalResultBlockers(["final_result_snapshot_missing"]);
+      setFinalResultMessage(null);
+      setFinalResultError(null);
+      setWorkspaceLauncherOpen(false);
+      setActiveModule("study-builder");
+      setLauncherCreateMessage("Saved workspace created and listed under Current Studies.");
+      await loadSavedStudies();
+    } catch (error) {
+      setLauncherCreateError(error instanceof Error ? error.message : "Unable to create saved study workspace.");
+    } finally {
+      setLauncherCreateBusy(false);
     }
   }
 
@@ -2336,6 +2470,10 @@ function App() {
     ? activeModule
     : navigationModules[0]?.id ?? accessibleModules[0]?.id ?? "participant";
   const nextAction = buildNextAction({ workflow, wizard, roundConfigs, runtimeData });
+  const participantEntryActive = role === "panelist" || Boolean(participantInviteToken || magicToken);
+  const referenceModuleSelected = visibleModule === "about" || visibleModule === "glossary";
+  const suppressStudyOperatingChrome = !participantEntryActive && workspaceLauncherOpen;
+  const showStudyWorkspaceLauncher = suppressStudyOperatingChrome && !referenceModuleSelected;
 
   async function runNextActionCommand(command: NonNullable<NextAction["command"]>) {
     if (command.kind === "transition-round") {
@@ -2373,18 +2511,41 @@ function App() {
           </select>
         </label>
 
-        <nav className="module-nav">
-          {navigationModules.map((module) => (
-            <button
-              className={visibleModule === module.id ? "nav-item active" : "nav-item"}
-              key={module.id}
-              onClick={() => setActiveModule(module.id)}
-              type="button"
-            >
-              <span>{module.label}</span>
-            </button>
-          ))}
-        </nav>
+        {!participantEntryActive ? (
+          <nav className="workspace-path-nav" aria-label="Study workspace paths">
+            <span className="sidebar-section-label">Study workspace</span>
+            {workspacePathOptions.map((entry) => (
+              <button
+                className={`workspace-path-button path-${entry.id} ${workspacePath === entry.id && workspaceLauncherOpen ? "active" : ""}`}
+                key={entry.id}
+                onClick={() => {
+                  setWorkspacePath(entry.id);
+                  setWorkspaceLauncherOpen(true);
+                  setActiveModule("dashboard");
+                }}
+                type="button"
+              >
+                <strong>{entry.label}</strong>
+                <small>{entry.detail}</small>
+              </button>
+            ))}
+          </nav>
+        ) : null}
+
+        {!workspaceLauncherOpen || participantEntryActive ? (
+          <nav className="module-nav">
+            {navigationModules.map((module) => (
+              <button
+                className={visibleModule === module.id ? "nav-item active" : "nav-item"}
+                key={module.id}
+                onClick={() => setActiveModule(module.id)}
+                type="button"
+              >
+                <span>{module.label}</span>
+              </button>
+            ))}
+          </nav>
+        ) : null}
       </aside>
 
       <section className="workspace">
@@ -2403,20 +2564,24 @@ function App() {
           </nav>
         </div>
 
-        <header className="topbar">
-          <div>
-            <span className="eyebrow">Active study</span>
-            <h1>{activeTitle}</h1>
-          </div>
-          <div className="topbar-actions">
-            <StatusBadge risk={activeStatus === "Active" ? "success" : "warning"} label={formatStatus(activeStatus)} />
-            <StatusBadge risk={consensusLocked ? "locked" : "warning"} label={consensusLocked ? "Consensus threshold locked" : "Consensus threshold draft"} />
-          </div>
-        </header>
+        {!suppressStudyOperatingChrome ? (
+          <>
+            <header className="topbar">
+              <div>
+                <span className="eyebrow">Active study</span>
+                <h1>{activeTitle}</h1>
+              </div>
+              <div className="topbar-actions">
+                <StatusBadge risk={activeStatus === "Active" ? "success" : "warning"} label={formatStatus(activeStatus)} />
+                <StatusBadge risk={consensusLocked ? "locked" : "warning"} label={consensusLocked ? "Consensus threshold locked" : "Consensus threshold draft"} />
+              </div>
+            </header>
 
-        <NextActionPanel nextAction={nextAction} onNavigate={setActiveModule} onRunCommand={runNextActionCommand} />
+            <NextActionPanel nextAction={nextAction} onNavigate={setActiveModule} onRunCommand={runNextActionCommand} />
+          </>
+        ) : null}
 
-        {showSmsSetupPrompt ? (
+        {showSmsSetupPrompt && !suppressStudyOperatingChrome ? (
           <SmsSetupPrompt
             setup={smsSetupStatus}
             busy={smsSetupBusy}
@@ -2427,7 +2592,31 @@ function App() {
           />
         ) : null}
 
-        <ModuleRenderer
+        {showStudyWorkspaceLauncher ? (
+          <StudyWorkspaceLauncher
+            path={workspacePath}
+            role={role}
+            workflow={workflow}
+            draftTitle={launcherDraftTitle}
+            draftDescription={launcherDraftDescription}
+            roleMode={launcherRoleMode}
+            createBusy={launcherCreateBusy}
+            createError={launcherCreateError}
+            createMessage={launcherCreateMessage}
+            savedStudies={savedStudies}
+            savedStudiesLoading={savedStudiesLoading}
+            savedStudiesError={savedStudiesError}
+            onPathChange={setWorkspacePath}
+            onDraftTitleChange={setLauncherDraftTitle}
+            onDraftDescriptionChange={setLauncherDraftDescription}
+            onRoleModeChange={setLauncherRoleMode}
+            onCreateSavedWorkspace={createSavedStudyWorkspaceFromLauncher}
+            onRefreshSavedStudies={loadSavedStudies}
+            onOpenCurrentStudy={(record) => openSavedStudy(record, "dashboard")}
+            onOpenPastStudy={(record, target) => openSavedStudy(record, target)}
+          />
+        ) : (
+          <ModuleRenderer
           activeModule={visibleModule}
           role={role}
           study={selectedStudy}
@@ -2536,10 +2725,12 @@ function App() {
           savedStudiesError={savedStudiesError}
           onRefreshSavedStudies={loadSavedStudies}
           onOpenSavedStudy={openSavedStudy}
+          onStartNewStudyDraft={startNewStudyDraft}
           onArchiveSavedStudy={archiveSavedStudy}
           onArchiveSmokeTestStudies={archiveSmokeTestStudies}
           onRespondParticipantIssue={respondParticipantIssue}
         />
+        )}
         <footer className="app-footer">
           <button className="footer-link" onClick={navigateToCitation} type="button">
             Cite this tool
@@ -2547,6 +2738,285 @@ function App() {
         </footer>
       </section>
     </main>
+  );
+}
+
+function StudyWorkspaceLauncher({
+  path,
+  role,
+  workflow,
+  draftTitle,
+  draftDescription,
+  roleMode,
+  createBusy,
+  createError,
+  createMessage,
+  savedStudies,
+  savedStudiesLoading,
+  savedStudiesError,
+  onPathChange,
+  onDraftTitleChange,
+  onDraftDescriptionChange,
+  onRoleModeChange,
+  onCreateSavedWorkspace,
+  onRefreshSavedStudies,
+  onOpenCurrentStudy,
+  onOpenPastStudy,
+}: {
+  path: WorkspacePath;
+  role: UserRole;
+  workflow: ConductorWorkflow;
+  draftTitle: string;
+  draftDescription: string;
+  roleMode: LauncherRoleMode;
+  createBusy: boolean;
+  createError: string | null;
+  createMessage: string | null;
+  savedStudies: SavedStudyRecord[];
+  savedStudiesLoading: boolean;
+  savedStudiesError: string | null;
+  onPathChange: (path: WorkspacePath) => void;
+  onDraftTitleChange: (value: string) => void;
+  onDraftDescriptionChange: (value: string) => void;
+  onRoleModeChange: (mode: LauncherRoleMode) => void;
+  onCreateSavedWorkspace: () => void;
+  onRefreshSavedStudies: () => void;
+  onOpenCurrentStudy: (record: SavedStudyRecord) => void;
+  onOpenPastStudy: (record: SavedStudyRecord, target: ModuleId) => void;
+}) {
+  const currentStudies = savedStudies.filter(isCurrentStudyRecord);
+  const pastStudies = savedStudies.filter(isPastStudyRecord);
+  const titleMissing = draftTitle.trim().length === 0;
+  const saveBlocked = role !== "study_owner" || titleMissing || createBusy;
+  const saveState = role !== "study_owner"
+    ? "Save blocked"
+    : createMessage
+      ? "Saved workspace"
+      : "Unsaved draft";
+  const saveRisk: "success" | "warning" | "locked" = saveState === "Saved workspace"
+    ? "success"
+    : saveState === "Save blocked"
+      ? "locked"
+      : "warning";
+
+  function savedStudyTitle(record: SavedStudyRecord) {
+    return packetText(record.latestVersion?.study_design_packet_json, "title") ?? record.study.title;
+  }
+
+  function savedStudyDescription(record: SavedStudyRecord) {
+    return packetText(record.latestVersion?.study_design_packet_json, "description") ??
+      record.study.description ??
+      "No description provided.";
+  }
+
+  function renderStudyList(records: SavedStudyRecord[], mode: "current" | "past") {
+    if (records.length === 0 && !savedStudiesLoading) {
+      return (
+        <WarningBanner title={mode === "current" ? "No current studies" : "No past studies for writing up"} risk="info">
+          {mode === "current"
+            ? "Create a saved workspace from New Study, then return here to reopen it."
+            : "Closed or writing-up studies remain visible here until they are deliberately archived."}
+        </WarningBanner>
+      );
+    }
+
+    return (
+      <div className="saved-study-list">
+        {records.map((record) => {
+          const latest = record.latestVersion;
+          const status = latest ? formatStatus(latest.status) : "No version";
+          const isCurrentStudy = record.study.id === workflow.study?.id;
+          const hasSavedPacket = Boolean(latest?.study_design_packet_json);
+
+          return (
+            <article className={isCurrentStudy ? "saved-study-row current" : "saved-study-row"} key={record.study.id}>
+              <div>
+                <div className="saved-study-title">
+                  <strong>{savedStudyTitle(record)}</strong>
+                  {isCurrentStudy ? <StatusBadge risk="info" label="Selected study" /> : null}
+                </div>
+                <p>{savedStudyDescription(record)}</p>
+                <small>
+                  Saved {formatDateTime(record.study.created_at)} - ID {shortId(record.study.id)} - {latest ? `Version ${latest.version_number}` : "No versions"}
+                </small>
+              </div>
+              <div className="saved-study-actions">
+                <StatusBadge risk={latest?.status === "Active" ? "success" : latest?.status === "Closed" ? "info" : "warning"} label={status} />
+                <StatusBadge risk={hasSavedPacket ? "success" : "locked"} label={hasSavedPacket ? "Design saved" : "No design packet"} />
+                {mode === "current" ? (
+                  <button className="primary-button" onClick={() => onOpenCurrentStudy(record)} type="button">
+                    Open dashboard
+                  </button>
+                ) : (
+                  <>
+                    <button className="primary-button" onClick={() => onOpenPastStudy(record, "reporting")} type="button">
+                      Open reporting
+                    </button>
+                    <button className="secondary-button" onClick={() => onOpenPastStudy(record, "closeout")} type="button">
+                      Review closeout
+                    </button>
+                    <button className="secondary-button" onClick={() => onOpenPastStudy(record, "dashboard")} type="button">
+                      Open dashboard context
+                    </button>
+                  </>
+                )}
+              </div>
+            </article>
+          );
+        })}
+      </div>
+    );
+  }
+
+  return (
+    <div className="launcher-shell">
+      <section className="launcher-hero">
+        <div>
+          <span className="eyebrow">Study Workspace Launcher</span>
+          <h1>Choose the study work before opening the dashboard</h1>
+          <p>
+            Start a saved study workspace, reopen current work, or return to closed studies for writing, reporting, and evidence review.
+          </p>
+        </div>
+        <StatusBadge risk={path === "new-study" ? saveRisk : "info"} label={path === "new-study" ? saveState : "Select a study"} />
+      </section>
+
+      <section className="launcher-path-tabs" aria-label="Study workspace path selector">
+        {workspacePathOptions.map((entry) => (
+          <button
+            className={`launcher-path-tab path-${entry.id} ${path === entry.id ? "active" : ""}`}
+            key={entry.id}
+            onClick={() => onPathChange(entry.id)}
+            type="button"
+          >
+            <strong>{entry.label}</strong>
+            <small>{entry.detail}</small>
+          </button>
+        ))}
+      </section>
+
+      {path === "new-study" ? (
+        <section className="panel wide launcher-panel">
+          <div className="split-line">
+            <div>
+              <h2>New Study</h2>
+              <p className="muted">This begins as an unsaved draft. Create a saved backend workspace before you build the study.</p>
+            </div>
+            <StatusBadge risk={saveRisk} label={saveState} />
+          </div>
+
+          <div className="form-grid">
+            <label className="field wide-field">
+              <span>Study title</span>
+              <input value={draftTitle} onChange={(event) => onDraftTitleChange(event.target.value)} />
+            </label>
+            <label className="field wide-field">
+              <span>Purpose / description</span>
+              <textarea value={draftDescription} onChange={(event) => onDraftDescriptionChange(event.target.value)} />
+            </label>
+          </div>
+
+          <section className="launcher-role-box" aria-label="New study role setup">
+            <div>
+              <h3>Role setup</h3>
+              <p>
+                Study Owner / PI and Ethics & Methods Steward remain distinct charter roles. Backend membership and signoff gates still enforce launch authority.
+              </p>
+            </div>
+            <label className="check-field">
+              <input
+                checked={roleMode === "separate_steward"}
+                onChange={() => onRoleModeChange("separate_steward")}
+                type="radio"
+              />
+              <span>I will assign a separate Ethics & Methods Steward after creating the workspace.</span>
+            </label>
+            <label className="check-field">
+              <input
+                checked={roleMode === "solo_internal"}
+                onChange={() => onRoleModeChange("solo_internal")}
+                type="radio"
+              />
+              <span>Solo internal/synthetic setup for now; one person may hold roles only for demo or local testing.</span>
+            </label>
+          </section>
+
+          <WarningBanner title={roleMode === "solo_internal" ? "Solo internal setup only" : "Independent stewardship required"} risk={roleMode === "solo_internal" ? "warning" : "info"}>
+            {roleMode === "solo_internal"
+              ? "A separate Ethics & Methods Steward is recommended and required before human-use readiness. Solo setup must remain internal synthetic/demo work."
+              : "Assign the Ethics & Methods Steward in Admin / Security before governance signoff. UI selection does not replace backend authorization."}
+          </WarningBanner>
+
+          {titleMissing ? (
+            <WarningBanner title="Study title required" risk="warning">
+              Add a study title before creating the saved workspace.
+            </WarningBanner>
+          ) : null}
+          {createError ? (
+            <WarningBanner title="Workspace save blocked" risk="danger">
+              {humanizeBackendMessage(createError)}
+            </WarningBanner>
+          ) : null}
+          {createMessage ? (
+            <WarningBanner title="Saved workspace" risk="success">
+              {createMessage}
+            </WarningBanner>
+          ) : null}
+
+          <div className="action-row">
+            <button className="primary-button" disabled={saveBlocked} onClick={onCreateSavedWorkspace} type="button">
+              {createBusy ? "Creating..." : "Create saved study workspace"}
+            </button>
+            <button className="secondary-button" onClick={() => onPathChange("current-studies")} type="button">
+              View Current Studies
+            </button>
+          </div>
+        </section>
+      ) : null}
+
+      {path === "current-studies" ? (
+        <section className="panel wide launcher-panel">
+          <div className="split-line">
+            <div>
+              <h2>Current Studies</h2>
+              <p className="muted">Draft, active, and ready-for-signoff studies open into the selected-study dashboard.</p>
+            </div>
+            <button className="secondary-button" onClick={onRefreshSavedStudies} type="button">
+              {savedStudiesLoading ? "Refreshing..." : "Refresh"}
+            </button>
+          </div>
+          {savedStudiesError ? (
+            <WarningBanner title="Unable to load saved studies" risk="danger">
+              {humanizeBackendMessage(savedStudiesError)}
+            </WarningBanner>
+          ) : null}
+          {renderStudyList(currentStudies, "current")}
+        </section>
+      ) : null}
+
+      {path === "past-studies" ? (
+        <section className="panel wide launcher-panel">
+          <div className="split-line">
+            <div>
+              <h2>Past Studies / Writing Up</h2>
+              <p className="muted">Closed and writing-up studies stay available for reporting, exports, closeout, and audit review until archived.</p>
+            </div>
+            <button className="secondary-button" onClick={onRefreshSavedStudies} type="button">
+              {savedStudiesLoading ? "Refreshing..." : "Refresh"}
+            </button>
+          </div>
+          <WarningBanner title="Writing up is not archive" risk="info">
+            Archive hides a study from ordinary lists while preserving records. Writing-up studies should remain visible here until the team deliberately archives them.
+          </WarningBanner>
+          {savedStudiesError ? (
+            <WarningBanner title="Unable to load saved studies" risk="danger">
+              {humanizeBackendMessage(savedStudiesError)}
+            </WarningBanner>
+          ) : null}
+          {renderStudyList(pastStudies, "past")}
+        </section>
+      ) : null}
+    </div>
   );
 }
 
@@ -2659,6 +3129,7 @@ function ModuleRenderer({
   savedStudiesError,
   onRefreshSavedStudies,
   onOpenSavedStudy,
+  onStartNewStudyDraft,
   onArchiveSavedStudy,
   onArchiveSmokeTestStudies,
   onRespondParticipantIssue,
@@ -2771,6 +3242,7 @@ function ModuleRenderer({
   savedStudiesError: string | null;
   onRefreshSavedStudies: () => void;
   onOpenSavedStudy: (record: SavedStudyRecord) => void;
+  onStartNewStudyDraft: () => void;
   onArchiveSavedStudy: (record: SavedStudyRecord) => void;
   onArchiveSmokeTestStudies: () => void;
   onRespondParticipantIssue: (issueId: string, status: ParticipantIssue["status"], responseNote: string) => void;
@@ -2801,6 +3273,7 @@ function ModuleRenderer({
           savedStudiesError={savedStudiesError}
           onRefreshSavedStudies={onRefreshSavedStudies}
           onOpenSavedStudy={onOpenSavedStudy}
+          onStartNewStudyDraft={onStartNewStudyDraft}
           onArchiveSavedStudy={onArchiveSavedStudy}
           onArchiveSmokeTestStudies={onArchiveSmokeTestStudies}
           onRespondParticipantIssue={onRespondParticipantIssue}
@@ -2816,6 +3289,7 @@ function ModuleRenderer({
           onWizardChange={onWizardChange}
           onWizardStepChange={onWizardStepChange}
           onWorkflowStep={onWorkflowStep}
+          onStartNewStudyDraft={onStartNewStudyDraft}
         />
       );
     case "governance":
@@ -3594,15 +4068,15 @@ function buildNextAction(input: {
 
   if (workflow.version.status === "ReadyForSignoff") {
     const missing = [
-      hasSignoff(workflow, "Owner") ? null : "Study Owner",
-      hasSignoff(workflow, "MethodsSteward") ? null : "Ethics & Methods Steward",
+      hasSignoff(workflow, "Owner") ? null : "Study PI",
+      hasSignoff(workflow, "MethodsSteward") ? null : "Ethics PI",
     ].filter(Boolean).join(" and ");
 
     return {
       title: missing ? `${missing} signoff required` : "Activate the governed version",
       detail: missing
-        ? "Both required signoffs must be recorded before launch."
-        : "Both governance signoffs are recorded; activate the version before round setup.",
+        ? "Use Current role: Study Owner / PI for the Study PI signoff. Assign the Ethics PI as Ethics & Methods Steward in Admin / Security, then switch Current role to Ethics & Methods Steward for the second signoff."
+        : "Both governance signoffs are recorded; the Study Owner / PI can activate the version before round setup.",
       module: "governance",
       actionLabel: "Open signoff gate",
       risk: "warning",
@@ -3883,6 +4357,7 @@ function DashboardScreen({
   savedStudiesError,
   onRefreshSavedStudies,
   onOpenSavedStudy,
+  onStartNewStudyDraft,
   onArchiveSavedStudy,
   onArchiveSmokeTestStudies,
   onRespondParticipantIssue,
@@ -3898,6 +4373,7 @@ function DashboardScreen({
   savedStudiesError: string | null;
   onRefreshSavedStudies: () => void;
   onOpenSavedStudy: (record: SavedStudyRecord) => void;
+  onStartNewStudyDraft: () => void;
   onArchiveSavedStudy: (record: SavedStudyRecord) => void;
   onArchiveSmokeTestStudies: () => void;
   onRespondParticipantIssue: (issueId: string, status: ParticipantIssue["status"], responseNote: string) => void;
@@ -3968,12 +4444,19 @@ function DashboardScreen({
             <h3>Saved Studies</h3>
             <p className="muted">Open an existing study workspace or refresh the backend list.</p>
           </div>
-          <button className="secondary-button" onClick={onRefreshSavedStudies} type="button">
-            {savedStudiesLoading ? "Refreshing..." : "Refresh"}
-          </button>
-          <button className="secondary-button danger-button" onClick={onArchiveSmokeTestStudies} type="button">
-            Archive test workspaces
-          </button>
+          <div className="compact-actions">
+            {role === "study_owner" ? (
+              <button className="primary-button" onClick={onStartNewStudyDraft} type="button">
+                Start new study
+              </button>
+            ) : null}
+            <button className="secondary-button" onClick={onRefreshSavedStudies} type="button">
+              {savedStudiesLoading ? "Refreshing..." : "Refresh"}
+            </button>
+            <button className="secondary-button danger-button" onClick={onArchiveSmokeTestStudies} type="button">
+              Archive test workspaces
+            </button>
+          </div>
         </div>
 
         {savedStudiesError ? (
@@ -4080,6 +4563,7 @@ function StudyBuilderScreen({
   onWizardChange,
   onWizardStepChange,
   onWorkflowStep,
+  onStartNewStudyDraft,
 }: {
   role: UserRole;
   workflow: ConductorWorkflow;
@@ -4088,6 +4572,7 @@ function StudyBuilderScreen({
   onWizardChange: (state: StudyWizardState) => void;
   onWizardStepChange: (step: StudyWizardStepId) => void;
   onWorkflowStep: (step: WorkflowStep) => void;
+  onStartNewStudyDraft: () => void;
 }) {
   const selectedMethod = methodRegistry.find((method) =>
     wizard.studyFormat === "ModifiedDelphi" ? method.id === "modified-delphi" : method.id === "classic-delphi",
@@ -4294,10 +4779,17 @@ function StudyBuilderScreen({
             <span className="eyebrow">Study Builder</span>
             <h2>Design the study once, then carry it into governance and launch</h2>
           </div>
-          <button className="context-sidecar-trigger" onClick={() => setContextOpen(true)} type="button">
-            <span>Study Context & Disclosures</span>
-            <small>{contextStatusLabel}</small>
-          </button>
+          <div className="compact-actions">
+            {role === "study_owner" && workflow.study ? (
+              <button className="secondary-button" onClick={onStartNewStudyDraft} type="button">
+                Start new study
+              </button>
+            ) : null}
+            <button className="context-sidecar-trigger" onClick={() => setContextOpen(true)} type="button">
+              <span>Study Context & Disclosures</span>
+              <small>{contextStatusLabel}</small>
+            </button>
+          </div>
         </div>
         <div className="wizard-stepper" role="tablist" aria-label="Study builder steps">
           {wizardSteps.map((step, index) => {
@@ -5422,6 +5914,12 @@ function ConductorWorkflowPanel({
   const methodBlockers = validateWizardStep("method", wizard);
   const roundBlockers = validateWizardStep("rounds", wizard);
   const reviewBlockers = validateWizardStep("review", wizard);
+  const purposeBlockers = validateWizardStep("purpose", wizard);
+  const workflowBusy = workflow.busyStep !== null;
+  const hasOwnerApproval = hasSignoff(workflow, "Owner");
+  const hasStewardApproval = hasSignoff(workflow, "MethodsSteward");
+  const ownerRoleRequired = "Change Current role to Study Owner / PI.";
+  const stewardRoleRequired = "Change Current role to Ethics & Methods Steward after that user has been assigned to this study in Admin / Security.";
 
   const steps: Array<{
     id: WorkflowStep;
@@ -5429,13 +5927,23 @@ function ConductorWorkflowPanel({
     detail: string;
     roleNote: string;
     disabled: boolean;
+    disabledReason: string | null;
+    actionLabel: string;
   }> = [
     {
       id: "create-study",
       label: "Create study",
       detail: workflow.study ? workflow.study.id : `Creates "${wizard.title}" in the backend.`,
       roleNote: "Study Owner",
-      disabled: !ownerCanAct || Boolean(workflow.study) || validateWizardStep("purpose", wizard).length > 0,
+      disabled: !ownerCanAct || Boolean(workflow.study) || purposeBlockers.length > 0,
+      disabledReason: !ownerCanAct
+        ? ownerRoleRequired
+        : workflow.study
+          ? "A backend study is already current; use Start new study for a separate workspace."
+          : purposeBlockers.length > 0
+            ? "Complete the Study Builder purpose fields first."
+            : null,
+      actionLabel: "Create study",
     },
     {
       id: "create-version",
@@ -5443,6 +5951,14 @@ function ConductorWorkflowPanel({
       detail: version ? `Version ${version.version_number}: ${formatStatus(version.status)}` : "Creates the governed StudyVersion.",
       roleNote: "Study Owner",
       disabled: !ownerCanAct || !workflow.study || Boolean(version),
+      disabledReason: !ownerCanAct
+        ? ownerRoleRequired
+        : !workflow.study
+          ? "Create or open a backend study first."
+          : version
+            ? "This study already has a current version open."
+            : null,
+      actionLabel: "Create draft version",
     },
     {
       id: "save-wizard-packet",
@@ -5452,6 +5968,12 @@ function ConductorWorkflowPanel({
         : "Creates a draft workspace if needed, then stores panel, consent, feedback, AI, retention, and governance inputs.",
       roleNote: "Study Owner",
       disabled: !ownerCanAct || (version !== null && version.status !== "Draft"),
+      disabledReason: !ownerCanAct
+        ? ownerRoleRequired
+        : version !== null && version.status !== "Draft"
+          ? "The saved packet is locked after governance submission; create a new version for changes."
+          : null,
+      actionLabel: workflowStepDone(workflow, "save-wizard-packet") ? "Save study design again" : "Save study design",
     },
     {
       id: "set-design",
@@ -5464,6 +5986,18 @@ function ConductorWorkflowPanel({
         !workflowStepDone(workflow, "save-wizard-packet") ||
         methodBlockers.length > 0 ||
         workflowStepDone(workflow, "set-design"),
+      disabledReason: !ownerCanAct
+        ? ownerRoleRequired
+        : !version
+          ? "Create the draft StudyVersion first."
+          : !workflowStepDone(workflow, "save-wizard-packet")
+            ? "Save the Study Builder packet before applying method design."
+            : methodBlockers.length > 0
+              ? "Complete the method rationale and method-specific fields first."
+              : workflowStepDone(workflow, "set-design")
+                ? "Method design is already applied."
+                : null,
+      actionLabel: "Apply method design",
     },
     {
       id: "set-consensus",
@@ -5478,6 +6012,18 @@ function ConductorWorkflowPanel({
         roundBlockers.length > 0 ||
         !workflowStepDone(workflow, "set-design") ||
         workflowStepDone(workflow, "set-consensus"),
+      disabledReason: !ownerCanAct
+        ? ownerRoleRequired
+        : !version
+          ? "Create the draft StudyVersion first."
+          : roundBlockers.length > 0
+            ? "Complete the round plan and consensus settings first."
+            : !workflowStepDone(workflow, "set-design")
+              ? "Apply method design before locking the consensus rule."
+              : workflowStepDone(workflow, "set-consensus")
+                ? "Consensus threshold is already saved for this version."
+                : null,
+      actionLabel: "Set consensus threshold",
     },
     {
       id: "submit",
@@ -5491,34 +6037,84 @@ function ConductorWorkflowPanel({
         !workflowStepDone(workflow, "save-wizard-packet") ||
         !workflowStepDone(workflow, "set-consensus") ||
         workflowStepDone(workflow, "submit"),
+      disabledReason: !ownerCanAct
+        ? ownerRoleRequired
+        : !version
+          ? "Create and save the draft StudyVersion first."
+          : reviewBlockers.length > 0
+            ? "Complete every Study Builder review requirement before signoff."
+            : !workflowStepDone(workflow, "save-wizard-packet")
+              ? "Save the full Study Builder packet first."
+              : !workflowStepDone(workflow, "set-consensus")
+                ? "Apply method design and consensus threshold before submission."
+                : workflowStepDone(workflow, "submit")
+                  ? "This version is already submitted for governance signoff."
+                  : null,
+      actionLabel: "Submit for signoff",
     },
     {
       id: "owner-signoff",
-      label: "Owner signoff",
-      detail: hasSignoff(workflow, "Owner") ? "Owner signoff recorded." : "Records Study Owner approval.",
-      roleNote: "Study Owner",
-      disabled: !ownerCanAct || version?.status !== "ReadyForSignoff" || hasSignoff(workflow, "Owner"),
+      label: "Study PI signoff",
+      detail: hasOwnerApproval
+        ? "Study PI signoff recorded for this StudyVersion."
+        : "The Study Owner / PI records approval after the version is submitted for governance signoff.",
+      roleNote: "Study Owner / PI",
+      disabled: !ownerCanAct || version?.status !== "ReadyForSignoff" || hasOwnerApproval,
+      disabledReason: !ownerCanAct
+        ? ownerRoleRequired
+        : version?.status !== "ReadyForSignoff"
+          ? "Submit the completed StudyVersion for governance signoff first."
+          : hasOwnerApproval
+            ? "Study PI signoff is already recorded."
+            : null,
+      actionLabel: "Record Study PI signoff",
     },
     {
       id: "steward-signoff",
-      label: "Ethics & Methods signoff",
-      detail: hasSignoff(workflow, "MethodsSteward") ? "Methods signoff recorded." : "Switch role to Steward and approve.",
-      roleNote: "Ethics & Methods Steward",
-      disabled: !stewardCanAct || version?.status !== "ReadyForSignoff" || hasSignoff(workflow, "MethodsSteward"),
+      label: "Ethics PI signoff",
+      detail: hasStewardApproval
+        ? "Ethics PI / Ethics & Methods Steward signoff recorded for this StudyVersion."
+        : "Assign the Ethics PI as Ethics & Methods Steward in Admin / Security, then use Current role: Ethics & Methods Steward to approve.",
+      roleNote: "Ethics PI / Ethics & Methods Steward",
+      disabled: !stewardCanAct || version?.status !== "ReadyForSignoff" || hasStewardApproval,
+      disabledReason: !stewardCanAct
+        ? stewardRoleRequired
+        : version?.status !== "ReadyForSignoff"
+          ? "Submit the completed StudyVersion for governance signoff first."
+          : hasStewardApproval
+            ? "Ethics PI signoff is already recorded."
+            : null,
+      actionLabel: "Record Ethics PI signoff",
     },
     {
       id: "activate",
       label: "Activate version",
-      detail: version?.status === "Active" ? "StudyVersion is active." : "Requires both signoffs.",
-      roleNote: "Study Owner",
-      disabled: !ownerCanAct || version?.status !== "ReadyForSignoff" || !hasSignoff(workflow, "Owner") || !hasSignoff(workflow, "MethodsSteward"),
+      detail: version?.status === "Active" ? "StudyVersion is active." : "Requires Study PI and Ethics PI signoffs.",
+      roleNote: "Study Owner / PI",
+      disabled: !ownerCanAct || version?.status !== "ReadyForSignoff" || !hasOwnerApproval || !hasStewardApproval,
+      disabledReason: !ownerCanAct
+        ? ownerRoleRequired
+        : version?.status !== "ReadyForSignoff"
+          ? "The version must be Ready for signoff before activation."
+          : !hasOwnerApproval || !hasStewardApproval
+            ? "Activation is blocked until both Study PI and Ethics PI signoffs are recorded."
+            : null,
+      actionLabel: "Activate version",
     },
     {
       id: "open-round-1",
       label: "Open Round 1",
       detail: version?.opened_round1_at ? `Opened ${new Date(version.opened_round1_at).toLocaleString()}` : "Makes the open-ended round available.",
-      roleNote: "Study Owner",
+      roleNote: "Study Owner / PI",
       disabled: !ownerCanAct || version?.status !== "Active" || Boolean(version.opened_round1_at),
+      disabledReason: !ownerCanAct
+        ? ownerRoleRequired
+        : version?.status !== "Active"
+          ? "Activate the governed version before opening Round 1."
+          : version.opened_round1_at
+            ? "Round 1 is already open."
+            : null,
+      actionLabel: "Open Round 1",
     },
   ];
 
@@ -5544,10 +6140,15 @@ function ConductorWorkflowPanel({
         </WarningBanner>
       ) : null}
 
+      <WarningBanner title="Governance signoff sequence" risk="info">
+        Save the design, apply method and consensus settings, submit for governance signoff, record the Study PI signoff, record the Ethics PI signoff as the assigned Ethics & Methods Steward, then activate the version as Study Owner / PI.
+      </WarningBanner>
+
       <div className="workflow-steps">
         {steps.map((step, index) => {
           const done = workflowStepDone(workflow, step.id);
           const busy = workflow.busyStep === step.id;
+          const unavailable = step.disabled || busy || workflowBusy;
 
           return (
             <article className="workflow-step" key={step.id}>
@@ -5558,14 +6159,17 @@ function ConductorWorkflowPanel({
                   <StatusBadge risk={done ? "success" : "info"} label={done ? "Done" : step.roleNote} />
                 </div>
                 <p>{step.detail}</p>
+                {unavailable && !done && step.disabledReason ? (
+                  <small className="workflow-disabled-reason">{step.disabledReason}</small>
+                ) : null}
               </div>
               <button
                 className="secondary-button"
-                disabled={step.disabled || busy || workflow.busyStep !== null}
+                disabled={unavailable}
                 onClick={() => onWorkflowStep(step.id)}
                 type="button"
               >
-                {busy ? "Working..." : step.id === "save-wizard-packet" && done ? "Save again" : done ? "Complete" : "Run"}
+                {busy ? "Working..." : done ? "Complete" : step.actionLabel}
               </button>
             </article>
           );
