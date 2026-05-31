@@ -27,9 +27,9 @@ These assets are internal package candidates only. They do not create production
 
 | Item | Value |
 | --- | --- |
-| Release tag | [`internal-windows-installer-candidate-2026-05-18-r7`](https://github.com/scasper-source/Delphi-Commons/releases/tag/internal-windows-installer-candidate-2026-05-18-r7) |
-| Workflow run | [`26061390715`](https://github.com/scasper-source/Delphi-Commons/actions/runs/26061390715) |
+| Release tag | [`internal-windows-installer-candidate-2026-05-31-r9`](https://github.com/scasper-source/Delphi-Commons/releases/tag/internal-windows-installer-candidate-2026-05-31-r9) |
+| Workflow run | [`26718778645`](https://github.com/scasper-source/Delphi-Commons/actions/runs/26718778645) |
 | Result | `completed` / `success` |
 | Recommended asset | Windows x64 installer ZIP bundle |
-| Superseded assets | `r2` deleted after user-reported Windows code 193 post-install launch failure; `r3` deleted after user-reported browser-reopen/desktop-shortcut launch issue; `r4` deleted after user-facing Stop/Status shortcuts and background-runtime lifecycle were removed; `r5` deleted after stale ZIP README Stop wording was found; `r6` deleted after review found fallback-order and attached-browser-unavailable issues |
-| Remaining evidence | Clean-profile or second-machine install/start/browser-window-close-to-stop/uninstall on `r7` remains `NOT RUN` |
+| Superseded assets | `r2` deleted after user-reported Windows code 193 post-install launch failure; `r3` deleted after user-reported browser-reopen/desktop-shortcut launch issue; `r4` deleted after user-facing Stop/Status shortcuts and background-runtime lifecycle were removed; `r5` deleted after stale ZIP README Stop wording was found; `r6` deleted after review found fallback-order and attached-browser-unavailable issues; `r7` superseded by the package-mode auth fix in `r8`; `r8` superseded by the Study Workspace Launcher, multi-study persistence, and Study PI/Ethics PI signoff follow-up in `r9` |
+| Remaining evidence | Clean-profile or second-machine retest on `r9` remains `NOT RUN` |
