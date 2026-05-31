@@ -48,7 +48,7 @@ Delphi Commons has strong controlled synthetic/mock-trial and internal engineeri
 | --- | --- |
 | Phase 0 baseline preservation | Baseline mock-trial/regression evidence is preserved. |
 | Phase 1 product surface lock | Complete as scope lock only. It does not authorize human testing. |
-| Phase 2 downloadable laptop operator candidate | In progress. Windows internal portable ZIP, corrected Windows internal installer `r8` ZIP/EXE, and macOS Apple Silicon single installer ZIP bundle are available on GitHub. A 2026-05-29 clean Windows `r8` operator report shows install/launch/close-window stop/relaunch/uninstall mostly passing, but saved-study reopen/new-study continuity failed or was unclear and screenshots still need attachment. Local follow-up code now adds package-mode multi-study and Study PI/Ethics PI signoff regressions plus clearer signoff UI; these still require merge, package rebuild, and clean Windows retest evidence. |
+| Phase 2 downloadable laptop operator candidate | In progress. Windows internal portable ZIP, corrected Windows internal installer `r8` ZIP/EXE, and macOS Apple Silicon single installer ZIP bundle are available on GitHub. A 2026-05-29 clean Windows `r8` operator report shows install/launch/close-window stop/relaunch/uninstall mostly passing, but saved-study reopen/new-study continuity failed or was unclear and screenshots still need attachment. Local follow-up code now adds package-mode multi-study persistence, a top-level Study Workspace Launcher with backend-backed New/Current/Past study paths, and Study PI/Ethics PI signoff regressions plus clearer signoff UI; these still require merge, package rebuild, and clean Windows retest evidence. |
 | Phase 3 phone/SMS candidate | Local mock/sandbox implementation and evidence-prep are substantially complete. Real iOS/Android device evidence, real provider/sandbox evidence if in scope, accessibility review, privacy/copy/Data Custodian review, and human-observed phone walkthrough remain open. |
 | Phase 4 human testing binder | Binder package is assembled for final human-testing preparation; candidate remains not ready until laptop/phone run evidence and required signoffs are attached. |
 | Phase 5 final human testing | Not run. |
@@ -57,7 +57,7 @@ Delphi Commons has strong controlled synthetic/mock-trial and internal engineeri
 
 - Pin a candidate commit/package and record the exact supported surfaces.
 - Complete clean-profile or second-machine laptop package evidence for the selected Windows path, including linked screenshot/log artifacts.
-- Merge, package, and rerun the Windows saved-study reopen/new-study continuity path found during the 2026-05-29 `r8` retest.
+- Merge, package, and rerun the Windows Study Workspace Launcher plus saved-study reopen/new-study continuity path found during the 2026-05-29 `r8` retest.
 - Merge, package, and rerun the Study PI plus Ethics PI signoff flow found confusing or unreachable during the 2026-05-29 `r8` retest.
 - Complete macOS install/lifecycle evidence if macOS is included for the candidate.
 - Complete iPhone/Safari and Android/Chrome phone-flow evidence.
