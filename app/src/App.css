@@ -128,6 +128,11 @@
   border-color: #b9d6c8;
 }
 
+.workspace-path-button.path-main-menu.active {
+  background: #485c61;
+  border-color: #c9d9d6;
+}
+
 .workspace-path-button.path-new-study.active {
   background: #2f6f5f;
   border-color: #9ed7c2;
@@ -232,6 +237,11 @@
 
 .launcher-path-tab.active {
   color: #ffffff;
+}
+
+.launcher-path-tab.path-main-menu.active {
+  background: #485c61;
+  border-color: #485c61;
 }
 
 .launcher-path-tab.path-new-study.active {
