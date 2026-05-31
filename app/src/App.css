@@ -88,6 +88,61 @@
   gap: 6px;
 }
 
+.workspace-path-nav {
+  display: grid;
+  gap: 8px;
+}
+
+.sidebar-section-label {
+  color: #c9d9d6;
+  display: block;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0;
+  text-transform: uppercase;
+}
+
+.workspace-path-button {
+  align-items: start;
+  background: #10272d;
+  border: 1px solid #547177;
+  border-left: 8px solid #7da99f;
+  border-radius: 8px;
+  color: #edf4f2;
+  cursor: pointer;
+  display: grid;
+  gap: 3px;
+  min-height: 58px;
+  padding: 9px 10px;
+  text-align: left;
+  width: 100%;
+}
+
+.workspace-path-button small {
+  color: #c9d9d6;
+  line-height: 1.35;
+}
+
+.workspace-path-button:hover,
+.workspace-path-button:focus-visible {
+  border-color: #b9d6c8;
+}
+
+.workspace-path-button.path-new-study.active {
+  background: #2f6f5f;
+  border-color: #9ed7c2;
+}
+
+.workspace-path-button.path-current-studies.active {
+  background: #345f8c;
+  border-color: #b5d1ed;
+}
+
+.workspace-path-button.path-past-studies.active {
+  background: #6a5b2d;
+  border-color: #e3d08a;
+}
+
 .nav-item {
   width: 100%;
   min-height: 46px;
@@ -119,6 +174,106 @@
   box-sizing: border-box;
   min-width: 0;
   padding: 26px;
+}
+
+.launcher-shell {
+  display: grid;
+  gap: 18px;
+}
+
+.launcher-hero {
+  align-items: end;
+  background: #fbfcfa;
+  border: 1px solid #dbe4df;
+  border-left: 8px solid #2f6f5f;
+  border-radius: 8px;
+  display: grid;
+  gap: 16px;
+  grid-template-columns: minmax(0, 1fr) auto;
+  padding: 18px;
+}
+
+.launcher-hero h1 {
+  margin: 4px 0 8px;
+  font-size: 1.8rem;
+  line-height: 1.2;
+}
+
+.launcher-hero p {
+  color: #39484b;
+  margin: 0;
+  max-width: 760px;
+}
+
+.launcher-path-tabs {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.launcher-path-tab {
+  background: #fbfcfa;
+  border: 1px solid #dbe4df;
+  border-top: 8px solid #7da99f;
+  border-radius: 8px;
+  color: #1f2a2e;
+  cursor: pointer;
+  display: grid;
+  gap: 4px;
+  min-height: 86px;
+  padding: 12px;
+  text-align: left;
+}
+
+.launcher-path-tab small {
+  color: #5d6d70;
+  line-height: 1.35;
+}
+
+.launcher-path-tab.active {
+  color: #ffffff;
+}
+
+.launcher-path-tab.path-new-study.active {
+  background: #2f6f5f;
+  border-color: #2f6f5f;
+}
+
+.launcher-path-tab.path-current-studies.active {
+  background: #345f8c;
+  border-color: #345f8c;
+}
+
+.launcher-path-tab.path-past-studies.active {
+  background: #6a5b2d;
+  border-color: #6a5b2d;
+}
+
+.launcher-path-tab.active small {
+  color: #eef7f4;
+}
+
+.launcher-panel {
+  display: grid;
+  gap: 14px;
+}
+
+.launcher-role-box {
+  background: #f7fbf8;
+  border: 1px solid #c4d8d2;
+  border-radius: 8px;
+  display: grid;
+  gap: 10px;
+  padding: 14px;
+}
+
+.launcher-role-box h3 {
+  margin: 0 0 4px;
+}
+
+.launcher-role-box p {
+  color: #39484b;
+  margin: 0;
 }
 
 .reference-bar {
@@ -1876,6 +2031,15 @@ summary:focus-visible,
 
   .module-nav {
     grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  }
+
+  .workspace-path-nav {
+    grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  }
+
+  .launcher-hero,
+  .launcher-path-tabs {
+    grid-template-columns: 1fr;
   }
 
   .screen-grid,
