@@ -26,4 +26,4 @@ Store evidence in a controlled evidence folder and link exact paths here. Do not
 | F4-EVID-018 | Signoff | Security/privacy review | NOT RUN | HUMAN_REQUIRED |  |
 | F4-EVID-019 | Final table | P0 blocker closeout | OPEN | `FINAL_P0_BLOCKER_TABLE.md` |  |
 | F4-EVID-020 | Screenshot/log | Saved-study reopen and post-relaunch continuity | FAIL_REPORTED | HUMAN_REQUIRED | 2026-05-29 operator report says saved-study reopen was not proven and post-relaunch smoke/new-study continuity failed or was unclear |
-| F4-EVID-021 | Screenshot/log | Study Owner and Ethics & Methods signoff controls | FAIL_REPORTED | HUMAN_REQUIRED | 2026-05-29 operator report says signoff controls appeared broken, unreachable, or not wired clearly enough |
+| F4-EVID-021 | Screenshot/log | Study PI and Ethics PI signoff controls | CODE_FIX_PENDING_RETEST | HUMAN_REQUIRED | 2026-05-29 operator report says signoff controls appeared broken, unreachable, or not wired clearly enough. 2026-05-31 local code follow-up adds backend regression and clearer UI; corrected-package screenshots/logs are still required. |

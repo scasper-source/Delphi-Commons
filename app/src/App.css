@@ -1108,6 +1108,13 @@
   overflow-wrap: anywhere;
 }
 
+.workflow-disabled-reason {
+  color: #5d4b16;
+  display: block;
+  font-weight: 700;
+  margin-top: 6px;
+}
+
 .badge-line,
 .compact-actions {
   display: flex;

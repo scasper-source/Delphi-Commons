@@ -99,6 +99,24 @@ test("cannot launch without governance signoff and completed checklist", () => {
   assert.equal(canLaunchStudy(draftStudy), false);
 });
 
+test("governance signoff UI names PI roles, sequence, and blocked-action reasons", () => {
+  const source = appSource();
+  const css = fs.readFileSync(path.join(appRoot, "src", "App.css"), "utf8");
+  const workflowSource = sourceSlice(source, "function ConductorWorkflowPanel", "function buildGovernanceChecklist");
+  const nextActionSource = sourceSlice(source, "if (workflow.version.status === \"ReadyForSignoff\")", "if (!roundOneConfig)");
+
+  assert.match(workflowSource, /Study PI signoff/);
+  assert.match(workflowSource, /Ethics PI signoff/);
+  assert.match(workflowSource, /Record Study PI signoff/);
+  assert.match(workflowSource, /Record Ethics PI signoff/);
+  assert.match(workflowSource, /Admin \/ Security/);
+  assert.match(workflowSource, /Activation is blocked until both Study PI and Ethics PI signoffs are recorded/);
+  assert.match(workflowSource, /workflow-disabled-reason/);
+  assert.match(nextActionSource, /Assign the Ethics PI as Ethics & Methods Steward/);
+  assert.doesNotMatch(workflowSource, /Switch role to Steward/);
+  assert.match(css, /\.workflow-disabled-reason/);
+});
+
 test("cannot publish AI suggestion without human acceptance and dual signoff", () => {
   assert.equal(
     canPublishAISuggestion({

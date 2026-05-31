@@ -134,6 +134,7 @@ Interpretation:
 - The clean Windows package install, launch, save, close-window lifecycle, relaunch, and uninstall path is reported as mostly passing.
 - The package-mode auth/session blocker is **not closed** because save/list/reopen continuity was not proven for the same synthetic study. The operator reported that reopening an existing saved study and creating/saving another study are not ergonomically or functionally working as required.
 - The operator also reported a governance signoff concern: Study Owner/PI and Ethics & Methods/PI signoff appeared broken or unreachable during the walkthrough. This is a separate human-use readiness blocker until reproduced, fixed, and retested.
+- A 2026-05-31 local follow-up adds backend package-mode regression coverage for the Study PI/Ethics PI sequence and clarifies the UI with explicit signoff action labels, role-assignment guidance, and disabled-action reasons. This is code-level evidence only; it does not close the installed-package blocker until merged into a corrected package and retested on clean Windows.
 - The operator rated the result as a Phase 2 package-path pass, but not a pass for human use. This evidence record adopts that interpretation: **package lifecycle partial pass; human-testing candidate remains not ready**.
 
 Screenshot note: the operator reported screenshots for most moments, but the SmartScreen prompt/install start was not captured. Formal evidence closure still requires the actual screenshot/log artifacts to be linked in the Phase 4 evidence index.
@@ -142,8 +143,8 @@ Screenshot note: the operator reported screenshots for most moments, but the Sma
 
 A clean Windows retest has been attempted and produced partial pass evidence with open workflow blockers. The release gate is satisfied: the real GitHub `r8` tag/release exists, its assets use the corrected short SHA, and its package manifest points at the corrected post-fix commit. Follow-up must include:
 
-- reproduce and fix saved-study reopen/new-study continuity,
-- reproduce and fix Study Owner plus Ethics & Methods signoff controls,
+- merge/package the saved-study reopen/new-study continuity follow-up,
+- merge/package the Study PI plus Ethics PI signoff UI/backend follow-up,
 - rerun the affected clean-Windows steps after the fixes,
 - attach screenshot/log artifacts before any readiness advancement.
 
