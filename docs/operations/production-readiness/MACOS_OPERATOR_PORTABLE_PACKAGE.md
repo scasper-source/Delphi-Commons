@@ -1,8 +1,8 @@
 # macOS Operator Portable Package (Phase 2 Prototype/Internal)
 
-Status: **MACOS PORTABLE PACKAGE PROTOTYPE / POST-FIX APPLE SILICON LIFECYCLE EVIDENCE RECORDED / INTERNAL ENGINEERING EVIDENCE ONLY**.
+Status: **MACOS PORTABLE PACKAGE PROTOTYPE / LOCAL APPLE SILICON LIFECYCLE EVIDENCE RECORDED / INTERNAL ENGINEERING EVIDENCE ONLY**.
 Decision label: **NOT READY FOR HUMAN TESTING**.
-Date basis: **2026-05-14**.
+Date basis: **2026-05-31**.
 
 ## Scope
 
@@ -11,6 +11,8 @@ This document covers the scaffolded internal macOS portable operator package pat
 One Apple Silicon macOS internal engineering runtime run was performed on **2026-05-13**. It produced partial positive package/build/start evidence but exposed lifecycle defects. Follow-up script fixes and local package verification were recorded separately.
 
 A post-fix real Apple Silicon macOS lifecycle rerun was performed on **2026-05-14** at commit `56b37b7494e9b9c796de4a80010d290307ac3a50` and passed for the previously observed lifecycle defects. This remains internal engineering evidence only and does **not** establish macOS support readiness or human-testing readiness.
+
+A later local source-built Apple Silicon macOS portable smoke was reported on **2026-05-31** at commit `2a831eee203d70bf295f821712603502667109dd`. It passed app/server install/build/test, package build, start, restart, smoke, stop, reset, and final port-clear checks, but it was not run from a newly published macOS release asset and it identified follow-up findings for dependency audit posture, deployment security verifier npm resolution, staging cleanup, reset-snapshot pruning, and packaging-script maintainability.
 
 ## Builder
 
@@ -81,6 +83,7 @@ This prototype does **not** include or claim:
 - [macOS Signing And Distribution Limitations (Phase 2)](./MACOS_SIGNING_DISTRIBUTION_LIMITATIONS.md)
 - [macOS Operator Portable Runbook (planned internal candidate)](./MACOS_OPERATOR_PORTABLE_RUNBOOK.md)
 - [macOS Operator Portable Post-Fix Lifecycle Evidence (2026-05-14)](./MACOS_OPERATOR_PORTABLE_POST_FIX_LIFECYCLE_EVIDENCE_2026-05-14.md)
+- [macOS Operator Portable Local Smoke Evidence (2026-05-31)](./MACOS_OPERATOR_PORTABLE_LOCAL_SMOKE_EVIDENCE_2026-05-31.md)
 - [Windows Operator Portable Package (Stage 1 Prototype)](./WINDOWS_OPERATOR_PORTABLE_PACKAGE.md)
 - [Product Readiness Plan for eDelphi](./PRODUCTION_READY_EDELPHI_PLATFORM.md)
 
@@ -157,6 +160,14 @@ Specific prior defects closed by this rerun:
 - high-severity server audit finding at the tested commit.
 
 Remaining boundary: this is one Apple Silicon internal engineering rerun. It does not provide Intel Mac coverage, signed/notarized distribution evidence, installer evidence, accessibility evidence, security certification, pilot readiness, production readiness, or human-subjects readiness.
+
+## 2026-05-31 Apple Silicon local source-built portable smoke
+
+Detailed evidence: [MACOS_OPERATOR_PORTABLE_LOCAL_SMOKE_EVIDENCE_2026-05-31.md](./MACOS_OPERATOR_PORTABLE_LOCAL_SMOKE_EVIDENCE_2026-05-31.md).
+
+Summary: a tester-reported local source-build/package lifecycle smoke on macOS arm64 at commit `2a831eee203d70bf295f821712603502667109dd` passed app/server dependency install, app/server builds, server tests, macOS portable package build, start, browser UI load at `http://127.0.0.1:4173`, smoke after start, restart, smoke after restart, stop, reset after stop, final stopped status, and final port-clear checks for `3001` and `4173`.
+
+This result is useful engineering evidence for the shared app and macOS portable lifecycle path, but it does not close macOS release-readiness. It was not a clean test from a newly published macOS release asset, SMS setup UX was not tested, and the report identified open follow-up findings for `brace-expansion`, deployment security verifier npm resolution, build staging cleanup, reset-snapshot pruning, and packaging-script readability.
 
 
 ## 2026-05-14 bundled-runtime internal hardening update
