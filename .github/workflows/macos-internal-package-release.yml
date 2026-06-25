@@ -169,7 +169,7 @@ jobs:
           name: macos-internal-package-assets-${{ steps.meta.outputs.tag }}-${{ steps.meta.outputs.short_sha }}
           path: build/release-assets/macos/*
           if-no-files-found: error
-          retention-days: 30
+          retention-days: 1
 
       - name: Publish GitHub prerelease assets
         if: ${{ github.ref_type == 'tag' || inputs.publish_release }}
