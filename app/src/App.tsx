@@ -9,19 +9,15 @@ import {
   conductorApi,
   createStudyApi,
   apiBoundary,
-  type BackendSignoff,
-  type BackendStudy,
-  type BackendStudyVersion,
   type AISuggestionRecord,
+  type BackendSignoff,
   type ItemRecord,
   type ResponseRecord,
-  type RoundItemForParticipant,
-  type RoundReport,
   type RoundConfig,
+  type RoundItemForParticipant,
   type SavedStudyRecord,
   type ParticipantInvitationContext,
   type ExportPackage,
-  type ExportPackageFile,
   type BackendUser,
   type StudyAssignment,
   type StudyAIConfig,
@@ -43,8 +39,49 @@ import {
   type ParticipantIssueInput,
   type ParticipantIssue,
   type ParticipantIssueType,
-  type RoundOneAnswerInput,
 } from "./core/api";
+import {
+  type ConductorWorkflow,
+  type RatingDraft,
+  type RationaleDraft,
+  type RoundOneResponseEntry,
+  type RoundOneSetupState,
+  type RoundTwoSetupState,
+  type RuntimeStudyData,
+  type NextAction,
+  type ActionChecklistItem,
+  type WorkflowStep,
+  roleOrder,
+  DEMO_PARTICIPANT_ID,
+  initialWorkflow,
+  defaultRoundOneSetup,
+  defaultRoundTwoSetup,
+  emptyRuntimeStudyData,
+  ratingScaleOptions,
+  legacyVagueRatingPrompt,
+} from "./core/appTypes";
+import {
+  formatStatus,
+  formatRatingChoice,
+  formatDateTime,
+  shortId,
+  packetText,
+  excerpt,
+  roundReportRisk,
+  humanizeBackendMessage,
+  downloadPackageFile,
+  participantInviteTokenFromLocation,
+  magicTokenFromLocation,
+  fallbackResearchQuestion,
+  questionLabel,
+  roundOneQuestions,
+  roundOneResponseEntries,
+  responseOpenText,
+  firstRoundOneAnswerText,
+  roundOneAnswerInputs,
+  roundOneAnswersFromPayload,
+} from "./core/appUtils";
+import { AppProvider } from "./core/AppContext";
 import { mockStudies, mockStudy } from "./core/mockData";
 import { canAccessIdentityMap, canAccessModule, canExportOutput, roleLabels } from "./core/permissions";
 import type { GovernanceChecklistItem, ModuleId, StudyRecord, UserRole } from "./core/types";
@@ -59,7 +96,6 @@ import {
   reportIncludesNonConsensus,
 } from "./policies/governance";
 import {
-  activeResearchQuestions,
   buildGovernanceSummary,
   consensusRuleSourceLabels,
   consensusSourceRequiresPreRoundInput,
@@ -106,17 +142,6 @@ import {
   citationMetadata,
 } from "./content/citation";
 
-const roleOrder: UserRole[] = [
-  "study_owner",
-  "ethics_methods_steward",
-  "study_coordinator",
-  "panelist",
-  "data_custodian",
-  "security_privacy_lead",
-  "open_source_admin",
-];
-
-const DEMO_PARTICIPANT_ID = "demo-panelist-001";
 const TWILIO_SETUP_FALLBACK_URL = "https://console.twilio.com/us1/develop/sms/services";
 
 type SmsSetupChoice = "undecided" | "off" | "twilio";
@@ -162,20 +187,6 @@ function isPastStudyRecord(record: SavedStudyRecord): boolean {
   if (record.study.archived_at) return false;
   const status = record.latestVersion?.status;
   return status === "Closed";
-}
-
-const statusLabels: Record<string, string> = {
-  ReadyForReview: "Ready for review",
-  NotOpen: "Not open",
-  ReadyForSignoff: "Ready for signoff",
-};
-
-function participantInviteTokenFromLocation() {
-  const queryToken = new URLSearchParams(window.location.search).get("invite");
-  if (queryToken) return queryToken;
-
-  const hash = window.location.hash.startsWith("#") ? window.location.hash.slice(1) : window.location.hash;
-  return new URLSearchParams(hash).get("invite");
 }
 
 function smsSetupProgress(setup: SmsSetupStatus | null): string {
@@ -229,377 +240,6 @@ function SmsSetupPrompt({
     </section>
   );
 }
-
-function magicTokenFromLocation() {
-  const pathMatch = window.location.pathname.match(/^\/m\/([A-Za-z0-9_-]{32,256})$/);
-  if (pathMatch?.[1]) return pathMatch[1];
-  const queryToken = new URLSearchParams(window.location.search).get("m");
-  if (queryToken) return queryToken;
-  const hash = window.location.hash.startsWith("#") ? window.location.hash.slice(1) : window.location.hash;
-  return new URLSearchParams(hash).get("m");
-}
-
-const ratingScaleOptions = [
-  { value: 1, label: "Strongly disagree", detail: "I do not support prioritizing this statement." },
-  { value: 2, label: "Disagree", detail: "I mostly do not support prioritizing this statement." },
-  { value: 3, label: "Somewhat disagree", detail: "I lean against prioritizing this statement." },
-  { value: 4, label: "Slightly disagree", detail: "I have mild reservations about prioritizing this statement." },
-  { value: 5, label: "Uncertain / mixed judgment", detail: "I see reasons both for and against prioritizing this statement." },
-  { value: 6, label: "Slightly agree", detail: "I mildly support prioritizing this statement." },
-  { value: 7, label: "Somewhat agree", detail: "I lean toward prioritizing this statement." },
-  { value: 8, label: "Agree", detail: "I support prioritizing this statement." },
-  { value: 9, label: "Strongly agree", detail: "I strongly support prioritizing this statement." },
-] as const;
-
-const legacyVagueRatingPrompt = "Please rate each candidate statement using the study rating scale.";
-
-function formatStatus(value: string): string {
-  return statusLabels[value] ?? value;
-}
-
-function formatRatingChoice(value: number | null | undefined): string {
-  if (!value) return "No response recorded";
-  return ratingScaleOptions.find((option) => option.value === value)?.label ?? `Recorded response ${value}`;
-}
-
-function formatDateTime(value: string): string {
-  return new Date(value).toLocaleString(undefined, {
-    month: "short",
-    day: "numeric",
-    hour: "numeric",
-    minute: "2-digit",
-  });
-}
-
-function shortId(value: string): string {
-  return value.slice(0, 8);
-}
-
-function packetText(packet: unknown, key: "title" | "description"): string | null {
-  if (!packet || typeof packet !== "object" || Array.isArray(packet)) return null;
-  const value = (packet as Record<string, unknown>)[key];
-  return typeof value === "string" && value.trim() ? value : null;
-}
-
-type RoundOneResponseEntry = {
-  researchQuestionId: string;
-  researchQuestionLabel: string;
-  researchQuestionText: string;
-  text: string;
-};
-
-function fallbackResearchQuestion(): ResearchQuestion {
-  return {
-    id: "rq-1",
-    displayOrder: 1,
-    text: defaultWizardState.researchQuestion,
-    shortLabel: "Research question 1",
-    description: "",
-    requiredForRound1Response: true,
-    active: true,
-    createdAt: "2026-01-01T00:00:00.000Z",
-    updatedAt: "2026-01-01T00:00:00.000Z",
-  };
-}
-
-function questionLabel(question: ResearchQuestion, index: number): string {
-  return question.shortLabel?.trim() || `Research question ${index + 1}`;
-}
-
-function roundOneQuestions(wizard: StudyWizardState): ResearchQuestion[] {
-  const questions = activeResearchQuestions(wizard);
-  return questions.length > 0 ? questions : [fallbackResearchQuestion()];
-}
-
-function roundOneResponseEntries(responseJson: unknown, questions: ResearchQuestion[] = [fallbackResearchQuestion()]): RoundOneResponseEntry[] {
-  const activeQuestions = questions.filter((question) => question.active);
-  const fallbackQuestion = activeQuestions[0] ?? questions[0] ?? fallbackResearchQuestion();
-  if (typeof responseJson === "string" && responseJson.trim()) {
-    return [{
-      researchQuestionId: fallbackQuestion.id,
-      researchQuestionLabel: questionLabel(fallbackQuestion, 0),
-      researchQuestionText: fallbackQuestion.text,
-      text: responseJson.trim(),
-    }];
-  }
-  if (!responseJson || typeof responseJson !== "object" || Array.isArray(responseJson)) return [];
-  const record = responseJson as Record<string, unknown>;
-  if (Array.isArray(record.responses)) {
-    const questionById = new Map(activeQuestions.map((question, index) => [question.id, { question, index }]));
-    const entries = record.responses.flatMap((entry): RoundOneResponseEntry[] => {
-      if (!entry || typeof entry !== "object" || Array.isArray(entry)) return [];
-      const entryRecord = entry as Record<string, unknown>;
-      const researchQuestionId = typeof entryRecord.researchQuestionId === "string" ? entryRecord.researchQuestionId : "";
-      const text = typeof entryRecord.text === "string" ? entryRecord.text.trim() : "";
-      if (!researchQuestionId || !text) return [];
-      const match = questionById.get(researchQuestionId);
-      return [{
-        researchQuestionId,
-        researchQuestionLabel: match ? questionLabel(match.question, match.index) : researchQuestionId,
-        researchQuestionText: match?.question.text ?? "",
-        text,
-      }];
-    });
-    if (entries.length > 0) return entries;
-  }
-
-  for (const key of ["text", "response_text", "open_text", "answer", "statement", "comment", "comments"]) {
-    const value = record[key];
-    if (typeof value === "string" && value.trim()) {
-      return [{
-        researchQuestionId: fallbackQuestion.id,
-        researchQuestionLabel: questionLabel(fallbackQuestion, 0),
-        researchQuestionText: fallbackQuestion.text,
-        text: value.trim(),
-      }];
-    }
-  }
-
-  return [];
-}
-
-function responseOpenText(responseJson: unknown): string | null {
-  return roundOneResponseEntries(responseJson).at(0)?.text ?? null;
-}
-
-function firstRoundOneAnswerText(answers: Record<string, string>, questions: ResearchQuestion[]): string {
-  return questions.map((question) => answers[question.id]?.trim() ?? "").find(Boolean) ?? "";
-}
-
-function roundOneAnswerInputs(answers: Record<string, string>, questions: ResearchQuestion[]): RoundOneAnswerInput[] {
-  return questions.map((question) => ({
-    researchQuestionId: question.id,
-    text: answers[question.id]?.trim() ?? "",
-  }));
-}
-
-function roundOneAnswersFromPayload(payload: unknown, questions: ResearchQuestion[]): Record<string, string> {
-  const out: Record<string, string> = {};
-  for (const entry of roundOneResponseEntries(payload, questions)) {
-    out[entry.researchQuestionId] = entry.text;
-  }
-  return out;
-}
-
-function excerpt(value: string, max = 240): string {
-  const collapsed = value.replace(/\s+/g, " ").trim();
-  return collapsed.length > max ? `${collapsed.slice(0, max - 3)}...` : collapsed;
-}
-
-function roundReportRisk(status: string): "success" | "warning" | "info" | "locked" {
-  if (status === "consensus") return "success";
-  if (status === "non_consensus") return "warning";
-  return "info";
-}
-
-function humanizeBackendMessage(message: string | null): string | null {
-  if (!message) return null;
-
-  const labels: Record<string, string> = {
-    active_consent_required: "Consent must be acknowledged before this participant response can be submitted.",
-    active_research_question_required: "At least one active research question is required before launch or Round 1 response collection.",
-    ai_suggestion_decision_required: "Accept, edit, or reject the AI suggestion before using it.",
-    ai_suggestion_release_signoff_required:
-      "Participant-facing AI-assisted material needs both Study Owner and Ethics & Methods Steward release signoff.",
-    another_round_open: "Close the currently open round before opening another round.",
-    consensus_rule_locked: "The consensus threshold is locked after governance submission.",
-    consensus_setting_process_missing: "Document how the consensus rule was set before governance signoff.",
-    invalid_consensus_threshold: "Choose a consensus threshold of 60%, 70%, 80%, or 90%.",
-    invalid_consensus_rule_source: "Choose a valid consensus rule source.",
-    invalid_pre_round_consensus_status: "Choose a valid pre-round consensus input status.",
-    locked_study_design_required_for_ai: "Submit the study design for governance before using AI-assisted drafting.",
-    pre_round_consensus_input_not_reviewed: "Panel- or stakeholder-informed consensus input must be reviewed or finalized before governance signoff.",
-    pre_round_consensus_prompt_missing: "Add a neutral pre-round prompt for consensus-rule input.",
-    pre_round_consensus_summary_missing: "Summarize how pre-round consensus input was considered before governance signoff.",
-    previous_round_must_be_closed: "Close the previous round before opening this round.",
-    participant_orientation_required: "Complete the study orientation before beginning Round 1.",
-    published_items_required_for_round: "Publish at least one traceable candidate item before opening this round.",
-    missing_required_signoffs: "Both Study PI and Ethics PI signoffs are required before activation.",
-    not_ready_for_signoff: "Submit the completed study version for governance signoff before recording approvals.",
-    round_config_required: "Configure this round before opening it.",
-    round_not_open: "This task is not available until the study team opens the round.",
-    round1_config_required: "Configure Round 1 before collecting participant responses.",
-    round1_not_open: "Round 1 is not open for participant responses.",
-    required_research_question_response_missing: "A required research question response is missing.",
-    research_question_text_required: "Each active research question needs text before governance review.",
-    source_material_required_for_synthesis: "Round 1 responses are required before drafting Round 2 candidates.",
-    study_design_packet_missing: "Save the Study Builder packet before submitting for governance signoff.",
-    study_title_required: "Add a study title before creating the saved workspace.",
-    study_version_not_active: "Activate the study version before opening rounds or collecting responses.",
-    session_required: "Session sign-in is required. In internal packaged testing, enable the synthetic operator auth bootstrap gate before launching.",
-    session_bootstrap_invalid_credentials: "Operator session bootstrap failed because built-in synthetic credentials were rejected. Verify internal synthetic bootstrap gating is enabled for this package run.",
-    forbidden: "This role is not authorized for the selected study. Confirm the user has study membership for this role.",
-    unassigned: "This signed-in user is not assigned to the selected study.",
-  };
-
-  if (message.startsWith("session_bootstrap_failed:")) {
-    return "Operator session bootstrap failed in package-like mode. Confirm the internal synthetic auth bootstrap gate is enabled and retry.";
-  }
-
-  return labels[message] ?? message.replaceAll("_", " ");
-}
-
-function bytesFromBase64(value: string): ArrayBuffer {
-  const binary = window.atob(value);
-  const buffer = new ArrayBuffer(binary.length);
-  const bytes = new Uint8Array(buffer);
-  for (let index = 0; index < binary.length; index += 1) {
-    bytes[index] = binary.charCodeAt(index);
-  }
-  return buffer;
-}
-
-function downloadPackageFile(file: ExportPackageFile) {
-  const body: BlobPart =
-    file.content_encoding === "base64"
-      ? bytesFromBase64(file.content_text)
-      : file.content_text;
-  const blob = new Blob([body], { type: file.media_type });
-  const url = window.URL.createObjectURL(blob);
-  const link = document.createElement("a");
-  link.href = url;
-  link.download = file.path.split("/").at(-1) ?? "delphi-commons-export-file";
-  document.body.append(link);
-  link.click();
-  link.remove();
-  window.URL.revokeObjectURL(url);
-}
-
-type NextAction = {
-  title: string;
-  detail: string;
-  module: ModuleId;
-  actionLabel: string;
-  risk: "success" | "warning" | "info" | "locked";
-  command?: {
-    kind: "transition-round";
-    roundNumber: number;
-    action: "open" | "close";
-  };
-};
-
-type ActionChecklistItem = {
-  label: string;
-  detail: string;
-  complete: boolean;
-};
-
-type WorkflowStep =
-  | "create-study"
-  | "create-version"
-  | "save-wizard-packet"
-  | "set-design"
-  | "set-consensus"
-  | "submit"
-  | "owner-signoff"
-  | "steward-signoff"
-  | "activate"
-  | "open-round-1";
-
-type ConductorWorkflow = {
-  study: BackendStudy | null;
-  version: BackendStudyVersion | null;
-  signoffs: BackendSignoff[];
-  busyStep: WorkflowStep | null;
-  lastMessage: string | null;
-  error: string | null;
-};
-
-type RoundOneSetupState = {
-  title: string;
-  prompt: string;
-  participantInstructions: string;
-  responseWindowDays: number;
-  reminderSubject: string;
-  reminderBody: string;
-  aiCurationEnabled: boolean;
-};
-
-type RoundTwoSetupState = {
-  title: string;
-  prompt: string;
-  participantInstructions: string;
-  responseWindowDays: number;
-  reminderSubject: string;
-  reminderBody: string;
-  controlledFeedbackEnabled: boolean;
-  feedbackFormat: "distribution_only" | "distribution_summary" | "distribution_rationales";
-  showParticipantPriorResponse: boolean;
-};
-
-type RuntimeStudyData = {
-  responses: ResponseRecord[];
-  items: ItemRecord[];
-  aiSuggestions: AISuggestionRecord[];
-  roundTwoItems: RoundItemForParticipant[];
-  ratingRoundItems: Record<number, RoundItemForParticipant[]>;
-  roundReport: RoundReport | null;
-  roundReports: Record<number, RoundReport | null>;
-  exportReport: RoundReport | null;
-  exportPackages: ExportPackage[];
-  exportPackageFiles: Record<string, ExportPackageFile[]>;
-  participantIssues: ParticipantIssue[];
-  selectedExportPackageId: string | null;
-  loading: boolean;
-  error: string | null;
-  message: string | null;
-};
-
-type RatingDraft = Record<string, number>;
-type RationaleDraft = Record<string, string>;
-
-const initialWorkflow: ConductorWorkflow = {
-  study: null,
-  version: null,
-  signoffs: [],
-  busyStep: null,
-  lastMessage: null,
-  error: null,
-};
-
-const defaultRoundOneSetup: RoundOneSetupState = {
-  title: "Round 1: Open-ended elicitation",
-  prompt: "What care transition practices should this panel consider for later rating rounds?",
-  participantInstructions:
-    "Please provide one or more practices or concerns in your own words. There is no expected answer, and disagreement or uncertainty is useful to the study.",
-  responseWindowDays: 7,
-  reminderSubject: "Round 1 response window is open",
-  reminderBody:
-    "This is a neutral reminder that Round 1 is open. Participation is voluntary, and you may respond within the study window.",
-  aiCurationEnabled: true,
-};
-
-const defaultRoundTwoSetup: RoundTwoSetupState = {
-  title: "Round 2: Structured rating",
-  prompt: "For each candidate statement, indicate how much you agree it should be prioritized for this study.",
-  participantInstructions:
-    "Review each statement independently. Use your own judgment; no response is treated as correct, and retaining or revising a response are both acceptable choices.",
-  responseWindowDays: 7,
-  reminderSubject: "Round 2 rating window is open",
-  reminderBody:
-    "This is a neutral reminder that Round 2 is open. Participation is voluntary, and you may respond within the study window.",
-  controlledFeedbackEnabled: true,
-  feedbackFormat: "distribution_summary",
-  showParticipantPriorResponse: true,
-};
-
-const emptyRuntimeStudyData: RuntimeStudyData = {
-  responses: [],
-  items: [],
-  aiSuggestions: [],
-  roundTwoItems: [],
-  ratingRoundItems: {},
-  roundReport: null,
-  roundReports: {},
-  exportReport: null,
-  exportPackages: [],
-  exportPackageFiles: {},
-  participantIssues: [],
-  selectedExportPackageId: null,
-  loading: false,
-  error: null,
-  message: null,
-};
 
 function App() {
   const [role, setRole] = useState<UserRole>("study_owner");
@@ -2513,7 +2153,24 @@ function App() {
     }, 0);
   }
 
+  const appContextValue = useMemo(
+    () => ({
+      role,
+      setRole,
+      activeModule,
+      setActiveModule,
+      study: selectedStudy,
+      workflow,
+      wizard,
+      runtimeData,
+      roundConfigs,
+      consensusLocked,
+    }),
+    [role, activeModule, selectedStudy, workflow, wizard, runtimeData, roundConfigs, consensusLocked],
+  );
+
   return (
+    <AppProvider value={appContextValue}>
     <main className={role === "panelist" ? "app-shell participant-mode" : "app-shell"}>
       <aside className="sidebar" aria-label="Application modules">
         <div className="brand-block">
@@ -2767,6 +2424,7 @@ function App() {
         </footer>
       </section>
     </main>
+    </AppProvider>
   );
 }
 

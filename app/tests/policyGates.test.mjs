@@ -37,7 +37,9 @@ function containsForbiddenParticipantLanguage(text) {
 }
 
 function appSource() {
-  return fs.readFileSync(path.join(appRoot, "src", "App.tsx"), "utf8");
+  const srcDir = path.join(appRoot, "src");
+  const files = sourceFiles(srcDir);
+  return files.map((f) => fs.readFileSync(f, "utf8")).join("\n");
 }
 
 function sourceSlice(source, start, end) {
