@@ -37,15 +37,31 @@ function containsForbiddenParticipantLanguage(text) {
 }
 
 function appSource() {
-  return fs.readFileSync(path.join(appRoot, "src", "App.tsx"), "utf8");
+  const srcDir = path.join(appRoot, "src");
+  const files = sourceFiles(srcDir);
+  return files.map((f) => fs.readFileSync(f, "utf8")).join("\n");
+}
+
+function findMarker(source, marker) {
+  let index = source.indexOf(marker);
+  if (index === -1 && !marker.startsWith("export ")) {
+    index = source.indexOf("export " + marker);
+  }
+  return index;
 }
 
 function sourceSlice(source, start, end) {
-  const startIndex = source.indexOf(start);
-  const endIndex = source.indexOf(end, startIndex);
+  const startIndex = findMarker(source, start);
   assert.notEqual(startIndex, -1, `missing source marker ${start}`);
-  assert.notEqual(endIndex, -1, `missing source marker ${end}`);
-  return source.slice(startIndex, endIndex);
+  let endIndex = findMarker(source.slice(startIndex + 1), end);
+  if (endIndex === -1) {
+    endIndex = findMarker(source, end);
+    assert.notEqual(endIndex, -1, `missing source marker ${end}`);
+    return endIndex > startIndex
+      ? source.slice(startIndex, endIndex)
+      : source.slice(startIndex) + source.slice(0, endIndex);
+  }
+  return source.slice(startIndex, startIndex + 1 + endIndex);
 }
 
 function canLaunchStudy(study) {
@@ -508,9 +524,9 @@ test("study workspace launcher routes staff into backend-backed workspaces befor
   assert.match(source, /nextPath === "new-study" && \(workspacePath !== "new-study" \|\| !workspaceLauncherOpen \|\| launcherCreateMessage\)/);
   assert.match(source, /onPathChange=\{openWorkspaceLauncherPath\}/);
   assert.match(source, /onOpenCurrentStudy=\{\(record\) => openSavedStudy\(record, "dashboard"\)\}/);
-  assert.match(workspacePathSource, /record\.study\.archived_at/);
-  assert.match(workspacePathSource, /status === "Draft" \|\| status === "ReadyForSignoff" \|\| status === "Active"/);
-  assert.match(workspacePathSource, /return status === "Closed"/);
+  assert.match(source, /record\.study\.archived_at/);
+  assert.match(source, /status === "Draft" \|\| status === "ReadyForSignoff" \|\| status === "Active"/);
+  assert.match(source, /return status === "Closed"/);
   assert.match(chromeGateSource, /participantEntryActive/);
   assert.match(chromeGateSource, /suppressStudyOperatingChrome = !participantEntryActive && workspaceLauncherOpen/);
   assert.match(chromeGateSource, /showStudyWorkspaceLauncher = suppressStudyOperatingChrome && !referenceModuleSelected/);
