@@ -28,6 +28,7 @@ export function AppProvider({ value, children }: { value: AppContextValue; child
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
 export function useAppContext(): AppContextValue {
   const context = useContext(AppContext);
   if (!context) {
