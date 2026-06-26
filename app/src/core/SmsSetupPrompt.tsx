@@ -6,6 +6,7 @@ import { StatusBadge } from "../components/ui/Primitives";
 
 export const TWILIO_SETUP_FALLBACK_URL = "https://console.twilio.com/us1/develop/sms/services";
 
+// eslint-disable-next-line react-refresh/only-export-components
 export function smsSetupProgress(setup: SmsSetupStatus | null): string {
   if (!setup) return "Not checked";
   const values = Object.values(setup.required);

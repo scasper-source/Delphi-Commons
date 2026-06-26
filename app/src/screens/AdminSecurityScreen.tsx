@@ -63,6 +63,7 @@ function smsSetupProgress(setup: SmsSetupStatus | null): string {
   return `${complete}/${values.length} ready`;
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
 export function aiConfigStatusRisk(validation: AIConfigValidation | null): "success" | "warning" | "info" {
   if (!validation) return "info";
   if (validation.status === "ready" && validation.errors.length === 0) return "success";
@@ -70,6 +71,7 @@ export function aiConfigStatusRisk(validation: AIConfigValidation | null): "succ
   return "warning";
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
 export function aiConfigStatusLabel(validation: AIConfigValidation | null): string {
   if (!validation) return "Not loaded";
   if (validation.status === "no_external_ai_mode") return "No External AI mode";

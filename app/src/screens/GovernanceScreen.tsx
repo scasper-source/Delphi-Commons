@@ -19,6 +19,7 @@ import {
 import { ConductorWorkflowPanel } from "./ConductorWorkflowPanel";
 import { hasSignoff, workflowStepDone } from "../core/workflowHelpers";
 
+// eslint-disable-next-line react-refresh/only-export-components
 export function buildGovernanceChecklist(wizard: StudyWizardState, workflow: ConductorWorkflow): GovernanceChecklistItem[] {
   const purposeComplete = validateWizardStep("purpose", wizard).length === 0;
   const methodComplete = validateWizardStep("method", wizard).length === 0 && validateWizardStep("rounds", wizard).length === 0;

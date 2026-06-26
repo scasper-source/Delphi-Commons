@@ -43,10 +43,12 @@ export function NextActionPanel({
   );
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
 export function hasSignoff(workflow: ConductorWorkflow, requiredRole: BackendSignoff["required_role"]): boolean {
   return workflow.signoffs.some((signoff) => signoff.required_role === requiredRole);
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
 export const studyRoleLabels: Record<StudyAssignment["role"], string> = {
   Owner: "Study Owner / PI",
   MethodsSteward: "Ethics & Methods Steward",
@@ -55,6 +57,7 @@ export const studyRoleLabels: Record<StudyAssignment["role"], string> = {
   Maintainer: "Open Source Maintainer / Admin",
 };
 
+// eslint-disable-next-line react-refresh/only-export-components
 export function concentratedAssignments(assignments: StudyAssignment[]) {
   const rolesByUser = new Map<string, Set<StudyAssignment["role"]>>();
   for (const assignment of assignments) {
@@ -68,6 +71,7 @@ export function concentratedAssignments(assignments: StudyAssignment[]) {
     .filter((entry) => entry.roles.length > 1);
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
 export function workflowStepDone(workflow: ConductorWorkflow, step: WorkflowStep): boolean {
   switch (step) {
     case "create-study":
@@ -93,6 +97,7 @@ export function workflowStepDone(workflow: ConductorWorkflow, step: WorkflowStep
   }
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
 export function buildNextAction(input: {
   workflow: ConductorWorkflow;
   wizard: StudyWizardState;
@@ -272,6 +277,7 @@ export function buildNextAction(input: {
   };
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
 export function buildActionableChecklist(input: {
   workflow: ConductorWorkflow;
   roundConfigs: RoundConfig[];

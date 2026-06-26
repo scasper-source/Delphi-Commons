@@ -21,6 +21,7 @@ export type PlannedRound = {
   blocker?: string;
 };
 
+// eslint-disable-next-line react-refresh/only-export-components
 export function buildPlannedRounds(wizard: StudyWizardState, workflow: ConductorWorkflow): PlannedRound[] {
   const isClassic = wizard.studyFormat === "ClassicDelphi";
   const roundCount = wizard.plannedRoundCount;
@@ -62,6 +63,7 @@ export function buildPlannedRounds(wizard: StudyWizardState, workflow: Conductor
   });
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
 export function roundStatusRisk(status: string): "success" | "warning" | "info" | "locked" {
   if (status === "Open") return "success";
   if (status === "Ready to open") return "warning";

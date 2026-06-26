@@ -433,6 +433,7 @@ export function StudyBuilderScreen({
   );
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
 export function createDraftStudyContext(wizard: StudyWizardState): StudyContextDisclosure {
   const now = new Date().toISOString();
   return {
@@ -487,6 +488,7 @@ export function createDraftStudyContext(wizard: StudyWizardState): StudyContextD
   };
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
 export function contextHasSuppliedDraft(context: StudyContextDisclosure): boolean {
   return Boolean(
     context.basic_context.study_short_name.trim() ||
@@ -513,6 +515,7 @@ export function contextHasSuppliedDraft(context: StudyContextDisclosure): boolea
   );
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
 export function draftMaterialConditions(context: StudyContextDisclosure): string[] {
   const conditions: string[] = [];
   if (context.data_access.sponsor_can_access_raw_responses === "yes") conditions.push("sponsor_raw_response_access");
@@ -523,6 +526,7 @@ export function draftMaterialConditions(context: StudyContextDisclosure): string
   return conditions;
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
 export function validateDraftStudyContext(context: StudyContextDisclosure): StudyContextValidation {
   const materialConditions = draftMaterialConditions(context);
   const warnings = materialConditions.length > 0 && !(
@@ -539,6 +543,7 @@ export function validateDraftStudyContext(context: StudyContextDisclosure): Stud
   };
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
 export function generateDraftParticipantDisclosure(context: StudyContextDisclosure): StudyContextDisclosure {
   const conductor = context.basic_context.institution_or_organization.trim()
     || context.basic_context.pi_or_study_owner.trim()
