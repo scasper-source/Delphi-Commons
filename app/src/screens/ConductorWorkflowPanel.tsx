@@ -1,23 +1,18 @@
 /* Copyright 2026 Stephen T. Casper / SPDX-License-Identifier: Apache-2.0 */
 
-import type { ConductorWorkflow, WorkflowStep } from "../core/appTypes";
+import type { WorkflowStep } from "../core/appTypes";
 import { formatStatus, humanizeBackendMessage } from "../core/appUtils";
-import type { UserRole } from "../core/types";
-import { validateWizardStep, type StudyWizardState } from "../core/studyWizard";
+import { useAppContext } from "../core/AppContext";
+import { validateWizardStep } from "../core/studyWizard";
 import { StatusBadge, WarningBanner } from "../components/ui/Primitives";
 import { hasSignoff, workflowStepDone } from "../core/workflowHelpers";
 
 export function ConductorWorkflowPanel({
-  role,
-  workflow,
-  wizard,
   onWorkflowStep,
 }: {
-  role: UserRole;
-  workflow: ConductorWorkflow;
-  wizard: StudyWizardState;
   onWorkflowStep: (step: WorkflowStep) => void;
 }) {
+  const { role, workflow, wizard } = useAppContext();
   const version = workflow.version;
   const ownerCanAct = role === "study_owner";
   const stewardCanAct = role === "ethics_methods_steward";

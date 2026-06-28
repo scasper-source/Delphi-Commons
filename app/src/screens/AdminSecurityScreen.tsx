@@ -17,9 +17,8 @@ import {
   type StudyAIConfig,
   type StudyAssignment,
 } from "../core/api";
-import type { ConductorWorkflow } from "../core/appTypes";
 import { formatDateTime, humanizeBackendMessage } from "../core/appUtils";
-import type { UserRole } from "../core/types";
+import { useAppContext } from "../core/AppContext";
 import { canAccessIdentityMap } from "../core/permissions";
 import { identityAccessDecision } from "../policies/governance";
 import { StatusBadge, WarningBanner } from "../components/ui/Primitives";
@@ -79,7 +78,8 @@ export function aiConfigStatusLabel(validation: AIConfigValidation | null): stri
   return "Incomplete";
 }
 
-export function AdminSecurityScreen({ role, workflow }: { role: UserRole; workflow: ConductorWorkflow }) {
+export function AdminSecurityScreen() {
+  const { role, workflow } = useAppContext();
   const identityDecision = identityAccessDecision(role, "Review data subject withdrawal request");
   const [users, setUsers] = useState<BackendUser[]>([]);
   const [assignments, setAssignments] = useState<StudyAssignment[]>([]);

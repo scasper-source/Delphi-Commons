@@ -3,7 +3,7 @@
 import { useState, type CSSProperties } from "react";
 import type { FinalResultSnapshot, ParticipantFinalResponse } from "../core/api";
 import { formatDateTime } from "../core/appUtils";
-import type { UserRole } from "../core/types";
+import { useAppContext } from "../core/AppContext";
 import { Checklist, StatCard, StatusBadge, WarningBanner } from "../components/ui/Primitives";
 
 const finalOutcomeLabels: Record<FinalResultSnapshot["itemOutcomes"][number]["outcome"], string> = {
@@ -23,7 +23,6 @@ const finalOutcomeRisks: Record<FinalResultSnapshot["itemOutcomes"][number]["out
 };
 
 export function FinalResultsCloseoutScreen({
-  role,
   snapshot,
   blockers,
   participantFinalResponses,
@@ -33,7 +32,6 @@ export function FinalResultsCloseoutScreen({
   onAction,
   onExportOutput,
 }: {
-  role: UserRole;
   snapshot: FinalResultSnapshot | null;
   blockers: string[];
   participantFinalResponses: ParticipantFinalResponse[];
@@ -43,6 +41,7 @@ export function FinalResultsCloseoutScreen({
   onAction: (action: "create" | "signoff" | "release" | "archive") => void;
   onExportOutput: (outputId: string) => void;
 }) {
+  const { role } = useAppContext();
   const [activeOutcome, setActiveOutcome] = useState<FinalResultSnapshot["itemOutcomes"][number]["outcome"] | "all">("all");
   const isParticipant = role === "panelist";
   const visibleItems = snapshot

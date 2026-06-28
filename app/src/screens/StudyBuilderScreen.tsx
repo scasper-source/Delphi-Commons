@@ -406,7 +406,7 @@ export function StudyBuilderScreen({
       </section>
 
       <section className="panel wide">
-        <ConductorWorkflowPanel role={role} workflow={workflow} wizard={wizard} onWorkflowStep={onWorkflowStep} />
+        <ConductorWorkflowPanel onWorkflowStep={onWorkflowStep} />
       </section>
 
       {contextOpen ? (

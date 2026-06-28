@@ -309,7 +309,7 @@ export function ModuleRenderer({
         />
       );
     case "governance":
-      return <GovernanceScreen role={role} workflow={workflow} wizard={wizard} onWorkflowStep={onWorkflowStep} />;
+      return <GovernanceScreen onWorkflowStep={onWorkflowStep} />;
     case "round-manager":
       return (
         <RoundManagerScreen
@@ -418,7 +418,6 @@ export function ModuleRenderer({
     case "closeout":
       return (
         <FinalResultsCloseoutScreen
-          role={role}
           snapshot={finalResultSnapshot}
           blockers={finalResultBlockers}
           participantFinalResponses={participantFinalResponses}
@@ -444,6 +443,6 @@ export function ModuleRenderer({
     case "audit":
       return <AuditScreen />;
     case "admin-security":
-      return <AdminSecurityScreen role={role} workflow={workflow} />;
+      return <AdminSecurityScreen />;
   }
 }
