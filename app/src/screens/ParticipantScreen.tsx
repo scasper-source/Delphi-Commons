@@ -6,12 +6,9 @@ import type {
   ParticipantIssueInput,
   RoundItemForParticipant,
 } from "../core/api";
-import type { RoundConfig } from "../core/api";
 import type {
-  ConductorWorkflow,
   RatingDraft,
   RationaleDraft,
-  RuntimeStudyData,
 } from "../core/appTypes";
 import {
   defaultRoundTwoSetup,
@@ -25,7 +22,7 @@ import {
   humanizeBackendMessage,
   shortId,
 } from "../core/appUtils";
-import type { StudyWizardState } from "../core/studyWizard";
+import { useAppContext } from "../core/AppContext";
 import {
   DataBar,
   StatusBadge,
@@ -46,9 +43,6 @@ import {
 import { participantCopy } from "../content/participantCopy";
 
 export function ParticipantScreen({
-  workflow,
-  wizard,
-  roundConfigs,
   participantResponseText,
   participantRoundOneAnswers,
   participantSubmittedRoundOneText,
@@ -77,7 +71,6 @@ export function ParticipantScreen({
   magicMessage,
   magicError,
   magicBusy,
-  runtimeData,
   roundTwoRatings,
   roundTwoRationales,
   onParticipantResponseChange,
@@ -104,9 +97,6 @@ export function ParticipantScreen({
   onRoundTwoRationaleChange,
   onSubmitRoundTwoRatings,
 }: {
-  workflow: ConductorWorkflow;
-  wizard: StudyWizardState;
-  roundConfigs: RoundConfig[];
   participantResponseText: string;
   participantRoundOneAnswers: Record<string, string>;
   participantSubmittedRoundOneText: string | null;
@@ -135,7 +125,6 @@ export function ParticipantScreen({
   magicMessage: string | null;
   magicError: string | null;
   magicBusy: boolean;
-  runtimeData: RuntimeStudyData;
   roundTwoRatings: RatingDraft;
   roundTwoRationales: RationaleDraft;
   onParticipantResponseChange: (value: string) => void;
@@ -162,6 +151,8 @@ export function ParticipantScreen({
   onRoundTwoRationaleChange: (itemId: string, rationale: string) => void;
   onSubmitRoundTwoRatings: () => void;
 }) {
+  const { workflow, wizard, roundConfigs, runtimeData } = useAppContext();
+
   if (magicContext || magicError) {
     return (
       <MagicRoundEntryScreen

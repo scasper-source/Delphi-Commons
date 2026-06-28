@@ -43,16 +43,12 @@ import { AdminSecurityScreen } from "../screens/AdminSecurityScreen";
 
 export function ModuleRenderer({
   activeModule,
-  study,
   apiMode,
   apiBaseUrl,
   knownStudies,
   listStudiesLabel,
-  workflow,
-  wizard,
   roundOneSetup,
   roundTwoSetup,
-  roundConfigs,
   roundActionMessage,
   roundActionError,
   roundActionBusy,
@@ -84,7 +80,6 @@ export function ModuleRenderer({
   magicMessage,
   magicError,
   magicBusy,
-  runtimeData,
   runtimeActionBusy,
   roundTwoRatings,
   roundTwoRationales,
@@ -325,9 +320,6 @@ export function ModuleRenderer({
     case "curation":
       return (
         <CurationScreen
-          study={study}
-          workflow={workflow}
-          runtimeData={runtimeData}
           runtimeActionBusy={runtimeActionBusy}
           onRefreshRuntimeData={onRefreshRuntimeData}
           onCreateManualItemFromResponse={onCreateManualItemFromResponse}
@@ -348,9 +340,6 @@ export function ModuleRenderer({
     case "participant":
       return (
         <ParticipantScreen
-          workflow={workflow}
-          wizard={wizard}
-          roundConfigs={roundConfigs}
           participantResponseText={participantResponseText}
           participantRoundOneAnswers={participantRoundOneAnswers}
           participantSubmittedRoundOneText={participantSubmittedRoundOneText}
@@ -379,7 +368,6 @@ export function ModuleRenderer({
           magicMessage={magicMessage}
           magicError={magicError}
           magicBusy={magicBusy}
-          runtimeData={runtimeData}
           roundTwoRatings={roundTwoRatings}
           roundTwoRationales={roundTwoRationales}
           onParticipantResponseChange={onParticipantResponseChange}

@@ -1,10 +1,10 @@
 /* Copyright 2026 Stephen T. Casper / SPDX-License-Identifier: Apache-2.0 */
 
 import type { AISuggestionRecord, ItemRecord, ResponseRecord } from "../core/api";
-import type { ConductorWorkflow, RoundOneResponseEntry, RuntimeStudyData } from "../core/appTypes";
+import type { RoundOneResponseEntry } from "../core/appTypes";
 import { humanizeBackendMessage, roundOneQuestions, roundOneResponseEntries, shortId } from "../core/appUtils";
-import type { StudyRecord } from "../core/types";
 import { wizardFromBackendPacket } from "../core/studyWizard";
+import { useAppContext } from "../core/AppContext";
 import {
   AISuggestionCard,
   ProvenanceList,
@@ -13,9 +13,6 @@ import {
 } from "../components/ui/Primitives";
 
 export function CurationScreen({
-  study,
-  workflow,
-  runtimeData,
   runtimeActionBusy,
   onRefreshRuntimeData,
   onCreateManualItemFromResponse,
@@ -30,9 +27,6 @@ export function CurationScreen({
   onSplitItem,
   onMergeItemInto,
 }: {
-  study: StudyRecord;
-  workflow: ConductorWorkflow;
-  runtimeData: RuntimeStudyData;
   runtimeActionBusy: string | null;
   onRefreshRuntimeData: () => void;
   onCreateManualItemFromResponse: (response: ResponseRecord, entry?: RoundOneResponseEntry) => void;
@@ -47,6 +41,8 @@ export function CurationScreen({
   onSplitItem: (item: ItemRecord) => void;
   onMergeItemInto: (item: ItemRecord, target: ItemRecord) => void;
 }) {
+  const { study, workflow, runtimeData } = useAppContext();
+
   const hasBackendStudy = Boolean(workflow.study && workflow.version);
   const curationWizard = wizardFromBackendPacket(workflow.version?.study_design_packet_json, workflow.study ?? undefined);
   const curationQuestions = roundOneQuestions(curationWizard);
