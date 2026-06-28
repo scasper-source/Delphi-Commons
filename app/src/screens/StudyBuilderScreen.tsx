@@ -6,9 +6,9 @@ import {
   type StudyContextDisclosure,
   type StudyContextValidation,
 } from "../core/api";
-import type { ConductorWorkflow, WorkflowStep } from "../core/appTypes";
+import type { WorkflowStep } from "../core/appTypes";
 import { formatStatus, humanizeBackendMessage } from "../core/appUtils";
-import type { UserRole } from "../core/types";
+import { useAppContext } from "../core/AppContext";
 import { methodRegistry } from "../methods/registry";
 import {
   buildGovernanceSummary,
@@ -36,24 +36,19 @@ const ternaryOptions = [
 ] as const;
 
 export function StudyBuilderScreen({
-  role,
-  workflow,
-  wizard,
   activeWizardStep,
   onWizardChange,
   onWizardStepChange,
   onWorkflowStep,
   onStartNewStudyDraft,
 }: {
-  role: UserRole;
-  workflow: ConductorWorkflow;
-  wizard: StudyWizardState;
   activeWizardStep: StudyWizardStepId;
   onWizardChange: (state: StudyWizardState) => void;
   onWizardStepChange: (step: StudyWizardStepId) => void;
   onWorkflowStep: (step: WorkflowStep) => void;
   onStartNewStudyDraft: () => void;
 }) {
+  const { role, workflow, wizard } = useAppContext();
   const selectedMethod = methodRegistry.find((method) =>
     wizard.studyFormat === "ModifiedDelphi" ? method.id === "modified-delphi" : method.id === "classic-delphi",
   );

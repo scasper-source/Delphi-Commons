@@ -1,13 +1,12 @@
 /* Copyright 2026 Stephen T. Casper / SPDX-License-Identifier: Apache-2.0 */
 
-import type { RoundConfig } from "../core/api";
 import type {
   ConductorWorkflow,
   RoundOneSetupState,
   RoundTwoSetupState,
-  RuntimeStudyData,
 } from "../core/appTypes";
 import { formatStatus, humanizeBackendMessage } from "../core/appUtils";
+import { useAppContext } from "../core/AppContext";
 import type { StudyWizardState } from "../core/studyWizard";
 import { DataBar, StatCard, StatusBadge, WarningBanner } from "../components/ui/Primitives";
 
@@ -72,12 +71,8 @@ export function roundStatusRisk(status: string): "success" | "warning" | "info" 
 }
 
 export function RoundManagerScreen({
-  workflow,
-  wizard,
   roundOneSetup,
   roundTwoSetup,
-  roundConfigs,
-  runtimeData,
   roundActionMessage,
   roundActionError,
   roundActionBusy,
@@ -88,12 +83,8 @@ export function RoundManagerScreen({
   onSaveRatingRoundSetup,
   onTransitionRound,
 }: {
-  workflow: ConductorWorkflow;
-  wizard: StudyWizardState;
   roundOneSetup: RoundOneSetupState;
   roundTwoSetup: RoundTwoSetupState;
-  roundConfigs: RoundConfig[];
-  runtimeData: RuntimeStudyData;
   roundActionMessage: string | null;
   roundActionError: string | null;
   roundActionBusy: string | null;
@@ -104,6 +95,7 @@ export function RoundManagerScreen({
   onSaveRatingRoundSetup: (roundNumber: number) => void;
   onTransitionRound: (roundNumber: number, action: "open" | "close") => void;
 }) {
+  const { workflow, wizard, roundConfigs, runtimeData } = useAppContext();
   const plannedRounds = buildPlannedRounds(wizard, workflow);
   const savedRoundOne = roundConfigs.find((config) => config.round_number === 1);
   const savedRoundTwo = roundConfigs.find((config) => config.round_number === 2);

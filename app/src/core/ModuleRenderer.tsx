@@ -43,7 +43,6 @@ import { AdminSecurityScreen } from "../screens/AdminSecurityScreen";
 
 export function ModuleRenderer({
   activeModule,
-  role,
   study,
   apiMode,
   apiBaseUrl,
@@ -298,9 +297,6 @@ export function ModuleRenderer({
     case "study-builder":
       return (
         <StudyBuilderScreen
-          role={role}
-          workflow={workflow}
-          wizard={wizard}
           activeWizardStep={activeWizardStep}
           onWizardChange={onWizardChange}
           onWizardStepChange={onWizardStepChange}
@@ -313,12 +309,8 @@ export function ModuleRenderer({
     case "round-manager":
       return (
         <RoundManagerScreen
-          workflow={workflow}
-          wizard={wizard}
           roundOneSetup={roundOneSetup}
           roundTwoSetup={roundTwoSetup}
-          roundConfigs={roundConfigs}
-          runtimeData={runtimeData}
           roundActionMessage={roundActionMessage}
           roundActionError={roundActionError}
           roundActionBusy={roundActionBusy}
