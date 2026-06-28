@@ -1,10 +1,10 @@
 /* Copyright 2026 Stephen T. Casper / SPDX-License-Identifier: Apache-2.0 */
 
-import type { ParticipantIssue, RoundConfig, SavedStudyRecord } from "../core/api";
-import type { ConductorWorkflow, RuntimeStudyData, WorkflowStep } from "../core/appTypes";
+import type { ParticipantIssue, SavedStudyRecord } from "../core/api";
+import type { WorkflowStep } from "../core/appTypes";
 import { formatDateTime, formatStatus, humanizeBackendMessage, packetText, shortId } from "../core/appUtils";
 import { roleLabels } from "../core/permissions";
-import type { StudyRecord, UserRole } from "../core/types";
+import { useAppContext } from "../core/AppContext";
 import { evaluateLaunchGate } from "../policies/governance";
 import { buildActionableChecklist, workflowStepDone } from "../core/workflowHelpers";
 import { DataBar, StatCard, StatusBadge, WarningBanner } from "../components/ui/Primitives";
@@ -12,11 +12,6 @@ import { DataBar, StatCard, StatusBadge, WarningBanner } from "../components/ui/
 import { ParticipantIssueInbox } from "./ParticipantIssueInbox";
 
 export function DashboardScreen({
-  study,
-  role,
-  workflow,
-  roundConfigs,
-  runtimeData,
   runtimeActionBusy,
   savedStudies,
   savedStudiesLoading,
@@ -28,11 +23,6 @@ export function DashboardScreen({
   onArchiveSmokeTestStudies,
   onRespondParticipantIssue,
 }: {
-  study: StudyRecord;
-  role: UserRole;
-  workflow: ConductorWorkflow;
-  roundConfigs: RoundConfig[];
-  runtimeData: RuntimeStudyData;
   runtimeActionBusy: string | null;
   savedStudies: SavedStudyRecord[];
   savedStudiesLoading: boolean;
@@ -44,6 +34,7 @@ export function DashboardScreen({
   onArchiveSmokeTestStudies: () => void;
   onRespondParticipantIssue: (issueId: string, status: ParticipantIssue["status"], responseNote: string) => void;
 }) {
+  const { study, role, workflow, roundConfigs, runtimeData } = useAppContext();
   const launchBlockers = evaluateLaunchGate(study);
   const actionChecklist = buildActionableChecklist({ workflow, roundConfigs, runtimeData });
   const checklistComplete = actionChecklist.filter((item) => item.complete).length;

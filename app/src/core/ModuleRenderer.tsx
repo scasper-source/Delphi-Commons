@@ -283,11 +283,6 @@ export function ModuleRenderer({
     case "dashboard":
       return (
         <DashboardScreen
-          study={study}
-          role={role}
-          workflow={workflow}
-          roundConfigs={roundConfigs}
-          runtimeData={runtimeData}
           runtimeActionBusy={runtimeActionBusy}
           savedStudies={savedStudies}
           savedStudiesLoading={savedStudiesLoading}
@@ -439,10 +434,6 @@ export function ModuleRenderer({
     case "reporting":
       return (
         <ReportingScreen
-          study={study}
-          role={role}
-          workflow={workflow}
-          runtimeData={runtimeData}
           runtimeActionBusy={runtimeActionBusy}
           onExportOutput={onExportOutput}
           onSelectExportPackage={onSelectExportPackage}
@@ -451,7 +442,7 @@ export function ModuleRenderer({
         />
       );
     case "audit":
-      return <AuditScreen study={study} />;
+      return <AuditScreen />;
     case "admin-security":
       return <AdminSecurityScreen role={role} workflow={workflow} />;
   }

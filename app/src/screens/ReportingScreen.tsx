@@ -1,8 +1,7 @@
 /* Copyright 2026 Stephen T. Casper / SPDX-License-Identifier: Apache-2.0 */
 
 import { useState } from "react";
-import type { StudyRecord, UserRole } from "../core/types";
-import type { ConductorWorkflow, RuntimeStudyData } from "../core/appTypes";
+import { useAppContext } from "../core/AppContext";
 import {
   formatDateTime,
   shortId,
@@ -20,26 +19,19 @@ import {
 } from "../components/ui/Primitives";
 
 export function ReportingScreen({
-  study,
-  role,
-  workflow,
-  runtimeData,
   runtimeActionBusy,
   onExportOutput,
   onSelectExportPackage,
   onReviewExportPackage,
   onDownloadExportPackageFile,
 }: {
-  study: StudyRecord;
-  role: UserRole;
-  workflow: ConductorWorkflow;
-  runtimeData: RuntimeStudyData;
   runtimeActionBusy: string | null;
   onExportOutput: (outputId: string) => void;
   onSelectExportPackage: (packageId: string) => void;
   onReviewExportPackage: (packageId: string, reviewStatus: "approved" | "rejected", note: string) => void;
   onDownloadExportPackageFile: (packageId: string, fileId: string) => void;
 }) {
+  const { study, role, workflow, runtimeData } = useAppContext();
   const [reviewNotes, setReviewNotes] = useState<Record<string, string>>({});
   const realReport = runtimeData.roundReport ?? runtimeData.exportReport;
   const realItems = realReport?.items ?? [];

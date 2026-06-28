@@ -1,9 +1,10 @@
 /* Copyright 2026 Stephen T. Casper / SPDX-License-Identifier: Apache-2.0 */
 
-import type { StudyRecord } from "../core/types";
+import { useAppContext } from "../core/AppContext";
 import { AuditTrail } from "../components/ui/Primitives";
 
-export function AuditScreen({ study }: { study: StudyRecord }) {
+export function AuditScreen() {
+  const { study } = useAppContext();
   return (
     <div className="screen-grid">
       <section className="panel wide">
