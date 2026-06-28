@@ -2,7 +2,7 @@
 
 import type { AISuggestionRecord, ItemRecord, ResponseRecord } from "../core/api";
 import type { RoundOneResponseEntry } from "../core/appTypes";
-import { humanizeBackendMessage, roundOneQuestions, roundOneResponseEntries, shortId } from "../core/appUtils";
+import { roundOneQuestions, roundOneResponseEntries, shortId } from "../core/appUtils";
 import { wizardFromBackendPacket } from "../core/studyWizard";
 import { useAppContext } from "../core/AppContext";
 import {
@@ -99,16 +99,6 @@ export function CurationScreen({
           <button className="secondary-button" onClick={onRefreshRuntimeData} type="button">Refresh</button>
         </div>
         {runtimeData.loading ? <p className="muted">Loading study data...</p> : null}
-        {runtimeData.error ? (
-          <WarningBanner title="Curation data issue" risk="danger">
-            {humanizeBackendMessage(runtimeData.error)}
-          </WarningBanner>
-        ) : null}
-        {runtimeData.message ? (
-          <WarningBanner title="Curation updated" risk="success">
-            {runtimeData.message}
-          </WarningBanner>
-        ) : null}
         {openResponseEntries.length === 0 ? (
           <WarningBanner title="No Round 1 responses yet" risk="info">
             Round 1 participant responses will appear here after consent and submission.

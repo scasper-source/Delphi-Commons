@@ -2,7 +2,7 @@
 
 import type { ParticipantIssue, SavedStudyRecord } from "../core/api";
 import type { WorkflowStep } from "../core/appTypes";
-import { formatDateTime, formatStatus, humanizeBackendMessage, packetText, shortId } from "../core/appUtils";
+import { formatDateTime, formatStatus, packetText, shortId } from "../core/appUtils";
 import { roleLabels } from "../core/permissions";
 import { useAppContext } from "../core/AppContext";
 import { evaluateLaunchGate } from "../policies/governance";
@@ -15,7 +15,6 @@ export function DashboardScreen({
   runtimeActionBusy,
   savedStudies,
   savedStudiesLoading,
-  savedStudiesError,
   onRefreshSavedStudies,
   onOpenSavedStudy,
   onStartNewStudyDraft,
@@ -26,7 +25,6 @@ export function DashboardScreen({
   runtimeActionBusy: string | null;
   savedStudies: SavedStudyRecord[];
   savedStudiesLoading: boolean;
-  savedStudiesError: string | null;
   onRefreshSavedStudies: () => void;
   onOpenSavedStudy: (record: SavedStudyRecord) => void;
   onStartNewStudyDraft: () => void;
@@ -115,12 +113,6 @@ export function DashboardScreen({
             </button>
           </div>
         </div>
-
-        {savedStudiesError ? (
-          <WarningBanner title="Unable to load saved studies" risk="danger">
-            {humanizeBackendMessage(savedStudiesError)}
-          </WarningBanner>
-        ) : null}
 
         {savedStudies.length === 0 && !savedStudiesLoading ? (
           <WarningBanner title="No saved studies yet" risk="info">

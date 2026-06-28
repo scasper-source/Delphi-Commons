@@ -54,7 +54,9 @@ import {
   firstRoundOneAnswerText,
   roundOneAnswerInputs,
   roundOneAnswersFromPayload,
+  humanizeBackendMessage,
 } from "./core/appUtils";
+import { ToastContainer, useNotify } from "./core/NotificationContext";
 import { AppProvider } from "./core/AppContext";
 import { SmsSetupPrompt } from "./core/SmsSetupPrompt";
 import { StudyWorkspaceLauncher } from "./core/StudyWorkspaceLauncher";
@@ -119,14 +121,10 @@ function App() {
   const [launcherDraftDescription, setLauncherDraftDescription] = useState(defaultWizardState.description);
   const [launcherRoleMode, setLauncherRoleMode] = useState<LauncherRoleMode>("separate_steward");
   const [launcherCreateBusy, setLauncherCreateBusy] = useState(false);
-  const [launcherCreateError, setLauncherCreateError] = useState<string | null>(null);
-  const [launcherCreateMessage, setLauncherCreateMessage] = useState<string | null>(null);
   const [activeWizardStep, setActiveWizardStep] = useState<StudyWizardStepId>("purpose");
   const [roundOneSetup, setRoundOneSetup] = useState<RoundOneSetupState>(defaultRoundOneSetup);
   const [roundTwoSetup, setRoundTwoSetup] = useState<RoundTwoSetupState>(defaultRoundTwoSetup);
   const [roundConfigs, setRoundConfigs] = useState<RoundConfig[]>([]);
-  const [roundActionMessage, setRoundActionMessage] = useState<string | null>(null);
-  const [roundActionError, setRoundActionError] = useState<string | null>(null);
   const [roundActionBusy, setRoundActionBusy] = useState<string | null>(null);
   const [participantResponseText, setParticipantResponseText] = useState("");
   const [participantRoundOneAnswers, setParticipantRoundOneAnswers] = useState<Record<string, string>>({});
@@ -143,8 +141,6 @@ function App() {
   const [participantWithdrawn, setParticipantWithdrawn] = useState(false);
   const [participantConsentChecked, setParticipantConsentChecked] = useState(false);
   const [participantOrientationComplete, setParticipantOrientationComplete] = useState(false);
-  const [participantMessage, setParticipantMessage] = useState<string | null>(null);
-  const [participantError, setParticipantError] = useState<string | null>(null);
   const [participantBusy, setParticipantBusy] = useState(false);
   const [participantInviteToken, setParticipantInviteToken] = useState(participantInviteTokenFromLocation);
   const [magicToken, setMagicToken] = useState(magicTokenFromLocation);
@@ -154,8 +150,7 @@ function App() {
   const [magicRoundOneAnswers, setMagicRoundOneAnswers] = useState<Record<string, string>>({});
   const [magicRatings, setMagicRatings] = useState<RatingDraft>({});
   const [magicRationales, setMagicRationales] = useState<RationaleDraft>({});
-  const [magicMessage, setMagicMessage] = useState<string | null>(null);
-  const [magicError, setMagicError] = useState<string | null>(null);
+  const [magicLoadFailed, setMagicLoadFailed] = useState(false);
   const [magicBusy, setMagicBusy] = useState(false);
   const [participantInvite, setParticipantInvite] = useState<ParticipantInvitationContext | null>(null);
   const [runtimeData, setRuntimeData] = useState<RuntimeStudyData>(emptyRuntimeStudyData);
@@ -167,15 +162,12 @@ function App() {
   const [participantFinalResponses, setParticipantFinalResponses] = useState<ParticipantFinalResponse[]>([]);
   const [smsSetupChoice, setSmsSetupChoice] = useState<SmsSetupChoice>("undecided");
   const [smsSetupStatus, setSmsSetupStatus] = useState<SmsSetupStatus | null>(null);
-  const [smsSetupError, setSmsSetupError] = useState<string | null>(null);
   const [smsSetupBusy, setSmsSetupBusy] = useState(false);
-  const [finalResultMessage, setFinalResultMessage] = useState<string | null>(null);
-  const [finalResultError, setFinalResultError] = useState<string | null>(null);
   const [finalResultBusy, setFinalResultBusy] = useState<string | null>(null);
   const [savedStudies, setSavedStudies] = useState<SavedStudyRecord[]>([]);
   const [savedStudiesLoading, setSavedStudiesLoading] = useState(false);
-  const [savedStudiesError, setSavedStudiesError] = useState<string | null>(null);
   const studyApi = useMemo(() => createStudyApi(mockStudies), []);
+  const notify = useNotify();
   const accessibleModules = moduleRegistry.filter((module) => canAccessModule(role, module));
   const headerModuleIds: ModuleId[] = role === "panelist"
     ? ["about", "participant", "closeout", "glossary"]
@@ -192,12 +184,11 @@ function App() {
   async function loadSmsSetupStatus() {
     if (!canSeeSmsSetup) return;
     setSmsSetupBusy(true);
-    setSmsSetupError(null);
     try {
       const result = await conductorApi.getSmsSetupStatus(role);
       setSmsSetupStatus(result.setup);
     } catch (error) {
-      setSmsSetupError(error instanceof Error ? error.message : "Unable to load SMS setup status.");
+      notify("danger", "SMS setup error", error instanceof Error ? error.message : "Unable to load SMS setup status.");
     } finally {
       setSmsSetupBusy(false);
     }
@@ -240,13 +231,12 @@ function App() {
     }
 
     setSavedStudiesLoading(true);
-    setSavedStudiesError(null);
 
     try {
       const records = await conductorApi.listSavedStudies(role);
       setSavedStudies(records);
     } catch (error) {
-      setSavedStudiesError(error instanceof Error ? error.message : "Unable to load saved studies.");
+      notify("danger", "Studies error", error instanceof Error ? error.message : "Unable to load saved studies.");
     } finally {
       setSavedStudiesLoading(false);
     }
@@ -263,7 +253,6 @@ function App() {
     const token = magicToken;
     async function loadMagicEntry() {
       setMagicBusy(true);
-      setMagicError(null);
       try {
         setRole("panelist");
         setActiveModule("participant");
@@ -279,7 +268,10 @@ function App() {
       } catch (error) {
         setRole("panelist");
         setActiveModule("participant");
-        setMagicError(
+        setMagicLoadFailed(true);
+        notify(
+          "danger",
+          "Magic link error",
           error instanceof Error
             ? error.message
             : "This secure link has expired or has already been used.",
@@ -289,7 +281,7 @@ function App() {
       }
     }
     void loadMagicEntry();
-  }, [magicToken]);
+  }, [magicToken, notify]);
 
   useEffect(() => {
     if (!participantInviteToken) return;
@@ -328,9 +320,8 @@ function App() {
             study: context.study,
             version: context.study_version,
             signoffs: [],
-            lastMessage: "Participant invitation opened.",
-            error: null,
           }));
+          notify("success", "Workflow", "Participant invitation opened.");
         }
 
         const openRatingRound = context.round_configs.find((config) => config.round_number > 1 && config.status === "Open");
@@ -365,12 +356,12 @@ function App() {
           setParticipantFinalResponses([]);
         }
       } catch (error) {
-        setParticipantError(error instanceof Error ? error.message : "Unable to open participant invitation.");
+        notify("danger", "Participant error", error instanceof Error ? error.message : "Unable to open participant invitation.");
       }
     }
 
     void loadInvite();
-  }, [participantInviteToken]);
+  }, [participantInviteToken, notify]);
 
   useEffect(() => {
     const hasDraftText = participantResponseText.trim() || Object.values(participantRoundOneAnswers).some((value) => value.trim());
@@ -410,11 +401,10 @@ function App() {
       version: record.latestVersion,
       signoffs: record.signoffs,
       busyStep: null,
-      lastMessage: record.latestVersion
-        ? `Opened saved study, version ${record.latestVersion.version_number}.`
-        : "Opened saved study with no version yet.",
-      error: null,
     });
+    notify("success", "Workflow", record.latestVersion
+      ? `Opened saved study, version ${record.latestVersion.version_number}.`
+      : "Opened saved study with no version yet.");
     setWorkspaceLauncherOpen(false);
     setActiveModule(targetModule ?? (record.latestVersion ? "study-builder" : "dashboard"));
     if (record.latestVersion) {
@@ -429,10 +419,8 @@ function App() {
     );
     if (!confirmed) return;
 
-    setWorkflow({
-      ...initialWorkflow,
-      lastMessage: "Started a new unsaved study draft.",
-    });
+    setWorkflow(initialWorkflow);
+    notify("success", "Workflow", "Started a new unsaved study draft.");
     setWizard(defaultWizardState);
     setActiveWizardStep("purpose");
     setRoundConfigs([]);
@@ -441,13 +429,9 @@ function App() {
     setRoundTwoRationales({});
     setFinalResultSnapshot(null);
     setFinalResultBlockers(["final_result_snapshot_missing"]);
-    setFinalResultMessage(null);
-    setFinalResultError(null);
     setLauncherDraftTitle(defaultWizardState.title);
     setLauncherDraftDescription(defaultWizardState.description);
     setLauncherRoleMode("separate_steward");
-    setLauncherCreateError(null);
-    setLauncherCreateMessage(null);
     setWorkspacePath("new-study");
     setWorkspaceLauncherOpen(true);
     setActiveModule("dashboard");
@@ -457,12 +441,10 @@ function App() {
     setLauncherDraftTitle(defaultWizardState.title);
     setLauncherDraftDescription(defaultWizardState.description);
     setLauncherRoleMode("separate_steward");
-    setLauncherCreateError(null);
-    setLauncherCreateMessage(null);
   }
 
   function openWorkspaceLauncherPath(nextPath: WorkspacePath) {
-    if (nextPath === "new-study" && (workspacePath !== "new-study" || !workspaceLauncherOpen || launcherCreateMessage)) {
+    if (nextPath === "new-study" && (workspacePath !== "new-study" || !workspaceLauncherOpen)) {
       resetLauncherNewStudyDraft();
     }
     setWorkspacePath(nextPath);
@@ -474,11 +456,11 @@ function App() {
     const title = launcherDraftTitle.trim();
     const description = launcherDraftDescription.trim();
     if (!title) {
-      setLauncherCreateError("study_title_required");
+      notify("danger", "Workspace error", humanizeBackendMessage("study_title_required") ?? "Study title is required.");
       return;
     }
     if (role !== "study_owner") {
-      setLauncherCreateError("forbidden");
+      notify("danger", "Workspace error", humanizeBackendMessage("forbidden") ?? "Forbidden.");
       return;
     }
 
@@ -488,8 +470,6 @@ function App() {
       description,
     });
     setLauncherCreateBusy(true);
-    setLauncherCreateError(null);
-    setLauncherCreateMessage(null);
 
     try {
       const created = await conductorApi.createStudy(role, nextWizard);
@@ -501,11 +481,10 @@ function App() {
         version: savedPacket.studyVersion,
         signoffs: [],
         busyStep: null,
-        lastMessage: launcherRoleMode === "solo_internal"
-          ? "Saved workspace created for internal synthetic setup. Assign a separate Ethics & Methods Steward before any human-use readiness claim."
-          : "Saved workspace created. Assign the Ethics & Methods Steward before governance signoff.",
-        error: null,
       });
+      notify("success", "Workspace saved", launcherRoleMode === "solo_internal"
+        ? "Saved workspace created for internal synthetic setup. Assign a separate Ethics & Methods Steward before any human-use readiness claim."
+        : "Saved workspace created. Assign the Ethics & Methods Steward before governance signoff.");
       setActiveWizardStep("purpose");
       setRoundConfigs([]);
       setRuntimeData(emptyRuntimeStudyData);
@@ -513,14 +492,12 @@ function App() {
       setRoundTwoRationales({});
       setFinalResultSnapshot(null);
       setFinalResultBlockers(["final_result_snapshot_missing"]);
-      setFinalResultMessage(null);
-      setFinalResultError(null);
       setWorkspaceLauncherOpen(false);
       setActiveModule("study-builder");
-      setLauncherCreateMessage("Saved workspace created and listed under Current Studies.");
+      notify("success", "Workspace saved", "Saved workspace created and listed under Current Studies.");
       await loadSavedStudies();
     } catch (error) {
-      setLauncherCreateError(error instanceof Error ? error.message : "Unable to create saved study workspace.");
+      notify("danger", "Workspace error", error instanceof Error ? error.message : "Unable to create saved study workspace.");
     } finally {
       setLauncherCreateBusy(false);
     }
@@ -548,7 +525,7 @@ function App() {
       return;
     }
 
-    setRuntimeData((current) => ({ ...current, loading: true, error: null }));
+    setRuntimeData((current) => ({ ...current, loading: true }));
 
     try {
       const canReadStaffData = role !== "panelist";
@@ -618,38 +595,31 @@ function App() {
             ? current.selectedExportPackageId
             : exportPackagesResult.export_packages.at(-1)?.export_package_id ?? null,
         loading: false,
-        error: null,
       }));
     } catch (error) {
       setRuntimeData((current) => ({
         ...current,
         loading: false,
-        error: error instanceof Error ? error.message : "Unable to load study runtime data.",
       }));
+      notify("danger", "Data error", error instanceof Error ? error.message : "Unable to load study runtime data.");
     }
   }
 
   function setRuntimeMessage(message: string) {
-    setRuntimeData((current) => ({ ...current, message, error: null }));
+    notify("success", "Data updated", message);
   }
 
   function setRuntimeError(error: unknown, fallback: string) {
-    setRuntimeData((current) => ({
-      ...current,
-      error: error instanceof Error ? error.message : fallback,
-      message: null,
-    }));
+    notify("danger", "Data error", error instanceof Error ? error.message : fallback);
   }
 
   async function saveRoundOneConfiguration() {
     if (!workflow.study || !workflow.version) {
-      setRoundActionError("Save the study design and create a draft version before configuring Round 1.");
+      notify("danger", "Round setup error", "Save the study design and create a draft version before configuring Round 1.");
       return;
     }
 
     setRoundActionBusy("save-r1");
-    setRoundActionError(null);
-    setRoundActionMessage(null);
 
     try {
       const result = await conductorApi.saveRoundConfig(workflow.study.id, workflow.version.id, 1, role, {
@@ -687,9 +657,9 @@ function App() {
         ...current.filter((config) => config.round_number !== 1),
         result.round_config,
       ]);
-      setRoundActionMessage("Round 1 setup saved and consent text activated.");
+      notify("success", "Round saved", "Round 1 setup saved and consent text activated.");
     } catch (error) {
-      setRoundActionError(error instanceof Error ? error.message : "Unable to save Round 1 setup.");
+      notify("danger", "Round setup error", error instanceof Error ? error.message : "Unable to save Round 1 setup.");
     } finally {
       setRoundActionBusy(null);
     }
@@ -701,13 +671,11 @@ function App() {
 
   async function saveRatingRoundConfiguration(roundNumber: number) {
     if (!workflow.study || !workflow.version) {
-      setRoundActionError("Save and activate the study before configuring rating rounds.");
+      notify("danger", "Round setup error", "Save and activate the study before configuring rating rounds.");
       return;
     }
 
     setRoundActionBusy(`save-r${roundNumber}`);
-    setRoundActionError(null);
-    setRoundActionMessage(null);
 
     try {
       const isTerminal = roundNumber === (workflow.version.terminal_round_number ?? wizard.terminalRoundNumber);
@@ -742,9 +710,9 @@ function App() {
         ...current.filter((config) => config.round_number !== roundNumber),
         result.round_config,
       ]);
-      setRoundActionMessage(`Round ${roundNumber} participant task configured.`);
+      notify("success", "Round saved", `Round ${roundNumber} participant task configured.`);
     } catch (error) {
-      setRoundActionError(error instanceof Error ? error.message : `Unable to save Round ${roundNumber} setup.`);
+      notify("danger", "Round setup error", error instanceof Error ? error.message : `Unable to save Round ${roundNumber} setup.`);
     } finally {
       setRoundActionBusy(null);
     }
@@ -752,13 +720,11 @@ function App() {
 
   async function transitionRound(roundNumber: number, action: "open" | "close") {
     if (!workflow.study || !workflow.version) {
-      setRoundActionError("Select an active backend study before changing round status.");
+      notify("danger", "Round setup error", "Select an active backend study before changing round status.");
       return;
     }
 
     setRoundActionBusy(`${action}-${roundNumber}`);
-    setRoundActionError(null);
-    setRoundActionMessage(null);
 
     try {
       if (
@@ -805,14 +771,14 @@ function App() {
         setFinalResultBlockers(["study_owner_closeout_signoff_missing", "ethics_methods_closeout_signoff_missing"]);
         setActiveModule("closeout");
       }
-      setRoundActionMessage(
+      notify("success", "Round saved",
         createdSnapshot
           ? `Round ${roundNumber} closed and the Final Results & Study Closeout snapshot was created.`
           : `Round ${roundNumber} ${action === "open" ? "opened" : "closed"}.`,
       );
       await loadRuntimeData(workflow.study.id, workflow.version.id);
     } catch (error) {
-      setRoundActionError(error instanceof Error ? error.message : `Unable to ${action} Round ${roundNumber}.`);
+      notify("danger", "Round setup error", error instanceof Error ? error.message : `Unable to ${action} Round ${roundNumber}.`);
     } finally {
       setRoundActionBusy(null);
     }
@@ -820,13 +786,11 @@ function App() {
 
   async function runFinalResultAction(action: "create" | "signoff" | "release" | "archive") {
     if (!workflow.study || !workflow.version) {
-      setFinalResultError("Open a backend study before working with final results.");
+      notify("danger", "Final results error", "Open a backend study before working with final results.");
       return;
     }
 
     setFinalResultBusy(action);
-    setFinalResultError(null);
-    setFinalResultMessage(null);
 
     try {
       const result =
@@ -840,14 +804,14 @@ function App() {
 
       setFinalResultSnapshot(result.snapshot);
       setFinalResultBlockers(result.release_blockers);
-      setFinalResultMessage({
+      notify("success", "Final results", {
         create: "FinalResultSnapshot created from the closed terminal round.",
         signoff: "Closeout release signoff recorded.",
         release: "Participant final results are released from the canonical snapshot.",
         archive: "Final results archived with snapshot hashes preserved.",
       }[action]);
     } catch (error) {
-      setFinalResultError(error instanceof Error ? error.message : "Unable to update final results.");
+      notify("danger", "Final results error", error instanceof Error ? error.message : "Unable to update final results.");
     } finally {
       setFinalResultBusy(null);
     }
@@ -855,17 +819,17 @@ function App() {
 
   async function submitParticipantRoundOne() {
     if (!workflow.study || !workflow.version) {
-      setParticipantError("No active study version is selected.");
+      notify("warning", "Validation", "No active study version is selected.");
       return;
     }
 
     if (!participantConsentChecked) {
-      setParticipantError("Consent acknowledgement is required before submitting.");
+      notify("warning", "Validation", "Consent acknowledgement is required before submitting.");
       return;
     }
 
     if (!participantOrientationComplete) {
-      setParticipantError("participant_orientation_required");
+      notify("warning", "Orientation required", humanizeBackendMessage("participant_orientation_required") ?? "Please complete the study orientation first.");
       return;
     }
 
@@ -880,13 +844,11 @@ function App() {
       question.requiredForRound1Response && !answerMap[question.id]?.trim()
     );
     if (missingRequired) {
-      setParticipantError(`${questionLabel(missingRequired, activeQuestions.indexOf(missingRequired))} response is required.`);
+      notify("warning", "Validation", `${questionLabel(missingRequired, activeQuestions.indexOf(missingRequired))} response is required.`);
       return;
     }
 
     setParticipantBusy(true);
-    setParticipantError(null);
-    setParticipantMessage(null);
 
     try {
       const submittedAnswers = roundOneAnswerInputs(answerMap, activeQuestions);
@@ -948,12 +910,12 @@ function App() {
       setParticipantSubmittedRoundOneAnswers(Object.fromEntries(submittedAnswers.map((answer) => [answer.researchQuestionId, answer.text])));
       setParticipantRoundOneEditing(false);
       setParticipantRoundOneComplete(false);
-      setParticipantMessage("Round 1 response submitted. Please review what was recorded.");
+      notify("success", "Participant", "Round 1 response submitted. Please review what was recorded.");
       setParticipantResponseText("");
       setParticipantRoundOneAnswers({});
       void loadRuntimeData(workflow.study.id, workflow.version.id);
     } catch (error) {
-      setParticipantError(error instanceof Error ? error.message : "Unable to submit Round 1 response.");
+      notify("danger", "Participant error", error instanceof Error ? error.message : "Unable to submit Round 1 response.");
     } finally {
       setParticipantBusy(false);
     }
@@ -961,13 +923,11 @@ function App() {
 
   async function completeParticipantOrientation() {
     if (!workflow.study || !workflow.version) {
-      setParticipantError("No active study version is selected.");
+      notify("warning", "Validation", "No active study version is selected.");
       return;
     }
 
     setParticipantBusy(true);
-    setParticipantError(null);
-    setParticipantMessage(null);
 
     try {
       if (participantInviteToken) {
@@ -983,9 +943,9 @@ function App() {
         setParticipantInvite((current) => current ? { ...current, orientation_completion: result.orientation_completion } : current);
       }
       setParticipantOrientationComplete(true);
-      setParticipantMessage("Study orientation completed. You may begin Round 1.");
+      notify("success", "Participant", "Study orientation completed. You may begin Round 1.");
     } catch (error) {
-      setParticipantError(error instanceof Error ? error.message : "Unable to complete study orientation.");
+      notify("danger", "Participant error", error instanceof Error ? error.message : "Unable to complete study orientation.");
     } finally {
       setParticipantBusy(false);
     }
@@ -997,8 +957,7 @@ function App() {
     if (participantSubmittedRoundOneAnswers) setParticipantRoundOneAnswers(participantSubmittedRoundOneAnswers);
     setParticipantRoundOneEditing(true);
     setParticipantRoundOneComplete(false);
-    setParticipantMessage("You can revise your Round 1 response below.");
-    setParticipantError(null);
+    notify("info", "Editing", "You can revise your Round 1 response below.");
   }
 
   function finishRoundOneTask() {
@@ -1006,15 +965,14 @@ function App() {
     setParticipantRoundOneComplete(true);
     setParticipantResponseText("");
     setParticipantRoundOneAnswers({});
-    setParticipantMessage("Round 1 task complete. Your submitted response is recorded.");
-    setParticipantError(null);
+    notify("success", "Complete", "Round 1 task complete. Your submitted response is recorded.");
   }
 
   async function createManualItemFromResponse(response: ResponseRecord, entry?: RoundOneResponseEntry) {
     if (!workflow.study || !workflow.version) return;
     const text = entry?.text ?? responseOpenText(response.response_json);
     if (!text) {
-      setRuntimeData((current) => ({ ...current, error: "The selected response does not contain open text.", message: null }));
+      notify("danger", "Data error", "The selected response does not contain open text.");
       return;
     }
 
@@ -1248,7 +1206,6 @@ function App() {
 
   async function saveParticipantRoundOneDraft() {
     setParticipantBusy(true);
-    setParticipantError(null);
     try {
       const questions = roundOneQuestions(wizard);
       const answers = {
@@ -1267,9 +1224,9 @@ function App() {
       } else {
         setParticipantDraftSavedAt(new Date().toISOString());
       }
-      setParticipantMessage("Progress saved. Submit when you are ready for the study team to receive it.");
+      notify("success", "Participant", "Progress saved. Submit when you are ready for the study team to receive it.");
     } catch (error) {
-      setParticipantError(error instanceof Error ? error.message : "Unable to save progress.");
+      notify("danger", "Participant error", error instanceof Error ? error.message : "Unable to save progress.");
     } finally {
       setParticipantBusy(false);
     }
@@ -1277,7 +1234,6 @@ function App() {
 
   async function saveParticipantRatingDraft(roundNumber: number) {
     setParticipantBusy(true);
-    setParticipantError(null);
     try {
       if (participantInviteToken) {
         const result = await conductorApi.saveInvitationDraft(participantInviteToken, roundNumber, {
@@ -1288,9 +1244,9 @@ function App() {
       } else {
         setParticipantRatingDraftSavedAt((current) => ({ ...current, [roundNumber]: new Date().toISOString() }));
       }
-      setParticipantMessage(`Round ${roundNumber} progress saved. Submit when you are ready for the study team to receive it.`);
+      notify("success", "Participant", `Round ${roundNumber} progress saved. Submit when you are ready for the study team to receive it.`);
     } catch (error) {
-      setParticipantError(error instanceof Error ? error.message : "Unable to save progress.");
+      notify("danger", "Participant error", error instanceof Error ? error.message : "Unable to save progress.");
     } finally {
       setParticipantBusy(false);
     }
@@ -1298,7 +1254,7 @@ function App() {
 
   async function submitRoundTwoRatings() {
     if (!workflow.study || !workflow.version) {
-      setParticipantError("No active study version is selected.");
+      notify("warning", "Validation", "No active study version is selected.");
       return;
     }
 
@@ -1307,13 +1263,11 @@ function App() {
     const currentItems = runtimeData.ratingRoundItems[currentRound] ?? runtimeData.roundTwoItems;
     const missing = currentItems.some((item) => !roundTwoRatings[item.item_id]);
     if (missing) {
-      setParticipantError(`A response option is required for each available Round ${currentRound} statement.`);
+      notify("warning", "Validation", `A response option is required for each available Round ${currentRound} statement.`);
       return;
     }
 
     setParticipantBusy(true);
-    setParticipantError(null);
-    setParticipantMessage(null);
 
     try {
       if (participantInviteToken) {
@@ -1367,12 +1321,12 @@ function App() {
         ...current,
         [currentRound]: false,
       }));
-      setParticipantMessage(`Round ${currentRound} responses submitted. Please review what was recorded.`);
+      notify("success", "Participant", `Round ${currentRound} responses submitted. Please review what was recorded.`);
       setRoundTwoRatings({});
       setRoundTwoRationales({});
       await loadRuntimeData(workflow.study.id, workflow.version.id);
     } catch (error) {
-      setParticipantError(error instanceof Error ? error.message : "Unable to submit Round 2 ratings.");
+      notify("danger", "Participant error", error instanceof Error ? error.message : "Unable to submit Round 2 ratings.");
     } finally {
       setParticipantBusy(false);
     }
@@ -1391,8 +1345,7 @@ function App() {
       ...current,
       [roundNumber]: false,
     }));
-    setParticipantMessage(`You can revise your Round ${roundNumber} responses below.`);
-    setParticipantError(null);
+    notify("info", "Editing", `You can revise your Round ${roundNumber} responses below.`);
   }
 
   function finishRatingRoundTask(roundNumber: number) {
@@ -1406,27 +1359,24 @@ function App() {
     }));
     setRoundTwoRatings({});
     setRoundTwoRationales({});
-    setParticipantMessage(`Round ${roundNumber} task complete. Your submitted responses are recorded.`);
-    setParticipantError(null);
+    notify("success", "Complete", `Round ${roundNumber} task complete. Your submitted responses are recorded.`);
   }
 
   async function withdrawParticipantInvitation() {
     if (!participantInviteToken) {
-      setParticipantError("Withdrawal is available from a participant invitation link.");
+      notify("danger", "Participant error", "Withdrawal is available from a participant invitation link.");
       return;
     }
 
     setParticipantBusy(true);
-    setParticipantError(null);
-    setParticipantMessage(null);
 
     try {
       await conductorApi.withdrawInvitationConsent(participantInviteToken);
       setParticipantConsentChecked(false);
       setParticipantWithdrawn(true);
-      setParticipantMessage("Withdrawal recorded for future rounds. Prior submitted responses may remain in historical study data according to the study protocol and consent terms.");
+      notify("success", "Participant", "Withdrawal recorded for future rounds. Prior submitted responses may remain in historical study data according to the study protocol and consent terms.");
     } catch (error) {
-      setParticipantError(error instanceof Error ? error.message : "Unable to record withdrawal.");
+      notify("danger", "Participant error", error instanceof Error ? error.message : "Unable to record withdrawal.");
     } finally {
       setParticipantBusy(false);
     }
@@ -1434,22 +1384,20 @@ function App() {
 
   async function requestParticipantDeletionReview() {
     if (!participantInviteToken) {
-      setParticipantError("A retention or deletion review is available from a participant invitation link.");
+      notify("danger", "Participant error", "A retention or deletion review is available from a participant invitation link.");
       return;
     }
 
     setParticipantBusy(true);
-    setParticipantError(null);
-    setParticipantMessage(null);
 
     try {
       await conductorApi.requestInvitationDeletionReview(
         participantInviteToken,
         "Participant requested review of retention, deletion, or restricted-use options.",
       );
-      setParticipantMessage("Retention/deletion review request recorded. The research team will review it under the study retention policy.");
+      notify("success", "Participant", "Retention/deletion review request recorded. The research team will review it under the study retention policy.");
     } catch (error) {
-      setParticipantError(error instanceof Error ? error.message : "Unable to request retention/deletion review.");
+      notify("danger", "Participant error", error instanceof Error ? error.message : "Unable to request retention/deletion review.");
     } finally {
       setParticipantBusy(false);
     }
@@ -1458,14 +1406,12 @@ function App() {
   async function reportParticipantIssue(input: ParticipantIssueInput) {
     if (magicContext) {
       setMagicBusy(true);
-      setMagicError(null);
-      setMagicMessage(null);
       try {
         const result = await conductorApi.reportMagicParticipantIssue(input);
         setRuntimeData((current) => ({ ...current, participantIssues: [result.issue, ...current.participantIssues] }));
-        setMagicMessage(participantCopy.trouble.success);
+        notify("success", "Magic link", participantCopy.trouble.success);
       } catch (error) {
-        setMagicError(error instanceof Error ? error.message : "Unable to send issue note.");
+        notify("danger", "Magic link error", error instanceof Error ? error.message : "Unable to send issue note.");
       } finally {
         setMagicBusy(false);
       }
@@ -1475,8 +1421,6 @@ function App() {
     if (!participantInviteToken) {
       if (workflow.study && workflow.version) {
         setParticipantBusy(true);
-        setParticipantError(null);
-        setParticipantMessage(null);
         try {
           const result = await conductorApi.reportParticipantIssue(
             workflow.study.id,
@@ -1486,16 +1430,15 @@ function App() {
             input,
           );
           setRuntimeData((current) => ({ ...current, participantIssues: [result.issue, ...current.participantIssues] }));
-          setParticipantMessage(participantCopy.trouble.success);
+          notify("success", "Participant", participantCopy.trouble.success);
         } catch (error) {
-          setParticipantError(error instanceof Error ? error.message : "Unable to send issue note.");
+          notify("danger", "Participant error", error instanceof Error ? error.message : "Unable to send issue note.");
         } finally {
           setParticipantBusy(false);
         }
         return;
       }
 
-      setParticipantError(null);
       const now = new Date().toISOString();
       const issue: ParticipantIssue = {
         issue_id: `local-${Date.now()}`,
@@ -1518,20 +1461,18 @@ function App() {
         created_by: "staff_preview",
       };
       setRuntimeData((current) => ({ ...current, participantIssues: [issue, ...current.participantIssues] }));
-      setParticipantMessage(participantCopy.trouble.success);
+      notify("success", "Participant", participantCopy.trouble.success);
       return;
     }
 
     setParticipantBusy(true);
-    setParticipantError(null);
-    setParticipantMessage(null);
 
     try {
       const result = await conductorApi.reportInvitationParticipantIssue(participantInviteToken, input);
       setRuntimeData((current) => ({ ...current, participantIssues: [result.issue, ...current.participantIssues] }));
-      setParticipantMessage(participantCopy.trouble.success);
+      notify("success", "Participant", participantCopy.trouble.success);
     } catch (error) {
-      setParticipantError(error instanceof Error ? error.message : "Unable to send issue note.");
+      notify("danger", "Participant error", error instanceof Error ? error.message : "Unable to send issue note.");
     } finally {
       setParticipantBusy(false);
     }
@@ -1556,9 +1497,8 @@ function App() {
               }
             : issue,
         ),
-        message: "Participant issue response recorded in this local preview.",
-        error: null,
       }));
+      notify("success", "Data updated", "Participant issue response recorded in this local preview.");
       return;
     }
 
@@ -1576,9 +1516,8 @@ function App() {
         participantIssues: current.participantIssues.map((issue) =>
           issue.issue_id === issueId ? result.issue : issue,
         ),
-        message: "Participant issue response recorded.",
-        error: null,
       }));
+      notify("success", "Data updated", "Participant issue response recorded.");
     } catch (error) {
       setRuntimeError(error, "Unable to respond to participant issue note.");
     } finally {
@@ -1589,8 +1528,6 @@ function App() {
   async function submitMagicRound() {
     if (!magicContext) return;
     setMagicBusy(true);
-    setMagicError(null);
-    setMagicMessage(null);
     try {
       const roundNumber = magicContext.round.round_number;
       if (roundNumber === 1) {
@@ -1619,9 +1556,9 @@ function App() {
         }
       }
       setMagicContext((current) => current ? { ...current, round: { ...current.round, status: "completed" } } : current);
-      setMagicMessage("Round response submitted. You can close this page or return through your normal participant route.");
+      notify("success", "Magic link", "Round response submitted. You can close this page or return through your normal participant route.");
     } catch (error) {
-      setMagicError(error instanceof Error ? error.message : "Unable to submit from this secure link.");
+      notify("danger", "Magic link error", error instanceof Error ? error.message : "Unable to submit from this secure link.");
     } finally {
       setMagicBusy(false);
     }
@@ -1630,14 +1567,12 @@ function App() {
   async function declineMagicRound() {
     if (!magicContext) return;
     setMagicBusy(true);
-    setMagicError(null);
-    setMagicMessage(null);
     try {
       await conductorApi.declineMagicRound(magicContext.round.round_number);
       setMagicContext((current) => current ? { ...current, round: { ...current.round, status: "declined" } } : current);
-      setMagicMessage("Round declined. Participation remains voluntary.");
+      notify("success", "Magic link", "Round declined. Participation remains voluntary.");
     } catch (error) {
-      setMagicError(error instanceof Error ? error.message : "Unable to decline this round.");
+      notify("danger", "Magic link error", error instanceof Error ? error.message : "Unable to decline this round.");
     } finally {
       setMagicBusy(false);
     }
@@ -1645,7 +1580,7 @@ function App() {
 
   async function requestOutputExport(outputId: string) {
     if (!workflow.study || !workflow.version) {
-      setRuntimeData((current) => ({ ...current, error: "Open a backend study before preparing an export.", message: null }));
+      notify("danger", "Data error", "Open a backend study before preparing an export.");
       return;
     }
 
@@ -1659,9 +1594,8 @@ function App() {
           exportReport: result.report,
           exportPackages: packages.export_packages,
           selectedExportPackageId: result.export_package?.export_package_id ?? packages.export_packages.at(-1)?.export_package_id ?? current.selectedExportPackageId,
-          message: "Final Delphi report package prepared and audit logged.",
-          error: null,
         }));
+        notify("success", "Data updated", "Final Delphi report package prepared and audit logged.");
       } else {
         const result = await conductorApi.createExportPackage(
           workflow.study.id,
@@ -1674,9 +1608,8 @@ function App() {
           ...current,
           exportPackages: packages.export_packages,
           selectedExportPackageId: result.export_package.export_package_id,
-          message: `${outputModelRegistry.find((output) => output.id === outputId)?.label ?? "Export"} package prepared and audit logged.`,
-          error: null,
         }));
+        notify("success", "Data updated", `${outputModelRegistry.find((output) => output.id === outputId)?.label ?? "Export"} package prepared and audit logged.`);
       }
     } catch (error) {
       setRuntimeError(error, "Unable to prepare export.");
@@ -1698,7 +1631,6 @@ function App() {
           ...current.exportPackageFiles,
           [packageId]: result.files,
         },
-        error: null,
       }));
     } catch (error) {
       setRuntimeError(error, "Unable to load export package files.");
@@ -1725,9 +1657,8 @@ function App() {
         exportPackages: current.exportPackages.map((pkg) =>
           pkg.export_package_id === packageId ? { ...pkg, reviews: result.reviews } : pkg,
         ),
-        message: `Export package ${reviewStatus}. Review event audit logged.`,
-        error: null,
       }));
+      notify("success", "Data updated", `Export package ${reviewStatus}. Review event audit logged.`);
     } catch (error) {
       setRuntimeError(error, "Unable to review export package.");
     } finally {
@@ -1748,11 +1679,7 @@ function App() {
         role,
       );
       downloadPackageFile(result.file);
-      setRuntimeData((current) => ({
-        ...current,
-        message: `${result.file.path} downloaded and audit logged.`,
-        error: null,
-      }));
+      notify("success", "Data updated", `${result.file.path} downloaded and audit logged.`);
     } catch (error) {
       setRuntimeError(error, "Unable to download export package file.");
     } finally {
@@ -1766,8 +1693,6 @@ function App() {
     );
     if (!confirmed) return;
 
-    setSavedStudiesError(null);
-
     try {
       await conductorApi.archiveStudy(record.study.id, role);
       if (workflow.study?.id === record.study.id) {
@@ -1777,7 +1702,7 @@ function App() {
       }
       await loadSavedStudies();
     } catch (error) {
-      setSavedStudiesError(error instanceof Error ? error.message : "Unable to archive study.");
+      notify("danger", "Studies error", error instanceof Error ? error.message : "Unable to archive study.");
     }
   }
 
@@ -1787,7 +1712,7 @@ function App() {
     );
 
     if (candidates.length === 0) {
-      setSavedStudiesError("No test or debug workspaces were found in the visible saved studies list.");
+      notify("danger", "Studies error", "No test or debug workspaces were found in the visible saved studies list.");
       return;
     }
 
@@ -1807,12 +1732,12 @@ function App() {
       }
       await loadSavedStudies();
     } catch (error) {
-      setSavedStudiesError(error instanceof Error ? error.message : "Unable to archive test or debug study workspaces.");
+      notify("danger", "Studies error", error instanceof Error ? error.message : "Unable to archive test or debug study workspaces.");
     }
   }
 
   async function runWorkflowStep(step: WorkflowStep) {
-    setWorkflow((current) => ({ ...current, busyStep: step, error: null, lastMessage: null }));
+    setWorkflow((current) => ({ ...current, busyStep: step }));
 
     try {
       if (step === "create-study") {
@@ -1823,8 +1748,8 @@ function App() {
           version: null,
           signoffs: [],
           busyStep: null,
-          lastMessage: "Study created in the backend.",
         }));
+        notify("success", "Workflow", "Study created in the backend.");
         void loadSavedStudies();
         return;
       }
@@ -1837,8 +1762,8 @@ function App() {
           version: result.studyVersion,
           signoffs: [],
           busyStep: null,
-          lastMessage: "Draft StudyVersion created.",
         }));
+        notify("success", "Workflow", "Draft StudyVersion created.");
         void loadSavedStudies();
         return;
       }
@@ -1868,8 +1793,8 @@ function App() {
           version: result.studyVersion,
           signoffs: version?.id === current.version?.id ? current.signoffs : [],
           busyStep: null,
-          lastMessage: "Study Builder packet saved.",
         }));
+        notify("success", "Workflow", "Study Builder packet saved.");
         void loadSavedStudies();
         return;
       }
@@ -1884,8 +1809,8 @@ function App() {
           ...current,
           version: result.studyVersion,
           busyStep: null,
-          lastMessage: "Modified Delphi design saved.",
         }));
+        notify("success", "Workflow", "Modified Delphi design saved.");
         void loadSavedStudies();
         return;
       }
@@ -1896,8 +1821,8 @@ function App() {
           ...current,
           version: result.studyVersion,
           busyStep: null,
-          lastMessage: "Consensus threshold saved before launch.",
         }));
+        notify("success", "Workflow", "Consensus threshold saved before launch.");
         void loadSavedStudies();
         return;
       }
@@ -1908,8 +1833,8 @@ function App() {
           ...current,
           version: result.studyVersion,
           busyStep: null,
-          lastMessage: "StudyVersion submitted for governance signoff.",
         }));
+        notify("success", "Workflow", "StudyVersion submitted for governance signoff.");
         void loadSavedStudies();
         return;
       }
@@ -1925,8 +1850,8 @@ function App() {
             result.signoff,
           ],
           busyStep: null,
-          lastMessage: `${result.signoff.required_role} signoff recorded.`,
         }));
+        notify("success", "Workflow", `${result.signoff.required_role} signoff recorded.`);
         void loadSavedStudies();
         return;
       }
@@ -1937,8 +1862,8 @@ function App() {
           ...current,
           version: result.studyVersion,
           busyStep: null,
-          lastMessage: "StudyVersion activated.",
         }));
+        notify("success", "Workflow", "StudyVersion activated.");
         void loadSavedStudies();
         return;
       }
@@ -1982,15 +1907,15 @@ function App() {
         ...current,
         version: current.version ? { ...current.version, opened_round1_at: current.version.opened_round1_at ?? openedAt } : current.version,
         busyStep: null,
-        lastMessage: "Round 1 opened with participant task and consent text.",
       }));
+      notify("success", "Workflow", "Round 1 opened with participant task and consent text.");
       void loadSavedStudies();
     } catch (error) {
       setWorkflow((current) => ({
         ...current,
         busyStep: null,
-        error: error instanceof Error ? error.message : "Workflow action failed.",
       }));
+      notify("danger", "Workflow error", error instanceof Error ? error.message : "Workflow action failed.");
     }
   }
 
@@ -2038,7 +1963,8 @@ function App() {
 
   return (
     <AppProvider value={appContextValue}>
-    <main className={role === "panelist" ? "app-shell participant-mode" : "app-shell"}>
+    <a className="skip-link" href="#main-content">Skip to main content</a>
+    <div className={role === "panelist" ? "app-shell participant-mode" : "app-shell"}>
       <aside className="sidebar" aria-label="Application modules">
         <div className="brand-block">
           <span className="brand-mark">eD</span>
@@ -2092,7 +2018,7 @@ function App() {
         ) : null}
       </aside>
 
-      <section className="workspace">
+      <main className="workspace" id="main-content">
         <div className="reference-bar">
           <nav aria-label="Reference pages">
             {headerModules.map((module) => (
@@ -2138,7 +2064,6 @@ function App() {
           <SmsSetupPrompt
             setup={smsSetupStatus}
             busy={smsSetupBusy}
-            error={smsSetupError}
             onKeepOff={() => chooseSmsSetup("off")}
             onUseSms={() => chooseSmsSetup("twilio")}
             onRefresh={loadSmsSetupStatus}
@@ -2154,11 +2079,8 @@ function App() {
             draftDescription={launcherDraftDescription}
             roleMode={launcherRoleMode}
             createBusy={launcherCreateBusy}
-            createError={launcherCreateError}
-            createMessage={launcherCreateMessage}
             savedStudies={savedStudies}
             savedStudiesLoading={savedStudiesLoading}
-            savedStudiesError={savedStudiesError}
             onPathChange={openWorkspaceLauncherPath}
             onDraftTitleChange={setLauncherDraftTitle}
             onDraftDescriptionChange={setLauncherDraftDescription}
@@ -2182,8 +2104,6 @@ function App() {
           roundOneSetup={roundOneSetup}
           roundTwoSetup={roundTwoSetup}
           roundConfigs={roundConfigs}
-          roundActionMessage={roundActionMessage}
-          roundActionError={roundActionError}
           roundActionBusy={roundActionBusy}
           participantResponseText={participantResponseText}
           participantRoundOneAnswers={participantRoundOneAnswers}
@@ -2200,8 +2120,6 @@ function App() {
           participantWithdrawn={participantWithdrawn}
           participantConsentChecked={participantConsentChecked}
           participantOrientationComplete={participantOrientationComplete}
-          participantMessage={participantMessage}
-          participantError={participantError}
           participantBusy={participantBusy}
           participantInvite={participantInvite}
           magicContext={magicContext}
@@ -2210,8 +2128,7 @@ function App() {
           magicRoundOneAnswers={magicRoundOneAnswers}
           magicRatings={magicRatings}
           magicRationales={magicRationales}
-          magicMessage={magicMessage}
-          magicError={magicError}
+          magicLoadFailed={magicLoadFailed}
           magicBusy={magicBusy}
           runtimeData={runtimeData}
           runtimeActionBusy={runtimeActionBusy}
@@ -2220,8 +2137,6 @@ function App() {
           finalResultSnapshot={finalResultSnapshot}
           finalResultBlockers={finalResultBlockers}
           participantFinalResponses={participantFinalResponses}
-          finalResultMessage={finalResultMessage}
-          finalResultError={finalResultError}
           finalResultBusy={finalResultBusy}
           activeWizardStep={activeWizardStep}
           onWizardChange={setWizard}
@@ -2275,7 +2190,6 @@ function App() {
           onDownloadExportPackageFile={downloadExportPackageFile}
           savedStudies={savedStudies}
           savedStudiesLoading={savedStudiesLoading}
-          savedStudiesError={savedStudiesError}
           onRefreshSavedStudies={loadSavedStudies}
           onOpenSavedStudy={openSavedStudy}
           onStartNewStudyDraft={startNewStudyDraft}
@@ -2289,8 +2203,9 @@ function App() {
             Cite this tool
           </button>
         </footer>
-      </section>
-    </main>
+      </main>
+    </div>
+    <ToastContainer />
     </AppProvider>
   );
 }

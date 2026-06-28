@@ -49,8 +49,6 @@ export function ModuleRenderer({
   listStudiesLabel,
   roundOneSetup,
   roundTwoSetup,
-  roundActionMessage,
-  roundActionError,
   roundActionBusy,
   participantResponseText,
   participantRoundOneAnswers,
@@ -67,8 +65,6 @@ export function ModuleRenderer({
   participantWithdrawn,
   participantConsentChecked,
   participantOrientationComplete,
-  participantMessage,
-  participantError,
   participantBusy,
   participantInvite,
   magicContext,
@@ -77,8 +73,7 @@ export function ModuleRenderer({
   magicRoundOneAnswers,
   magicRatings,
   magicRationales,
-  magicMessage,
-  magicError,
+  magicLoadFailed,
   magicBusy,
   runtimeActionBusy,
   roundTwoRatings,
@@ -86,8 +81,6 @@ export function ModuleRenderer({
   finalResultSnapshot,
   finalResultBlockers,
   participantFinalResponses,
-  finalResultMessage,
-  finalResultError,
   finalResultBusy,
   activeWizardStep,
   onWizardChange,
@@ -141,7 +134,6 @@ export function ModuleRenderer({
   onDownloadExportPackageFile,
   savedStudies,
   savedStudiesLoading,
-  savedStudiesError,
   onRefreshSavedStudies,
   onOpenSavedStudy,
   onStartNewStudyDraft,
@@ -161,8 +153,6 @@ export function ModuleRenderer({
   roundOneSetup: RoundOneSetupState;
   roundTwoSetup: RoundTwoSetupState;
   roundConfigs: RoundConfig[];
-  roundActionMessage: string | null;
-  roundActionError: string | null;
   roundActionBusy: string | null;
   participantResponseText: string;
   participantRoundOneAnswers: Record<string, string>;
@@ -179,8 +169,6 @@ export function ModuleRenderer({
   participantWithdrawn: boolean;
   participantConsentChecked: boolean;
   participantOrientationComplete: boolean;
-  participantMessage: string | null;
-  participantError: string | null;
   participantBusy: boolean;
   participantInvite: ParticipantInvitationContext | null;
   magicContext: MagicRoundEntryContext | null;
@@ -189,8 +177,7 @@ export function ModuleRenderer({
   magicRoundOneAnswers: Record<string, string>;
   magicRatings: RatingDraft;
   magicRationales: RationaleDraft;
-  magicMessage: string | null;
-  magicError: string | null;
+  magicLoadFailed: boolean;
   magicBusy: boolean;
   runtimeData: RuntimeStudyData;
   runtimeActionBusy: string | null;
@@ -199,8 +186,6 @@ export function ModuleRenderer({
   finalResultSnapshot: FinalResultSnapshot | null;
   finalResultBlockers: string[];
   participantFinalResponses: ParticipantFinalResponse[];
-  finalResultMessage: string | null;
-  finalResultError: string | null;
   finalResultBusy: string | null;
   activeWizardStep: StudyWizardStepId;
   onWizardChange: (state: StudyWizardState) => void;
@@ -254,7 +239,6 @@ export function ModuleRenderer({
   onDownloadExportPackageFile: (packageId: string, fileId: string) => void;
   savedStudies: SavedStudyRecord[];
   savedStudiesLoading: boolean;
-  savedStudiesError: string | null;
   onRefreshSavedStudies: () => void;
   onOpenSavedStudy: (record: SavedStudyRecord) => void;
   onStartNewStudyDraft: () => void;
@@ -280,7 +264,6 @@ export function ModuleRenderer({
           runtimeActionBusy={runtimeActionBusy}
           savedStudies={savedStudies}
           savedStudiesLoading={savedStudiesLoading}
-          savedStudiesError={savedStudiesError}
           onRefreshSavedStudies={onRefreshSavedStudies}
           onOpenSavedStudy={onOpenSavedStudy}
           onStartNewStudyDraft={onStartNewStudyDraft}
@@ -306,8 +289,6 @@ export function ModuleRenderer({
         <RoundManagerScreen
           roundOneSetup={roundOneSetup}
           roundTwoSetup={roundTwoSetup}
-          roundActionMessage={roundActionMessage}
-          roundActionError={roundActionError}
           roundActionBusy={roundActionBusy}
           onRoundOneSetupChange={onRoundOneSetupChange}
           onRoundTwoSetupChange={onRoundTwoSetupChange}
@@ -355,8 +336,6 @@ export function ModuleRenderer({
           participantWithdrawn={participantWithdrawn}
           participantConsentChecked={participantConsentChecked}
           participantOrientationComplete={participantOrientationComplete}
-          participantMessage={participantMessage}
-          participantError={participantError}
           participantBusy={participantBusy}
           participantInvite={participantInvite}
           magicContext={magicContext}
@@ -365,8 +344,7 @@ export function ModuleRenderer({
           magicRoundOneAnswers={magicRoundOneAnswers}
           magicRatings={magicRatings}
           magicRationales={magicRationales}
-          magicMessage={magicMessage}
-          magicError={magicError}
+          magicLoadFailed={magicLoadFailed}
           magicBusy={magicBusy}
           roundTwoRatings={roundTwoRatings}
           roundTwoRationales={roundTwoRationales}
@@ -401,8 +379,6 @@ export function ModuleRenderer({
           snapshot={finalResultSnapshot}
           blockers={finalResultBlockers}
           participantFinalResponses={participantFinalResponses}
-          message={finalResultMessage}
-          error={finalResultError}
           busy={finalResultBusy}
           onAction={onFinalResultAction}
           onExportOutput={onExportOutput}

@@ -5,7 +5,7 @@ import type {
   RoundOneSetupState,
   RoundTwoSetupState,
 } from "../core/appTypes";
-import { formatStatus, humanizeBackendMessage } from "../core/appUtils";
+import { formatStatus } from "../core/appUtils";
 import { useAppContext } from "../core/AppContext";
 import type { StudyWizardState } from "../core/studyWizard";
 import { DataBar, StatCard, StatusBadge, WarningBanner } from "../components/ui/Primitives";
@@ -73,8 +73,6 @@ export function roundStatusRisk(status: string): "success" | "warning" | "info" 
 export function RoundManagerScreen({
   roundOneSetup,
   roundTwoSetup,
-  roundActionMessage,
-  roundActionError,
   roundActionBusy,
   onRoundOneSetupChange,
   onRoundTwoSetupChange,
@@ -85,8 +83,6 @@ export function RoundManagerScreen({
 }: {
   roundOneSetup: RoundOneSetupState;
   roundTwoSetup: RoundTwoSetupState;
-  roundActionMessage: string | null;
-  roundActionError: string | null;
   roundActionBusy: string | null;
   onRoundOneSetupChange: (state: RoundOneSetupState) => void;
   onRoundTwoSetupChange: (state: RoundTwoSetupState) => void;
@@ -178,16 +174,7 @@ export function RoundManagerScreen({
           <h2>Open-ended prompt, participant instructions, window, and reminders</h2>
         </div>
 
-        {roundActionError ? (
-          <WarningBanner title="Round setup not saved" risk="danger">
-            {humanizeBackendMessage(roundActionError)}
-          </WarningBanner>
-        ) : null}
-        {roundActionMessage ? (
-          <WarningBanner title="Round setup saved" risk="success">
-            {roundActionMessage}
-          </WarningBanner>
-        ) : null}
+
         {roundOneClosed ? (
           <WarningBanner title="Round 1 setup locked" risk="locked">
             Round 1 is closed. Its prompt, instructions, response window, reminder text, and AI curation setting are locked for this study version.

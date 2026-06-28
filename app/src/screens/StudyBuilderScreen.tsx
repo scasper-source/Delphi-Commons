@@ -317,17 +317,6 @@ export function StudyBuilderScreen({
           </WarningBanner>
         ) : null}
 
-        {workflow.error ? (
-          <WarningBanner title="Save did not complete" risk="danger">
-            {humanizeBackendMessage(workflow.error)}
-          </WarningBanner>
-        ) : null}
-
-        {workflow.lastMessage === "Study Builder packet saved." ? (
-          <WarningBanner title="Saved" risk="success">
-            Study design saved to the backend. You can leave this page and reopen the study from the Dashboard.
-          </WarningBanner>
-        ) : null}
 
         <div className="wizard-actions">
           <button className="secondary-button" disabled={activeIndex === 0} onClick={() => moveWizard(-1)} type="button">

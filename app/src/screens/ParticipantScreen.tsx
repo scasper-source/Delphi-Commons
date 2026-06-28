@@ -19,7 +19,6 @@ import {
   formatRatingChoice,
   questionLabel,
   roundOneQuestions,
-  humanizeBackendMessage,
   shortId,
 } from "../core/appUtils";
 import { useAppContext } from "../core/AppContext";
@@ -58,8 +57,6 @@ export function ParticipantScreen({
   participantWithdrawn,
   participantConsentChecked,
   participantOrientationComplete,
-  participantMessage,
-  participantError,
   participantBusy,
   participantInvite,
   magicContext,
@@ -68,8 +65,7 @@ export function ParticipantScreen({
   magicRoundOneAnswers,
   magicRatings,
   magicRationales,
-  magicMessage,
-  magicError,
+  magicLoadFailed,
   magicBusy,
   roundTwoRatings,
   roundTwoRationales,
@@ -112,8 +108,6 @@ export function ParticipantScreen({
   participantWithdrawn: boolean;
   participantConsentChecked: boolean;
   participantOrientationComplete: boolean;
-  participantMessage: string | null;
-  participantError: string | null;
   participantBusy: boolean;
   participantInvite: ParticipantInvitationContext | null;
   magicContext: MagicRoundEntryContext | null;
@@ -122,8 +116,7 @@ export function ParticipantScreen({
   magicRoundOneAnswers: Record<string, string>;
   magicRatings: RatingDraft;
   magicRationales: RationaleDraft;
-  magicMessage: string | null;
-  magicError: string | null;
+  magicLoadFailed: boolean;
   magicBusy: boolean;
   roundTwoRatings: RatingDraft;
   roundTwoRationales: RationaleDraft;
@@ -153,7 +146,7 @@ export function ParticipantScreen({
 }) {
   const { workflow, wizard, roundConfigs, runtimeData } = useAppContext();
 
-  if (magicContext || magicError) {
+  if (magicContext || magicLoadFailed) {
     return (
       <MagicRoundEntryScreen
         context={magicContext}
@@ -162,8 +155,6 @@ export function ParticipantScreen({
         roundOneAnswers={magicRoundOneAnswers}
         ratings={magicRatings}
         rationales={magicRationales}
-        message={magicMessage}
-        error={magicError}
         busy={magicBusy}
         participantIssues={runtimeData.participantIssues}
         onResponseTextChange={onMagicResponseTextChange}
@@ -268,16 +259,6 @@ export function ParticipantScreen({
         {!hasBackendStudy ? (
           <WarningBanner title={participantCopy.portal.noBackendTitle} risk="info">
             {participantCopy.portal.noBackendBody}
-          </WarningBanner>
-        ) : null}
-        {participantError ? (
-          <WarningBanner title="Submission blocked" risk="danger">
-            {humanizeBackendMessage(participantError)}
-          </WarningBanner>
-        ) : null}
-        {participantMessage ? (
-          <WarningBanner title="Submitted" risk="success">
-            {participantMessage}
           </WarningBanner>
         ) : null}
         {participantInvite?.active_consent_version ? (

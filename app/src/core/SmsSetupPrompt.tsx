@@ -1,7 +1,6 @@
 /* Copyright 2026 Stephen T. Casper / SPDX-License-Identifier: Apache-2.0 */
 
 import type { SmsSetupStatus } from "./api";
-import { humanizeBackendMessage } from "./appUtils";
 import { StatusBadge } from "../components/ui/Primitives";
 
 export const TWILIO_SETUP_FALLBACK_URL = "https://console.twilio.com/us1/develop/sms/services";
@@ -17,14 +16,12 @@ export function smsSetupProgress(setup: SmsSetupStatus | null): string {
 export function SmsSetupPrompt({
   setup,
   busy,
-  error,
   onKeepOff,
   onUseSms,
   onRefresh,
 }: {
   setup: SmsSetupStatus | null;
   busy: boolean;
-  error: string | null;
   onKeepOff: () => void;
   onUseSms: () => void;
   onRefresh: () => void;
@@ -38,7 +35,6 @@ export function SmsSetupPrompt({
         <p>
           SMS is off until an operator chooses it and completes Twilio setup. The local package can continue without SMS.
         </p>
-        {error ? <small className="inline-error">{humanizeBackendMessage(error)}</small> : null}
       </div>
       <div className="sms-first-run-actions">
         <StatusBadge risk={setup?.ready_for_real_sms_attempt ? "success" : "warning"} label={smsSetupProgress(setup)} />

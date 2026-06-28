@@ -6,7 +6,6 @@ import {
   formatDateTime,
   shortId,
   roundReportRisk,
-  humanizeBackendMessage,
 } from "../core/appUtils";
 import { canExportOutput } from "../core/permissions";
 import { reportIncludesNonConsensus } from "../policies/governance";
@@ -103,16 +102,6 @@ export function ReportingScreen({
 
       <section className="panel">
         <h3>Output Models</h3>
-        {runtimeData.message ? (
-          <WarningBanner title="Export status" risk="success">
-            {runtimeData.message}
-          </WarningBanner>
-        ) : null}
-        {runtimeData.error ? (
-          <WarningBanner title="Export blocked" risk="danger">
-            {humanizeBackendMessage(runtimeData.error)}
-          </WarningBanner>
-        ) : null}
         {outputModelRegistry.map((output) => {
           const permitted = canExportOutput(role, output);
 
