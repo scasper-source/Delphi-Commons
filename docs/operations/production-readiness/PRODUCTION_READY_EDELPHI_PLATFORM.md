@@ -2,7 +2,7 @@
 
 Status: planning document. This is not a production-readiness claim.
 
-Date basis: 2026-05-18.
+Date basis: 2026-06-28.
 
 This document resets the near-term readiness plan around the project's actual next goal:
 
@@ -68,11 +68,23 @@ Use existing evidence as baseline. Do not rerun mock-trial work unless a change 
 | Export privacy/provenance | Governed packages include reviewer provenance metadata; focused export privacy/provenance tests exist. | Data Custodian/reviewer signoff still required. |
 | External collaborator smoke | External collaborator reported successful client/server build and start. | Build/start smoke only; not workflow validation. |
 | Human/deployment closeout | Evidence-gap binders/templates exist or are being prepared. | Gaps remain open until human testing is performed against a candidate. |
-| Laptop installer candidates | Windows installer adapter and macOS installer adapter are merged. GitHub release assets exist for the Windows installer ZIP/EXE and macOS Apple Silicon single installer ZIP bundle. | Installer packaging is downloadable from GitHub for internal use, but installed lifecycle, signing, reputation/Gatekeeper, and clean-profile evidence remain open. |
-| Phase 3 SMS candidate controls | Local mock STOP/HELP simulation, opt-in gates, resend limits, and staff permission tests added in server automated coverage. A gated Twilio setup/provider track and operator SMS setup prompt are now merged. | Engineering-only local evidence; still not real-SMS, telecom, pilot, production, or human-testing readiness. |
-| GitHub repository hygiene | Private clean-history repository exists; stale `codex/*` branches were removed; open PR queue was empty at the latest snapshot; latest verified application-code basis before this documentation refresh was `61f9506`. | Repository collaboration surface is clean, but this does not close product, security, accessibility, or human-testing gates. |
-| Current repo-verifiable checks | On 2026-05-18, app tests, app lint, app production build, app high-severity npm audit, server tests, server high-severity npm audit, and `git diff --check` passed on the GitHub-connected checkout. | Useful current-main health signal only; not a substitute for human-required evidence. |
+| Laptop installer candidates | Windows installer adapter and macOS installer adapter are merged. GitHub release assets exist for the Windows installer ZIP/EXE and macOS Apple Silicon single installer ZIP bundle. The current Windows retest target is `r10`, which supersedes `r9` and points at candidate commit `2a831ee`. | Installer packaging is downloadable from GitHub for internal use, but installed lifecycle, signing, reputation/Gatekeeper, clean-profile evidence, and clean Windows `r10` retest evidence remain open. |
+| Phase 3 SMS candidate controls | Local mock STOP/HELP simulation, opt-in gates, resend limits, staff permission tests, gated Twilio provider plumbing, setup-status reporting, delivery callback handling, inbound STOP/HELP handling, and an operator setup prompt are merged. | Engineering-only local/provider-path evidence; still not telecom approval, pilot, production, real participant texting, or human-testing readiness. |
+| GitHub repository hygiene | Private clean-history repository exists. As of 2026-06-28, default branch is `main`; `master` is archived as `archive/master-pre-main-migration`; stale remote `codex/*` and decomposition branches are removed; open PR queue is empty; latest repository cleanup commit is `dcd54e2`; latest app/server behavior commit is `2fa50fe`. | Repository collaboration surface is clean, but this does not close product, security, accessibility, or human-testing gates. |
+| Current repo-verifiable checks | Latest GitHub Actions CI run `28339250962` covered PR #136 on 2026-06-28: server build/test passed and server audit reported 0 vulnerabilities; app lint/build/test passed and app tests reported 31/31; app audit reported 5 vulnerabilities, including 1 high Vite advisory, because the workflow currently records audit output without failing the job. | Useful current-main health signal only. App dependency findings require security/dependency triage and this is not a substitute for human-required evidence. |
 | Readiness claim controls | Packaging overclaim scanner now covers production/pilot/human-testing, IRB/ethics/legal/security/accessibility approval, real-SMS/PWA/native/public-release, installer/updater/signing/notarization, and Windows/macOS support-readiness language. | Guardrail only; it prevents overclaims in package evidence surfaces but does not replace human review. |
+
+## June 2026 Repository And Code Health Update
+
+The repository cleanup and June code-health work improve maintainability and collaboration hygiene, but they do not change the human-testing boundary.
+
+- GitHub default branch is `main`; the old `master` line is archived as tag `archive/master-pre-main-migration`.
+- Remote branch inventory is clean: no stale `codex/*`, decomposition, or `master` branches remain after pruning.
+- Latest repository cleanup commit is `dcd54e2`, which updated status documentation, normalized `.gitignore`, and preserved failed May 2026 manual-browser QC artifacts.
+- Latest app/server behavior commit is `2fa50fe`, the merge of PR #136.
+- PRs #135 and #136 added the CI pipeline, extracted shared app types/utilities/context, moved major screens onto `AppContext`, consolidated CSS design tokens, centralized toast notifications, and added first-run operator bootstrap.
+- Latest confirmed CI evidence is GitHub Actions run `28339250962` for PR #136: server build/test passed, server audit reported 0 vulnerabilities, app lint/build/test passed, app tests reported 31/31, and app audit reported 5 vulnerabilities including 1 high Vite advisory.
+- These changes support engineering readiness and future reviewability only; `human_testing_candidate` remains **NOT READY** until the human-required evidence rows and P0 blockers are closed or explicitly accepted by authorized roles.
 
 ## Product Tracks
 
@@ -439,6 +451,7 @@ Minimum repo-verifiable checks:
 
 Latest repo-verifiable validation snapshot:
 
+- 2026-06-28, PR #136 head `a62d15e` merged into `main` as `2fa50fe`: GitHub Actions CI run `28339250962` completed successfully. Server build/test passed and `npm audit --audit-level=high` reported 0 vulnerabilities. App lint/build/test passed and app tests reported 31/31, but app `npm audit --audit-level=high` reported 5 vulnerabilities (2 low, 2 moderate, 1 high), including Vite advisory output; this remains a dependency/security triage item. Follow-up repository cleanup commit `dcd54e2` updated documentation, gitignore, and preserved failed QC artifacts; no product-behavior or human-readiness claim is made from that cleanup commit.
 - 2026-05-14, merged main at `121a526`: `npm.cmd --prefix app run build` passed after rerun outside the local sandbox; `npm.cmd --prefix app run test` passed 28/28; `npm.cmd --prefix server test` passed; packaging/claim-scan tests passed 18/18; `powershell -ExecutionPolicy Bypass -File .\scripts\windows\portable-bundled-runtime.ps1 verify` passed; app and server `npm audit --audit-level=high` reported 0 vulnerabilities; `git diff --check` passed. `npm.cmd --prefix app run lint` produced two existing React Hook dependency warnings and no errors.
 - 2026-05-14, merged main at `121a526`: claim-scan follow-up coverage catches standalone `IRB approval`, combined `IRB/ethics approval`, and standalone `ethics approval` package overclaims.
 - 2026-05-15, merged main at `eb4bacb`: PR #85 added the gated Twilio setup/provider track and operator SMS setup prompt. Validation recorded in the PR, with portable command forms shown here: `npm --prefix server run build` passed; `npm --prefix app run build` passed; `node scripts/run-tests.mjs "server/tests/twilioSmsProvider.test.mjs"` passed; `node scripts/run-tests.mjs "server/tests/smsMagicLink.test.mjs"` passed; `npm --prefix server test` passed; `npm --prefix server run security:audit` passed with 0 vulnerabilities.
