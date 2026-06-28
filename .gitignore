@@ -1,55 +1,52 @@
+# OS files
 Thumbs.db
 desktop.ini
 .DS_Store
 ~$*.docx
-*.tmp
-*.bak
-*.log
-node_modules/
-dist/
-build/
-.env
-.env.*
-!.env.example
-# local server data
-server/data/
-
-
-# local server data
-server/data/
-
-# Logs
-logs
-*.log
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-pnpm-debug.log*
-lerna-debug.log*
-
-node_modules
-dist
-dist-ssr
-*.local
 
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
 .idea
-.DS_Store
 *.suo
 *.ntvs*
 *.njsproj
 *.sln
 *.sw?
 
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+dist-ssr/
+build/
+coverage/
+*.local
+
+# Environment and secrets
+.env
+.env.*
+!.env.example
+
+# Logs
+*.log
+logs/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# Temp files
+*.tmp
+*.bak
+*.backup
+
 # Delphi Commons runtime persistence (local-only)
 server/data/
 server/backups/
 server/audit/
-
-# Delphi Commons audit log (append-only local file)
-server/audit/audit.log
 
 # Local databases and generated operational artifacts
 *.sqlite
@@ -59,13 +56,18 @@ server/audit/audit.log
 *.db-shm
 *.sqlite-wal
 *.sqlite-shm
-*.backup
+
+# Archive artifacts
 *.zip
 *.tar
 *.tgz
 *.gz
-coverage/
 
 # Local browser profiles produced during synthetic QC screenshot capture
 docs/qc/full-mock-trial/artifacts/edge-profile-*/
 docs/qc/full-mock-trial/artifacts/phase3-browser-*/
+
+# Local workspace clutter (GitHub import scratch dirs, Claude session data)
+github-clean/
+github-clean-auth-bootstrap/
+.claude/

@@ -1,34 +1,44 @@
 # Current Project Status
 
-Date basis: 2026-05-29.
+Date basis: 2026-06-28.
 
 Boundary statement: Delphi Commons is suitable only for controlled mock-trial use with synthetic or low-risk test data in local, development, or staging environments. It is not approved or ready for production deployment or real human-subjects research.
 
 ## Repository State
 
 - GitHub repository: `scasper-source/Delphi-Commons`
-- Verified application-code snapshot before the Phase 4 binder assembly: `2a71d6c Correct Phase 2 Windows sanity OS version`
-- Open pull requests: none at the time of this snapshot
-- Remote branches: `main` only at the time of this snapshot
-- Stale `codex/*` branches: removed after confirming they were merged, superseded, or tied to closed PRs
+- Latest code commit on `main`: `2fa50fe` (Merge PR #136, 2026-06-28)
+- Default branch: `main` (only branch; `master` archived as tag `archive/master-pre-main-migration`)
+- Open pull requests: none
+- Stale remote branches: none (all `codex/*` and decomposition branches cleaned up 2026-06-28)
+- CI: GitHub Actions — App (build, lint, test, audit) + Server (build, test, audit), both passing
 - Public release: not created
 - DOI/archive release: not created
 
 ## Current Verification Snapshot
 
-The following checks were refreshed on the GitHub-connected checkout during Phase 4 binder assembly on 2026-05-18:
+CI runs on every push and PR to `main`. Latest passing run: `28339250962` (2026-06-28).
 
 | Area | Result |
 | --- | --- |
-| App tests | PASS, 28/28 |
+| App tests | PASS, 31/31 |
 | App lint | PASS, 0 errors |
 | App production build | PASS |
-| App high-severity npm audit | PASS for high severity; one moderate `brace-expansion` advisory reported |
-| Server tests | PASS, 28/28 |
+| Server tests | PASS |
 | Server high-severity npm audit | PASS, 0 vulnerabilities |
-| Whitespace diff check | PASS, CRLF warnings only |
-| Heuristic no-secrets scan | PASS, no matches |
-| Frontend browser-storage policy gate | PASS after removing SMS setup `localStorage` use |
+
+## June 2026 Code Health Update
+
+The following structural improvements landed in PRs #135 and #136 (June 2026):
+
+- **CI pipeline**: GitHub Actions runs app build/lint/test/audit and server build/test/audit on every push and PR.
+- **AppContext decomposition** (6 passes): Extracted shared state (study, role, workflow, wizard, runtimeData, roundConfigs) into React Context. Eliminated prop drilling through ModuleRenderer to 12 screen components.
+- **CSS design tokens**: Defined ~75 semantic CSS custom properties in `:root`, replacing ~240 hardcoded hex values across App.css. Near-duplicate colors consolidated.
+- **Toast notification system**: Centralized NotificationContext with `useNotify()` hook replaces 12 scattered error/message `useState` pairs and ~100 `set*Error`/`set*Message` calls. Auto-dismiss (5s success, 8s danger) with accessible `aria-live` region.
+- **First-run operator bootstrap**: `GET /auth/setup-status` and `POST /auth/setup` endpoints. Frontend `FirstRunSetupScreen` gates the app when no users exist. Creates admin/owner account + seeds demo users.
+- **Shared types/utils extraction**: `appTypes.ts`, `appUtils.ts`, `AppContext.tsx`, `NotificationContext.tsx` separated from the monolithic `App.tsx`.
+
+These changes are code-health improvements. They do not change the readiness boundary.
 
 ## Readiness Summary
 
@@ -49,11 +59,13 @@ Delphi Commons has strong controlled synthetic/mock-trial and internal engineeri
 | Phase 0 baseline preservation | Baseline mock-trial/regression evidence is preserved. |
 | Phase 1 product surface lock | Complete as scope lock only. It does not authorize human testing. |
 | Phase 2 downloadable laptop operator candidate | In progress. Windows internal portable ZIP, corrected Windows internal installer `r8` ZIP/EXE, superseding corrected Windows internal installer `r9` ZIP/EXE, and macOS Apple Silicon single installer ZIP bundle are available on GitHub. A 2026-05-29 clean Windows `r8` operator report shows install/launch/close-window stop/relaunch/uninstall mostly passing, but saved-study reopen/new-study continuity failed or was unclear and screenshots still need attachment. The `r9` package now includes package-mode multi-study persistence, a top-level Study Workspace Launcher with backend-backed New/Current/Past study paths, and Study PI/Ethics PI signoff regressions plus clearer signoff UI; clean Windows `r9` retest evidence remains required. |
-| Phase 3 phone/SMS candidate | Local mock/sandbox implementation and evidence-prep are substantially complete. Real iOS/Android device evidence, real provider/sandbox evidence if in scope, accessibility review, privacy/copy/Data Custodian review, and human-observed phone walkthrough remain open. |
+| Phase 3 phone/SMS candidate | Local mock/sandbox implementation and evidence-prep are substantially complete. Twilio integration is fully implemented (magic links, OTP, consent tracking, delivery webhooks, coercive-language filter) — activation requires only env-var configuration, not code changes. Real iOS/Android device evidence, real provider/sandbox evidence if in scope, accessibility review, privacy/copy/Data Custodian review, and human-observed phone walkthrough remain open. |
 | Phase 4 human testing binder | Binder package is assembled for final human-testing preparation; candidate remains not ready until laptop/phone run evidence and required signoffs are attached. |
 | Phase 5 final human testing | Not run. |
 
-## Still Required Before Human Testing
+## Open P0 Blockers
+
+None that are code blockers. All remaining blockers are human-action gates:
 
 - Pin a candidate commit/package and record the exact supported surfaces.
 - Complete clean-profile or second-machine laptop package evidence for the selected Windows path, including linked screenshot/log artifacts.

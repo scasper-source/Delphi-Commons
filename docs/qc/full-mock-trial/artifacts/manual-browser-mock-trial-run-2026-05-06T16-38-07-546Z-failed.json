@@ -1,0 +1,100 @@
+{
+  "run_started_at": "2026-05-06T16:38:07.546Z",
+  "run_completed_at": "2026-05-06T16:38:17.471Z",
+  "marker": "FMT-BROWSER-moua6uuz",
+  "mode": "local_api_setup_with_browser_ui_participant_submission_pass",
+  "scope": {
+    "synthetic_data_only": true,
+    "local_or_controlled_dev_only": true,
+    "production_deployment": false,
+    "real_human_subjects_research": false,
+    "irb_launch": false,
+    "sensitive_participant_data": false,
+    "external_ai_calls": false
+  },
+  "environment": {
+    "commit_hash": "9df7f75af31a152db46729d1bb60ae22a2af2c68",
+    "branch": "master",
+    "backend_url": "http://127.0.0.1:3001",
+    "frontend_url": "http://127.0.0.1:5173",
+    "backend_health": {
+      "status": "ok",
+      "service": "edelphi-server",
+      "environment": "development"
+    },
+    "frontend_http_status": 200,
+    "browser": "Microsoft Edge or Chrome headless via Chrome DevTools Protocol",
+    "mobile_widths": [
+      320,
+      390,
+      414
+    ]
+  },
+  "commands": [
+    {
+      "command": "git rev-parse HEAD",
+      "cwd": "C:\\Users\\13152\\Dropbox\\eDelphi"
+    },
+    {
+      "command": "git branch --show-current",
+      "cwd": "C:\\Users\\13152\\Dropbox\\eDelphi"
+    }
+  ],
+  "study": {
+    "study_id": "855d8bb6-287d-4507-931d-47dfd8c55393",
+    "version_id": "1894544d-019f-486d-a85b-8285f986b780",
+    "title": "Manual Browser Mock Trial Classical Delphi FMT-BROWSER-moua6uuz",
+    "topic": "Prioritizing features for a fictional community garden scheduling app.",
+    "method": "ClassicDelphi",
+    "participant_count": 8
+  },
+  "checks": [
+    {
+      "name": "study setup and governance signoff via local API",
+      "status": "PASS"
+    },
+    {
+      "name": "consensus rule change after launch blocked",
+      "status": "PASS",
+      "blocked": true,
+      "message": "PATCH /studies/855d8bb6-287d-4507-931d-47dfd8c55393/versions/1894544d-019f-486d-a85b-8285f986b780/consensus-rule returned 409: consensus_rule_locked"
+    },
+    {
+      "name": "Round 1 submission blocked before consent",
+      "status": "PASS"
+    }
+  ],
+  "browser_participant_submissions": {
+    "round1": [],
+    "round2": [],
+    "round3": [],
+    "round4": []
+  },
+  "support_loop": {},
+  "final_browser_check": {},
+  "mobile_width_checks": [],
+  "export_packages": [],
+  "export_scan": {
+    "failures": [],
+    "warnings": []
+  },
+  "browser_execution_scope": {
+    "all_8_participant_submissions_via_browser_ui": true,
+    "study_setup_and_round_progression_via_api": true,
+    "staff_support_response_via_api": true,
+    "mobile_width_submission_checks_completed": true,
+    "note": "The study setup, curation, round progression, final results, and export/privacy checks use local APIs. All 8 synthetic participants submit Rounds 1-4 through local browser UI automation."
+  },
+  "defects": {
+    "P0": [
+      {
+        "id": "FMT-BROWSER-RUNNER-FAILURE",
+        "summary": "SYN-P001 Round 1 submission confirmation missing. Debug: {\"valueLength\":251,\"checked\":true,\"submitDisabled\":false,\"submitText\":\"Submit Round 1 response\"}. Visible text: About\nGlossary\nACTIVE STUDY\nManual Browser Mock Trial Classical Delphi FMT-BROWSER-moua6uuz\nPARTICIPANT PORTAL\nConsent, confidentiality, rights, and current task\nConfidentiality\nResponses are confidential to research team members with approved access and are linked across rounds through participant IDs.\nInvitation link active\nYou do not need an account, password, API key, or access code. This private invitation link identifies your study task.\nSave and resume\nDraft responses are not stored in browser local storage. Use Save progress if you need to pause, and submit when you are ready for the study team to receive your response.\nYour Current Round\n\nRound 1: Open-ended elicitation\n\nWhat to do next\n\nRead the prompt, enter your response, save if you pause, and submit when ready.\n\nSave and resume\n\nSaving progress is separate from final submission. Submitted responses can be reviewed before you finish the task.\n\nSubmission blocked\nresponse text required\nConsent information\nConfidential to research team\nResponses are confidential to the research team and linked across rounds through participant IDs. \n?\nRound reminder\nYou are giving your independent judgment. There are no correct answers.\n"
+      }
+    ],
+    "P1": [],
+    "P2": [],
+    "P3": []
+  },
+  "status": "NO_GO"
+}

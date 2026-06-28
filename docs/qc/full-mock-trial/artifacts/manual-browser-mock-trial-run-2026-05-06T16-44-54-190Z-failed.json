@@ -1,0 +1,604 @@
+{
+  "run_started_at": "2026-05-06T16:44:54.190Z",
+  "run_completed_at": "2026-05-06T16:49:52.376Z",
+  "marker": "FMT-BROWSER-mouafkmn",
+  "mode": "local_api_setup_with_browser_ui_participant_submission_pass",
+  "scope": {
+    "synthetic_data_only": true,
+    "local_or_controlled_dev_only": true,
+    "production_deployment": false,
+    "real_human_subjects_research": false,
+    "irb_launch": false,
+    "sensitive_participant_data": false,
+    "external_ai_calls": false
+  },
+  "environment": {
+    "commit_hash": "9df7f75af31a152db46729d1bb60ae22a2af2c68",
+    "branch": "master",
+    "backend_url": "http://127.0.0.1:3001",
+    "frontend_url": "http://127.0.0.1:5173",
+    "backend_health": {
+      "status": "ok",
+      "service": "edelphi-server",
+      "environment": "development"
+    },
+    "frontend_http_status": 200,
+    "browser": "Microsoft Edge or Chrome headless via Chrome DevTools Protocol",
+    "mobile_widths": [
+      320,
+      390,
+      414
+    ]
+  },
+  "commands": [
+    {
+      "command": "git rev-parse HEAD",
+      "cwd": "C:\\Users\\13152\\Dropbox\\eDelphi"
+    },
+    {
+      "command": "git branch --show-current",
+      "cwd": "C:\\Users\\13152\\Dropbox\\eDelphi"
+    }
+  ],
+  "study": {
+    "study_id": "d6fa74d3-e146-4c68-bf08-2a9871b0f0cd",
+    "version_id": "dfd4dc4e-7568-41e9-8cec-1be8109c51bd",
+    "title": "Manual Browser Mock Trial Classical Delphi FMT-BROWSER-mouafkmn",
+    "topic": "Prioritizing features for a fictional community garden scheduling app.",
+    "method": "ClassicDelphi",
+    "participant_count": 8
+  },
+  "checks": [
+    {
+      "name": "study setup and governance signoff via local API",
+      "status": "PASS"
+    },
+    {
+      "name": "consensus rule change after launch blocked",
+      "status": "PASS",
+      "blocked": true,
+      "message": "PATCH /studies/d6fa74d3-e146-4c68-bf08-2a9871b0f0cd/versions/dfd4dc4e-7568-41e9-8cec-1be8109c51bd/consensus-rule returned 409: consensus_rule_locked"
+    },
+    {
+      "name": "Round 1 submission blocked before consent",
+      "status": "PASS"
+    },
+    {
+      "name": "Round 1 all 8 synthetic participants submitted through browser UI",
+      "status": "PASS"
+    },
+    {
+      "name": "support loop completed with participant browser send/view",
+      "status": "PASS",
+      "browser_note_submission": {
+        "participant": "SYN-P003",
+        "viewport": {
+          "width": 390,
+          "height": 900,
+          "mobile": true
+        },
+        "status": "PASS",
+        "screenshot_path": "docs/qc/full-mock-trial/artifacts/manual-browser-support-SYN-P003.png"
+      },
+      "staff_visible_count": 1,
+      "staff_response_via_api": true,
+      "participant_response_browser_visible": true,
+      "other_participant_issue_count": 0,
+      "response_browser_screenshot_path": "docs/qc/full-mock-trial/artifacts/manual-browser-support-response-SYN-P003.png"
+    },
+    {
+      "name": "Round 2 all 8 synthetic participants submitted ratings through browser UI",
+      "status": "PASS"
+    },
+    {
+      "name": "consensus rule change after Round 2 blocked",
+      "status": "PASS",
+      "blocked": true,
+      "message": "PATCH /studies/d6fa74d3-e146-4c68-bf08-2a9871b0f0cd/versions/dfd4dc4e-7568-41e9-8cec-1be8109c51bd/consensus-rule returned 409: consensus_rule_locked"
+    },
+    {
+      "name": "Round 3 all 8 synthetic participants submitted reratings through browser UI",
+      "status": "PASS",
+      "retained_disagreement_participants": [
+        "SYN-P007",
+        "SYN-P008"
+      ]
+    },
+    {
+      "name": "consensus rule change after Round 3 blocked",
+      "status": "PASS",
+      "blocked": true,
+      "message": "PATCH /studies/d6fa74d3-e146-4c68-bf08-2a9871b0f0cd/versions/dfd4dc4e-7568-41e9-8cec-1be8109c51bd/consensus-rule returned 409: consensus_rule_locked"
+    },
+    {
+      "name": "Round 4 all 8 synthetic participants submitted final ratings through browser UI",
+      "status": "PASS"
+    },
+    {
+      "name": "mobile-width final participant checks completed",
+      "status": "PASS",
+      "widths": [
+        320,
+        390,
+        414
+      ]
+    }
+  ],
+  "browser_participant_submissions": {
+    "round1": [
+      {
+        "participant": "SYN-P001",
+        "viewport": {
+          "width": 320,
+          "height": 900,
+          "mobile": true
+        },
+        "status": "PASS",
+        "browser_confirmation": true,
+        "orientation_complete": true,
+        "consent_recorded": true,
+        "screenshot_path": "docs/qc/full-mock-trial/artifacts/manual-browser-r1-SYN-P001.png"
+      },
+      {
+        "participant": "SYN-P002",
+        "viewport": {
+          "width": 1200,
+          "height": 900,
+          "mobile": false
+        },
+        "status": "PASS",
+        "browser_confirmation": true,
+        "orientation_complete": true,
+        "consent_recorded": true,
+        "screenshot_path": "docs/qc/full-mock-trial/artifacts/manual-browser-r1-SYN-P002.png"
+      },
+      {
+        "participant": "SYN-P003",
+        "viewport": {
+          "width": 1200,
+          "height": 900,
+          "mobile": false
+        },
+        "status": "PASS",
+        "browser_confirmation": true,
+        "orientation_complete": true,
+        "consent_recorded": true,
+        "screenshot_path": "docs/qc/full-mock-trial/artifacts/manual-browser-r1-SYN-P003.png"
+      },
+      {
+        "participant": "SYN-P004",
+        "viewport": {
+          "width": 1200,
+          "height": 900,
+          "mobile": false
+        },
+        "status": "PASS",
+        "browser_confirmation": true,
+        "orientation_complete": true,
+        "consent_recorded": true,
+        "screenshot_path": "docs/qc/full-mock-trial/artifacts/manual-browser-r1-SYN-P004.png"
+      },
+      {
+        "participant": "SYN-P005",
+        "viewport": {
+          "width": 1200,
+          "height": 900,
+          "mobile": false
+        },
+        "status": "PASS",
+        "browser_confirmation": true,
+        "orientation_complete": true,
+        "consent_recorded": true,
+        "screenshot_path": "docs/qc/full-mock-trial/artifacts/manual-browser-r1-SYN-P005.png"
+      },
+      {
+        "participant": "SYN-P006",
+        "viewport": {
+          "width": 1200,
+          "height": 900,
+          "mobile": false
+        },
+        "status": "PASS",
+        "browser_confirmation": true,
+        "orientation_complete": true,
+        "consent_recorded": true,
+        "screenshot_path": "docs/qc/full-mock-trial/artifacts/manual-browser-r1-SYN-P006.png"
+      },
+      {
+        "participant": "SYN-P007",
+        "viewport": {
+          "width": 1200,
+          "height": 900,
+          "mobile": false
+        },
+        "status": "PASS",
+        "browser_confirmation": true,
+        "orientation_complete": true,
+        "consent_recorded": true,
+        "screenshot_path": "docs/qc/full-mock-trial/artifacts/manual-browser-r1-SYN-P007.png"
+      },
+      {
+        "participant": "SYN-P008",
+        "viewport": {
+          "width": 1200,
+          "height": 900,
+          "mobile": false
+        },
+        "status": "PASS",
+        "browser_confirmation": true,
+        "orientation_complete": true,
+        "consent_recorded": true,
+        "screenshot_path": "docs/qc/full-mock-trial/artifacts/manual-browser-r1-SYN-P008.png"
+      }
+    ],
+    "round2": [
+      {
+        "participant": "SYN-P001",
+        "viewport": {
+          "width": 1200,
+          "height": 900,
+          "mobile": false
+        },
+        "status": "PASS",
+        "item_count": 8,
+        "screenshot_path": "docs/qc/full-mock-trial/artifacts/manual-browser-r2-SYN-P001.png"
+      },
+      {
+        "participant": "SYN-P002",
+        "viewport": {
+          "width": 390,
+          "height": 900,
+          "mobile": true
+        },
+        "status": "PASS",
+        "item_count": 8,
+        "screenshot_path": "docs/qc/full-mock-trial/artifacts/manual-browser-r2-SYN-P002.png"
+      },
+      {
+        "participant": "SYN-P003",
+        "viewport": {
+          "width": 1200,
+          "height": 900,
+          "mobile": false
+        },
+        "status": "PASS",
+        "item_count": 8,
+        "screenshot_path": "docs/qc/full-mock-trial/artifacts/manual-browser-r2-SYN-P003.png"
+      },
+      {
+        "participant": "SYN-P004",
+        "viewport": {
+          "width": 1200,
+          "height": 900,
+          "mobile": false
+        },
+        "status": "PASS",
+        "item_count": 8,
+        "screenshot_path": "docs/qc/full-mock-trial/artifacts/manual-browser-r2-SYN-P004.png"
+      },
+      {
+        "participant": "SYN-P005",
+        "viewport": {
+          "width": 1200,
+          "height": 900,
+          "mobile": false
+        },
+        "status": "PASS",
+        "item_count": 8,
+        "screenshot_path": "docs/qc/full-mock-trial/artifacts/manual-browser-r2-SYN-P005.png"
+      },
+      {
+        "participant": "SYN-P006",
+        "viewport": {
+          "width": 1200,
+          "height": 900,
+          "mobile": false
+        },
+        "status": "PASS",
+        "item_count": 8,
+        "screenshot_path": "docs/qc/full-mock-trial/artifacts/manual-browser-r2-SYN-P006.png"
+      },
+      {
+        "participant": "SYN-P007",
+        "viewport": {
+          "width": 1200,
+          "height": 900,
+          "mobile": false
+        },
+        "status": "PASS",
+        "item_count": 8,
+        "screenshot_path": "docs/qc/full-mock-trial/artifacts/manual-browser-r2-SYN-P007.png"
+      },
+      {
+        "participant": "SYN-P008",
+        "viewport": {
+          "width": 1200,
+          "height": 900,
+          "mobile": false
+        },
+        "status": "PASS",
+        "item_count": 8,
+        "screenshot_path": "docs/qc/full-mock-trial/artifacts/manual-browser-r2-SYN-P008.png"
+      }
+    ],
+    "round3": [
+      {
+        "participant": "SYN-P001",
+        "viewport": {
+          "width": 1200,
+          "height": 900,
+          "mobile": false
+        },
+        "status": "PASS",
+        "item_count": 8,
+        "screenshot_path": "docs/qc/full-mock-trial/artifacts/manual-browser-r3-SYN-P001.png"
+      },
+      {
+        "participant": "SYN-P002",
+        "viewport": {
+          "width": 1200,
+          "height": 900,
+          "mobile": false
+        },
+        "status": "PASS",
+        "item_count": 8,
+        "screenshot_path": "docs/qc/full-mock-trial/artifacts/manual-browser-r3-SYN-P002.png"
+      },
+      {
+        "participant": "SYN-P003",
+        "viewport": {
+          "width": 1200,
+          "height": 900,
+          "mobile": false
+        },
+        "status": "PASS",
+        "item_count": 8,
+        "screenshot_path": "docs/qc/full-mock-trial/artifacts/manual-browser-r3-SYN-P003.png"
+      },
+      {
+        "participant": "SYN-P004",
+        "viewport": {
+          "width": 1200,
+          "height": 900,
+          "mobile": false
+        },
+        "status": "PASS",
+        "item_count": 8,
+        "screenshot_path": "docs/qc/full-mock-trial/artifacts/manual-browser-r3-SYN-P004.png"
+      },
+      {
+        "participant": "SYN-P005",
+        "viewport": {
+          "width": 1200,
+          "height": 900,
+          "mobile": false
+        },
+        "status": "PASS",
+        "item_count": 8,
+        "screenshot_path": "docs/qc/full-mock-trial/artifacts/manual-browser-r3-SYN-P005.png"
+      },
+      {
+        "participant": "SYN-P006",
+        "viewport": {
+          "width": 1200,
+          "height": 900,
+          "mobile": false
+        },
+        "status": "PASS",
+        "item_count": 8,
+        "screenshot_path": "docs/qc/full-mock-trial/artifacts/manual-browser-r3-SYN-P006.png"
+      },
+      {
+        "participant": "SYN-P007",
+        "viewport": {
+          "width": 414,
+          "height": 900,
+          "mobile": true
+        },
+        "status": "PASS",
+        "item_count": 8,
+        "screenshot_path": "docs/qc/full-mock-trial/artifacts/manual-browser-r3-SYN-P007.png"
+      },
+      {
+        "participant": "SYN-P008",
+        "viewport": {
+          "width": 1200,
+          "height": 900,
+          "mobile": false
+        },
+        "status": "PASS",
+        "item_count": 8,
+        "screenshot_path": "docs/qc/full-mock-trial/artifacts/manual-browser-r3-SYN-P008.png"
+      }
+    ],
+    "round4": [
+      {
+        "participant": "SYN-P001",
+        "viewport": {
+          "width": 1200,
+          "height": 900,
+          "mobile": false
+        },
+        "status": "PASS",
+        "item_count": 8,
+        "screenshot_path": "docs/qc/full-mock-trial/artifacts/manual-browser-r4-SYN-P001.png"
+      },
+      {
+        "participant": "SYN-P002",
+        "viewport": {
+          "width": 1200,
+          "height": 900,
+          "mobile": false
+        },
+        "status": "PASS",
+        "item_count": 8,
+        "screenshot_path": "docs/qc/full-mock-trial/artifacts/manual-browser-r4-SYN-P002.png"
+      },
+      {
+        "participant": "SYN-P003",
+        "viewport": {
+          "width": 1200,
+          "height": 900,
+          "mobile": false
+        },
+        "status": "PASS",
+        "item_count": 8,
+        "screenshot_path": "docs/qc/full-mock-trial/artifacts/manual-browser-r4-SYN-P003.png"
+      },
+      {
+        "participant": "SYN-P004",
+        "viewport": {
+          "width": 1200,
+          "height": 900,
+          "mobile": false
+        },
+        "status": "PASS",
+        "item_count": 8,
+        "screenshot_path": "docs/qc/full-mock-trial/artifacts/manual-browser-r4-SYN-P004.png"
+      },
+      {
+        "participant": "SYN-P005",
+        "viewport": {
+          "width": 1200,
+          "height": 900,
+          "mobile": false
+        },
+        "status": "PASS",
+        "item_count": 8,
+        "screenshot_path": "docs/qc/full-mock-trial/artifacts/manual-browser-r4-SYN-P005.png"
+      },
+      {
+        "participant": "SYN-P006",
+        "viewport": {
+          "width": 1200,
+          "height": 900,
+          "mobile": false
+        },
+        "status": "PASS",
+        "item_count": 8,
+        "screenshot_path": "docs/qc/full-mock-trial/artifacts/manual-browser-r4-SYN-P006.png"
+      },
+      {
+        "participant": "SYN-P007",
+        "viewport": {
+          "width": 1200,
+          "height": 900,
+          "mobile": false
+        },
+        "status": "PASS",
+        "item_count": 8,
+        "screenshot_path": "docs/qc/full-mock-trial/artifacts/manual-browser-r4-SYN-P007.png"
+      },
+      {
+        "participant": "SYN-P008",
+        "viewport": {
+          "width": 320,
+          "height": 900,
+          "mobile": true
+        },
+        "status": "PASS",
+        "item_count": 8,
+        "screenshot_path": "docs/qc/full-mock-trial/artifacts/manual-browser-r4-SYN-P008.png"
+      }
+    ]
+  },
+  "support_loop": {
+    "browser_note_submission": {
+      "participant": "SYN-P003",
+      "viewport": {
+        "width": 390,
+        "height": 900,
+        "mobile": true
+      },
+      "status": "PASS",
+      "screenshot_path": "docs/qc/full-mock-trial/artifacts/manual-browser-support-SYN-P003.png"
+    },
+    "staff_visible_count": 1,
+    "staff_response_via_api": true,
+    "participant_response_browser_visible": true,
+    "other_participant_issue_count": 0,
+    "response_browser_screenshot_path": "docs/qc/full-mock-trial/artifacts/manual-browser-support-response-SYN-P003.png"
+  },
+  "final_browser_check": {
+    "participant": "SYN-P001",
+    "viewport": {
+      "width": 320,
+      "height": 900,
+      "mobile": true
+    },
+    "status": "PARTIAL",
+    "required_limitation_visible": false,
+    "has_horizontal_overflow": false,
+    "has_forbidden_synthetic_label": false,
+    "has_forbidden_email": false,
+    "screenshot_path": "docs/qc/full-mock-trial/artifacts/manual-browser-final-SYN-P001-320.png"
+  },
+  "mobile_width_checks": [
+    {
+      "participant": "SYN-P001",
+      "viewport": {
+        "width": 320,
+        "height": 900,
+        "mobile": true
+      },
+      "status": "PARTIAL",
+      "required_limitation_visible": false,
+      "has_horizontal_overflow": false,
+      "has_forbidden_synthetic_label": false,
+      "has_forbidden_email": false,
+      "screenshot_path": "docs/qc/full-mock-trial/artifacts/manual-browser-final-SYN-P001-320.png"
+    },
+    {
+      "participant": "SYN-P001",
+      "viewport": {
+        "width": 390,
+        "height": 900,
+        "mobile": true
+      },
+      "status": "PARTIAL",
+      "required_limitation_visible": false,
+      "has_horizontal_overflow": false,
+      "has_forbidden_synthetic_label": false,
+      "has_forbidden_email": false,
+      "screenshot_path": "docs/qc/full-mock-trial/artifacts/manual-browser-final-SYN-P001-390.png"
+    },
+    {
+      "participant": "SYN-P001",
+      "viewport": {
+        "width": 414,
+        "height": 900,
+        "mobile": true
+      },
+      "status": "PARTIAL",
+      "required_limitation_visible": false,
+      "has_horizontal_overflow": false,
+      "has_forbidden_synthetic_label": false,
+      "has_forbidden_email": false,
+      "screenshot_path": "docs/qc/full-mock-trial/artifacts/manual-browser-final-SYN-P001-414.png"
+    }
+  ],
+  "export_packages": [],
+  "export_scan": {
+    "failures": [],
+    "warnings": []
+  },
+  "browser_execution_scope": {
+    "all_8_participant_submissions_via_browser_ui": true,
+    "study_setup_and_round_progression_via_api": true,
+    "staff_support_response_via_api": true,
+    "mobile_width_submission_checks_completed": true,
+    "note": "The study setup, curation, round progression, final results, and export/privacy checks use local APIs. All 8 synthetic participants submit Rounds 1-4 through local browser UI automation."
+  },
+  "defects": {
+    "P0": [
+      {
+        "id": "FMT-BROWSER-RUNNER-FAILURE",
+        "summary": "POST /studies/d6fa74d3-e146-4c68-bf08-2a9871b0f0cd/versions/dfd4dc4e-7568-41e9-8cec-1be8109c51bd/export-packages returned 429: rate_limited"
+      }
+    ],
+    "P1": [],
+    "P2": [],
+    "P3": []
+  },
+  "status": "NO_GO"
+}
