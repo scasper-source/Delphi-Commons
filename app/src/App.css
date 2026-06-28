@@ -2542,3 +2542,44 @@ summary:focus-visible,
     grid-template-columns: 1fr;
   }
 }
+
+/* ── First-run setup ────────────────────────────── */
+
+.first-run-shell {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  padding: 24px;
+  background: var(--surface);
+}
+
+.first-run-card {
+  max-width: 520px;
+  width: 100%;
+  background: var(--surface-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 32px;
+  box-shadow: var(--shadow-popover);
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.first-run-header {
+  text-align: center;
+}
+
+.first-run-header h1 {
+  margin: 8px 0 4px;
+  font-size: 1.35rem;
+  color: var(--color-primary);
+}
+
+.first-run-header p {
+  color: var(--text-muted);
+  font-size: var(--font-size-body);
+  line-height: 1.5;
+  margin: 0;
+}

@@ -76,6 +76,7 @@ import {
 } from "./core/studyWizard";
 import { StatusBadge } from "./components/ui/Primitives";
 import { participantCopy } from "./content/participantCopy";
+import { FirstRunSetupScreen } from "./screens/FirstRunSetupScreen";
 
 type SmsSetupChoice = "undecided" | "off" | "twilio";
 type WorkspacePath = "main-menu" | "new-study" | "current-studies" | "past-studies";
@@ -111,6 +112,7 @@ const workspacePathOptions: Array<{
 
 
 function App() {
+  const [setupNeeded, setSetupNeeded] = useState<boolean | null>(null);
   const [role, setRole] = useState<UserRole>("study_owner");
   const [activeModule, setActiveModule] = useState<ModuleId>("dashboard");
   const [workspaceLauncherOpen, setWorkspaceLauncherOpen] = useState(true);
@@ -208,6 +210,13 @@ function App() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [role, smsSetupChoice]);
+
+  useEffect(() => {
+    fetch(`${apiBoundary.baseUrl}/auth/setup-status`)
+      .then((r) => r.json())
+      .then((data: { needs_setup?: boolean }) => setSetupNeeded(data.needs_setup === true))
+      .catch(() => setSetupNeeded(false));
+  }, []);
 
   useEffect(() => {
     function syncEntryTokensFromLocation() {
@@ -1960,6 +1969,14 @@ function App() {
     }),
     [role, activeModule, selectedStudy, workflow, wizard, runtimeData, roundConfigs, consensusLocked],
   );
+
+  if (setupNeeded === null) {
+    return <div className="first-run-shell"><p>Loading...</p></div>;
+  }
+
+  if (setupNeeded) {
+    return <FirstRunSetupScreen onComplete={() => setSetupNeeded(false)} />;
+  }
 
   return (
     <AppProvider value={appContextValue}>

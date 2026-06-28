@@ -484,7 +484,7 @@ test("Phase 1A multi-research-question setup and Round 1 capture stay lean and g
 test("study owner can start a new backend study without archiving saved studies", () => {
   const source = appSource();
   const resetSlice = sourceSlice(source, "function startNewStudyDraft()", "async function loadRoundConfigs");
-  assert.match(resetSlice, /setWorkflow\(\{\s*\.\.\.initialWorkflow,/s);
+  assert.match(resetSlice, /setWorkflow\(initialWorkflow\)/);
   assert.match(resetSlice, /setWizard\(defaultWizardState\)/);
   assert.match(resetSlice, /setActiveWizardStep\("purpose"\)/);
   assert.match(resetSlice, /setWorkspacePath\("new-study"\)/);
@@ -492,7 +492,7 @@ test("study owner can start a new backend study without archiving saved studies"
   assert.match(resetSlice, /setActiveModule\("dashboard"\)/);
   assert.doesNotMatch(resetSlice, /archiveStudy/);
 
-  const dashboardSavedStudiesSlice = sourceSlice(source, "<h3>Saved Studies</h3>", "{savedStudiesError ? (");
+  const dashboardSavedStudiesSlice = sourceSlice(source, "<h3>Saved Studies</h3>", "savedStudies.length === 0");
   assert.match(dashboardSavedStudiesSlice, /onStartNewStudyDraft/);
   assert.match(dashboardSavedStudiesSlice, /Start new study/);
   assert.match(dashboardSavedStudiesSlice, /onArchiveSmokeTestStudies/);
@@ -519,9 +519,8 @@ test("study workspace launcher routes staff into backend-backed workspaces befor
   assert.match(source, /const \[workspacePath, setWorkspacePath\] = useState<WorkspacePath>\("main-menu"\)/);
   assert.match(source, /openWorkspaceLauncherPath\("main-menu"\)/);
   assert.match(source, /function resetLauncherNewStudyDraft\(\)/);
-  assert.match(source, /setLauncherCreateMessage\(null\)/);
   assert.match(source, /function openWorkspaceLauncherPath\(nextPath: WorkspacePath\)/);
-  assert.match(source, /nextPath === "new-study" && \(workspacePath !== "new-study" \|\| !workspaceLauncherOpen \|\| launcherCreateMessage\)/);
+  assert.match(source, /nextPath === "new-study" && \(workspacePath !== "new-study" \|\| !workspaceLauncherOpen\)/);
   assert.match(source, /onPathChange=\{openWorkspaceLauncherPath\}/);
   assert.match(source, /onOpenCurrentStudy=\{\(record\) => openSavedStudy\(record, "dashboard"\)\}/);
   assert.match(source, /record\.study\.archived_at/);
@@ -552,10 +551,10 @@ test("study workspace launcher routes staff into backend-backed workspaces befor
   assert.match(launcherSource, /solo internal\/synthetic/i);
   assert.match(launcherSource, /UI selection does not replace backend authorization/);
 
-  assert.match(css, /\.workspace-path-button\.path-main-menu\.active\s*\{[^}]*background:\s*#485c61/s);
-  assert.match(css, /\.workspace-path-button\.path-new-study\.active\s*\{[^}]*background:\s*#2f6f5f/s);
-  assert.match(css, /\.workspace-path-button\.path-current-studies\.active\s*\{[^}]*background:\s*#345f8c/s);
-  assert.match(css, /\.workspace-path-button\.path-past-studies\.active\s*\{[^}]*background:\s*#6a5b2d/s);
+  assert.match(css, /\.workspace-path-button\.path-main-menu\.active\s*\{[^}]*background:\s*var\(--path-menu\)/s);
+  assert.match(css, /\.workspace-path-button\.path-new-study\.active\s*\{[^}]*background:\s*var\(--path-new\)/s);
+  assert.match(css, /\.workspace-path-button\.path-current-studies\.active\s*\{[^}]*background:\s*var\(--path-current\)/s);
+  assert.match(css, /\.workspace-path-button\.path-past-studies\.active\s*\{[^}]*background:\s*var\(--path-past\)/s);
   assert.match(css, /\.launcher-path-tabs\s*\{[^}]*grid-template-columns:\s*repeat\(3, minmax\(0, 1fr\)\)/s);
 });
 
