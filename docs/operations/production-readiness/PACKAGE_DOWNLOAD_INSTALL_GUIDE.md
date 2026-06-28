@@ -2,7 +2,7 @@
 
 Status: **INTERNAL PACKAGE CANDIDATE GUIDE / NOT READY FOR HUMAN TESTING**.
 
-Date basis: 2026-05-31.
+Date basis: 2026-06-28.
 
 This guide is the simple operator-facing path for internal package candidates. Use synthetic or low-risk test data only.
 
@@ -18,10 +18,12 @@ This guide is the simple operator-facing path for internal package candidates. U
 
 | Platform | Release page |
 | --- | --- |
-| Windows x64 installer | [`internal-windows-installer-candidate-2026-05-31-r10`](https://github.com/scasper-source/Delphi-Commons/releases/tag/internal-windows-installer-candidate-2026-05-31-r10) |
-| macOS Apple Silicon package | [`internal-macos-package-candidate-2026-05-18-r4`](https://github.com/scasper-source/Delphi-Commons/releases/tag/internal-macos-package-candidate-2026-05-18-r4) |
+| Windows x64 installer | [`internal-windows-installer-candidate-2026-06-28-r2`](https://github.com/scasper-source/Delphi-Commons/releases/tag/internal-windows-installer-candidate-2026-06-28-r2) |
+| macOS Apple Silicon package | [`internal-macos-package-candidate-2026-06-28-r2`](https://github.com/scasper-source/Delphi-Commons/releases/tag/internal-macos-package-candidate-2026-06-28-r2) |
 
 The GitHub repository is private, so operators need repository access before these links can be used.
+
+The prior May release pages remain in GitHub only as archived/superseded traceability records.
 
 ## Windows Installer Flow
 
@@ -52,7 +54,7 @@ powershell -ExecutionPolicy Bypass -File .\scripts\windows\portable-bundled-runt
 
 ## macOS Installer Bundle Flow
 
-1. Download `delphi-commons-macos-arm64-installer-internal-internal-macos-package-candidate-2026-05-18-r4-60479a1.zip` from the corrected internal GitHub release.
+1. Download `delphi-commons-macos-arm64-installer-internal-internal-macos-package-candidate-2026-06-28-r2-18faba2.zip` from the current internal GitHub release.
 2. Unzip it to a local folder path you control.
 3. Run the included PKG.
 4. Open `/Applications/Delphi Commons/Delphi Commons.app`.
