@@ -2,7 +2,7 @@
 
 import type { SavedStudyRecord } from "./api";
 import type { ConductorWorkflow } from "./appTypes";
-import { formatStatus, formatDateTime, shortId, packetText, humanizeBackendMessage } from "./appUtils";
+import { formatStatus, formatDateTime, shortId, packetText } from "./appUtils";
 import type { ModuleId, UserRole } from "./types";
 import { StatusBadge, WarningBanner } from "../components/ui/Primitives";
 
@@ -51,11 +51,8 @@ export function StudyWorkspaceLauncher({
   draftDescription,
   roleMode,
   createBusy,
-  createError,
-  createMessage,
   savedStudies,
   savedStudiesLoading,
-  savedStudiesError,
   onPathChange,
   onDraftTitleChange,
   onDraftDescriptionChange,
@@ -72,11 +69,8 @@ export function StudyWorkspaceLauncher({
   draftDescription: string;
   roleMode: LauncherRoleMode;
   createBusy: boolean;
-  createError: string | null;
-  createMessage: string | null;
   savedStudies: SavedStudyRecord[];
   savedStudiesLoading: boolean;
-  savedStudiesError: string | null;
   onPathChange: (path: WorkspacePath) => void;
   onDraftTitleChange: (value: string) => void;
   onDraftDescriptionChange: (value: string) => void;
@@ -90,16 +84,8 @@ export function StudyWorkspaceLauncher({
   const pastStudies = savedStudies.filter(isPastStudyRecord);
   const titleMissing = draftTitle.trim().length === 0;
   const saveBlocked = role !== "study_owner" || titleMissing || createBusy;
-  const saveState = role !== "study_owner"
-    ? "Save blocked"
-    : createMessage
-      ? "Saved workspace"
-      : "Unsaved draft";
-  const saveRisk: "success" | "warning" | "locked" = saveState === "Saved workspace"
-    ? "success"
-    : saveState === "Save blocked"
-      ? "locked"
-      : "warning";
+  const saveState = role !== "study_owner" ? "Save blocked" : "Unsaved draft";
+  const saveRisk: "success" | "warning" | "locked" = saveState === "Save blocked" ? "locked" : "warning";
 
   function savedStudyTitle(record: SavedStudyRecord) {
     return packetText(record.latestVersion?.study_design_packet_json, "title") ?? record.study.title;
@@ -193,6 +179,40 @@ export function StudyWorkspaceLauncher({
         />
       </section>
 
+      {path === "main-menu" ? (
+        <section className="panel wide launcher-panel" aria-label="Getting started guide">
+          <h2>Get started in three steps</h2>
+          <div className="workflow-steps">
+            <article className="workflow-step">
+              <span className="workflow-index">1</span>
+              <div>
+                <strong>Create a study</strong>
+                <p>Give your Delphi study a title and description, then design it with the guided 9-step Study Builder.</p>
+              </div>
+              <button className="primary-button" onClick={() => onPathChange("new-study")} type="button">
+                New Study
+              </button>
+            </article>
+            <article className="workflow-step">
+              <span className="workflow-index">2</span>
+              <div>
+                <strong>Invite your panel</strong>
+                <p>Add participants by email or share a magic link. Panelists join from any phone or laptop browser.</p>
+              </div>
+              <StatusBadge risk="info" label="After study creation" />
+            </article>
+            <article className="workflow-step">
+              <span className="workflow-index">3</span>
+              <div>
+                <strong>Launch Round 1</strong>
+                <p>Open the first round for responses, then curate, rate, and iterate toward consensus.</p>
+              </div>
+              <StatusBadge risk="info" label="After panel setup" />
+            </article>
+          </div>
+        </section>
+      ) : null}
+
       {path !== "main-menu" ? (
         <section className="launcher-path-tabs" aria-label="Study workspace path selector">
           {studyWorkspacePathOptions.map((entry) => (
@@ -266,17 +286,6 @@ export function StudyWorkspaceLauncher({
               Add a study title before creating the saved workspace.
             </WarningBanner>
           ) : null}
-          {createError ? (
-            <WarningBanner title="Workspace save blocked" risk="danger">
-              {humanizeBackendMessage(createError)}
-            </WarningBanner>
-          ) : null}
-          {createMessage ? (
-            <WarningBanner title="Saved workspace" risk="success">
-              {createMessage}
-            </WarningBanner>
-          ) : null}
-
           <div className="action-row">
             <button className="primary-button" disabled={saveBlocked} onClick={onCreateSavedWorkspace} type="button">
               {createBusy ? "Creating..." : "Create saved study workspace"}
@@ -299,11 +308,6 @@ export function StudyWorkspaceLauncher({
               {savedStudiesLoading ? "Refreshing..." : "Refresh"}
             </button>
           </div>
-          {savedStudiesError ? (
-            <WarningBanner title="Unable to load saved studies" risk="danger">
-              {humanizeBackendMessage(savedStudiesError)}
-            </WarningBanner>
-          ) : null}
           {renderStudyList(currentStudies, "current")}
         </section>
       ) : null}
@@ -322,11 +326,6 @@ export function StudyWorkspaceLauncher({
           <WarningBanner title="Writing up is not archive" risk="info">
             Archive hides a study from ordinary lists while preserving records. Writing-up studies should remain visible here until the team deliberately archives them.
           </WarningBanner>
-          {savedStudiesError ? (
-            <WarningBanner title="Unable to load saved studies" risk="danger">
-              {humanizeBackendMessage(savedStudiesError)}
-            </WarningBanner>
-          ) : null}
           {renderStudyList(pastStudies, "past")}
         </section>
       ) : null}

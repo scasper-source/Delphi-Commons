@@ -1,7 +1,8 @@
 /* Copyright 2026 Stephen T. Casper / SPDX-License-Identifier: Apache-2.0 */
 
 import type { ConductorWorkflow, WorkflowStep } from "../core/appTypes";
-import type { GovernanceChecklistItem, UserRole } from "../core/types";
+import type { GovernanceChecklistItem } from "../core/types";
+import { useAppContext } from "../core/AppContext";
 import {
   buildGovernanceSummary,
   consensusRuleSourceLabels,
@@ -114,16 +115,11 @@ export function buildGovernanceChecklist(wizard: StudyWizardState, workflow: Con
 }
 
 export function GovernanceScreen({
-  role,
-  workflow,
-  wizard,
   onWorkflowStep,
 }: {
-  role: UserRole;
-  workflow: ConductorWorkflow;
-  wizard: StudyWizardState;
   onWorkflowStep: (step: WorkflowStep) => void;
 }) {
+  const { workflow, wizard } = useAppContext();
   const governedStatus = workflow.version?.status ?? "Draft";
   const editAllowed = canEditConsensusRule(governedStatus);
   const checklist = buildGovernanceChecklist(wizard, workflow);
@@ -239,7 +235,7 @@ export function GovernanceScreen({
       </section>
 
       <section className="panel wide">
-        <ConductorWorkflowPanel role={role} workflow={workflow} wizard={wizard} onWorkflowStep={onWorkflowStep} />
+        <ConductorWorkflowPanel onWorkflowStep={onWorkflowStep} />
       </section>
     </div>
   );

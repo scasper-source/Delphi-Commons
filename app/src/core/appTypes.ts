@@ -35,8 +35,6 @@ export type ConductorWorkflow = {
   version: BackendStudyVersion | null;
   signoffs: BackendSignoff[];
   busyStep: WorkflowStep | null;
-  lastMessage: string | null;
-  error: string | null;
 };
 
 export type RoundOneSetupState = {
@@ -75,8 +73,6 @@ export type RuntimeStudyData = {
   participantIssues: ParticipantIssue[];
   selectedExportPackageId: string | null;
   loading: boolean;
-  error: string | null;
-  message: string | null;
 };
 
 export type RatingDraft = Record<string, number>;
@@ -139,8 +135,6 @@ export const initialWorkflow: ConductorWorkflow = {
   version: null,
   signoffs: [],
   busyStep: null,
-  lastMessage: null,
-  error: null,
 };
 
 export const defaultRoundOneSetup: RoundOneSetupState = {
@@ -183,6 +177,4 @@ export const emptyRuntimeStudyData: RuntimeStudyData = {
   participantIssues: [],
   selectedExportPackageId: null,
   loading: false,
-  error: null,
-  message: null,
 };

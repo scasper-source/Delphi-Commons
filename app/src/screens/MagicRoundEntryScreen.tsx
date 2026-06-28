@@ -22,8 +22,6 @@ export function MagicRoundEntryScreen({
   roundOneAnswers,
   ratings,
   rationales,
-  message,
-  error,
   busy,
   participantIssues,
   onResponseTextChange,
@@ -40,8 +38,6 @@ export function MagicRoundEntryScreen({
   roundOneAnswers: Record<string, string>;
   ratings: RatingDraft;
   rationales: RationaleDraft;
-  message: string | null;
-  error: string | null;
   busy: boolean;
   participantIssues: ParticipantIssue[];
   onResponseTextChange: (value: string) => void;
@@ -62,7 +58,6 @@ export function MagicRoundEntryScreen({
             You can request a new link through the approved participant route or contact the study team. This page does
             not reveal whether any participant, phone number, study, or round exists.
           </p>
-          {error ? <WarningBanner title="Secure link unavailable" risk="warning">{error}</WarningBanner> : null}
         </section>
       </div>
     );
@@ -98,8 +93,6 @@ export function MagicRoundEntryScreen({
             {context.controlled_feedback_explanation}
           </WarningBanner>
         ) : null}
-        {message ? <WarningBanner title="Status" risk="success">{message}</WarningBanner> : null}
-        {error ? <WarningBanner title="Action needed" risk="warning">{error}</WarningBanner> : null}
       </section>
 
       {isOpen && isRoundOne ? (

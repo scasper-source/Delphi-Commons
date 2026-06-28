@@ -6,12 +6,9 @@ import type {
   ParticipantIssueInput,
   RoundItemForParticipant,
 } from "../core/api";
-import type { RoundConfig } from "../core/api";
 import type {
-  ConductorWorkflow,
   RatingDraft,
   RationaleDraft,
-  RuntimeStudyData,
 } from "../core/appTypes";
 import {
   defaultRoundTwoSetup,
@@ -22,10 +19,9 @@ import {
   formatRatingChoice,
   questionLabel,
   roundOneQuestions,
-  humanizeBackendMessage,
   shortId,
 } from "../core/appUtils";
-import type { StudyWizardState } from "../core/studyWizard";
+import { useAppContext } from "../core/AppContext";
 import {
   DataBar,
   StatusBadge,
@@ -46,9 +42,6 @@ import {
 import { participantCopy } from "../content/participantCopy";
 
 export function ParticipantScreen({
-  workflow,
-  wizard,
-  roundConfigs,
   participantResponseText,
   participantRoundOneAnswers,
   participantSubmittedRoundOneText,
@@ -64,8 +57,6 @@ export function ParticipantScreen({
   participantWithdrawn,
   participantConsentChecked,
   participantOrientationComplete,
-  participantMessage,
-  participantError,
   participantBusy,
   participantInvite,
   magicContext,
@@ -74,10 +65,8 @@ export function ParticipantScreen({
   magicRoundOneAnswers,
   magicRatings,
   magicRationales,
-  magicMessage,
-  magicError,
+  magicLoadFailed,
   magicBusy,
-  runtimeData,
   roundTwoRatings,
   roundTwoRationales,
   onParticipantResponseChange,
@@ -104,9 +93,6 @@ export function ParticipantScreen({
   onRoundTwoRationaleChange,
   onSubmitRoundTwoRatings,
 }: {
-  workflow: ConductorWorkflow;
-  wizard: StudyWizardState;
-  roundConfigs: RoundConfig[];
   participantResponseText: string;
   participantRoundOneAnswers: Record<string, string>;
   participantSubmittedRoundOneText: string | null;
@@ -122,8 +108,6 @@ export function ParticipantScreen({
   participantWithdrawn: boolean;
   participantConsentChecked: boolean;
   participantOrientationComplete: boolean;
-  participantMessage: string | null;
-  participantError: string | null;
   participantBusy: boolean;
   participantInvite: ParticipantInvitationContext | null;
   magicContext: MagicRoundEntryContext | null;
@@ -132,10 +116,8 @@ export function ParticipantScreen({
   magicRoundOneAnswers: Record<string, string>;
   magicRatings: RatingDraft;
   magicRationales: RationaleDraft;
-  magicMessage: string | null;
-  magicError: string | null;
+  magicLoadFailed: boolean;
   magicBusy: boolean;
-  runtimeData: RuntimeStudyData;
   roundTwoRatings: RatingDraft;
   roundTwoRationales: RationaleDraft;
   onParticipantResponseChange: (value: string) => void;
@@ -162,7 +144,9 @@ export function ParticipantScreen({
   onRoundTwoRationaleChange: (itemId: string, rationale: string) => void;
   onSubmitRoundTwoRatings: () => void;
 }) {
-  if (magicContext || magicError) {
+  const { workflow, wizard, roundConfigs, runtimeData } = useAppContext();
+
+  if (magicContext || magicLoadFailed) {
     return (
       <MagicRoundEntryScreen
         context={magicContext}
@@ -171,8 +155,6 @@ export function ParticipantScreen({
         roundOneAnswers={magicRoundOneAnswers}
         ratings={magicRatings}
         rationales={magicRationales}
-        message={magicMessage}
-        error={magicError}
         busy={magicBusy}
         participantIssues={runtimeData.participantIssues}
         onResponseTextChange={onMagicResponseTextChange}
@@ -277,16 +259,6 @@ export function ParticipantScreen({
         {!hasBackendStudy ? (
           <WarningBanner title={participantCopy.portal.noBackendTitle} risk="info">
             {participantCopy.portal.noBackendBody}
-          </WarningBanner>
-        ) : null}
-        {participantError ? (
-          <WarningBanner title="Submission blocked" risk="danger">
-            {humanizeBackendMessage(participantError)}
-          </WarningBanner>
-        ) : null}
-        {participantMessage ? (
-          <WarningBanner title="Submitted" risk="success">
-            {participantMessage}
           </WarningBanner>
         ) : null}
         {participantInvite?.active_consent_version ? (

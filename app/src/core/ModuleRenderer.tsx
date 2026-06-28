@@ -43,19 +43,12 @@ import { AdminSecurityScreen } from "../screens/AdminSecurityScreen";
 
 export function ModuleRenderer({
   activeModule,
-  role,
-  study,
   apiMode,
   apiBaseUrl,
   knownStudies,
   listStudiesLabel,
-  workflow,
-  wizard,
   roundOneSetup,
   roundTwoSetup,
-  roundConfigs,
-  roundActionMessage,
-  roundActionError,
   roundActionBusy,
   participantResponseText,
   participantRoundOneAnswers,
@@ -72,8 +65,6 @@ export function ModuleRenderer({
   participantWithdrawn,
   participantConsentChecked,
   participantOrientationComplete,
-  participantMessage,
-  participantError,
   participantBusy,
   participantInvite,
   magicContext,
@@ -82,18 +73,14 @@ export function ModuleRenderer({
   magicRoundOneAnswers,
   magicRatings,
   magicRationales,
-  magicMessage,
-  magicError,
+  magicLoadFailed,
   magicBusy,
-  runtimeData,
   runtimeActionBusy,
   roundTwoRatings,
   roundTwoRationales,
   finalResultSnapshot,
   finalResultBlockers,
   participantFinalResponses,
-  finalResultMessage,
-  finalResultError,
   finalResultBusy,
   activeWizardStep,
   onWizardChange,
@@ -147,7 +134,6 @@ export function ModuleRenderer({
   onDownloadExportPackageFile,
   savedStudies,
   savedStudiesLoading,
-  savedStudiesError,
   onRefreshSavedStudies,
   onOpenSavedStudy,
   onStartNewStudyDraft,
@@ -167,8 +153,6 @@ export function ModuleRenderer({
   roundOneSetup: RoundOneSetupState;
   roundTwoSetup: RoundTwoSetupState;
   roundConfigs: RoundConfig[];
-  roundActionMessage: string | null;
-  roundActionError: string | null;
   roundActionBusy: string | null;
   participantResponseText: string;
   participantRoundOneAnswers: Record<string, string>;
@@ -185,8 +169,6 @@ export function ModuleRenderer({
   participantWithdrawn: boolean;
   participantConsentChecked: boolean;
   participantOrientationComplete: boolean;
-  participantMessage: string | null;
-  participantError: string | null;
   participantBusy: boolean;
   participantInvite: ParticipantInvitationContext | null;
   magicContext: MagicRoundEntryContext | null;
@@ -195,8 +177,7 @@ export function ModuleRenderer({
   magicRoundOneAnswers: Record<string, string>;
   magicRatings: RatingDraft;
   magicRationales: RationaleDraft;
-  magicMessage: string | null;
-  magicError: string | null;
+  magicLoadFailed: boolean;
   magicBusy: boolean;
   runtimeData: RuntimeStudyData;
   runtimeActionBusy: string | null;
@@ -205,8 +186,6 @@ export function ModuleRenderer({
   finalResultSnapshot: FinalResultSnapshot | null;
   finalResultBlockers: string[];
   participantFinalResponses: ParticipantFinalResponse[];
-  finalResultMessage: string | null;
-  finalResultError: string | null;
   finalResultBusy: string | null;
   activeWizardStep: StudyWizardStepId;
   onWizardChange: (state: StudyWizardState) => void;
@@ -260,7 +239,6 @@ export function ModuleRenderer({
   onDownloadExportPackageFile: (packageId: string, fileId: string) => void;
   savedStudies: SavedStudyRecord[];
   savedStudiesLoading: boolean;
-  savedStudiesError: string | null;
   onRefreshSavedStudies: () => void;
   onOpenSavedStudy: (record: SavedStudyRecord) => void;
   onStartNewStudyDraft: () => void;
@@ -283,15 +261,9 @@ export function ModuleRenderer({
     case "dashboard":
       return (
         <DashboardScreen
-          study={study}
-          role={role}
-          workflow={workflow}
-          roundConfigs={roundConfigs}
-          runtimeData={runtimeData}
           runtimeActionBusy={runtimeActionBusy}
           savedStudies={savedStudies}
           savedStudiesLoading={savedStudiesLoading}
-          savedStudiesError={savedStudiesError}
           onRefreshSavedStudies={onRefreshSavedStudies}
           onOpenSavedStudy={onOpenSavedStudy}
           onStartNewStudyDraft={onStartNewStudyDraft}
@@ -303,9 +275,6 @@ export function ModuleRenderer({
     case "study-builder":
       return (
         <StudyBuilderScreen
-          role={role}
-          workflow={workflow}
-          wizard={wizard}
           activeWizardStep={activeWizardStep}
           onWizardChange={onWizardChange}
           onWizardStepChange={onWizardStepChange}
@@ -314,18 +283,12 @@ export function ModuleRenderer({
         />
       );
     case "governance":
-      return <GovernanceScreen role={role} workflow={workflow} wizard={wizard} onWorkflowStep={onWorkflowStep} />;
+      return <GovernanceScreen onWorkflowStep={onWorkflowStep} />;
     case "round-manager":
       return (
         <RoundManagerScreen
-          workflow={workflow}
-          wizard={wizard}
           roundOneSetup={roundOneSetup}
           roundTwoSetup={roundTwoSetup}
-          roundConfigs={roundConfigs}
-          runtimeData={runtimeData}
-          roundActionMessage={roundActionMessage}
-          roundActionError={roundActionError}
           roundActionBusy={roundActionBusy}
           onRoundOneSetupChange={onRoundOneSetupChange}
           onRoundTwoSetupChange={onRoundTwoSetupChange}
@@ -338,9 +301,6 @@ export function ModuleRenderer({
     case "curation":
       return (
         <CurationScreen
-          study={study}
-          workflow={workflow}
-          runtimeData={runtimeData}
           runtimeActionBusy={runtimeActionBusy}
           onRefreshRuntimeData={onRefreshRuntimeData}
           onCreateManualItemFromResponse={onCreateManualItemFromResponse}
@@ -361,9 +321,6 @@ export function ModuleRenderer({
     case "participant":
       return (
         <ParticipantScreen
-          workflow={workflow}
-          wizard={wizard}
-          roundConfigs={roundConfigs}
           participantResponseText={participantResponseText}
           participantRoundOneAnswers={participantRoundOneAnswers}
           participantSubmittedRoundOneText={participantSubmittedRoundOneText}
@@ -379,8 +336,6 @@ export function ModuleRenderer({
           participantWithdrawn={participantWithdrawn}
           participantConsentChecked={participantConsentChecked}
           participantOrientationComplete={participantOrientationComplete}
-          participantMessage={participantMessage}
-          participantError={participantError}
           participantBusy={participantBusy}
           participantInvite={participantInvite}
           magicContext={magicContext}
@@ -389,10 +344,8 @@ export function ModuleRenderer({
           magicRoundOneAnswers={magicRoundOneAnswers}
           magicRatings={magicRatings}
           magicRationales={magicRationales}
-          magicMessage={magicMessage}
-          magicError={magicError}
+          magicLoadFailed={magicLoadFailed}
           magicBusy={magicBusy}
-          runtimeData={runtimeData}
           roundTwoRatings={roundTwoRatings}
           roundTwoRationales={roundTwoRationales}
           onParticipantResponseChange={onParticipantResponseChange}
@@ -423,12 +376,9 @@ export function ModuleRenderer({
     case "closeout":
       return (
         <FinalResultsCloseoutScreen
-          role={role}
           snapshot={finalResultSnapshot}
           blockers={finalResultBlockers}
           participantFinalResponses={participantFinalResponses}
-          message={finalResultMessage}
-          error={finalResultError}
           busy={finalResultBusy}
           onAction={onFinalResultAction}
           onExportOutput={onExportOutput}
@@ -439,10 +389,6 @@ export function ModuleRenderer({
     case "reporting":
       return (
         <ReportingScreen
-          study={study}
-          role={role}
-          workflow={workflow}
-          runtimeData={runtimeData}
           runtimeActionBusy={runtimeActionBusy}
           onExportOutput={onExportOutput}
           onSelectExportPackage={onSelectExportPackage}
@@ -451,8 +397,8 @@ export function ModuleRenderer({
         />
       );
     case "audit":
-      return <AuditScreen study={study} />;
+      return <AuditScreen />;
     case "admin-security":
-      return <AdminSecurityScreen role={role} workflow={workflow} />;
+      return <AdminSecurityScreen />;
   }
 }
