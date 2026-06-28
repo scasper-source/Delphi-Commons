@@ -165,6 +165,7 @@ jobs:
 
       - name: Upload workflow artifact
         uses: actions/upload-artifact@v4
+        continue-on-error: true
         with:
           name: macos-internal-package-assets-${{ steps.meta.outputs.tag }}-${{ steps.meta.outputs.short_sha }}
           path: build/release-assets/macos/*
