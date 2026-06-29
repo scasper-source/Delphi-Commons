@@ -11,7 +11,7 @@ const installerPackagerPath = path.join(repoRoot, 'scripts/packaging/macos-insta
 const portablePackagerPath = path.join(repoRoot, 'scripts/packaging/macos-portable.mjs');
 const releaseWorkflowPath = path.join(repoRoot, '.github/workflows/macos-internal-package-release.yml');
 
-const read = (file) => fs.readFileSync(file, 'utf8');
+const read = (file) => fs.readFileSync(file, 'utf8').replace(/\r\n/g, '\n');
 
 test('macOS normal wrappers default to start, not status', () => {
   assert.match(read(portableWrapperPath), /set -- start/);
