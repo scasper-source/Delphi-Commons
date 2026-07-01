@@ -7,6 +7,7 @@ import {
   type StudyContextValidation,
 } from "../core/api";
 import type { WorkflowStep } from "../core/appTypes";
+import type { ModuleId } from "../core/types";
 import { formatStatus, humanizeBackendMessage } from "../core/appUtils";
 import { useAppContext } from "../core/AppContext";
 import { methodRegistry } from "../methods/registry";
@@ -49,7 +50,7 @@ export function StudyBuilderScreen({
   onWizardStepChange: (step: StudyWizardStepId) => void;
   onWorkflowStep: (step: WorkflowStep) => void;
   onStartNewStudyDraft: () => void;
-  onNavigateModule?: (module: string) => void;
+  onNavigateModule?: (module: ModuleId) => void;
 }) {
   const { role, workflow, wizard } = useAppContext();
   const selectedMethod = methodRegistry.find((method) =>
