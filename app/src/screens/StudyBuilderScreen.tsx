@@ -26,6 +26,7 @@ import {
 } from "../core/studyWizard";
 import { DataBar, StatusBadge, WarningBanner } from "../components/ui/Primitives";
 import { ConductorWorkflowPanel } from "./ConductorWorkflowPanel";
+import { workflowStepDone } from "../core/workflowHelpers";
 
 const ternaryOptions = [
   ["not_specified", "Not specified"],
@@ -41,12 +42,14 @@ export function StudyBuilderScreen({
   onWizardStepChange,
   onWorkflowStep,
   onStartNewStudyDraft,
+  onNavigateModule,
 }: {
   activeWizardStep: StudyWizardStepId;
   onWizardChange: (state: StudyWizardState) => void;
   onWizardStepChange: (step: StudyWizardStepId) => void;
   onWorkflowStep: (step: WorkflowStep) => void;
   onStartNewStudyDraft: () => void;
+  onNavigateModule?: (module: string) => void;
 }) {
   const { role, workflow, wizard } = useAppContext();
   const selectedMethod = methodRegistry.find((method) =>
@@ -64,6 +67,8 @@ export function StudyBuilderScreen({
     (workflow.version !== null && workflow.version.status !== "Draft") ||
     workflow.busyStep !== null;
   const instrumentLocked = Boolean(workflow.version && workflow.version.status !== "Draft");
+  const designSaved = workflowStepDone(workflow, "save-wizard-packet");
+  const governanceReady = designSaved && reviewBlockers.length === 0 && !workflowStepDone(workflow, "activate");
   const [contextOpen, setContextOpen] = useState(false);
   const [contextRecord, setContextRecord] = useState<StudyContextDisclosure | null>(null);
   const [contextValidation, setContextValidation] = useState<StudyContextValidation | null>(null);
@@ -339,6 +344,17 @@ export function StudyBuilderScreen({
             Next
           </button>
         </div>
+
+        {governanceReady && onNavigateModule ? (
+          <WarningBanner title="Design saved — governance signoff is next" risk="info">
+            The study design packet is saved. Continue to the Governance screen to apply method design, set the consensus threshold, submit for signoff, and record Study PI and Ethics PI approvals.
+            <div style={{ marginTop: "0.5rem" }}>
+              <button className="primary-button" onClick={() => onNavigateModule("governance")} type="button">
+                Continue to Governance
+              </button>
+            </div>
+          </WarningBanner>
+        ) : null}
       </section>
 
       <section className="panel wizard-side">

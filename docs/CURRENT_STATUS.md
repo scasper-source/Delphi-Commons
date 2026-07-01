@@ -61,7 +61,7 @@ Delphi Commons has strong controlled synthetic/mock-trial and internal engineeri
 | --- | --- |
 | Phase 0 baseline preservation | Baseline mock-trial/regression evidence is preserved. |
 | Phase 1 product surface lock | Complete as scope lock only. It does not authorize human testing. |
-| Phase 2 downloadable laptop operator candidate | In progress. Windows internal portable ZIP, June 28 Windows internal installer `r2` ZIP/EXE candidate, and June 28 macOS Apple Silicon single installer ZIP bundle are available on GitHub. The prior Windows `r10` and macOS `r4` releases are archived/superseded in GitHub. A 2026-05-29 clean Windows `r8` operator report shows install/launch/close-window stop/relaunch/uninstall mostly passing, but saved-study reopen/new-study continuity failed or was unclear and screenshots still need attachment. The June 28 Windows `r2` package supersedes `r10` for retest and includes all merged June code-health/release-workflow changes; clean Windows `r2` retest evidence remains required. |
+| Phase 2 downloadable laptop operator candidate | In progress. Windows internal portable ZIP, June 28 Windows internal installer `r2` ZIP/EXE candidate, and June 28 macOS Apple Silicon single installer ZIP bundle are available on GitHub. The prior Windows `r10` and macOS `r4` releases are archived/superseded in GitHub. A 2026-05-29 clean Windows `r8` operator report shows install/launch/close-window stop/relaunch/uninstall mostly passing, but saved-study reopen/new-study continuity failed or was unclear and screenshots still need attachment. A 2026-07-01 clean Windows `r2` retest showed install/open/uninstall and multi-study list/reopen partial pass, but governance signoff, smoke/save verification, and operator function closeout failed or remained unproven; a successor Windows installer package is required. |
 | Phase 3 phone/SMS candidate | Local mock/sandbox implementation and evidence-prep are substantially complete. Twilio integration is fully implemented (magic links, OTP, consent tracking, delivery webhooks, coercive-language filter) — activation requires only env-var configuration, not code changes. Real iOS/Android device evidence, real provider/sandbox evidence if in scope, accessibility review, privacy/copy/Data Custodian review, and human-observed phone walkthrough remain open. |
 | Phase 4 human testing binder | Binder package is assembled for final human-testing preparation; candidate remains not ready until laptop/phone run evidence and required signoffs are attached. |
 | Phase 5 final human testing | Not run. |
@@ -70,9 +70,10 @@ Delphi Commons has strong controlled synthetic/mock-trial and internal engineeri
 
 One repo-verifiable dependency/security item is open: the latest CI app audit reported 5 vulnerabilities, including one high Vite advisory. The remaining readiness blockers are human-action gates:
 
+- Publish and retest a successor Windows installer package after the June 28 `r2` clean Windows retest failed.
 - Complete clean-profile or second-machine laptop package evidence for the selected Windows path, including linked screenshot/log artifacts.
-- Rerun the Windows Study Workspace Launcher plus saved-study reopen/new-study continuity path against the June 28 `r2` package.
-- Rerun the Study PI plus Ethics PI signoff flow against the June 28 `r2` package.
+- Rerun the Windows Study Workspace Launcher plus saved-study reopen/new-study continuity path against the successor Windows package.
+- Rerun the Study PI plus Ethics PI signoff flow against the successor Windows package.
 - Complete macOS install/lifecycle evidence if macOS is included for the candidate.
 - Complete iPhone/Safari and Android/Chrome phone-flow evidence.
 - Complete SMS copy/privacy/Data Custodian/security review for any SMS path used in human testing.

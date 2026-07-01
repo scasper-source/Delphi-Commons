@@ -1934,13 +1934,19 @@ function App() {
   )
     ? activeModule
     : navigationModules[0]?.id ?? accessibleModules[0]?.id ?? "participant";
-  const nextAction = buildNextAction({ workflow, wizard, roundConfigs, runtimeData });
+  const nextAction = buildNextAction({ role, workflow, wizard, roundConfigs, runtimeData });
   const participantEntryActive = role === "panelist" || Boolean(participantInviteToken || magicToken);
   const referenceModuleSelected = visibleModule === "about" || visibleModule === "glossary";
   const suppressStudyOperatingChrome = !participantEntryActive && workspaceLauncherOpen;
   const showStudyWorkspaceLauncher = suppressStudyOperatingChrome && !referenceModuleSelected;
 
   async function runNextActionCommand(command: NonNullable<NextAction["command"]>) {
+    if (command.kind === "workflow-step") {
+      setActiveModule("governance");
+      await runWorkflowStep(command.step);
+      return;
+    }
+
     if (command.kind === "transition-round") {
       setActiveModule("round-manager");
       await transitionRound(command.roundNumber, command.action);
@@ -2210,6 +2216,7 @@ function App() {
           onRefreshSavedStudies={loadSavedStudies}
           onOpenSavedStudy={openSavedStudy}
           onStartNewStudyDraft={startNewStudyDraft}
+          onNavigateModule={setActiveModule}
           onArchiveSavedStudy={archiveSavedStudy}
           onArchiveSmokeTestStudies={archiveSmokeTestStudies}
           onRespondParticipantIssue={respondParticipantIssue}

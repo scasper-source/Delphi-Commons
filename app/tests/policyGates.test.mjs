@@ -119,7 +119,9 @@ test("governance signoff UI names PI roles, sequence, and blocked-action reasons
   const source = appSource();
   const css = fs.readFileSync(path.join(appRoot, "src", "App.css"), "utf8");
   const workflowSource = sourceSlice(source, "function ConductorWorkflowPanel", "function buildGovernanceChecklist");
+  const preSignoffNextActionSource = sourceSlice(source, "if (!workflow.version.study_format)", "if (workflow.version.status === \"ReadyForSignoff\")");
   const nextActionSource = sourceSlice(source, "if (workflow.version.status === \"ReadyForSignoff\")", "if (!roundOneConfig)");
+  const appCommandSource = sourceSlice(source, "async function runNextActionCommand", "function navigateToCitation");
 
   assert.match(workflowSource, /Study PI signoff/);
   assert.match(workflowSource, /Ethics PI signoff/);
@@ -128,7 +130,15 @@ test("governance signoff UI names PI roles, sequence, and blocked-action reasons
   assert.match(workflowSource, /Admin \/ Security/);
   assert.match(workflowSource, /Activation is blocked until both Study PI and Ethics PI signoffs are recorded/);
   assert.match(workflowSource, /workflow-disabled-reason/);
+  assert.match(preSignoffNextActionSource, /kind: "workflow-step", step: "set-design"/);
+  assert.match(preSignoffNextActionSource, /kind: "workflow-step", step: "set-consensus"/);
+  assert.match(preSignoffNextActionSource, /kind: "workflow-step", step: "submit"/);
   assert.match(nextActionSource, /Assign the Ethics PI as Ethics & Methods Steward/);
+  assert.match(nextActionSource, /kind: "workflow-step", step: "owner-signoff"/);
+  assert.match(nextActionSource, /kind: "workflow-step", step: "steward-signoff"/);
+  assert.match(nextActionSource, /kind: "workflow-step", step: "activate"/);
+  assert.match(appCommandSource, /command\.kind === "workflow-step"/);
+  assert.match(appCommandSource, /runWorkflowStep\(command\.step\)/);
   assert.doesNotMatch(workflowSource, /Switch role to Steward/);
   assert.match(css, /\.workflow-disabled-reason/);
 });
@@ -540,6 +550,8 @@ test("study workspace launcher routes staff into backend-backed workspaces befor
   assert.match(launcherSource, /Unsaved draft/);
   assert.match(launcherSource, /Delphi Commons is a governed eDelphi research workspace/);
   assert.match(launcherSource, /Saved workspace/);
+  assert.match(launcherSource, /Version saved/);
+  assert.match(launcherSource, /latest\?\.updated_at \?\? latest\?\.created_at \?\? record\.study\.updated_at \?\? record\.study\.created_at/);
   assert.match(launcherSource, /Save blocked/);
   assert.match(launcherSource, /Create saved study workspace/);
   assert.match(launcherSource, /onOpenCurrentStudy\(record\)/);

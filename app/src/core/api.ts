@@ -18,6 +18,7 @@ export type BackendStudy = {
   description: string;
   created_by: string;
   created_at: string;
+  updated_at?: string;
   archived_at?: string;
   archived_by?: string;
 };
@@ -39,6 +40,7 @@ export type BackendStudyVersion = {
   opened_round1_at: string | null;
   created_by: string;
   created_at: string;
+  updated_at?: string;
 };
 
 export type BackendSignoff = {

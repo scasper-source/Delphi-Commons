@@ -745,6 +745,7 @@ export async function studiesRoutes(app: FastifyInstance) {
 
       created_by: actor.userId,
       created_at: now,
+      updated_at: now,
     };
 
     await createStudyVersion(v);

@@ -115,6 +115,7 @@ export function StudyWorkspaceLauncher({
           const status = latest ? formatStatus(latest.status) : "No version";
           const isCurrentStudy = record.study.id === workflow.study?.id;
           const hasSavedPacket = Boolean(latest?.study_design_packet_json);
+          const savedTimestamp = latest?.updated_at ?? latest?.created_at ?? record.study.updated_at ?? record.study.created_at;
 
           return (
             <article className={isCurrentStudy ? "saved-study-row current" : "saved-study-row"} key={record.study.id}>
@@ -125,7 +126,7 @@ export function StudyWorkspaceLauncher({
                 </div>
                 <p>{savedStudyDescription(record)}</p>
                 <small>
-                  Saved {formatDateTime(record.study.created_at)} - ID {shortId(record.study.id)} - {latest ? `Version ${latest.version_number}` : "No versions"}
+                  {latest ? "Version saved" : "Study created"} {formatDateTime(savedTimestamp)} - ID {shortId(record.study.id)} - {latest ? `Version ${latest.version_number}` : "No versions"}
                 </small>
               </div>
               <div className="saved-study-actions">
