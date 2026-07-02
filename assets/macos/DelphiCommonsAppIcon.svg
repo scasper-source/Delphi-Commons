@@ -1,0 +1,58 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" role="img" aria-labelledby="title desc">
+  <title id="title">Delphi Commons macOS app icon</title>
+  <desc id="desc">A polished teal macOS icon with an ivory commons temple and connected Delphi panel marks.</desc>
+  <defs>
+    <linearGradient id="sky" x1="176" y1="92" x2="848" y2="944" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#7FD9C7"/>
+      <stop offset="0.46" stop-color="#227D86"/>
+      <stop offset="1" stop-color="#133C5C"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="34%" cy="22%" r="78%">
+      <stop offset="0" stop-color="#F9F5D7" stop-opacity="0.95"/>
+      <stop offset="0.34" stop-color="#F0C85E" stop-opacity="0.38"/>
+      <stop offset="1" stop-color="#F0C85E" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="marble" x1="232" y1="240" x2="792" y2="794" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#FFF9DF"/>
+      <stop offset="0.58" stop-color="#F2E8C0"/>
+      <stop offset="1" stop-color="#DDB85E"/>
+    </linearGradient>
+    <linearGradient id="shadow" x1="512" y1="648" x2="512" y2="852" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#06273A" stop-opacity="0.02"/>
+      <stop offset="1" stop-color="#06273A" stop-opacity="0.38"/>
+    </linearGradient>
+    <filter id="softDrop" x="-12%" y="-12%" width="124%" height="124%">
+      <feDropShadow dx="0" dy="18" stdDeviation="22" flood-color="#06273A" flood-opacity="0.34"/>
+    </filter>
+    <filter id="tinyLift" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="6" stdDeviation="8" flood-color="#06273A" flood-opacity="0.24"/>
+    </filter>
+  </defs>
+
+  <rect width="1024" height="1024" rx="226" fill="url(#sky)"/>
+  <rect width="1024" height="1024" rx="226" fill="url(#glow)"/>
+  <path d="M150 774c118 56 230 77 362 77 139 0 258-26 362-78v99c0 58-47 105-105 105H255c-58 0-105-47-105-105z" fill="url(#shadow)" opacity="0.56"/>
+
+  <g filter="url(#softDrop)">
+    <path d="M512 188 231 355h562z" fill="url(#marble)"/>
+    <path d="M279 379h466v58H279z" fill="#FFF5D7"/>
+    <path d="M301 704h422v66H301z" fill="#F0D68E"/>
+    <path d="M256 770h512v72H256z" fill="#F7E7AC"/>
+    <path d="M318 437h70v267h-70zM438 437h70v267h-70zM558 437h70v267h-70zM678 437h70v267h-70z" fill="#FFF7DD"/>
+    <path d="M342 437h22v267h-22zM462 437h22v267h-22zM582 437h22v267h-22zM702 437h22v267h-22z" fill="#D8B75B" opacity="0.42"/>
+  </g>
+
+  <g filter="url(#tinyLift)">
+    <path d="M296 598c75-79 154-119 237-119 80 0 148 38 195 113" fill="none" stroke="#0F4B63" stroke-width="30" stroke-linecap="round" opacity="0.42"/>
+    <path d="M296 598c75-79 154-119 237-119 80 0 148 38 195 113" fill="none" stroke="#F8E7A0" stroke-width="14" stroke-linecap="round"/>
+    <circle cx="296" cy="598" r="48" fill="#F3C54E"/>
+    <circle cx="533" cy="479" r="54" fill="#FFF2BF"/>
+    <circle cx="728" cy="592" r="48" fill="#FF876A"/>
+    <circle cx="296" cy="598" r="17" fill="#14506A"/>
+    <circle cx="533" cy="479" r="18" fill="#14506A"/>
+    <circle cx="728" cy="592" r="17" fill="#14506A"/>
+  </g>
+
+  <path d="M190 230c37-58 90-100 158-125" fill="none" stroke="#FFFFFF" stroke-width="22" stroke-linecap="round" opacity="0.28"/>
+  <path d="M792 778c36-25 62-56 79-93" fill="none" stroke="#FFFFFF" stroke-width="16" stroke-linecap="round" opacity="0.18"/>
+</svg>
