@@ -55,7 +55,7 @@ Current snapshot: the public GitHub repository exists at `scasper-source/Delphi-
 - [x] Repository builds locally in final pre-migration gate
 - [x] Tests pass locally in final pre-migration gate
 - [x] Private GitHub clean-environment install/build/test check passed
-- [x] Current app/server high-severity security audits completed in the GitHub-connected checkout with 0 vulnerabilities
+- [ ] Current app/server high-severity security audits completed in the GitHub-connected checkout with 0 vulnerabilities (OPEN: app audit reports 5 vulnerabilities including 1 high Vite advisory as of 2026-07-03)
 - [x] README has setup instructions
 - [x] CONTRIBUTING.md exists
 - [x] GOVERNANCE.md exists
@@ -71,7 +71,7 @@ Current snapshot: the public GitHub repository exists at `scasper-source/Delphi-
 
 ## DOI Readiness
 
-- [x] Public release created on GitHub (repository made public 2026-07-03; tagged version release pending)
+- [ ] Tagged release version created on GitHub (repository is public since 2026-07-03; tagged release artifact not yet created)
 - [ ] Zenodo or equivalent archive connected
 - [ ] DOI minted only after release
 - [ ] DOI added to README after creation
