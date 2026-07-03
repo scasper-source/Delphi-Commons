@@ -135,10 +135,6 @@ export function buildNeutralSmsBody(input: { safeName: string; magicLinkUrl: str
   return body;
 }
 
-function buildPhoneVerificationSmsBody(input: { otp: string; ttlMinutes: number }): string {
-  return `Delphi phone verification code: ${input.otp}. It expires in ${input.ttlMinutes} minutes. Reply STOP to opt out.`;
-}
-
 function publicParticipantOrigin(fallbackOrigin: string): string {
   const config = getServerConfig();
   if (config.smsProvider !== "twilio") return fallbackOrigin.replace(/\/$/, "");
@@ -276,12 +272,52 @@ export async function startPhoneVerification(input: {
   if (!preference?.phone_e164 || !preference.phone_hash) throw new Error("phone_required_before_verification");
   const config = getServerConfig();
   const provider = getSmsProvider();
-  const otp = String(crypto.randomInt(0, 1_000_000)).padStart(6, "0");
+  const maskedPhone = maskPhone(preference.phone_e164) ?? "***-***-0000";
   const expiresAt = new Date(Date.now() + config.phoneOtpTtlMinutes * 60_000).toISOString();
+
+  if (provider.name === "twilio" && config.twilioVerifyServiceSid) {
+    const accountSid = config.twilioAccountSid!;
+    const authToken = config.twilioAuthToken!;
+    const response = await fetch(
+      `https://verify.twilio.com/v2/Services/${config.twilioVerifyServiceSid}/Verifications`,
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Basic ${Buffer.from(`${accountSid}:${authToken}`).toString("base64")}`,
+          "Content-Type": "application/x-www-form-urlencoded",
+        },
+        body: new URLSearchParams({ To: preference.phone_e164, Channel: "sms" }),
+      },
+    );
+    const payload = (await response.json().catch(() => ({}))) as Record<string, unknown>;
+    if (!response.ok) {
+      throw new Error(`twilio_verify_start_failed_${response.status}_${payload.code ?? "unknown"}`);
+    }
+    const challengeId = `verify-${input.participant_id}-${Date.now()}`;
+    const challenge = createPhoneChallenge({
+      participant_id: input.participant_id,
+      phone_hash: preference.phone_hash,
+      masked_phone: maskedPhone,
+      otp_hash: "twilio-verify-managed",
+      expires_at: expiresAt,
+    });
+
+    await writeAuditEvent({
+      actor: { userId: input.actor_user_id, role: "owner", systemRoles: ["owner"], authSource: "legacy-dev-header" },
+      action: "phone_verification_started",
+      object: { type: "participant", id: input.participant_id },
+      details: { masked_phone: maskedPhone, expires_at: expiresAt, provider: "twilio_verify", verify_sid: String(payload.sid ?? "") },
+    });
+
+    return { challenge_id: challenge.challenge_id, masked_phone: maskedPhone, expires_at: expiresAt };
+  }
+
+  // Mock provider: generate OTP locally for development
+  const otp = String(crypto.randomInt(0, 1_000_000)).padStart(6, "0");
   const challenge = createPhoneChallenge({
     participant_id: input.participant_id,
     phone_hash: preference.phone_hash,
-    masked_phone: maskPhone(preference.phone_e164) ?? "***-***-0000",
+    masked_phone: maskedPhone,
     otp_hash: hashSecret(otp),
     expires_at: expiresAt,
   });
@@ -290,38 +326,14 @@ export async function startPhoneVerification(input: {
     actor: { userId: input.actor_user_id, role: "owner", systemRoles: ["owner"], authSource: "legacy-dev-header" },
     action: "phone_verification_started",
     object: { type: "participant", id: input.participant_id },
-    details: { masked_phone: challenge.masked_phone, expires_at: challenge.expires_at },
+    details: { masked_phone: maskedPhone, expires_at: expiresAt, provider: "mock" },
   });
-
-  if (provider.name === "twilio") {
-    try {
-      const result = await provider.sendSms({
-        to: preference.phone_e164,
-        body: buildPhoneVerificationSmsBody({ otp, ttlMinutes: config.phoneOtpTtlMinutes }),
-        metadata: { purpose: "phone_verification", challenge_id: challenge.challenge_id },
-      });
-      await writeAuditEvent({
-        actor: { userId: input.actor_user_id, role: "owner", systemRoles: ["owner"], authSource: "legacy-dev-header" },
-        action: "phone_verification_sms_sent",
-        object: { type: "phone_verification_challenge", id: challenge.challenge_id },
-        details: { provider: provider.name, provider_message_id: result.providerMessageId, masked_phone: challenge.masked_phone },
-      });
-    } catch (error) {
-      await writeAuditEvent({
-        actor: { userId: input.actor_user_id, role: "owner", systemRoles: ["owner"], authSource: "legacy-dev-header" },
-        action: "phone_verification_sms_failed",
-        object: { type: "phone_verification_challenge", id: challenge.challenge_id },
-        details: { provider: provider.name, masked_phone: challenge.masked_phone },
-      });
-      throw error;
-    }
-  }
 
   return {
     challenge_id: challenge.challenge_id,
-    masked_phone: challenge.masked_phone,
-    expires_at: challenge.expires_at,
-    ...(config.environment !== "production" && provider.name !== "twilio" ? { dev_otp: otp } : {}),
+    masked_phone: maskedPhone,
+    expires_at: expiresAt,
+    ...(config.environment !== "production" ? { dev_otp: otp } : {}),
   };
 }
 
@@ -337,7 +349,35 @@ export async function verifyPhoneOtp(input: {
   if (challenge.attempts >= OTP_MAX_ATTEMPTS) {
     throw new Error("phone_verification_attempts_exceeded");
   }
-  const ok = hashSecret(input.otp.trim()) === challenge.otp_hash;
+
+  const config = getServerConfig();
+  const provider = getSmsProvider();
+  let ok = false;
+
+  if (provider.name === "twilio" && config.twilioVerifyServiceSid) {
+    // Use Twilio Verify VerificationCheck API
+    const preference = getContactPreference(challenge.participant_id);
+    if (!preference?.phone_e164) throw new Error("phone_required_for_verify_check");
+    const accountSid = config.twilioAccountSid!;
+    const authToken = config.twilioAuthToken!;
+    const response = await fetch(
+      `https://verify.twilio.com/v2/Services/${config.twilioVerifyServiceSid}/VerificationCheck`,
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Basic ${Buffer.from(`${accountSid}:${authToken}`).toString("base64")}`,
+          "Content-Type": "application/x-www-form-urlencoded",
+        },
+        body: new URLSearchParams({ To: preference.phone_e164, Code: input.otp.trim() }),
+      },
+    );
+    const payload = (await response.json().catch(() => ({}))) as Record<string, unknown>;
+    ok = response.ok && payload.status === "approved";
+  } else {
+    // Mock provider: check OTP hash locally
+    ok = hashSecret(input.otp.trim()) === challenge.otp_hash;
+  }
+
   recordPhoneChallengeAttempt({ challenge_id: input.challenge_id, consumed: ok });
 
   await writeAuditEvent({
@@ -350,7 +390,7 @@ export async function verifyPhoneOtp(input: {
   if (!ok) throw new Error("invalid_phone_verification_code");
   const updated = markPhoneVerified({
     participant_id: challenge.participant_id,
-    method: "otp",
+    method: provider.name === "twilio" ? "twilio_verify" : "otp",
     updated_by_user_id: input.actor_user_id,
   });
   const publicRecord = publicContactPreference(updated);
