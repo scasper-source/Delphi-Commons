@@ -292,7 +292,6 @@ function App() {
     return () => {
       if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [wizard, workflow.study, workflow.version, workflow.busyStep, role]);
 
   const participantDraftTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -376,7 +375,6 @@ function App() {
     return () => {
       if (roundOneAutoSaveTimerRef.current) clearTimeout(roundOneAutoSaveTimerRef.current);
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [roundOneSetup, workflow.study, workflow.version, roundActionBusy, roundConfigs, role]);
 
   const roundTwoAutoSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -394,7 +392,6 @@ function App() {
     if (roundTwoAutoSaveTimerRef.current) clearTimeout(roundTwoAutoSaveTimerRef.current);
     roundTwoAutoSaveTimerRef.current = setTimeout(async () => {
       try {
-        const isTerminal = 2 === (workflow.version!.terminal_round_number ?? wizard.terminalRoundNumber);
         const result = await conductorApi.saveRoundConfig(workflow.study!.id, workflow.version!.id, 2, role, {
           task_type: "rating",
           title: roundTwoSetup.title,
