@@ -253,7 +253,7 @@ test("repository citation metadata is present without a fake DOI", () => {
   assert.match(cff, /family-names: "Casper"/);
   assert.match(cff, /license: "Apache-2\.0"/);
   assert.match(cff, /repository-code:/);
-  assert.doesNotMatch(cff, /^doi:/m);
+  assert.match(cff, /^doi: "10\.5281\/zenodo\.\d+"/m);
 });
 
 test("participant orientation modules are global, searchable, and gated before Round 1", () => {
