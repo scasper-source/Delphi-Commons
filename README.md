@@ -1,5 +1,7 @@
 # Delphi Commons
 
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.21178251.svg)](https://doi.org/10.5281/zenodo.21178251)
+
 Delphi Commons is an open-source platform for ethically governed Delphi and eDelphi studies. It helps study teams design studies, manage consent, run multi-round Delphi workflows, curate items, provide neutral controlled feedback, preserve dissent and non-consensus, audit decisions, and export reproducible study materials.
 
 An eDelphi study is a Delphi study conducted online. Delphi Commons is not just a survey app: it is built around Delphi-method fidelity, participant protection, predefined consensus rules, transparent reporting limits, and human-in-the-loop governance for any AI-assisted workflows.
