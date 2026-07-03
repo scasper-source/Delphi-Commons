@@ -137,6 +137,7 @@ export function ModuleRenderer({
   onRefreshSavedStudies,
   onOpenSavedStudy,
   onStartNewStudyDraft,
+  onNavigateModule,
   onArchiveSavedStudy,
   onArchiveSmokeTestStudies,
   onRespondParticipantIssue,
@@ -242,6 +243,7 @@ export function ModuleRenderer({
   onRefreshSavedStudies: () => void;
   onOpenSavedStudy: (record: SavedStudyRecord) => void;
   onStartNewStudyDraft: () => void;
+  onNavigateModule: (module: ModuleId) => void;
   onArchiveSavedStudy: (record: SavedStudyRecord) => void;
   onArchiveSmokeTestStudies: () => void;
   onRespondParticipantIssue: (issueId: string, status: ParticipantIssue["status"], responseNote: string) => void;
@@ -280,6 +282,7 @@ export function ModuleRenderer({
           onWizardStepChange={onWizardStepChange}
           onWorkflowStep={onWorkflowStep}
           onStartNewStudyDraft={onStartNewStudyDraft}
+          onNavigateModule={onNavigateModule}
         />
       );
     case "governance":

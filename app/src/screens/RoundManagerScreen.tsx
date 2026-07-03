@@ -238,6 +238,11 @@ export function RoundManagerScreen({
             {roundOneClosed ? "Round 1 setup locked" : roundActionBusy === "save-r1" ? "Saving..." : "Save Round 1 setup"}
           </button>
         </div>
+        {!roundOneClosed && workflow.study && workflow.version ? (
+          <p style={{ fontSize: "0.85rem", color: "var(--muted-text, #888)", textAlign: "center", margin: "0.25rem 0 0" }}>
+            Changes auto-save after 3 seconds of inactivity
+          </p>
+        ) : null}
       </section>
 
       <section className="panel wide">
@@ -321,6 +326,11 @@ export function RoundManagerScreen({
             {roundActionBusy === "save-r2" ? "Saving..." : "Save Round 2 setup"}
           </button>
         </div>
+        {workflow.study && workflow.version ? (
+          <p style={{ fontSize: "0.85rem", color: "var(--muted-text, #888)", textAlign: "center", margin: "0.25rem 0 0" }}>
+            Changes auto-save after 3 seconds of inactivity
+          </p>
+        ) : null}
         <div className="rating-round-setup-list">
           {ratingRounds.map((round) => {
             const config = roundConfigs.find((entry) => entry.round_number === round.roundNumber);

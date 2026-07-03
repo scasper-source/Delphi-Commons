@@ -95,6 +95,9 @@ export type NextAction = {
     kind: "transition-round";
     roundNumber: number;
     action: "open" | "close";
+  } | {
+    kind: "workflow-step";
+    step: WorkflowStep;
   };
 };
 

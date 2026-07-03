@@ -135,10 +135,6 @@ export function buildNeutralSmsBody(input: { safeName: string; magicLinkUrl: str
   return body;
 }
 
-function buildPhoneVerificationSmsBody(input: { otp: string; ttlMinutes: number }): string {
-  return `Delphi phone verification code: ${input.otp}. It expires in ${input.ttlMinutes} minutes. Reply STOP to opt out.`;
-}
-
 function publicParticipantOrigin(fallbackOrigin: string): string {
   const config = getServerConfig();
   if (config.smsProvider !== "twilio") return fallbackOrigin.replace(/\/$/, "");
@@ -205,6 +201,7 @@ export async function updateParticipantSmsPreference(input: {
   participant_id: string;
   notification_preference: unknown;
   phone?: string | null;
+  email?: string | null;
   sms_consent_granted?: boolean;
   actor_user_id: string;
 }): Promise<PublicContactPreference> {
@@ -215,6 +212,10 @@ export async function updateParticipantSmsPreference(input: {
   if (input.phone !== undefined && input.phone !== null && !phoneE164) {
     throw new Error("valid_phone_e164_required");
   }
+  const emailNormalized = typeof input.email === "string" ? input.email.trim().toLowerCase() : undefined;
+  if (emailNormalized !== undefined && emailNormalized && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailNormalized)) {
+    throw new Error("valid_email_required");
+  }
   const updateInput: Parameters<typeof upsertContactPreference>[0] = {
     participant_id: input.participant_id,
     notification_preference: input.notification_preference,
@@ -223,6 +224,12 @@ export async function updateParticipantSmsPreference(input: {
           phone_e164: phoneE164,
           phone_hash: phoneE164 ? hashSecret(phoneE164) : null,
           phone_last_four: lastFour(phoneE164),
+        }
+      : {}),
+    ...(emailNormalized !== undefined
+      ? {
+          email: emailNormalized || null,
+          email_hash: emailNormalized ? hashSecret(emailNormalized) : null,
         }
       : {}),
     updated_by_user_id: input.actor_user_id,
@@ -265,12 +272,52 @@ export async function startPhoneVerification(input: {
   if (!preference?.phone_e164 || !preference.phone_hash) throw new Error("phone_required_before_verification");
   const config = getServerConfig();
   const provider = getSmsProvider();
-  const otp = String(crypto.randomInt(0, 1_000_000)).padStart(6, "0");
+  const maskedPhone = maskPhone(preference.phone_e164) ?? "***-***-0000";
   const expiresAt = new Date(Date.now() + config.phoneOtpTtlMinutes * 60_000).toISOString();
+
+  if (provider.name === "twilio" && config.twilioVerifyServiceSid) {
+    const accountSid = config.twilioAccountSid!;
+    const authToken = config.twilioAuthToken!;
+    const response = await fetch(
+      `https://verify.twilio.com/v2/Services/${config.twilioVerifyServiceSid}/Verifications`,
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Basic ${Buffer.from(`${accountSid}:${authToken}`).toString("base64")}`,
+          "Content-Type": "application/x-www-form-urlencoded",
+        },
+        body: new URLSearchParams({ To: preference.phone_e164, Channel: "sms" }),
+      },
+    );
+    const payload = (await response.json().catch(() => ({}))) as Record<string, unknown>;
+    if (!response.ok) {
+      throw new Error(`twilio_verify_start_failed_${response.status}_${payload.code ?? "unknown"}`);
+    }
+    const challengeId = `verify-${input.participant_id}-${Date.now()}`;
+    const challenge = createPhoneChallenge({
+      participant_id: input.participant_id,
+      phone_hash: preference.phone_hash,
+      masked_phone: maskedPhone,
+      otp_hash: "twilio-verify-managed",
+      expires_at: expiresAt,
+    });
+
+    await writeAuditEvent({
+      actor: { userId: input.actor_user_id, role: "owner", systemRoles: ["owner"], authSource: "legacy-dev-header" },
+      action: "phone_verification_started",
+      object: { type: "participant", id: input.participant_id },
+      details: { masked_phone: maskedPhone, expires_at: expiresAt, provider: "twilio_verify", verify_sid: String(payload.sid ?? "") },
+    });
+
+    return { challenge_id: challenge.challenge_id, masked_phone: maskedPhone, expires_at: expiresAt };
+  }
+
+  // Mock provider: generate OTP locally for development
+  const otp = String(crypto.randomInt(0, 1_000_000)).padStart(6, "0");
   const challenge = createPhoneChallenge({
     participant_id: input.participant_id,
     phone_hash: preference.phone_hash,
-    masked_phone: maskPhone(preference.phone_e164) ?? "***-***-0000",
+    masked_phone: maskedPhone,
     otp_hash: hashSecret(otp),
     expires_at: expiresAt,
   });
@@ -279,38 +326,14 @@ export async function startPhoneVerification(input: {
     actor: { userId: input.actor_user_id, role: "owner", systemRoles: ["owner"], authSource: "legacy-dev-header" },
     action: "phone_verification_started",
     object: { type: "participant", id: input.participant_id },
-    details: { masked_phone: challenge.masked_phone, expires_at: challenge.expires_at },
+    details: { masked_phone: maskedPhone, expires_at: expiresAt, provider: "mock" },
   });
-
-  if (provider.name === "twilio") {
-    try {
-      const result = await provider.sendSms({
-        to: preference.phone_e164,
-        body: buildPhoneVerificationSmsBody({ otp, ttlMinutes: config.phoneOtpTtlMinutes }),
-        metadata: { purpose: "phone_verification", challenge_id: challenge.challenge_id },
-      });
-      await writeAuditEvent({
-        actor: { userId: input.actor_user_id, role: "owner", systemRoles: ["owner"], authSource: "legacy-dev-header" },
-        action: "phone_verification_sms_sent",
-        object: { type: "phone_verification_challenge", id: challenge.challenge_id },
-        details: { provider: provider.name, provider_message_id: result.providerMessageId, masked_phone: challenge.masked_phone },
-      });
-    } catch (error) {
-      await writeAuditEvent({
-        actor: { userId: input.actor_user_id, role: "owner", systemRoles: ["owner"], authSource: "legacy-dev-header" },
-        action: "phone_verification_sms_failed",
-        object: { type: "phone_verification_challenge", id: challenge.challenge_id },
-        details: { provider: provider.name, masked_phone: challenge.masked_phone },
-      });
-      throw error;
-    }
-  }
 
   return {
     challenge_id: challenge.challenge_id,
-    masked_phone: challenge.masked_phone,
-    expires_at: challenge.expires_at,
-    ...(config.environment !== "production" && provider.name !== "twilio" ? { dev_otp: otp } : {}),
+    masked_phone: maskedPhone,
+    expires_at: expiresAt,
+    ...(config.environment !== "production" ? { dev_otp: otp } : {}),
   };
 }
 
@@ -326,7 +349,35 @@ export async function verifyPhoneOtp(input: {
   if (challenge.attempts >= OTP_MAX_ATTEMPTS) {
     throw new Error("phone_verification_attempts_exceeded");
   }
-  const ok = hashSecret(input.otp.trim()) === challenge.otp_hash;
+
+  const config = getServerConfig();
+  const provider = getSmsProvider();
+  let ok = false;
+
+  if (provider.name === "twilio" && config.twilioVerifyServiceSid) {
+    // Use Twilio Verify VerificationCheck API
+    const preference = getContactPreference(challenge.participant_id);
+    if (!preference?.phone_e164) throw new Error("phone_required_for_verify_check");
+    const accountSid = config.twilioAccountSid!;
+    const authToken = config.twilioAuthToken!;
+    const response = await fetch(
+      `https://verify.twilio.com/v2/Services/${config.twilioVerifyServiceSid}/VerificationCheck`,
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Basic ${Buffer.from(`${accountSid}:${authToken}`).toString("base64")}`,
+          "Content-Type": "application/x-www-form-urlencoded",
+        },
+        body: new URLSearchParams({ To: preference.phone_e164, Code: input.otp.trim() }),
+      },
+    );
+    const payload = (await response.json().catch(() => ({}))) as Record<string, unknown>;
+    ok = response.ok && payload.status === "approved";
+  } else {
+    // Mock provider: check OTP hash locally
+    ok = hashSecret(input.otp.trim()) === challenge.otp_hash;
+  }
+
   recordPhoneChallengeAttempt({ challenge_id: input.challenge_id, consumed: ok });
 
   await writeAuditEvent({
@@ -339,7 +390,7 @@ export async function verifyPhoneOtp(input: {
   if (!ok) throw new Error("invalid_phone_verification_code");
   const updated = markPhoneVerified({
     participant_id: challenge.participant_id,
-    method: "otp",
+    method: provider.name === "twilio" ? "twilio_verify" : "otp",
     updated_by_user_id: input.actor_user_id,
   });
   const publicRecord = publicContactPreference(updated);
@@ -744,4 +795,155 @@ export async function updateDeliveryWebhook(input: { req: any }): Promise<boolea
     details: { provider: provider.name, provider_message_id: parsed.providerMessageId, status: parsed.status },
   });
   return true;
+}
+
+export type EmailFanoutResult = {
+  sent: number;
+  skipped: number;
+  failed: number;
+  total: number;
+};
+
+export async function sendRoundOpenEmailNotifications(input: {
+  study_id: string;
+  version_id: string;
+  round_number: number;
+  actor_user_id: string;
+  frontend_origin: string;
+}): Promise<EmailFanoutResult> {
+  const { getEmailProvider } = await import("./emailProvider.js");
+  const { createEmailNotification, updateEmailNotificationDelivery } = await import("../stores/smsStore.js");
+
+  const config = getServerConfig();
+  const provider = getEmailProvider();
+  const policy = getStudySmsPolicy(input, input.actor_user_id, config.magicLinkTtlMinutes);
+  const round = getRoundConfig(input);
+  const study = await getStudy(input.study_id);
+  const enrollments = listParticipantEnrollments(input);
+  let sent = 0;
+  let skipped = 0;
+  let failed = 0;
+
+  for (const enrollment of enrollments) {
+    const preference = getContactPreference(enrollment.participant_id);
+    const preferenceSnapshot = {
+      notification_preference: preference?.notification_preference ?? "no_sms",
+      email: preference?.email ?? null,
+      email_verified: Boolean(preference?.email_verified_at),
+    };
+
+    const wantsEmail =
+      preference?.notification_preference === "email_only" ||
+      preference?.notification_preference === "both";
+
+    if (!wantsEmail || !preference?.email) {
+      skipped += 1;
+      createEmailNotification({
+        participant_id: enrollment.participant_id,
+        study_id: input.study_id,
+        version_id: input.version_id,
+        round_number: input.round_number,
+        provider: provider.name,
+        status: "skipped",
+        failure_code: !wantsEmail ? "preference_not_email" : "no_email_address",
+        preference_snapshot: preferenceSnapshot,
+      });
+      continue;
+    }
+
+    if (!hasActiveConsent({ participant_id: enrollment.participant_id, study_id: input.study_id, version_id: input.version_id })) {
+      skipped += 1;
+      createEmailNotification({
+        participant_id: enrollment.participant_id,
+        study_id: input.study_id,
+        version_id: input.version_id,
+        round_number: input.round_number,
+        provider: provider.name,
+        status: "skipped",
+        failure_code: "no_active_consent",
+        preference_snapshot: preferenceSnapshot,
+      });
+      continue;
+    }
+
+    const token = createMagicToken();
+    const ttlMinutes = Math.min(Math.max(1, policy.magic_link_ttl_minutes), 24 * 60);
+    const expiresAt = new Date(Date.now() + ttlMinutes * 60_000).toISOString();
+    revokeActiveMagicLinksForParticipantRound({
+      participant_id: enrollment.participant_id,
+      study_id: input.study_id,
+      version_id: input.version_id,
+      round_number: input.round_number,
+    });
+    const magicLink = createMagicLinkToken({
+      token_hash: hashSecret(token),
+      participant_id: enrollment.participant_id,
+      study_id: input.study_id,
+      version_id: input.version_id,
+      round_number: input.round_number,
+      expires_at: expiresAt,
+      metadata: { source: "round_open_email", ttl_minutes: ttlMinutes },
+    });
+
+    const safeName = policy.notification_safe_name ?? study?.title ?? "Research Study";
+    const link = `${input.frontend_origin}/join?token=${token}`;
+    const subject = `${safeName} - Round ${input.round_number} is now open`;
+    const textBody = [
+      `${safeName} - Round ${input.round_number} is now open for your participation.`,
+      "",
+      `Click the link below to access the study:`,
+      link,
+      "",
+      `This link expires in ${ttlMinutes} minutes.`,
+      "",
+      "If you did not expect this email, you may safely ignore it.",
+    ].join("\n");
+
+    const notification = createEmailNotification({
+      participant_id: enrollment.participant_id,
+      study_id: input.study_id,
+      version_id: input.version_id,
+      round_number: input.round_number,
+      provider: provider.name,
+      status: "queued",
+      preference_snapshot: preferenceSnapshot,
+      magic_link_id: magicLink.magic_link_id,
+    });
+
+    try {
+      const result = await provider.sendEmail({
+        to: preference.email,
+        subject,
+        textBody,
+        metadata: {
+          study_id: input.study_id,
+          version_id: input.version_id,
+          round_number: input.round_number,
+          participant_id: enrollment.participant_id,
+        },
+      });
+      updateEmailNotificationDelivery({
+        email_notification_id: notification.email_notification_id,
+        provider_message_id: result.providerMessageId,
+        status: "sent",
+      });
+      sent += 1;
+    } catch (err) {
+      updateEmailNotificationDelivery({
+        email_notification_id: notification.email_notification_id,
+        status: "failed",
+        failure_code: err instanceof Error ? err.message : "unknown_error",
+      });
+      failed += 1;
+    }
+  }
+
+  await writeAuditEvent({
+    actor: { userId: input.actor_user_id, role: "owner", systemRoles: ["owner"], authSource: "legacy-dev-header" },
+    action: "round_open_email_fanout_complete",
+    object: { type: "study_version", id: `${input.study_id}:${input.version_id}` },
+    details: { round_number: input.round_number, sent, skipped, failed, total: enrollments.length },
+  });
+
+  return { sent, skipped, failed, total: enrollments.length };
 }

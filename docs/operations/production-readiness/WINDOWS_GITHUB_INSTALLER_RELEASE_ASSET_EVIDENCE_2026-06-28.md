@@ -1,6 +1,6 @@
 # Windows GitHub Installer Release Asset Evidence - 2026-06-28
 
-Status: **ASSETS AVAILABLE / PRIOR RELEASE ARCHIVED / NOT READY FOR HUMAN TESTING**.
+Status: **ASSETS AVAILABLE / CLEAN WINDOWS R2 RETEST FAILED / NOT READY FOR HUMAN TESTING**.
 
 Date basis: 2026-06-28.
 
@@ -60,4 +60,8 @@ https://github.com/scasper-source/Delphi-Commons/releases/download/internal-wind
 
 This evidence confirms GitHub-hosted downloadable Windows internal package assets are available for `r2`. It does **not** prove clean-profile install/start/stop/relaunch/uninstall behavior, SmartScreen/Defender acceptance, code signing, accessibility conformance, security certification, pilot readiness, production readiness, or real human-subjects readiness.
 
-Required follow-up remains: download the `r2` ZIP on the selected Windows test surface, install and launch it, exercise the Study Workspace Launcher and governance signoff paths, record screenshots/logs, and attach the human-observed result.
+Clean Windows retest follow-up was attempted on 2026-07-01 and failed. R2 should not be used as the Windows closeout candidate.
+
+Failure evidence: [WINDOWS_INSTALLER_R2_FAILURE_EVIDENCE_2026-07-01.md](./WINDOWS_INSTALLER_R2_FAILURE_EVIDENCE_2026-07-01.md).
+
+Required follow-up now: fix the installed-package governance workflow and save-verification issues, publish a successor Windows installer release, then rerun the clean Windows package evidence against that successor artifact.

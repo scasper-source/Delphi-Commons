@@ -276,6 +276,7 @@ test("package-mode backend preserves multiple active studies and reopens each in
     assert.equal(versionList.studyVersions.length, 1);
     assert.equal(versionList.studyVersions[0].id, record.versionId);
     assert.equal(versionList.studyVersions[0].status, "Active");
+    assert.match(versionList.studyVersions[0].updated_at, /^\d{4}-\d{2}-\d{2}T/);
     assert.equal(versionList.studyVersions[0].study_design_packet_json.title, record.packet.title);
     assert.equal(versionList.studyVersions[0].study_design_packet_json.researchQuestion, record.packet.researchQuestion);
 

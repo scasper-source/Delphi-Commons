@@ -29,6 +29,15 @@ export type ServerConfig = {
   twilioWebhookBaseUrl: string | null;
   twilioStatusCallbackUrl: string | null;
   twilioConnectUrl: string | null;
+  twilioVerifyServiceSid: string | null;
+  emailProvider: "mock" | "smtp";
+  smtpHost: string | null;
+  smtpPort: number;
+  smtpSecure: boolean;
+  smtpUser: string | null;
+  smtpPass: string | null;
+  smtpFromAddress: string | null;
+  smtpFromName: string | null;
 };
 
 function parsePort(value: string | undefined): number {
@@ -120,5 +129,14 @@ export function getServerConfig(): ServerConfig {
     twilioWebhookBaseUrl: nonEmpty(process.env.EDELPHI_TWILIO_WEBHOOK_BASE_URL),
     twilioStatusCallbackUrl: nonEmpty(process.env.EDELPHI_TWILIO_STATUS_CALLBACK_URL),
     twilioConnectUrl: nonEmpty(process.env.EDELPHI_TWILIO_CONNECT_URL),
+    twilioVerifyServiceSid: nonEmpty(process.env.TWILIO_VERIFY_SERVICE_SID),
+    emailProvider: process.env.EDELPHI_EMAIL_PROVIDER === "smtp" ? "smtp" : "mock",
+    smtpHost: nonEmpty(process.env.EDELPHI_SMTP_HOST),
+    smtpPort: parsePositiveInt(process.env.EDELPHI_SMTP_PORT, 587, "smtp_port"),
+    smtpSecure: process.env.EDELPHI_SMTP_SECURE === "true",
+    smtpUser: nonEmpty(process.env.EDELPHI_SMTP_USER),
+    smtpPass: nonEmpty(process.env.EDELPHI_SMTP_PASS),
+    smtpFromAddress: nonEmpty(process.env.EDELPHI_SMTP_FROM_ADDRESS),
+    smtpFromName: nonEmpty(process.env.EDELPHI_SMTP_FROM_NAME),
   };
 }

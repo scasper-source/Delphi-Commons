@@ -44,7 +44,7 @@ export async function getStudy(studyId: string): Promise<Study | null> {
 }
 
 export async function updateStudy(studyId: string, patch: Partial<Study>): Promise<Study> {
-  const updated = studies.update(studyId, (existing) => ({ ...existing, ...patch, id: studyId }));
+  const updated = studies.update(studyId, (existing) => ({ ...existing, ...patch, id: studyId, updated_at: new Date().toISOString() }));
   if (!updated) throw new Error("study_not_found");
   return updated;
 }
@@ -108,7 +108,11 @@ export async function updateStudyVersion(
   studyVersionId: string,
   patch: Partial<StudyVersion>,
 ): Promise<StudyVersion> {
-  const updated = studyVersions.update(studyVersionId, (existing) => ({ ...existing, ...patch }));
+  const updated = studyVersions.update(studyVersionId, (existing) => ({
+    ...existing,
+    ...patch,
+    updated_at: new Date().toISOString(),
+  }));
   if (!updated) throw new Error("study_version_not_found");
   return updated;
 }

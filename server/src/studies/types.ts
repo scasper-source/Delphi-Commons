@@ -29,6 +29,7 @@ export interface Study {
   description: string;
   created_by: string;
   created_at: string; // ISO timestamp
+  updated_at?: string; // ISO timestamp
   archived_at?: string;
   archived_by?: string;
 }
@@ -56,6 +57,7 @@ export interface StudyVersion {
 
   created_by: string;
   created_at: string; // ISO timestamp
+  updated_at?: string; // ISO timestamp
 }
 
 export interface StudyAssignment {

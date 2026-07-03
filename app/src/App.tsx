@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import "./App.css";
 import {
   conductorApi,
@@ -257,6 +257,179 @@ function App() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [role]);
 
+  const autoSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const autoSaveWizardSnapshotRef = useRef<string>("");
+
+  useEffect(() => {
+    if (!workflow.study || !workflow.version) return;
+    if (workflow.version.status !== "Draft") return;
+    if (role !== "study_owner") return;
+    if (workflow.busyStep) return;
+
+    const serialized = JSON.stringify(wizard);
+    if (serialized === autoSaveWizardSnapshotRef.current) return;
+
+    if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
+    autoSaveTimerRef.current = setTimeout(async () => {
+      try {
+        const result = await conductorApi.saveWizardPacket(
+          workflow.study!.id,
+          workflow.version!.id,
+          role,
+          wizard,
+        );
+        autoSaveWizardSnapshotRef.current = JSON.stringify(wizard);
+        setWorkflow((current) => ({
+          ...current,
+          study: { ...current.study!, title: wizard.title, description: wizard.description },
+          version: result.studyVersion,
+        }));
+      } catch {
+        // Silent failure for auto-save; user can still save manually
+      }
+    }, 3000);
+
+    return () => {
+      if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
+    };
+  }, [wizard, workflow.study, workflow.version, workflow.busyStep, role]);
+
+  const participantDraftTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    if (!participantInviteToken) return;
+    if (participantRoundOneComplete) return;
+    if (!participantResponseText && Object.keys(participantRoundOneAnswers).length === 0) return;
+
+    if (participantDraftTimerRef.current) clearTimeout(participantDraftTimerRef.current);
+    participantDraftTimerRef.current = setTimeout(() => {
+      void saveParticipantRoundOneDraft();
+    }, 5000);
+
+    return () => {
+      if (participantDraftTimerRef.current) clearTimeout(participantDraftTimerRef.current);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [participantResponseText, participantRoundOneAnswers, participantInviteToken, participantRoundOneComplete]);
+
+  const participantRatingDraftTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    if (!participantInviteToken) return;
+    if (Object.keys(roundTwoRatings).length === 0) return;
+
+    const activeRound = Object.keys(participantRatingRoundEditing).find(
+      (rn) => participantRatingRoundEditing[Number(rn)],
+    );
+    if (!activeRound) return;
+
+    if (participantRatingDraftTimerRef.current) clearTimeout(participantRatingDraftTimerRef.current);
+    participantRatingDraftTimerRef.current = setTimeout(() => {
+      void saveParticipantRatingDraft(Number(activeRound));
+    }, 5000);
+
+    return () => {
+      if (participantRatingDraftTimerRef.current) clearTimeout(participantRatingDraftTimerRef.current);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [roundTwoRatings, roundTwoRationales, participantInviteToken, participantRatingRoundEditing]);
+
+  const roundOneAutoSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const roundOneSetupSnapshotRef = useRef<string>(JSON.stringify(defaultRoundOneSetup));
+
+  useEffect(() => {
+    if (!workflow.study || !workflow.version) return;
+    if (roundActionBusy) return;
+    const roundOneConfig = roundConfigs.find((c) => c.round_number === 1);
+    if (roundOneConfig?.status === "Open" || roundOneConfig?.status === "Closed") return;
+
+    const serialized = JSON.stringify(roundOneSetup);
+    if (serialized === roundOneSetupSnapshotRef.current) return;
+
+    if (roundOneAutoSaveTimerRef.current) clearTimeout(roundOneAutoSaveTimerRef.current);
+    roundOneAutoSaveTimerRef.current = setTimeout(async () => {
+      try {
+        const result = await conductorApi.saveRoundConfig(workflow.study!.id, workflow.version!.id, 1, role, {
+          task_type: "open_text",
+          title: roundOneSetup.title,
+          prompt: roundOneSetup.prompt,
+          participant_instructions: roundOneSetup.participantInstructions,
+          response_window_days: roundOneSetup.responseWindowDays,
+          reminder_subject: roundOneSetup.reminderSubject,
+          reminder_body: roundOneSetup.reminderBody,
+          controlled_feedback_enabled: false,
+          ai_curation_enabled: roundOneSetup.aiCurationEnabled,
+          feedback_config: null,
+          status: "Ready",
+        });
+        roundOneSetupSnapshotRef.current = JSON.stringify(roundOneSetup);
+        setRoundConfigs((current) => [
+          ...current.filter((config) => config.round_number !== 1),
+          result.round_config,
+        ]);
+      } catch {
+        // Silent failure for auto-save
+      }
+    }, 3000);
+
+    return () => {
+      if (roundOneAutoSaveTimerRef.current) clearTimeout(roundOneAutoSaveTimerRef.current);
+    };
+  }, [roundOneSetup, workflow.study, workflow.version, roundActionBusy, roundConfigs, role]);
+
+  const roundTwoAutoSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const roundTwoSetupSnapshotRef = useRef<string>(JSON.stringify(defaultRoundTwoSetup));
+
+  useEffect(() => {
+    if (!workflow.study || !workflow.version) return;
+    if (roundActionBusy) return;
+    const roundTwoConfig = roundConfigs.find((c) => c.round_number === 2);
+    if (roundTwoConfig?.status === "Open" || roundTwoConfig?.status === "Closed") return;
+
+    const serialized = JSON.stringify(roundTwoSetup);
+    if (serialized === roundTwoSetupSnapshotRef.current) return;
+
+    if (roundTwoAutoSaveTimerRef.current) clearTimeout(roundTwoAutoSaveTimerRef.current);
+    roundTwoAutoSaveTimerRef.current = setTimeout(async () => {
+      try {
+        const result = await conductorApi.saveRoundConfig(workflow.study!.id, workflow.version!.id, 2, role, {
+          task_type: "rating",
+          title: roundTwoSetup.title,
+          prompt: roundTwoSetup.prompt,
+          participant_instructions: roundTwoSetup.participantInstructions,
+          response_window_days: roundTwoSetup.responseWindowDays,
+          reminder_subject: roundTwoSetup.reminderSubject,
+          reminder_body: roundTwoSetup.reminderBody,
+          controlled_feedback_enabled: roundTwoSetup.controlledFeedbackEnabled,
+          ai_curation_enabled: false,
+          feedback_config: {
+            feedback_config_id: "",
+            version_number: 1,
+            format: roundTwoSetup.feedbackFormat,
+            show_participant_prior_response: roundTwoSetup.showParticipantPriorResponse,
+            locked_at: null,
+            locked_by_user_id: null,
+            created_at: "",
+            updated_at: "",
+          },
+          status: "Ready",
+        });
+        roundTwoSetupSnapshotRef.current = JSON.stringify(roundTwoSetup);
+        setRoundConfigs((current) => [
+          ...current.filter((config) => config.round_number !== 2),
+          result.round_config,
+        ]);
+      } catch {
+        // Silent failure for auto-save
+      }
+    }, 3000);
+
+    return () => {
+      if (roundTwoAutoSaveTimerRef.current) clearTimeout(roundTwoAutoSaveTimerRef.current);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [roundTwoSetup, workflow.study, workflow.version, roundActionBusy, roundConfigs, role]);
+
   useEffect(() => {
     if (!magicToken) return;
     const token = magicToken;
@@ -404,7 +577,9 @@ function App() {
   }, [role, workflow.study?.id, workflow.version?.id, participantInviteToken, magicToken]);
 
   function openSavedStudy(record: SavedStudyRecord, targetModule?: ModuleId) {
-    setWizard(wizardFromBackendPacket(record.latestVersion?.study_design_packet_json, record.study));
+    const loadedWizard = wizardFromBackendPacket(record.latestVersion?.study_design_packet_json, record.study);
+    setWizard(loadedWizard);
+    autoSaveWizardSnapshotRef.current = JSON.stringify(loadedWizard);
     setWorkflow({
       study: record.study,
       version: record.latestVersion,
@@ -485,6 +660,7 @@ function App() {
       const version = await conductorApi.createVersion(created.study.id, role);
       const savedPacket = await conductorApi.saveWizardPacket(created.study.id, version.studyVersion.id, role, nextWizard);
       setWizard(nextWizard);
+      autoSaveWizardSnapshotRef.current = JSON.stringify(nextWizard);
       setWorkflow({
         study: { ...created.study, title, description },
         version: savedPacket.studyVersion,
@@ -662,6 +838,7 @@ function App() {
         role,
       );
 
+      roundOneSetupSnapshotRef.current = JSON.stringify(roundOneSetup);
       setRoundConfigs((current) => [
         ...current.filter((config) => config.round_number !== 1),
         result.round_config,
@@ -715,6 +892,7 @@ function App() {
         status: "Ready",
       });
 
+      if (roundNumber === 2) roundTwoSetupSnapshotRef.current = JSON.stringify(roundTwoSetup);
       setRoundConfigs((current) => [
         ...current.filter((config) => config.round_number !== roundNumber),
         result.round_config,
@@ -1796,6 +1974,7 @@ function App() {
         }
 
         const result = await conductorApi.saveWizardPacket(study.id, version.id, role, wizard);
+        autoSaveWizardSnapshotRef.current = JSON.stringify(wizard);
         setWorkflow((current) => ({
           ...current,
           study: { ...study, title: wizard.title, description: wizard.description },
@@ -1934,13 +2113,19 @@ function App() {
   )
     ? activeModule
     : navigationModules[0]?.id ?? accessibleModules[0]?.id ?? "participant";
-  const nextAction = buildNextAction({ workflow, wizard, roundConfigs, runtimeData });
+  const nextAction = buildNextAction({ role, workflow, wizard, roundConfigs, runtimeData });
   const participantEntryActive = role === "panelist" || Boolean(participantInviteToken || magicToken);
   const referenceModuleSelected = visibleModule === "about" || visibleModule === "glossary";
   const suppressStudyOperatingChrome = !participantEntryActive && workspaceLauncherOpen;
   const showStudyWorkspaceLauncher = suppressStudyOperatingChrome && !referenceModuleSelected;
 
   async function runNextActionCommand(command: NonNullable<NextAction["command"]>) {
+    if (command.kind === "workflow-step") {
+      setActiveModule("governance");
+      await runWorkflowStep(command.step);
+      return;
+    }
+
     if (command.kind === "transition-round") {
       setActiveModule("round-manager");
       await transitionRound(command.roundNumber, command.action);
@@ -2210,6 +2395,7 @@ function App() {
           onRefreshSavedStudies={loadSavedStudies}
           onOpenSavedStudy={openSavedStudy}
           onStartNewStudyDraft={startNewStudyDraft}
+          onNavigateModule={setActiveModule}
           onArchiveSavedStudy={archiveSavedStudy}
           onArchiveSmokeTestStudies={archiveSmokeTestStudies}
           onRespondParticipantIssue={respondParticipantIssue}

@@ -9,7 +9,7 @@ import type {
   WorkflowStep,
 } from "./appTypes";
 import { responseOpenText } from "./appUtils";
-import type { ModuleId } from "./types";
+import type { ModuleId, UserRole } from "./types";
 import { validateWizardStep, type StudyWizardState } from "./studyWizard";
 
 export function NextActionPanel({
@@ -99,12 +99,13 @@ export function workflowStepDone(workflow: ConductorWorkflow, step: WorkflowStep
 
 // eslint-disable-next-line react-refresh/only-export-components
 export function buildNextAction(input: {
+  role: UserRole;
   workflow: ConductorWorkflow;
   wizard: StudyWizardState;
   roundConfigs: RoundConfig[];
   runtimeData: RuntimeStudyData;
 }): NextAction {
-  const { workflow, wizard, roundConfigs, runtimeData } = input;
+  const { role, workflow, wizard, roundConfigs, runtimeData } = input;
   const roundOneConfig = roundConfigs.find((config) => config.round_number === 1);
   const roundTwoConfig = roundConfigs.find((config) => config.round_number === 2);
   const openResponses = runtimeData.responses.filter((response) => responseOpenText(response.response_json));
@@ -141,13 +142,25 @@ export function buildNextAction(input: {
     };
   }
 
-  if (!workflow.version.study_format || !workflow.version.consensus_rule_json) {
+  if (!workflow.version.study_format) {
     return {
-      title: "Apply method design and locked consensus rule",
-      detail: "The declared method and predefined consensus threshold must be saved before governance signoff.",
+      title: "Apply method design",
+      detail: "Save the declared method, round count, terminal round, and method rationale before locking the consensus threshold.",
       module: "governance",
-      actionLabel: "Go to Governance",
+      actionLabel: "Apply method design",
       risk: "warning",
+      command: { kind: "workflow-step", step: "set-design" },
+    };
+  }
+
+  if (!workflow.version.consensus_rule_json) {
+    return {
+      title: "Lock consensus threshold",
+      detail: "Save the predefined consensus threshold before governance signoff.",
+      module: "governance",
+      actionLabel: "Set consensus threshold",
+      risk: "warning",
+      command: { kind: "workflow-step", step: "set-consensus" },
     };
   }
 
@@ -156,8 +169,9 @@ export function buildNextAction(input: {
       title: "Submit for governance signoff",
       detail: "The study design is ready for Study Owner and Ethics & Methods Steward review.",
       module: "governance",
-      actionLabel: "Review governance",
+      actionLabel: "Submit for signoff",
       risk: "warning",
+      command: { kind: "workflow-step", step: "submit" },
     };
   }
 
@@ -173,8 +187,21 @@ export function buildNextAction(input: {
         ? "Use Current role: Study Owner / PI for the Study PI signoff. Assign the Ethics PI as Ethics & Methods Steward in Admin / Security, then switch Current role to Ethics & Methods Steward for the second signoff."
         : "Both governance signoffs are recorded; the Study Owner / PI can activate the version before round setup.",
       module: "governance",
-      actionLabel: "Open signoff gate",
+      actionLabel: !hasSignoff(workflow, "Owner") && role === "study_owner"
+        ? "Record Study PI signoff"
+        : !hasSignoff(workflow, "MethodsSteward") && role === "ethics_methods_steward"
+          ? "Record Ethics PI signoff"
+          : !missing && role === "study_owner"
+            ? "Activate version"
+            : "Open signoff gate",
       risk: "warning",
+      command: !hasSignoff(workflow, "Owner") && role === "study_owner"
+        ? { kind: "workflow-step", step: "owner-signoff" }
+        : !hasSignoff(workflow, "MethodsSteward") && role === "ethics_methods_steward"
+          ? { kind: "workflow-step", step: "steward-signoff" }
+          : !missing && role === "study_owner"
+            ? { kind: "workflow-step", step: "activate" }
+            : undefined,
     };
   }
 
