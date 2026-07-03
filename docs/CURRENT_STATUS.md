@@ -1,25 +1,23 @@
 # Current Project Status
 
-Date basis: 2026-06-28.
+Date basis: 2026-07-03.
 
 Boundary statement: Delphi Commons is suitable only for controlled mock-trial use with synthetic or low-risk test data in local, development, or staging environments. It is not approved or ready for production deployment or real human-subjects research.
 
 ## Repository State
 
-- GitHub repository: `scasper-source/Delphi-Commons`
-- Current downloadable package commit on `main`: `18faba2` (release workflow fix and June 28 macOS/Windows internal download tags, 2026-06-28)
-- Latest repository cleanup commit on `main`: `dcd54e2` (repository cleanup, status update, and gitignore normalization, 2026-06-28)
-- Latest app/server code commit on `main`: `2fa50fe` (Merge PR #136, 2026-06-28)
-- Default branch: `main` (only branch; `master` archived as tag `archive/master-pre-main-migration`)
+- GitHub repository: `scasper-source/Delphi-Commons` (public since 2026-07-03)
+- Latest squash-merge commit on `main`: `cdc807d` (add auto-save, email notifications, Twilio Verify, and governance fixes, 2026-07-03)
+- Default branch: `main` (protected via GitHub ruleset requiring PR reviews)
 - Open pull requests: none
-- Stale remote branches: none (all `codex/*` and decomposition branches cleaned up 2026-06-28)
+- Stale remote branches: none
 - CI: GitHub Actions app/server jobs pass. Server audit reported 0 vulnerabilities; app audit reported 5 vulnerabilities (2 low, 2 moderate, 1 high) and requires dependency/security triage.
-- Public release: not created
+- Public release: repository is public; no tagged release version yet
 - DOI/archive release: not created
 
 ## Current Verification Snapshot
 
-CI runs on every push and PR to `main`. Latest passing run recorded for the June 28 release-package commit: `28340083441` (2026-06-28).
+CI runs on every push and PR to `main`. Latest passing run recorded for the July 3 squash-merge commit: `28673487064` (2026-07-03).
 
 | Area | Result |
 | --- | --- |
@@ -43,6 +41,20 @@ The following structural improvements landed in PRs #135 and #136 (June 2026):
 
 These changes are code-health improvements. They do not change the readiness boundary.
 
+## July 2026 Public Release and Feature Update
+
+The following changes landed as squash-merge `cdc807d` on `main` (2026-07-03):
+
+- **Public release**: Repository made public at `github.com/scasper-source/Delphi-Commons`. Main branch protected with GitHub ruleset requiring pull request reviews before merge.
+- **Email notification channel**: Mock and SMTP email providers, database migration for email fields, email notification fanout for round-open notifications, and frontend UI for managing email preferences.
+- **Twilio Verify integration**: Phone verification refactored from custom OTP flow to Twilio Verify API (`/v2/Services/{ServiceSid}/Verifications` and `/VerificationCheck`). Mock provider path preserved for development.
+- **Notification preferences**: Participants can choose SMS-only, email-only, or both (defaults to SMS). Contact preference UI updated.
+- **Auto-save**: Wizard, round setup, and participant draft data auto-saved to prevent loss.
+- **Code signing policy**: `CODE_SIGNING.md` added documenting SignPath Foundation application plan for Windows installer signing.
+- **Security scan**: Git history and codebase scanned for secrets before going public — all clean.
+
+These changes do not change the readiness boundary.
+
 ## Readiness Summary
 
 Delphi Commons has strong controlled synthetic/mock-trial and internal engineering evidence. It remains **not ready** for production deployment, real human-subjects research, pilot launch, IRB/ethics launch, legal approval, independent security certification, or completed accessibility conformance.
@@ -53,7 +65,7 @@ Delphi Commons has strong controlled synthetic/mock-trial and internal engineeri
 | `human_testing_candidate` | In progress. Laptop and phone/SMS candidate work is substantially documented and partially implemented, but human-required gates remain open. |
 | `controlled_pilot` | Not authorized. |
 | `production_candidate` | Not authorized. |
-| `public_open_source` | Private GitHub clean-history repository exists; public release and DOI/archive steps remain open. |
+| `public_open_source` | Repository is public on GitHub (2026-07-03). Main branch protected with PR-review ruleset. Tagged release version and DOI/archive steps remain open. |
 
 ## Phase Snapshot
 
@@ -62,7 +74,7 @@ Delphi Commons has strong controlled synthetic/mock-trial and internal engineeri
 | Phase 0 baseline preservation | Baseline mock-trial/regression evidence is preserved. |
 | Phase 1 product surface lock | Complete as scope lock only. It does not authorize human testing. |
 | Phase 2 downloadable laptop operator candidate | In progress. Windows internal portable ZIP, June 28 Windows internal installer `r2` ZIP/EXE candidate, and June 28 macOS Apple Silicon single installer ZIP bundle are available on GitHub. The prior Windows `r10` and macOS `r4` releases are archived/superseded in GitHub. A 2026-05-29 clean Windows `r8` operator report shows install/launch/close-window stop/relaunch/uninstall mostly passing, but saved-study reopen/new-study continuity failed or was unclear and screenshots still need attachment. A 2026-07-01 clean Windows `r2` retest showed install/open/uninstall and multi-study list/reopen partial pass, but governance signoff, smoke/save verification, and operator function closeout failed or remained unproven; a successor Windows installer package is required. |
-| Phase 3 phone/SMS candidate | Local mock/sandbox implementation and evidence-prep are substantially complete. Twilio integration is fully implemented (magic links, OTP, consent tracking, delivery webhooks, coercive-language filter) — activation requires only env-var configuration, not code changes. Real iOS/Android device evidence, real provider/sandbox evidence if in scope, accessibility review, privacy/copy/Data Custodian review, and human-observed phone walkthrough remain open. |
+| Phase 3 phone/SMS/email candidate | Local mock/sandbox implementation and evidence-prep are substantially complete. Twilio integration is fully implemented (magic links, Twilio Verify for OTP, consent tracking, delivery webhooks, coercive-language filter) and email notification channel is implemented (mock + SMTP providers). Notification preference supports SMS-only, email-only, or both. Activation requires only env-var configuration, not code changes. Real iOS/Android device evidence, real provider/sandbox evidence if in scope, accessibility review, privacy/copy/Data Custodian review, and human-observed phone walkthrough remain open. |
 | Phase 4 human testing binder | Binder package is assembled for final human-testing preparation; candidate remains not ready until laptop/phone run evidence and required signoffs are attached. |
 | Phase 5 final human testing | Not run. |
 

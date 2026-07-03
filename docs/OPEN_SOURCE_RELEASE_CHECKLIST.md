@@ -4,7 +4,7 @@ Boundary statement: "Delphi Commons is suitable only for controlled mock-trial u
 
 This checklist supports GitHub migration/open-source preparation. It does not certify production readiness, human-subjects readiness, IRB readiness, legal compliance, completed accessibility conformance, completed security review, or security certification.
 
-Current snapshot: the private clean-history GitHub repository exists at `scasper-source/Delphi-Commons`. As of the 2026-05-18 pre-documentation-refresh verification, the latest verified application-code snapshot was `61f9506`, there were no open PRs, stale `codex/*` branches had been removed, and app/server high-severity npm audits reported 0 vulnerabilities in the GitHub-connected checkout. Public release, DOI/archive, independent security review, and human-subjects readiness remain open.
+Current snapshot: the public GitHub repository exists at `scasper-source/Delphi-Commons` (made public 2026-07-03). Main branch is protected with a GitHub ruleset requiring PR reviews. Latest squash-merge on `main` is `cdc807d` (2026-07-03). There are no open PRs or stale branches. DOI/archive, independent security review, and human-subjects readiness remain open.
 
 ## Licensing
 
@@ -67,11 +67,11 @@ Current snapshot: the private clean-history GitHub repository exists at `scasper
 - [x] Open PR queue checked empty at latest snapshot
 - [ ] Code owners planned
 - [ ] Initial release version selected
-- [ ] CITATION.cff GitHub URL updated after the public repository URL is known
+- [x] CITATION.cff GitHub URL updated after the public repository URL is known
 
 ## DOI Readiness
 
-- [ ] Public release created on GitHub
+- [x] Public release created on GitHub (repository made public 2026-07-03; tagged version release pending)
 - [ ] Zenodo or equivalent archive connected
 - [ ] DOI minted only after release
 - [ ] DOI added to README after creation
