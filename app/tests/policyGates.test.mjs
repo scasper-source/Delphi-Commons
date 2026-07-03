@@ -647,7 +647,7 @@ test("SMS magic-link UI is opt-in, neutral, mobile-first, and avoids browser sto
   assert.match(smsSource, /Start phone verification/);
   assert.match(smsSource, /Verify phone/);
   assert.match(smsSource, /Send round-open SMS/);
-  assert.match(smsSource, /masked phone display/i);
+  assert.match(smsSource, /Contact preference/i);
   assert.match(magicSource, /Secure mobile round entry/);
   assert.match(magicSource, /Participation remains voluntary/);
   assert.match(magicSource, /Decline this round/);
