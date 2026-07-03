@@ -64,7 +64,16 @@ Delphi Commons uses Twilio Verify for phone number verification (OTP codes).
 2. Create a new Verify Service (name it something like "Delphi Commons Verification")
 3. Copy the **Service SID** (starts with `VA...`)
 
-## Step 6: Configure Environment Variables
+## Step 6: Create a Messaging Service
+
+Round-open notifications are sent via a Twilio Messaging Service (not a raw phone number).
+
+1. In the Twilio Console, go to **Messaging > Services**
+2. Create a new Messaging Service
+3. Add your phone number as a sender in the service
+4. Copy the **Messaging Service SID** (starts with `MG...`)
+
+## Step 7: Configure Environment Variables
 
 Set these in your server environment:
 
@@ -72,25 +81,44 @@ Set these in your server environment:
 # Twilio credentials (from your Twilio Console dashboard)
 TWILIO_ACCOUNT_SID=ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 TWILIO_AUTH_TOKEN=your_auth_token
-TWILIO_FROM_NUMBER=+1XXXXXXXXXX
+
+# Twilio Messaging Service (for sending round-open notifications)
+TWILIO_MESSAGING_SERVICE_SID=MGxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 
 # Twilio Verify (for phone OTP)
 TWILIO_VERIFY_SERVICE_SID=VAxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 
 # SMS provider mode ("twilio" for real, "mock" for development)
 EDELPHI_SMS_PROVIDER=twilio
+
+# Real SMS safety gates (all required for live sending)
+EDELPHI_ENABLE_REAL_SMS=true
+EDELPHI_REAL_SMS_ACK=TWILIO_REAL_SMS_REVIEWED_AND_APPROVED
+EDELPHI_PUBLIC_PARTICIPANT_ORIGIN=https://your-public-domain.example.com
+EDELPHI_TWILIO_WEBHOOK_BASE_URL=https://your-public-domain.example.com/api
 ```
 
-For local development, use `EDELPHI_SMS_PROVIDER=mock` — this skips Twilio entirely and logs messages to an in-memory outbox.
+### Safety gates explained
 
-## Step 7: Verify Consent Flow
+The server intentionally refuses to send real SMS unless all four safety gates are set:
+
+| Variable | Purpose |
+|----------|---------|
+| `EDELPHI_ENABLE_REAL_SMS` | Master switch — must be `true` |
+| `EDELPHI_REAL_SMS_ACK` | Must be the exact string `TWILIO_REAL_SMS_REVIEWED_AND_APPROVED` — proves you read this |
+| `EDELPHI_PUBLIC_PARTICIPANT_ORIGIN` | HTTPS URL where participants access the app (used in magic links) |
+| `EDELPHI_TWILIO_WEBHOOK_BASE_URL` | HTTPS URL where Twilio sends delivery status webhooks |
+
+For local development, use `EDELPHI_SMS_PROVIDER=mock` — this skips Twilio entirely and logs messages to an in-memory outbox. No safety gates needed in mock mode.
+
+## Step 8: Verify Consent Flow
 
 Before going live with participants, confirm that:
 
 - [ ] Participants see explicit SMS consent disclosure during enrollment
 - [ ] Consent timestamp is recorded (`sms_consent_at`)
 - [ ] STOP keyword immediately revokes consent (`sms_consent_revoked_at`)
-- [ ] HELP keyword returns a help message
+- [ ] HELP keyword logs a support-needed audit event (the app does **not** auto-reply to HELP — you must handle HELP follow-up manually or configure Twilio's auto-responder separately)
 - [ ] No messages are sent to participants who haven't consented
 - [ ] No messages are sent after consent is revoked
 
