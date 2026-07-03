@@ -108,6 +108,7 @@ export function AdminSecurityScreen() {
   const [smsNotifications, setSmsNotifications] = useState<SmsNotification[]>([]);
   const [smsParticipantId, setSmsParticipantId] = useState("");
   const [smsPhoneDraft, setSmsPhoneDraft] = useState("");
+  const [smsEmailDraft, setSmsEmailDraft] = useState("");
   const [smsPreferenceDraft, setSmsPreferenceDraft] = useState<ParticipantContactPreference["notification_preference"]>("both");
   const [smsConsentDraft, setSmsConsentDraft] = useState(true);
   const [smsChallenge, setSmsChallenge] = useState<PhoneVerificationChallengeResponse | null>(null);
@@ -280,6 +281,7 @@ export function AdminSecurityScreen() {
       const result = await conductorApi.updateContactPreference(activeStudyId, activeVersionId, smsParticipantId, role, {
         notification_preference: smsPreferenceDraft,
         phone: smsPhoneDraft,
+        email: smsEmailDraft || undefined,
         sms_consent_granted: smsConsentDraft,
       });
       setSmsPreference(result.contact_preference);
@@ -336,6 +338,21 @@ export function AdminSecurityScreen() {
       await loadSmsReview();
     } catch (error) {
       setSmsError(error instanceof Error ? error.message : "Unable to send round-open SMS.");
+    } finally {
+      setSmsBusy(false);
+    }
+  }
+
+  async function sendEmailForRound() {
+    if (!activeStudyId || !activeVersionId) return;
+    setSmsBusy(true);
+    setSmsError(null);
+    setSmsMessage(null);
+    try {
+      const result = await conductorApi.sendRoundOpenEmail(activeStudyId, activeVersionId, smsRoundNumber, role);
+      setSmsMessage(`${result.email.sent} email notification${result.email.sent === 1 ? "" : "s"} sent; ${result.email.skipped} skipped; ${result.email.failed} failed.`);
+    } catch (error) {
+      setSmsError(error instanceof Error ? error.message : "Unable to send round-open email.");
     } finally {
       setSmsBusy(false);
     }
@@ -924,6 +941,10 @@ export function AdminSecurityScreen() {
                 <span>Phone number</span>
                 <input autoComplete="tel" disabled={smsBusy} onChange={(event) => setSmsPhoneDraft(event.target.value)} placeholder={smsPreference?.masked_phone ?? "+1 555 555 1234"} value={smsPhoneDraft} />
               </label>
+              <label className="field">
+                <span>Email address</span>
+                <input autoComplete="email" disabled={smsBusy} onChange={(event) => setSmsEmailDraft(event.target.value)} placeholder={smsPreference?.masked_email ?? "participant@example.com"} type="email" value={smsEmailDraft} />
+              </label>
               <label className="check-field">
                 <input checked={smsConsentDraft} disabled={smsBusy} onChange={(event) => setSmsConsentDraft(event.target.checked)} type="checkbox" />
                 <span>Participant has explicitly consented to receive study texts</span>
@@ -943,9 +964,10 @@ export function AdminSecurityScreen() {
               <button className="secondary-button" disabled={smsBusy || !smsParticipantId} onClick={startSmsVerification} type="button">Start phone verification</button>
               <button className="secondary-button" disabled={smsBusy || !smsChallenge || !smsOtpDraft.trim()} onClick={verifySmsPhone} type="button">Verify phone</button>
               <button className="primary-button" disabled={smsBusy || !smsPolicy?.sms_enabled} onClick={sendSmsForRound} type="button">Send round-open SMS</button>
+              <button className="primary-button" disabled={smsBusy} onClick={sendEmailForRound} type="button">Send round-open email</button>
             </div>
             {smsChallenge?.dev_otp ? <WarningBanner title="Development OTP" risk="info">Local development OTP: {smsChallenge.dev_otp}. Production builds do not expose OTP values.</WarningBanner> : null}
-            {smsPreference ? <WarningBanner title="Masked phone display" risk={smsPreference.phone_verified_at ? "success" : "warning"}>{smsPreference.masked_phone ?? "No phone on file"}; preference {smsPreference.notification_preference.replaceAll("_", " ")}; verified {smsPreference.phone_verified_at ? "yes" : "no"}.</WarningBanner> : null}
+            {smsPreference ? <WarningBanner title="Contact preference" risk={smsPreference.phone_verified_at || smsPreference.email_verified_at ? "success" : "warning"}>Phone: {smsPreference.masked_phone ?? "none"}{ smsPreference.phone_verified_at ? " (verified)" : ""}; Email: {smsPreference.masked_email ?? "none"}{smsPreference.email_verified_at ? " (verified)" : ""}; Mode: {smsPreference.notification_preference.replaceAll("_", " ")}.</WarningBanner> : null}
             {smsMessage ? <WarningBanner title="SMS action recorded" risk="success">{smsMessage}</WarningBanner> : null}
             {smsError ? <WarningBanner title="SMS action blocked" risk="warning">{humanizeBackendMessage(smsError)}</WarningBanner> : null}
             <div className="review-stack">

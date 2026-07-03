@@ -366,6 +366,36 @@ const migrations: Migration[] = [
       );
     `,
   },
+  {
+    id: "009_email_notifications",
+    sql: `
+      ALTER TABLE participant_contact_preferences ADD COLUMN email TEXT;
+      ALTER TABLE participant_contact_preferences ADD COLUMN email_hash TEXT;
+      ALTER TABLE participant_contact_preferences ADD COLUMN email_verified_at TEXT;
+      ALTER TABLE participant_contact_preferences ADD COLUMN email_verification_method TEXT;
+
+      CREATE TABLE IF NOT EXISTS email_notifications (
+        email_notification_id TEXT PRIMARY KEY,
+        participant_id TEXT NOT NULL,
+        study_id TEXT NOT NULL,
+        version_id TEXT NOT NULL,
+        round_number INTEGER NOT NULL,
+        provider TEXT NOT NULL,
+        provider_message_id TEXT,
+        status TEXT NOT NULL,
+        status_updated_at TEXT,
+        sent_at TEXT,
+        failed_at TEXT,
+        failure_code TEXT,
+        preference_snapshot_json TEXT NOT NULL,
+        magic_link_id TEXT,
+        created_at TEXT NOT NULL
+      );
+
+      CREATE INDEX IF NOT EXISTS idx_email_notifications_participant
+        ON email_notifications(participant_id, study_id, version_id, created_at);
+    `,
+  },
 ];
 
 let db: DatabaseSync | null = null;

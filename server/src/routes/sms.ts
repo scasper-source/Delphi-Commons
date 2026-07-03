@@ -16,6 +16,7 @@ import {
   magicSessionFromCookie,
   setMagicSessionCookie,
   sendRoundOpenSmsNotifications,
+  sendRoundOpenEmailNotifications,
   startPhoneVerification,
   handleInboundSmsKeyword,
   updateDeliveryWebhook,
@@ -175,6 +176,7 @@ export async function smsRoutes(app: FastifyInstance) {
           actor_user_id: actor.userId,
         };
         if (typeof body.phone === "string") input.phone = body.phone;
+        if (typeof body.email === "string") input.email = body.email;
         if (typeof body.sms_consent_granted === "boolean") input.sms_consent_granted = body.sms_consent_granted;
         const contactPreference = await updateParticipantSmsPreference(input);
         return reply.send({ contact_preference: contactPreference });
@@ -265,6 +267,25 @@ export async function smsRoutes(app: FastifyInstance) {
         frontend_origin: frontendOrigin(req),
       });
       return reply.send({ sms: result });
+    },
+  );
+
+  app.post(
+    "/studies/:studyId/versions/:versionId/rounds/:roundNumber/email/send",
+    { preHandler: allowStaff },
+    async (req, reply) => {
+      const { studyId, versionId, roundNumber: rawRoundNumber } = req.params as any;
+      const actor = getActor(req);
+      const roundNumber = Number(rawRoundNumber);
+      if (!Number.isInteger(roundNumber) || roundNumber < 1) return reply.code(400).send({ error: "round_number_required" });
+      const result = await sendRoundOpenEmailNotifications({
+        study_id: studyId,
+        version_id: versionId,
+        round_number: roundNumber,
+        actor_user_id: actor.userId,
+        frontend_origin: frontendOrigin(req),
+      });
+      return reply.send({ email: result });
     },
   );
 

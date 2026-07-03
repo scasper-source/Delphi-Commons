@@ -19,12 +19,17 @@ export type ParticipantContactPreference = {
   sms_consent_revoked_at: string | null;
   phone_verified_at: string | null;
   phone_verification_method: string | null;
+  email: string | null;
+  email_hash: string | null;
+  email_verified_at: string | null;
+  email_verification_method: string | null;
   updated_at: string;
   updated_by_user_id: string;
 };
 
-export type PublicContactPreference = Omit<ParticipantContactPreference, "phone_e164" | "phone_hash"> & {
+export type PublicContactPreference = Omit<ParticipantContactPreference, "phone_e164" | "phone_hash" | "email_hash"> & {
   masked_phone: string | null;
+  masked_email: string | null;
 };
 
 export type PhoneVerificationChallenge = {
@@ -129,12 +134,21 @@ export function isNotificationPreference(value: unknown): value is NotificationP
   return value === "email_only" || value === "sms_only" || value === "both" || value === "no_sms";
 }
 
+function maskEmail(email: string | null): string | null {
+  if (!email) return null;
+  const [local, domain] = email.split("@");
+  if (!local || !domain) return null;
+  const visible = local.length <= 2 ? local.charAt(0) : local.substring(0, 2);
+  return `${visible}***@${domain}`;
+}
+
 export function publicContactPreference(record: ParticipantContactPreference | null): PublicContactPreference | null {
   if (!record) return null;
-  const { phone_e164: _phone, phone_hash: _hash, ...rest } = record;
+  const { phone_e164: _phone, phone_hash: _hash, email_hash: _emailHash, ...rest } = record;
   return {
     ...rest,
     masked_phone: record.phone_last_four ? `***-***-${record.phone_last_four}` : null,
+    masked_email: maskEmail(record.email),
   };
 }
 
@@ -160,6 +174,8 @@ export function upsertContactPreference(input: {
   phone_last_four?: string | null;
   sms_consent_granted?: boolean;
   sms_consent_version?: string | null;
+  email?: string | null;
+  email_hash?: string | null;
   updated_by_user_id: string;
 }): ParticipantContactPreference {
   const existing = getContactPreference(input.participant_id);
@@ -177,6 +193,8 @@ export function upsertContactPreference(input: {
         ? null
         : existing?.sms_consent_revoked_at ?? null;
 
+  const emailChanged = input.email !== undefined && input.email !== existing?.email;
+
   const record: ParticipantContactPreference = {
     participant_id: input.participant_id,
     notification_preference: input.notification_preference,
@@ -188,6 +206,10 @@ export function upsertContactPreference(input: {
     sms_consent_revoked_at: smsConsentRevokedAt,
     phone_verified_at: existing?.phone_verified_at ?? null,
     phone_verification_method: existing?.phone_verification_method ?? null,
+    email: input.email ?? existing?.email ?? null,
+    email_hash: input.email_hash ?? existing?.email_hash ?? null,
+    email_verified_at: emailChanged ? null : existing?.email_verified_at ?? null,
+    email_verification_method: emailChanged ? null : existing?.email_verification_method ?? null,
     updated_at: now,
     updated_by_user_id: input.updated_by_user_id,
   };
@@ -197,8 +219,9 @@ export function upsertContactPreference(input: {
       `INSERT INTO participant_contact_preferences (
         participant_id, notification_preference, phone_e164, phone_hash, phone_last_four,
         sms_consent_at, sms_consent_version, sms_consent_revoked_at, phone_verified_at,
-        phone_verification_method, updated_at, updated_by_user_id
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        phone_verification_method, email, email_hash, email_verified_at, email_verification_method,
+        updated_at, updated_by_user_id
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       ON CONFLICT(participant_id) DO UPDATE SET
         notification_preference = excluded.notification_preference,
         phone_e164 = excluded.phone_e164,
@@ -209,6 +232,10 @@ export function upsertContactPreference(input: {
         sms_consent_revoked_at = excluded.sms_consent_revoked_at,
         phone_verified_at = excluded.phone_verified_at,
         phone_verification_method = excluded.phone_verification_method,
+        email = excluded.email,
+        email_hash = excluded.email_hash,
+        email_verified_at = excluded.email_verified_at,
+        email_verification_method = excluded.email_verification_method,
         updated_at = excluded.updated_at,
         updated_by_user_id = excluded.updated_by_user_id`,
     )
@@ -223,6 +250,10 @@ export function upsertContactPreference(input: {
       record.sms_consent_revoked_at,
       record.phone_verified_at,
       record.phone_verification_method,
+      record.email,
+      record.email_hash,
+      record.email_verified_at,
+      record.email_verification_method,
       record.updated_at,
       record.updated_by_user_id,
     );
@@ -252,6 +283,144 @@ export function markPhoneVerified(input: {
     )
     .run(record.phone_verified_at, record.phone_verification_method, record.updated_at, record.updated_by_user_id, input.participant_id);
   return record;
+}
+
+export function markEmailVerified(input: {
+  participant_id: string;
+  method: string;
+  updated_by_user_id: string;
+}): ParticipantContactPreference | null {
+  const existing = getContactPreference(input.participant_id);
+  if (!existing) return null;
+  const record = {
+    ...existing,
+    email_verified_at: nowIso(),
+    email_verification_method: input.method,
+    updated_at: nowIso(),
+    updated_by_user_id: input.updated_by_user_id,
+  };
+  getDatabase()
+    .prepare(
+      `UPDATE participant_contact_preferences
+       SET email_verified_at = ?, email_verification_method = ?, updated_at = ?, updated_by_user_id = ?
+       WHERE participant_id = ?`,
+    )
+    .run(record.email_verified_at, record.email_verification_method, record.updated_at, record.updated_by_user_id, input.participant_id);
+  return record;
+}
+
+export type EmailNotification = {
+  email_notification_id: string;
+  participant_id: string;
+  study_id: string;
+  version_id: string;
+  round_number: number;
+  provider: string;
+  provider_message_id: string | null;
+  status: "queued" | "sent" | "failed" | "skipped";
+  status_updated_at: string | null;
+  sent_at: string | null;
+  failed_at: string | null;
+  failure_code: string | null;
+  preference_snapshot_json: string;
+  magic_link_id: string | null;
+  created_at: string;
+};
+
+export function createEmailNotification(input: {
+  participant_id: string;
+  study_id: string;
+  version_id: string;
+  round_number: number;
+  provider: string;
+  status: EmailNotification["status"];
+  preference_snapshot: Record<string, unknown>;
+  magic_link_id?: string | null;
+  failure_code?: string | null;
+}): EmailNotification {
+  const now = nowIso();
+  const record: EmailNotification = {
+    email_notification_id: crypto.randomUUID(),
+    participant_id: input.participant_id,
+    study_id: input.study_id,
+    version_id: input.version_id,
+    round_number: input.round_number,
+    provider: input.provider,
+    provider_message_id: null,
+    status: input.status,
+    status_updated_at: input.status === "skipped" || input.status === "failed" ? now : null,
+    sent_at: null,
+    failed_at: input.status === "failed" ? now : null,
+    failure_code: input.failure_code ?? null,
+    preference_snapshot_json: JSON.stringify(input.preference_snapshot),
+    magic_link_id: input.magic_link_id ?? null,
+    created_at: now,
+  };
+
+  getDatabase()
+    .prepare(
+      `INSERT INTO email_notifications (
+        email_notification_id, participant_id, study_id, version_id, round_number, provider,
+        provider_message_id, status, status_updated_at, sent_at, failed_at, failure_code,
+        preference_snapshot_json, magic_link_id, created_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    )
+    .run(
+      record.email_notification_id,
+      record.participant_id,
+      record.study_id,
+      record.version_id,
+      record.round_number,
+      record.provider,
+      record.provider_message_id,
+      record.status,
+      record.status_updated_at,
+      record.sent_at,
+      record.failed_at,
+      record.failure_code,
+      record.preference_snapshot_json,
+      record.magic_link_id,
+      record.created_at,
+    );
+
+  return record;
+}
+
+export function updateEmailNotificationDelivery(input: {
+  email_notification_id: string;
+  provider_message_id?: string | null;
+  status: EmailNotification["status"];
+  failure_code?: string | null;
+}): EmailNotification | null {
+  const existing = getDatabase()
+    .prepare("SELECT * FROM email_notifications WHERE email_notification_id = ?")
+    .get(input.email_notification_id) as EmailNotification | undefined;
+  if (!existing) return null;
+  const now = nowIso();
+  getDatabase()
+    .prepare(
+      `UPDATE email_notifications
+       SET provider_message_id = ?, status = ?, status_updated_at = ?, sent_at = ?, failed_at = ?, failure_code = ?
+       WHERE email_notification_id = ?`,
+    )
+    .run(
+      input.provider_message_id ?? existing.provider_message_id,
+      input.status,
+      now,
+      input.status === "sent" ? now : existing.sent_at,
+      input.status === "failed" ? now : existing.failed_at,
+      input.failure_code ?? existing.failure_code,
+      input.email_notification_id,
+    );
+  return {
+    ...existing,
+    provider_message_id: input.provider_message_id ?? existing.provider_message_id,
+    status: input.status,
+    status_updated_at: now,
+    sent_at: input.status === "sent" ? now : existing.sent_at,
+    failed_at: input.status === "failed" ? now : existing.failed_at,
+    failure_code: input.failure_code ?? existing.failure_code,
+  };
 }
 
 export function createPhoneChallenge(input: {

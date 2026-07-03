@@ -501,6 +501,10 @@ export type ParticipantContactPreference = {
   sms_consent_revoked_at: string | null;
   phone_verified_at: string | null;
   phone_verification_method: string | null;
+  email: string | null;
+  masked_email: string | null;
+  email_verified_at: string | null;
+  email_verification_method: string | null;
   updated_at: string;
   updated_by_user_id: string;
 };
@@ -1510,7 +1514,7 @@ export const conductorApi = {
     versionId: string,
     participantId: string,
     role: UserRole,
-    input: { notification_preference: ParticipantContactPreference["notification_preference"]; phone?: string; sms_consent_granted?: boolean },
+    input: { notification_preference: ParticipantContactPreference["notification_preference"]; phone?: string; email?: string; sms_consent_granted?: boolean },
   ) {
     return requestJson<{ contact_preference: ParticipantContactPreference }>(
       `/studies/${studyId}/versions/${versionId}/participants/${encodeURIComponent(participantId)}/contact-preferences`,
@@ -1538,6 +1542,14 @@ export const conductorApi = {
   async sendRoundOpenSms(studyId: string, versionId: string, roundNumber: number, role: UserRole) {
     return requestJson<{ sms: { eligible_checked: number; sent: number; skipped: number; notifications: SmsNotification[] } }>(
       `/studies/${studyId}/versions/${versionId}/rounds/${roundNumber}/sms/send`,
+      role,
+      { method: "POST", body: {} },
+    );
+  },
+
+  async sendRoundOpenEmail(studyId: string, versionId: string, roundNumber: number, role: UserRole) {
+    return requestJson<{ email: { sent: number; skipped: number; failed: number; total: number } }>(
+      `/studies/${studyId}/versions/${versionId}/rounds/${roundNumber}/email/send`,
       role,
       { method: "POST", body: {} },
     );

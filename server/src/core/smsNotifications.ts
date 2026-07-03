@@ -205,6 +205,7 @@ export async function updateParticipantSmsPreference(input: {
   participant_id: string;
   notification_preference: unknown;
   phone?: string | null;
+  email?: string | null;
   sms_consent_granted?: boolean;
   actor_user_id: string;
 }): Promise<PublicContactPreference> {
@@ -215,6 +216,10 @@ export async function updateParticipantSmsPreference(input: {
   if (input.phone !== undefined && input.phone !== null && !phoneE164) {
     throw new Error("valid_phone_e164_required");
   }
+  const emailNormalized = typeof input.email === "string" ? input.email.trim().toLowerCase() : undefined;
+  if (emailNormalized !== undefined && emailNormalized && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailNormalized)) {
+    throw new Error("valid_email_required");
+  }
   const updateInput: Parameters<typeof upsertContactPreference>[0] = {
     participant_id: input.participant_id,
     notification_preference: input.notification_preference,
@@ -223,6 +228,12 @@ export async function updateParticipantSmsPreference(input: {
           phone_e164: phoneE164,
           phone_hash: phoneE164 ? hashSecret(phoneE164) : null,
           phone_last_four: lastFour(phoneE164),
+        }
+      : {}),
+    ...(emailNormalized !== undefined
+      ? {
+          email: emailNormalized || null,
+          email_hash: emailNormalized ? hashSecret(emailNormalized) : null,
         }
       : {}),
     updated_by_user_id: input.actor_user_id,
@@ -744,4 +755,155 @@ export async function updateDeliveryWebhook(input: { req: any }): Promise<boolea
     details: { provider: provider.name, provider_message_id: parsed.providerMessageId, status: parsed.status },
   });
   return true;
+}
+
+export type EmailFanoutResult = {
+  sent: number;
+  skipped: number;
+  failed: number;
+  total: number;
+};
+
+export async function sendRoundOpenEmailNotifications(input: {
+  study_id: string;
+  version_id: string;
+  round_number: number;
+  actor_user_id: string;
+  frontend_origin: string;
+}): Promise<EmailFanoutResult> {
+  const { getEmailProvider } = await import("./emailProvider.js");
+  const { createEmailNotification, updateEmailNotificationDelivery } = await import("../stores/smsStore.js");
+
+  const config = getServerConfig();
+  const provider = getEmailProvider();
+  const policy = getStudySmsPolicy(input, input.actor_user_id, config.magicLinkTtlMinutes);
+  const round = getRoundConfig(input);
+  const study = await getStudy(input.study_id);
+  const enrollments = listParticipantEnrollments(input);
+  let sent = 0;
+  let skipped = 0;
+  let failed = 0;
+
+  for (const enrollment of enrollments) {
+    const preference = getContactPreference(enrollment.participant_id);
+    const preferenceSnapshot = {
+      notification_preference: preference?.notification_preference ?? "no_sms",
+      email: preference?.email ?? null,
+      email_verified: Boolean(preference?.email_verified_at),
+    };
+
+    const wantsEmail =
+      preference?.notification_preference === "email_only" ||
+      preference?.notification_preference === "both";
+
+    if (!wantsEmail || !preference?.email) {
+      skipped += 1;
+      createEmailNotification({
+        participant_id: enrollment.participant_id,
+        study_id: input.study_id,
+        version_id: input.version_id,
+        round_number: input.round_number,
+        provider: provider.name,
+        status: "skipped",
+        failure_code: !wantsEmail ? "preference_not_email" : "no_email_address",
+        preference_snapshot: preferenceSnapshot,
+      });
+      continue;
+    }
+
+    if (!hasActiveConsent({ participant_id: enrollment.participant_id, study_id: input.study_id, version_id: input.version_id })) {
+      skipped += 1;
+      createEmailNotification({
+        participant_id: enrollment.participant_id,
+        study_id: input.study_id,
+        version_id: input.version_id,
+        round_number: input.round_number,
+        provider: provider.name,
+        status: "skipped",
+        failure_code: "no_active_consent",
+        preference_snapshot: preferenceSnapshot,
+      });
+      continue;
+    }
+
+    const token = createMagicToken();
+    const ttlMinutes = Math.min(Math.max(1, policy.magic_link_ttl_minutes), 24 * 60);
+    const expiresAt = new Date(Date.now() + ttlMinutes * 60_000).toISOString();
+    revokeActiveMagicLinksForParticipantRound({
+      participant_id: enrollment.participant_id,
+      study_id: input.study_id,
+      version_id: input.version_id,
+      round_number: input.round_number,
+    });
+    const magicLink = createMagicLinkToken({
+      token_hash: hashSecret(token),
+      participant_id: enrollment.participant_id,
+      study_id: input.study_id,
+      version_id: input.version_id,
+      round_number: input.round_number,
+      expires_at: expiresAt,
+      metadata: { source: "round_open_email", ttl_minutes: ttlMinutes },
+    });
+
+    const safeName = policy.notification_safe_name ?? study?.title ?? "Research Study";
+    const link = `${input.frontend_origin}/join?token=${token}`;
+    const subject = `${safeName} - Round ${input.round_number} is now open`;
+    const textBody = [
+      `${safeName} - Round ${input.round_number} is now open for your participation.`,
+      "",
+      `Click the link below to access the study:`,
+      link,
+      "",
+      `This link expires in ${ttlMinutes} minutes.`,
+      "",
+      "If you did not expect this email, you may safely ignore it.",
+    ].join("\n");
+
+    const notification = createEmailNotification({
+      participant_id: enrollment.participant_id,
+      study_id: input.study_id,
+      version_id: input.version_id,
+      round_number: input.round_number,
+      provider: provider.name,
+      status: "queued",
+      preference_snapshot: preferenceSnapshot,
+      magic_link_id: magicLink.magic_link_id,
+    });
+
+    try {
+      const result = await provider.sendEmail({
+        to: preference.email,
+        subject,
+        textBody,
+        metadata: {
+          study_id: input.study_id,
+          version_id: input.version_id,
+          round_number: input.round_number,
+          participant_id: enrollment.participant_id,
+        },
+      });
+      updateEmailNotificationDelivery({
+        email_notification_id: notification.email_notification_id,
+        provider_message_id: result.providerMessageId,
+        status: "sent",
+      });
+      sent += 1;
+    } catch (err) {
+      updateEmailNotificationDelivery({
+        email_notification_id: notification.email_notification_id,
+        status: "failed",
+        failure_code: err instanceof Error ? err.message : "unknown_error",
+      });
+      failed += 1;
+    }
+  }
+
+  await writeAuditEvent({
+    actor: { userId: input.actor_user_id, role: "owner", systemRoles: ["owner"], authSource: "legacy-dev-header" },
+    action: "round_open_email_fanout_complete",
+    object: { type: "study_version", id: `${input.study_id}:${input.version_id}` },
+    details: { round_number: input.round_number, sent, skipped, failed, total: enrollments.length },
+  });
+
+  return { sent, skipped, failed, total: enrollments.length };
 }
