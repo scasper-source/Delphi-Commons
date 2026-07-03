@@ -66,16 +66,16 @@ Current snapshot: the public GitHub repository exists at `scasper-source/Delphi-
 - [x] Stale remote `codex/*` branches removed after merge/supersession/closed-PR review
 - [x] Open PR queue checked empty at latest snapshot
 - [ ] Code owners planned
-- [ ] Initial release version selected
+- [x] Initial release version selected (v0.1.0)
 - [x] CITATION.cff GitHub URL updated after the public repository URL is known
 
 ## DOI Readiness
 
-- [ ] Tagged release version created on GitHub (repository is public since 2026-07-03; tagged release artifact not yet created)
-- [ ] Zenodo or equivalent archive connected
-- [ ] DOI minted only after release
-- [ ] DOI added to README after creation
-- [ ] DOI added to CITATION.cff after creation
+- [x] Tagged release version created on GitHub (v0.1.0, 2026-07-03)
+- [x] Zenodo or equivalent archive connected
+- [x] DOI minted only after release (10.5281/zenodo.21178251)
+- [x] DOI added to README after creation
+- [x] DOI added to CITATION.cff after creation
 
 ## Phase 10 Evidence
 
