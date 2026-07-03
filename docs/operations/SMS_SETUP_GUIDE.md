@@ -72,6 +72,11 @@ Round-open notifications are sent via a Twilio Messaging Service (not a raw phon
 2. Create a new Messaging Service
 3. Add your phone number as a sender in the service
 4. Copy the **Messaging Service SID** (starts with `MG...`)
+5. Configure the **Inbound Request URL** for the service to point to your server's inbound webhook:
+   ```
+   https://your-public-domain.example.com/sms/twilio/inbound
+   ```
+   This is required for STOP/HELP keyword handling. Without it, participant replies (opt-out, help requests) will never reach your server.
 
 ## Step 7: Configure Environment Variables
 
@@ -95,7 +100,7 @@ EDELPHI_SMS_PROVIDER=twilio
 EDELPHI_ENABLE_REAL_SMS=true
 EDELPHI_REAL_SMS_ACK=TWILIO_REAL_SMS_REVIEWED_AND_APPROVED
 EDELPHI_PUBLIC_PARTICIPANT_ORIGIN=https://your-public-domain.example.com
-EDELPHI_TWILIO_WEBHOOK_BASE_URL=https://your-public-domain.example.com/api
+EDELPHI_TWILIO_WEBHOOK_BASE_URL=https://your-public-domain.example.com
 ```
 
 ### Safety gates explained
@@ -107,7 +112,7 @@ The server intentionally refuses to send real SMS unless all four safety gates a
 | `EDELPHI_ENABLE_REAL_SMS` | Master switch — must be `true` |
 | `EDELPHI_REAL_SMS_ACK` | Must be the exact string `TWILIO_REAL_SMS_REVIEWED_AND_APPROVED` — proves you read this |
 | `EDELPHI_PUBLIC_PARTICIPANT_ORIGIN` | HTTPS URL where participants access the app (used in magic links) |
-| `EDELPHI_TWILIO_WEBHOOK_BASE_URL` | HTTPS URL where Twilio sends delivery status webhooks |
+| `EDELPHI_TWILIO_WEBHOOK_BASE_URL` | HTTPS base URL of your server (no `/api` suffix) — Twilio delivery callbacks go to `{base}/sms/webhook` |
 
 For local development, use `EDELPHI_SMS_PROVIDER=mock` — this skips Twilio entirely and logs messages to an in-memory outbox. No safety gates needed in mock mode.
 
