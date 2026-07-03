@@ -248,6 +248,10 @@ export function StudyBuilderScreen({
   }
 
   function moveWizard(delta: number) {
+    if (delta > 0 && activeIndex === wizardSteps.length - 1 && onNavigateModule) {
+      onNavigateModule("governance");
+      return;
+    }
     const nextStep = wizardSteps[Math.min(Math.max(activeIndex + delta, 0), wizardSteps.length - 1)];
     onWizardStepChange(nextStep.id);
   }
@@ -338,13 +342,17 @@ export function StudyBuilderScreen({
           </button>
           <button
             className="primary-button"
-            disabled={activeIndex === wizardSteps.length - 1}
             onClick={() => moveWizard(1)}
             type="button"
           >
-            Next
+            {activeIndex === wizardSteps.length - 1 ? "Continue to Governance" : "Next"}
           </button>
         </div>
+        {designSaved && !saveBlocked ? (
+          <p className="auto-save-hint" style={{ fontSize: "0.85rem", color: "var(--muted-text, #888)", textAlign: "center", margin: "0.25rem 0 0" }}>
+            Changes auto-save after 3 seconds of inactivity
+          </p>
+        ) : null}
 
         {governanceReady && onNavigateModule ? (
           <WarningBanner title="Design saved — governance signoff is next" risk="info">
