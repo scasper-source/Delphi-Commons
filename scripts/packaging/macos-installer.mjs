@@ -33,6 +33,7 @@ const copyPath = (src, dst) => {
 const installerRuntimeRoot = '~/Library/Application Support/DelphiCommons/macos-installer-candidate';
 const installLocation = '/Applications/Delphi Commons/package';
 const appBundleName = 'Delphi Commons.app';
+const appIconFileName = 'DelphiCommons.icns';
 
 function writeInstallerWrapper(destination) {
   fs.mkdirSync(path.dirname(destination), { recursive: true });
@@ -83,10 +84,19 @@ Admin/debug commands:
 `;
 }
 
+function buildMacosAppIcon(destination) {
+  const iconBuildRoot = path.join(outRoot, 'app-icon');
+  run('bash', ['scripts/macos/generate-app-icon.sh', path.join(repoRoot, 'assets/macos/DelphiCommonsAppIcon.svg'), iconBuildRoot]);
+  copyPath(path.join(iconBuildRoot, appIconFileName), destination);
+}
+
 function writeAppLauncherBundle(destination) {
   const contents = path.join(destination, 'Contents');
   const macos = path.join(contents, 'MacOS');
+  const resources = path.join(contents, 'Resources');
   fs.mkdirSync(macos, { recursive: true });
+  fs.mkdirSync(resources, { recursive: true });
+  buildMacosAppIcon(path.join(resources, appIconFileName));
   fs.writeFileSync(
     path.join(contents, 'Info.plist'),
     `<?xml version="1.0" encoding="UTF-8"?>
@@ -97,6 +107,8 @@ function writeAppLauncherBundle(destination) {
   <string>Delphi Commons</string>
   <key>CFBundleExecutable</key>
   <string>Delphi Commons</string>
+  <key>CFBundleIconFile</key>
+  <string>DelphiCommons</string>
   <key>CFBundleIdentifier</key>
   <string>org.delphi.commons.internal</string>
   <key>CFBundleName</key>
